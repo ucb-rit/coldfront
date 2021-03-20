@@ -1002,19 +1002,15 @@ class ProjectUserDetail(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         project_user_pk = self.kwargs.get('project_user_pk')
 
         if project_obj.status.name not in ['Active', 'New', ]:
-            messages.error(
-                request, 'You cannot update a user in an archived project.')
+            messages.error(request, 'You cannot update a user in an archived project.')
             return HttpResponseRedirect(reverse('project-user-detail', kwargs={'pk': project_user_pk}))
 
         if project_obj.projectuser_set.filter(id=project_user_pk).exists():
-            project_user_obj = project_obj.projectuser_set.get(
-                pk=project_user_pk)
+            project_user_obj = project_obj.projectuser_set.get(pk=project_user_pk)
 
-            pi_role = ProjectUserRoleChoice.objects.get(
-                name='Principal Investigator')
+            pi_role = ProjectUserRoleChoice.objects.get(name='Principal Investigator')
             if project_user_obj.role == pi_role:
-                messages.error(
-                    request, 'PI role and email notification option cannot be changed.')
+                messages.error(request, 'PI role and email notification option cannot be changed.')
                 return HttpResponseRedirect(reverse('project-user-detail', kwargs={'pk': project_user_pk}))
 
             project_user_update_form = ProjectUserUpdateForm(request.POST,
@@ -1027,30 +1023,37 @@ class ProjectUserDetail(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
 
                 old_role = project_user_obj.role
                 new_role = ProjectUserRoleChoice.objects.get(name=form_data.get('role'))
-                only_manager = not project_obj.projectuser_set.filter(~Q(pk=project_user_pk),
-                                                                      role__name='Manager').exists()
 
-                if old_role.name == 'Manager' and only_manager:
+                # PIs can update notification preferences only when manager(s) exists
+                if new_role == old_role == 'Principal Investigator' and\
+                        not project_obj.projectuser_set.filter(role__name='Manager').exists():
+                            enable_notifications = project_user_obj.enable_notifications
 
-                    # demote manager
-                    if new_role.name == 'User':
-                        project_pis = project_obj.projectuser_set.filter(role__name='Principal Investigator')
+                # demote the only manager to user role
+                elif old_role.name == 'Manager' and \
+                        not managers.filter(~Q(pk=project_user_pk)).exists():
 
-                        if not project_pis.exists():
-                            # no pis exist, cannot demote
-                            new_role = old_role
-                            messages.error(
-                                request, 'The project must have at least one PI or manager with notifications enabled.')
-                        else:
-                            messages.warning(request, 'User {} is no longer a manager. All PIs will now receive notifications.'.format(
-                                project_user_obj.user.username))
-                            for pi in project_pis:
-                                pi.enable_notifications = True
-                                pi.save()
+                    project_pis = project_obj.projectuser_set.filter(role__name='Principal Investigator')
 
-                elif new_role.name == 'Manager' != old_role.name:
+                    # no pis exist, cannot demote
+                    if not project_pis.exists():
+                        new_role = old_role
+                        messages.error(request, 'The project must have at least one PI or manager with notifications enabled.')
 
-                    # manager always has notifications enabled
+                    # enable all PI notifications, demote to user role
+                    else:
+                        messages.warning(request, 'User {} is no longer a manager. All PIs will now receive notifications.'.format(
+                            project_user_obj.user.username))
+
+                        for pi in project_pis:
+                            pi.enable_notifications = True
+                            pi.save()
+
+                        # users have notifications disabled by default
+                        enable_notifications = False
+
+                # promote user to manager role
+                elif new_role.name == 'Manager':
                     enable_notifications = True
 
                 project_user_obj.enable_notifications = enable_notifications
