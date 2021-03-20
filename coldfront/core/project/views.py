@@ -90,30 +90,27 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         else:
             context['is_allowed_to_archive_project'] = False
 
+
         # Can the user update the project?
+        context['is_allowed_to_update_notifications'] = False
+        context['is_allowed_to_update_project'] = False
+
         if self.request.user.is_superuser:
             context['is_allowed_to_update_project'] = True
-            context['is_allowed_to_update_self_notifications'] = True
-        elif self.object.projectuser_set.filter(user=self.request.user).exists():
-            project_user = self.object.projectuser_set.get(user=self.request.user)
-            if project_user.role.name in ('Principal Investigator', 'Manager'):
-                context['is_allowed_to_update_project'] = True
 
-                # Can disable self-notifications iff atleast one other PI / Manager
-                # has active notifications
-                context['is_allowed_to_update_self_notifications'] = \
+        elif self.object.projectuser_set.filter(user=self.request.user).exists():
+
+            project_user = self.object.projectuser_set.get(user=self.request.user)
+            context['is_allowed_to_update_project'] = project_user.role.name in ['Principal Investigator', 'Manager']
+
+            # PIs can update notification preferences when a manager exists or
+            # if they have disabled notifications
+            if project_user.role.name == 'Principal Investigator':
+                context['is_allowed_to_update_notifications'] = \
                     not project_user.enable_notifications or\
-                    self.object.projectuser_set.filter(~Q(user=self.request.user),
-                                                       enable_notifications=True,
-                                                       role__name__in=['Principal Investigator', 'Manager']).exists()
+                    self.object.projectuser_set.filter(role__name='Manager').exists()
 
                 context['username'] = project_user.user.username
-            else:
-                context['is_allowed_to_update_project'] = False
-                context['is_allowed_to_update_self_notifications'] = True
-        else:
-            context['is_allowed_to_update_project'] = False
-            context['is_allowed_to_update_self_notifications'] = False
 
         # Only show 'Active Users'
         project_users = self.object.projectuser_set.filter(
@@ -917,7 +914,7 @@ class ProjectUserDetail(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
 
             if project_user_update_form.is_valid():
                 form_data = project_user_update_form.cleaned_data
-                project_user_obj.enable_notifications = form_data.get('enable_notifications')
+                enable_notifications = form_data.get('enable_notifications')
 
                 old_role = project_user_obj.role
                 new_role = ProjectUserRoleChoice.objects.get(name=form_data.get('role'))
@@ -925,6 +922,8 @@ class ProjectUserDetail(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                                                                       role__name='Manager').exists()
 
                 if old_role.name == 'Manager' and only_manager:
+
+                    # demote manager
                     if new_role.name == 'User':
                         project_pis = project_obj.projectuser_set.filter(role__name='Principal Investigator')
 
@@ -934,15 +933,18 @@ class ProjectUserDetail(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                             messages.error(
                                 request, 'The project must have at least one PI or manager with notifications enabled.')
                         else:
-                            messages.warning(request, 'User {} is no longer a manager. All PIs will now receive notifications.'
-                                             .format(project_user_obj.user.username))
+                            messages.warning(request, 'User {} is no longer a manager. All PIs will now receive notifications.'.format(
+                                project_user_obj.user.username))
                             for pi in project_pis:
                                 pi.enable_notifications = True
                                 pi.save()
 
-                    elif new_role.name == 'Principal Investigator':
-                        project_user_obj.enable_notifications = True
+                elif new_role.name == 'Manager' != old_role.name:
 
+                    # manager always has notifications enabled
+                    enable_notifications = True
+
+                project_user_obj.enable_notifications = enable_notifications
                 project_user_obj.role = new_role
                 project_user_obj.save()
 
