@@ -2,6 +2,7 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationAttribute
 from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationStatusChoice
+from coldfront.core.allocation.models import AllocationUser
 from coldfront.core.allocation.models import AllocationUserAttribute
 from coldfront.core.allocation.utils import get_or_create_active_allocation_user
 from coldfront.core.allocation.utils import review_cluster_access_requests_url
@@ -1281,3 +1282,11 @@ def add_vector_user_to_designated_savio_project(user_obj):
             message = runner_result.error_message
             logger.error(message)
         return runner_result.success
+
+
+def remove_user_from_project(user, project):
+    """Remove the given User from the given Project and any associated
+    Allocations."""
+    ProjectUser.objects.filter(project=project, user=user).delete()
+    AllocationUser.objects.filter(
+        allocation__project=project, user=user).delete()

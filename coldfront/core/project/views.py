@@ -57,6 +57,7 @@ from coldfront.core.project.utils import (add_vector_user_to_designated_savio_pr
                                           project_allocation_request_latest_update_timestamp,
                                           ProjectClusterAccessRequestRunner,
                                           ProjectDenialRunner,
+                                          remove_user_from_project,
                                           SavioProjectApprovalRunner,
                                           savio_request_denial_reason,
                                           send_added_to_project_notification_email,
@@ -1529,6 +1530,8 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         status = ProjectUserStatusChoice.objects.get(name='Pending - Add')
         reason = self.request.POST['reason']
 
+        next_view = reverse('project-join-list')
+
         if project_users.exists():
             project_user = project_users.first()
             project_user.role = role
@@ -1538,7 +1541,6 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                     f'You are already an Active member of Project '
                     f'{project_obj.name}.')
                 messages.warning(self.request, message)
-                next_view = reverse('project-join-list')
                 return redirect(next_view)
             project_user.status = status
             project_user.save()
@@ -1561,7 +1563,6 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                 f'be approved after a delay period, unless managers '
                 f'explicitly deny it.')
             messages.success(self.request, message)
-            next_view = reverse('project-join-list')
         else:
             # Activate the user.
             status = ProjectUserStatusChoice.objects.get(name='Active')
@@ -1599,6 +1600,62 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
             self.logger.error(message)
             self.logger.exception(e)
 
+        return redirect(next_view)
+
+
+class ProjectCancelJoinView(LoginRequiredMixin, UserPassesTestMixin,
+                            TemplateView):
+    login_url = '/'
+
+    logger = logging.getLogger(__name__)
+
+    def test_func(self):
+        project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
+        user_obj = self.request.user
+        project_users = project_obj.projectuser_set.filter(user=user_obj)
+
+        if not project_users.exists():
+            message = (
+                f'You are not associated with Project {project_obj.name}.')
+            messages.error(self.request, message)
+            return False
+
+        project_user = project_users.first()
+        if project_user.status.name != 'Pending - Add':
+            message = (
+                f'Your status on Project {project_obj.name} is not pending.')
+            messages.error(self.request, message)
+            return False
+
+        return True
+
+    def get(self, *args, **kwargs):
+        return redirect(self.login_url)
+
+    def post(self, request, *args, **kwargs):
+        project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
+        user_obj = self.request.user
+        remove_user_from_project(user_obj, project_obj)
+
+        message = (
+            f'User {user_obj.pk} cancelled their pending request to join '
+            f'Project {project_obj.pk}.')
+        self.logger.info(message)
+
+        try:
+            # TODO: Send email(s).
+            pass
+        except Exception as e:
+            message = 'Failed to send notification email. Details:'
+            self.logger.error(message)
+            self.logger.exception(e)
+
+        message = (
+            f'Your request to join Project {project_obj.name} has been '
+            f'cancelled.')
+        messages.success(self.request, message)
+
+        next_view = reverse('project-join-list')
         return redirect(next_view)
 
 

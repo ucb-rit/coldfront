@@ -27,6 +27,7 @@ Project List
           <th scope="col">Title</th>
           <th scope="col">Cluster</th>
           <th scope="col" class="text-nowrap">Auto-Approval Time</th>
+          <th scope="col" class="text-nowrap">Cancel</th>
         </tr>
       </thead>
       <tbody>
@@ -37,11 +38,50 @@ Project List
             <td>{% for pi in project.pis %}{{ pi.username }}<br>{% endfor %}</td>
             <td style="text-align: justify; text-justify: inter-word;">{{ project.title }}</td>
             <td>{{ project.cluster_name }}</td>
-
             <td>
-                <span class="badge badge-success">
-                  {{project.auto_approval_time}}
-                </span>
+              <span class="badge badge-success">
+                {{project.auto_approval_time}}
+              </span>
+            </td>
+            <td>
+              <div
+                  class="modal fade"
+                  id="cancelJoin{{ project.pk }}Modal"
+                  tabindex="-1"
+                  role="dialog"
+                  aria-labelledby="cancelJoin{{ project.pk }}ModalLabel"
+                  aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                  <form
+                      action="{% url 'project-cancel-join' project.pk %}"
+                      method="post"
+                      id="cancelJoin{{ project.pk }}Form">
+                    {% csrf_token %}
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Cancel Join Request: {{ project.name }}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">&times;</span>
+                        </button>
+                      </div>
+                      <div class="modal-body">
+                        <p>Are you sure? You may make another request at a later time.</p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="submit" class="btn btn-danger">
+                          Yes
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                          No
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              <button class="btn btn-danger" data-toggle="modal" data-target="#cancelJoin{{ project.pk }}Modal">
+                Cancel
+              </button>
             </td>
           </tr>
         {% endfor %}
@@ -135,7 +175,7 @@ Project List
                     {% csrf_token %}
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Join Project</h5>
+                            <h5 class="modal-title">Join Project: {{ project.name }}</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
@@ -148,11 +188,11 @@ Project List
                         </div>
 
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                             <button class="btn btn-primary" type="submit">
                                 <i class="fas fa-user-plus" aria-hidden="true"></i>
                                 Join
                             </button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                         </div>
                     </div>
                 </form>
