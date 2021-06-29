@@ -102,9 +102,37 @@ Project User Detail
                   Active
                 </span>
               {% elif cluster_access_status == 'Pending - Add' %}
-                <span class="badge badge-warning">
+                <span class="badge badge-warning float-left">
                   Pending
                 </span>
+                {% if project_user_obj.user not in project_user_obj.project.managers %}
+                  <button
+                      type="button"
+                      class="btn btn-danger float-right"
+                      data-toggle="modal"
+                      data-target="#cancelClusterAccessRequestModal">
+                    Cancel
+                  </button>
+                  <br><br>
+                  <p>
+                    Processing for this request has not begun yet, so it may be
+                    cancelled.
+                  </p>
+                  <p>
+                    Warning: Cancellation will also remove the user
+                    ({{ project_user_obj.user.first_name }}
+                    {{ project_user_obj.user.last_name }}) from the project.
+                  </p>
+                {% else %}
+                  <br><br>
+                  <p>
+                    Processing for this request has not begun yet, but it
+                    cannot be cancelled because the user
+                    ({{ project_user_obj.user.first_name }}
+                    {{ project_user_obj.user.last_name }}) is a manager on the
+                    project.
+                  </p>
+                {% endif %}
               {% elif cluster_access_status == 'None' %}
                 <span class="badge badge-danger">
                   No Access
@@ -129,5 +157,48 @@ Project User Detail
     </div>
   </div>
 </form>
+
+<div
+    class="modal fade"
+    id="cancelClusterAccessRequestModal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="cancelClusterAccessRequestModalLabel"
+    aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form
+        action="{% url 'allocation-cancel-cluster-account-request' allocation_obj.pk project_user_obj.user.pk %}"
+        method="post"
+        id="cancelClusterAccessRequestForm">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            Cancel Cluster Access Request:
+            {{ project_obj.name }}
+          </h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Are you sure? {{ project_user_obj.user.first_name }}
+            {{ project_user_obj.user.last_name }} will be
+            removed from the project.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-danger">
+            Yes
+          </button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">
+            No
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
 
 {% endblock%}

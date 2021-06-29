@@ -52,6 +52,7 @@ from coldfront.core.allocation.utils import (generate_guauge_data_from_usage,
                                              set_allocation_user_attribute_value)
 from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)
+from coldfront.core.project.utils import remove_user_from_project
 from coldfront.core.resource.models import Resource
 from coldfront.core.utils.common import get_domain_url, import_from_settings
 from coldfront.core.utils.mail import send_email_template
@@ -1645,8 +1646,7 @@ class AllocationRequestClusterAccountView(LoginRequiredMixin,
                 f'You cannot request cluster access under an allocation '
                 f'with status {allocation_obj.status.name}.')
             messages.error(request, message)
-            return HttpResponseRedirect(
-                reverse('allocation-detail', kwargs={'pk': allocation_obj.pk}))
+            return redirect
         else:
             return super().dispatch(request, *args, **kwargs)
 
@@ -1694,6 +1694,126 @@ class AllocationRequestClusterAccountView(LoginRequiredMixin,
             f'Requested cluster access under Project {project_obj.name} for '
             f'User {user_obj.username}.')
         messages.success(self.request, message)
+
+        return redirect
+
+
+class AllocationCancelClusterAccountRequestView(LoginRequiredMixin,
+                                                UserPassesTestMixin, View):
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        user = self.request.user
+
+        if user.is_superuser:
+            return True
+
+        allocation_obj = get_object_or_404(
+            Allocation, pk=self.kwargs.get('pk'))
+        if allocation_obj.allocationuser_set.filter(
+                user=self.request.user,
+                status__name='Active').exists():
+            return True
+        else:
+            message = (
+                'You do not have permission to cancel a cluster access '
+                'request under the allocation.')
+            messages.error(self.request, message)
+            return False
+
+    def dispatch(self, request, *args, **kwargs):
+        allocation_obj = get_object_or_404(
+            Allocation, pk=self.kwargs.get('pk'))
+        user_obj = get_object_or_404(User, pk=self.kwargs.get('user_pk'))
+        project_obj = allocation_obj.project
+
+        redirect = HttpResponseRedirect(
+            reverse('project-detail', kwargs={'pk': project_obj.pk}))
+
+        if not allocation_obj.allocationuser_set.filter(
+                user=user_obj, status__name='Active').exists():
+            message = (
+                f'User {user_obj.username} is not a member of allocation '
+                f'{allocation_obj.pk}.')
+            messages.error(self.request, message)
+            return redirect
+
+        if ProjectUser.objects.filter(
+                project=project_obj, user=user_obj,
+                role__name='Manager').exists():
+            message = (
+                f'User {user_obj.username} is a manager of allocation '
+                f'{allocation_obj.pk}\'s Project {project_obj.name}, so their '
+                f'cluster access request cannot be cancelled.')
+            messages.error(self.request, message)
+            return redirect
+
+        acceptable_statuses = [
+            'Active', 'New', 'Renewal Requested', 'Payment Pending',
+            'Payment Requested', 'Paid']
+        if allocation_obj.status.name not in acceptable_statuses:
+            message = (
+                f'You cannot cancel a cluster access request under an '
+                f'allocation with status {allocation_obj.status.name}.')
+            messages.error(request, message)
+            return redirect
+        else:
+            return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        allocation_obj = get_object_or_404(
+            Allocation, pk=self.kwargs.get('pk'))
+        user_obj = get_object_or_404(User, pk=self.kwargs.get('user_pk'))
+        project_obj = allocation_obj.project
+        allocation_attribute_type = AllocationAttributeType.objects.get(
+            name='Cluster Account Status')
+
+        pending = 'Pending - Add'
+
+        redirect = HttpResponseRedirect(
+            reverse('project-detail', kwargs={'pk': project_obj.pk}))
+
+        try:
+            access = allocation_obj.allocationuserattribute_set.get(
+                allocation_user__user=user_obj,
+                allocation_attribute_type=allocation_attribute_type)
+            if access.value != pending:
+                message = (
+                    f'User {user_obj.username}\'s cluster access request '
+                    f'under Project {project_obj.name} is not pending, so it '
+                    f'cannot be cancelled.')
+                messages.warning(self.request, message)
+            else:
+                remove_user_from_project(user_obj, project_obj)
+
+                message = (
+                    f'Cancelled User {user_obj.username}\'s cluster access '
+                    f'request under Project {project_obj.name} and removed '
+                    f'the user from the project.')
+                messages.success(self.request, message)
+
+                message = (
+                    f'User {user_obj.pk}\'s cluster access request under '
+                    f'Project {project_obj.pk} was cancelled by User '
+                    f'{self.request.user.pk}.')
+                logger.info(message)
+
+                try:
+                    # TODO: Send email(s).
+                    pass
+                except Exception as e:
+                    message = 'Failed to send notification email. Details:'
+                    logger.error(message)
+                    logger.exception(e)
+        except AllocationUserAttribute.DoesNotExist:
+            message = (
+                f'User {user_obj.username} has no cluster access request '
+                f'under Project to be cancelled.')
+            messages.error(self.request, message)
+        except AllocationUserAttribute.MultipleObjectsReturned:
+            message = (
+                'Unexpected server error. Please contact an administrator.')
+            messages.error(self.request, message)
 
         return redirect
 
