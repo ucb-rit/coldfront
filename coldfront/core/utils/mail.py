@@ -62,3 +62,11 @@ def send_email_template(subject, template_name, context, sender, receiver_list):
     body = render_to_string(template_name, context)
 
     return send_email(subject, body, sender, receiver_list)
+
+
+def send_email_template_customized(subject, template_name, contexts, sender, receiver_list):
+    """Helper function for sending emails from a template with individual contexts
+    """
+    for receiver, context in zip(receiver_list, contexts):
+        body = render_to_string(template_name, context)
+        send_email(subject, body, sender, [receiver])

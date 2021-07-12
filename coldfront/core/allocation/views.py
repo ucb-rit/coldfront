@@ -56,7 +56,7 @@ from coldfront.core.project.models import (Project, ProjectUser,
 from coldfront.core.project.utils import ProjectClusterAccessRequestRunner
 from coldfront.core.resource.models import Resource
 from coldfront.core.utils.common import get_domain_url, import_from_settings
-from coldfront.core.utils.mail import send_email_template
+from coldfront.core.utils.mail import send_email_template, send_email_template_customized
 
 ALLOCATION_ENABLE_ALLOCATION_RENEWAL = import_from_settings(
     'ALLOCATION_ENABLE_ALLOCATION_RENEWAL', True)
@@ -262,27 +262,29 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                 allocation_obj.start_date = start_date
                 allocation_obj.save()
                 if EMAIL_ENABLED:
-                    template_context = {
-                        'center_name': EMAIL_CENTER_NAME,
-                        'resource': resource_name,
-                        'allocation_url': allocation_url,
-                        'signature': EMAIL_SIGNATURE,
-                        'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL
-                    }
-
-                    email_receiver_list = []
-
+                    receiver_names, email_receiver_list = [], []
                     for allocation_user in allocation_obj.allocationuser_set.exclude(status__name__in=['Removed', 'Error']):
                         allocation_activate_user.send(
                             sender=self.__class__, allocation_user_pk=allocation_user.pk)
                         if allocation_user.allocation.project.projectuser_set.get(user=allocation_user.user).enable_notifications:
-                            email_receiver_list.append(
-                                allocation_user.user.email)
+                            receiver_names.append(allocation_user.user.first_name)
+                            email_receiver_list.append(allocation_user.user.email)
 
-                    send_email_template(
+                    template_contexts = []
+                    for name in receiver_names:
+                        template_contexts.append({
+                            'first_name': name,
+                            'center_name': EMAIL_CENTER_NAME,
+                            'resource': resource_name,
+                            'allocation_url': allocation_url,
+                            'signature': EMAIL_SIGNATURE,
+                            'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL
+                        })
+
+                    send_email_template_customized(
                         'Allocation Activated',
                         'email/allocation_activated.txt',
-                        template_context,
+                        template_contexts,
                         EMAIL_SENDER,
                         email_receiver_list
                     )
@@ -292,24 +294,27 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                 allocation_obj.end_date = None
                 allocation_obj.save()
                 if EMAIL_ENABLED:
-                    template_context = {
-                        'center_name': EMAIL_CENTER_NAME,
-                        'resource': resource_name,
-                        'allocation_url': allocation_url,
-                        'signature': EMAIL_SIGNATURE,
-                        'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL
-                    }
-
-                    email_receiver_list = []
+                    receiver_names, email_receiver_list = [], []
                     for allocation_user in allocation_obj.project.projectuser_set.all():
                         if allocation_user.enable_notifications:
-                            email_receiver_list.append(
-                                allocation_user.user.email)
+                            receiver_names.append(allocation_user.user.first_name)
+                            email_receiver_list.append(allocation_user.user.email)
 
-                    send_email_template(
+                    template_contexts = []
+                    for name in receiver_names:
+                        template_contexts.append({
+                            'first_name': name,
+                            'center_name': EMAIL_CENTER_NAME,
+                            'resource': resource_name,
+                            'allocation_url': allocation_url,
+                            'signature': EMAIL_SIGNATURE,
+                            'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL
+                        })
+
+                    send_email_template_customized(
                         'Allocation Denied',
                         'email/allocation_denied.txt',
-                        template_context,
+                        template_contexts,
                         EMAIL_SENDER,
                         email_receiver_list
                     )
@@ -1067,26 +1072,29 @@ class AllocationActivateRequestView(LoginRequiredMixin, UserPassesTestMixin, Vie
             'allocation-detail', kwargs={'pk': allocation_obj.pk}))
 
         if EMAIL_ENABLED:
-            template_context = {
-                'center_name': EMAIL_CENTER_NAME,
-                'resource': resource_name,
-                'allocation_url': allocation_url,
-                'signature': EMAIL_SIGNATURE,
-                'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL
-            }
 
-            email_receiver_list = []
-
+            receiver_names, email_receiver_list = [], []
             for allocation_user in allocation_obj.allocationuser_set.exclude(status__name__in=['Removed', 'Error']):
                 allocation_activate_user.send(
                     sender=self.__class__, allocation_user_pk=allocation_user.pk)
                 if allocation_user.allocation.project.projectuser_set.get(user=allocation_user.user).enable_notifications:
+                    receiver_names.append(allocation_user.user.first_name)
                     email_receiver_list.append(allocation_user.user.email)
 
-            send_email_template(
+            template_contexts = []
+            for name in receiver_names:
+                template_contexts.append({
+                    'center_name': EMAIL_CENTER_NAME,
+                    'resource': resource_name,
+                    'allocation_url': allocation_url,
+                    'signature': EMAIL_SIGNATURE,
+                    'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL
+                })
+
+            send_email_template_customized(
                 'Allocation Activated',
                 'email/allocation_activated.txt',
-                template_context,
+                template_contexts,
                 EMAIL_SENDER,
                 email_receiver_list
             )
@@ -1132,23 +1140,27 @@ class AllocationDenyRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
             'allocation-detail', kwargs={'pk': allocation_obj.pk}))
 
         if EMAIL_ENABLED:
-            template_context = {
-                'center_name': EMAIL_CENTER_NAME,
-                'resource': resource_name,
-                'allocation_url': allocation_url,
-                'signature': EMAIL_SIGNATURE,
-                'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL
-            }
-
-            email_receiver_list = []
+            receiver_names, email_receiver_list = [], []
             for allocation_user in allocation_obj.project.projectuser_set.all():
                 if allocation_user.enable_notifications:
+                    receiver_names.append(allocation_user.user.first_name)
                     email_receiver_list.append(allocation_user.user.email)
 
-            send_email_template(
+            template_contexts = []
+            for name in receiver_names:
+                template_contexts.append({
+                    'first_name': name,
+                    'center_name': EMAIL_CENTER_NAME,
+                    'resource': resource_name,
+                    'allocation_url': allocation_url,
+                    'signature': EMAIL_SIGNATURE,
+                    'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL
+                })
+
+            send_email_template_customized(
                 'Allocation Denied',
                 'email/allocation_denied.txt',
-                template_context,
+                template_contexts,
                 EMAIL_SENDER,
                 email_receiver_list
             )
@@ -1240,7 +1252,8 @@ class AllocationRenewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView)
 
             context['resource_eula'] = {}
             if allocation_obj.get_parent_resource.resourceattribute_set.filter(resource_attribute_type__name='eula').exists():
-                value = allocation_obj.get_parent_resource.resourceattribute_set.get(resource_attribute_type__name='eula').value
+                value = allocation_obj.get_parent_resource.resourceattribute_set.get(
+                    resource_attribute_type__name='eula').value
                 context['resource_eula'].update({'eula': value})
 
         context['allocation'] = allocation_obj
@@ -1959,13 +1972,6 @@ class AllocationClusterAccountDenyRequestView(LoginRequiredMixin,
 
             subject = 'Cluster Access Denied'
             template = 'email/cluster_access_denied.txt'
-            template_context = {
-                'center_name': EMAIL_CENTER_NAME,
-                'project': project_obj.name,
-                'allocation': allocation_obj.pk,
-                'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL,
-                'signature': EMAIL_SIGNATURE,
-            }
             sender = EMAIL_SENDER
 
             user_filter = Q(user=self.user_obj)
@@ -1979,8 +1985,21 @@ class AllocationClusterAccountDenyRequestView(LoginRequiredMixin,
                     'user__email', flat=True
                 ))
 
-            send_email_template(
-                subject, template, template_context, sender, receiver_list)
+            receiver_names = list(receiver_list.values_list('user__first_name', flat=True))
+
+            template_contexts = []
+            for name in receiver_names:
+                template_contexts.append({
+                    'first_name': name,
+                    'center_name': EMAIL_CENTER_NAME,
+                    'project': project_obj.name,
+                    'allocation': allocation_obj.pk,
+                    'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL,
+                    'signature': EMAIL_SIGNATURE,
+                })
+
+            send_email_template_customized(
+                subject, template, template_contexts, sender, receiver_list)
 
         return HttpResponseRedirect(
             reverse('allocation-cluster-account-request-list'))

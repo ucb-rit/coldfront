@@ -1,4 +1,4 @@
-Dear {{center_name}} user,
+Dear {{first_name}},
 
 Your allocation request for {{resource}} has been activated. You now have access to this resource.
 

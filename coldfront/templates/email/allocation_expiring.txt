@@ -1,4 +1,4 @@
-Dear {{center_name}} user,
+Dear {{first_name}},
 
 Your allocation for access to {{ allocation_type }} is expiring in {{ expiring_in_days }} days.
 Failure to renew the allocation before expiration will result in removal of access to this resource for all accounts

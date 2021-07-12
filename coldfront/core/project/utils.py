@@ -445,6 +445,7 @@ def send_project_request_approval_email(request):
 
     project_url = __project_detail_url(request.project)
     context = {
+        'first_name': request.requester.first_name,
         'center_name': settings.CENTER_NAME,
         'project_name': request.project.name,
         'project_url': project_url,
@@ -480,6 +481,7 @@ def send_project_request_denial_email(request):
         reason = vector_request_denial_reason(request)
 
     context = {
+        'first_name': request.requester.first_name,
         'center_name': settings.CENTER_NAME,
         'project_name': request.project.name,
         'reason_category': reason.category,

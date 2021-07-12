@@ -1,4 +1,4 @@
-Dear {{ center_name }} user,
+Dear {{first_name}},
 
 Your request to pool your allocation with project {{ project_name }} has been approved, and the project has been set up on the cluster.
 

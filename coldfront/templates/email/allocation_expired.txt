@@ -1,4 +1,4 @@
-Dear {{center_name}} user,
+Dear {{first_name}},
 
 Your allocation for access to {{ allocation_type }} has expired. Any accounts under this allocation are now unable to
 access this resource. If you wish to continue using it, the group owner responsible for this project must create a new
