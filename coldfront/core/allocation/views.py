@@ -1975,20 +1975,12 @@ class AllocationClusterAccountDenyRequestView(LoginRequiredMixin,
             sender = EMAIL_SENDER
 
             user_filter = Q(user=self.user_obj)
-            manager_pi_filter = Q(
-                role__name__in=['Manager', 'Principal Investigator'],
-                status__name='Active')
-            receiver_list = list(
-                project_obj.projectuser_set.filter(
-                    user_filter | manager_pi_filter, enable_notifications=True
-                ).values_list(
-                    'user__email', flat=True
-                ))
-
-            receiver_names = list(receiver_list.values_list('user__first_name', flat=True))
+            primary_receivers = list(project_obj.projectuser_set.filter(user_filter, enable_notifications=True))
+            primary_receivers_emails = list(primary_receivers.values_list('user__email', flat=True))
+            primary_receivers_names = list(primary_receivers.values_list('user__first_name', flat=True))
 
             template_contexts = []
-            for name in receiver_names:
+            for name in primary_receivers_names:
                 template_contexts.append({
                     'first_name': name,
                     'center_name': EMAIL_CENTER_NAME,
@@ -1998,8 +1990,14 @@ class AllocationClusterAccountDenyRequestView(LoginRequiredMixin,
                     'signature': EMAIL_SIGNATURE,
                 })
 
+            manager_pi_filter = Q(role__name__in=['Manager', 'Principal Investigator'], status__name='Active')
+            secondary_receivers = list(project_obj.projectuser_set.filter(manager_pi_filter, enable_notifications=True))
+            secondary_receivers_emails = list(secondary_receivers.values_list('user__email', flat=True))
+            # secondary_receivers_names = list(secondary_receivers.values_list('user__first_name', flat=True))
+
             send_email_template_customized(
-                subject, template, template_contexts, sender, receiver_list)
+                subject, template, template_contexts,
+                sender, primary_receivers_emails, cc=secondary_receivers_emails)
 
         return HttpResponseRedirect(
             reverse('allocation-cluster-account-request-list'))
