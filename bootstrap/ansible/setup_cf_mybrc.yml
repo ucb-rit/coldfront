@@ -171,12 +171,12 @@
 
     - name: Create a wsgi conf file from a template without SSL
       template: src={{ git_prefix }}/{{ reponame }}/bootstrap/ansible/cf_mybrc_wsgi_conf.tmpl
-                dest=/etc/httpd/conf.d/cf_mybrc_wsgi.conf
+                dest=/etc/httpd/conf.d/cf_mylrc_wsgi.conf
       when: not ssl_enabled
 
     - name: Create a wsgi conf file from a template with SSL
       template: src={{ git_prefix }}/{{ reponame }}/bootstrap/ansible/cf_mybrc_wsgi_conf_ssl.tmpl
-                dest=/etc/httpd/conf.d/cf_mybrc_wsgi.conf
+                dest=/etc/httpd/conf.d/cf_mylrc_wsgi.conf
       when: ssl_enabled
 
     - name: Restart Apache

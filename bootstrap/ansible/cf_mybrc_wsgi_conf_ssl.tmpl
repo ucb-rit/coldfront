@@ -33,8 +33,8 @@ WSGIPassAuthorization On
     SSLCertificateKeyFile {{ ssl_certificate_key_file }}
     SSLCertificateChainFile {{ ssl_certificate_chain_file }}
 
-    ErrorLog /var/log/httpd/cf_brc.error.log
-    CustomLog /var/log/httpd/cf_brc.custom.log combined
+    ErrorLog /var/log/httpd/cf_lrc.error.log
+    CustomLog /var/log/httpd/cf_lrc.custom.log combined
 
     <LocationMatch /(api(/|$))>
         Require ip {{ ip_range_with_api_access }}

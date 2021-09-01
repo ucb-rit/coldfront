@@ -5,7 +5,7 @@ LoadModule headers_module modules/mod_headers.so
 
 WSGIPassAuthorization On
 
-<VirtualHost 0.0.0.0:8000>
+<VirtualHost 0.0.0.0:8001>
 
     ServerName {{ hostname }}
     ServerAlias {{ hostname }}
@@ -26,7 +26,7 @@ WSGIPassAuthorization On
         </Files>
     </Directory>
 
-    ErrorLog /var/log/httpd/cf_brc.error.log
-    CustomLog /var/log/httpd/cf_brc.custom.log combined
+    ErrorLog /var/log/httpd/cf_lrc.error.log
+    CustomLog /var/log/httpd/cf_lrc.custom.log combined
 
 </VirtualHost>

@@ -1,5 +1,5 @@
 #########################################################
-## Settings need for ColdFront based MyBRC Django APP
+## Settings need for ColdFront based MyLRC Django APP
 
 ####################################
 # General Settings
@@ -16,21 +16,21 @@ djangoprojname: coldfront
 #####################################
 
 # The name of the PostgreSQL database.
-db_name: cf_brc_db
+db_name: cf_lrc_db
 
 # The credentials for the database admin user.
 db_admin_user: admin
 db_admin_passwd: ''
 
-log_path: '/var/log/user_portals/cf_mybrc'
-portal_log_file: 'cf_mybrc_portal.log'
-api_log_file: 'cf_mybrc_api.log'
+log_path: '/var/log/user_portals/cf_mylrc'
+portal_log_file: 'cf_mylrc_portal.log'
+api_log_file: 'cf_mylrc_api.log'
 
 from_email: brc-hpc-help@berkeley.edu
 admin_email: brc-hpcs@berkeley.edu
-email_subject_prefix: '[MyBRC-User-Portal]'
+email_subject_prefix: '[MyLRC-User-Portal]'
 
-google_sheets_credentials: '/tmp/credentials.json'
+google_sheets_credentials: '/tmp/lrc_credentials.json'
 
 #####################################
 #STAGING SETTINGS
@@ -39,11 +39,11 @@ google_sheets_credentials: '/tmp/credentials.json'
 #djangooperator: root
 
 #debug: True
-#git_prefix: /var/www/coldfront_app/
+#git_prefix: /var/www/lrc/coldfront_app/
 #hostname: scgup-dev.lbl.gov
 #host_ip: 131.243.130.236
-#app_port: 8000
-#full_host_path: http://scgup-dev.lbl.gov:8000
+#app_port: 8001
+#full_host_path: http://scgup-dev.lbl.gov:8001
 
 #ssl_enabled: false
 #ssl_certificate_file: /etc/ssl/ssl_certificate.file
@@ -61,7 +61,7 @@ request_approval_cc_list: []
 #djangooperator: meli
 
 #debug: False
-#git_prefix: /var/www/coldfront_app/
+#git_prefix: /var/www/lrc/coldfront_app/
 #hostname: mybrc.brc.berkeley.edu
 #host_ip: 136.152.224.34
 #app_port: 8000
