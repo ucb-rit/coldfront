@@ -18,7 +18,7 @@ import os
 """An admin command that creates existing users and accounts for LRC."""
 
 
-PASSWD_FILE = '/tmp/passwd'
+PASSWD_FILE = '/tmp/lrc_passwd'
 
 PROJECT_PREFIXES = {
     'ac_',
