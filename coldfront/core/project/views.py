@@ -2473,9 +2473,22 @@ def show_pooled_project_selection_form_condition(wizard):
 class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
     template_name = 'project/project_request/savio/project_request_list.html'
     login_url = '/'
-
     # Show completed requests if True; else, show pending requests.
     completed = False
+
+    def get_queryset(self):
+        order_by = self.request.GET.get('order_by')
+        if order_by:
+            direction = self.request.GET.get('direction')
+            if direction == 'asc':
+                direction = ''
+            else:
+                direction = '-'
+            order_by = direction + order_by
+        else:
+            order_by = 'id'
+
+        return SavioProjectAllocationRequest.objects.order_by(order_by)
 
     def get_context_data(self, **kwargs):
         """Include either pending or completed requests. If the user is
@@ -2484,16 +2497,17 @@ class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         args, kwargs = [], {}
 
+        request_list = self.get_queryset()
         user = self.request.user
         if not (user.is_superuser or user.has_perm('project.view_savioprojectallocationrequest')):
             args.append(Q(requester=user) | Q(pi=user))
-
         if self.completed:
             status__name__in = ['Approved - Complete', 'Denied']
         else:
             status__name__in = ['Under Review', 'Approved - Processing']
         kwargs['status__name__in'] = status__name__in
-
+        context['savio_project_request_list'] = request_list.filter(
+            *args, **kwargs)
         context['request_filter'] = (
             'completed' if self.completed else 'pending')
         context['savio_project_request_list'] = \
@@ -3309,9 +3323,21 @@ class VectorProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
 class VectorProjectRequestListView(LoginRequiredMixin, TemplateView):
     template_name = 'project/project_request/vector/project_request_list.html'
     login_url = '/'
-
     # Show completed requests if True; else, show pending requests.
     completed = False
+
+    def get_queryset(self):
+        order_by = self.request.GET.get('order_by')
+        if order_by:
+            direction = self.request.GET.get('direction')
+            if direction == 'asc':
+                direction = ''
+            else:
+                direction = '-'
+            order_by = direction + order_by
+        else:
+            order_by = 'id'
+        return VectorProjectAllocationRequest.objects.order_by(order_by)
 
     def get_context_data(self, **kwargs):
         """Include either pending or completed requests. If the user is
@@ -3322,19 +3348,20 @@ class VectorProjectRequestListView(LoginRequiredMixin, TemplateView):
         args, kwargs = [], {}
 
         user = self.request.user
+
+        request_list = self.get_queryset()
         if not (user.is_superuser or user.has_perm('project.view_vectorprojectallocationrequest')):
             args.append(Q(requester=user) | Q(pi=user))
-
         if self.completed:
             status__name__in = ['Approved - Complete', 'Denied']
         else:
             status__name__in = ['Under Review', 'Approved - Processing']
         kwargs['status__name__in'] = status__name__in
-
+        context['vector_project_request_list'] = request_list.filter(
+            *args, **kwargs)
         context['request_filter'] = (
             'completed' if self.completed else 'pending')
-        context['vector_project_request_list'] = \
-            VectorProjectAllocationRequest.objects.filter(*args, **kwargs)
+
         return context
 
 
