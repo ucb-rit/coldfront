@@ -109,4 +109,8 @@ urlpatterns = [
          user_views.UserNameExistsView.as_view(),
          name='user-name-exists'),
 
+    #send emails to all users as staff or admin
+    path('send-email',
+        user_views.SendEmailView.as_view(),
+        name='send-email')
 ]

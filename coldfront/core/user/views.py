@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -23,10 +24,12 @@ from django.views import View
 from django.views.generic import CreateView, ListView, TemplateView
 from django.views.generic.edit import FormView
 
+from django.core.mail import send_mail
 from coldfront.core.allocation.models import AllocationUserAttribute
 from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.user.forms import EmailAddressAddForm
 from coldfront.core.user.forms import UserReactivateForm
+from coldfront.core.user.forms import SendEmailForm
 from coldfront.core.user.forms import PrimaryEmailAddressSelectionForm
 from coldfront.core.user.forms import UserAccessAgreementForm
 from coldfront.core.user.forms import UserProfileUpdateForm
@@ -41,13 +44,36 @@ from coldfront.core.user.utils import send_email_verification_email
 from coldfront.core.utils.common import (import_from_settings,
                                          utc_now_offset_aware)
 from coldfront.core.utils.mail import send_email_template
-
 logger = logging.getLogger(__name__)
 EMAIL_ENABLED = import_from_settings('EMAIL_ENABLED', False)
 if EMAIL_ENABLED:
     EMAIL_TICKET_SYSTEM_ADDRESS = import_from_settings(
-        'EMAIL_TICKET_SYSTEM_ADDRESS')
+        'EMAIL_TICKET_SYSTEM_ADDRESS') 
 
+#for staff and super users  
+class SendEmailView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    template_name = 'user/send_email_form.html'
+    form_class = SendEmailForm
+    success_url = 'send-email'
+    context = dir()
+
+    def test_func(self):
+        return self.request.user.is_staff or self.request.user.is_superuser
+
+    def get_context_data(self, **kwargs):
+        self.context = super(SendEmailView, self).get_context_data(**kwargs)
+        self.context['sender'] = settings.EMAIL_SENDER
+        
+        return self.context 
+
+    def form_valid(self, form):
+        #send the email
+        recievers = list(User.objects.values_list('email', flat=True)) # DO THE DCC THING NOT THIS THIS IS STUPID 
+        send_mail(form.subject, form.body, settings.EMAIL_SENDER, recievers)        
+        messages.success(self.request, 'Email Sent Successfully') 
+
+        return HttpResponseRedirect(self.request.path_info, self.context) 
+        
 
 @method_decorator(login_required, name='dispatch')
 class UserProfile(TemplateView):
@@ -433,7 +459,7 @@ class UserListAllocations(LoginRequiredMixin, UserPassesTestMixin, TemplateView)
     def test_func(self):
         return self.request.user.is_superuser or self.request.user.userprofile.is_pi
 
-    def get_context_data(self, *args, **kwargs):
+    def ket_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
 
         user_dict = {}

@@ -16,6 +16,17 @@ from coldfront.core.user.models import UserProfile, EmailAddress
 
 from phonenumber_field.formfields import PhoneNumberField
 
+class SendEmailForm(forms.Form):
+    subject = forms.CharField(label="Email Subject", widget=forms.Textarea(attrs={'rows': 1}), required=True)
+    body = forms.CharField(label="Email Body",  widget=forms.Textarea(attrs={'rows': 14}), required=True)
+
+    def clean_subject(self):
+        self.subject = self.cleaned_data['subject']
+        return self.subject
+
+    def clean_body(self):
+        self.body = self.cleaned_data['body']
+        return self.body
 
 class UserSearchForm(forms.Form):
     CHOICES = [('username_only', 'Exact Username Only'),
