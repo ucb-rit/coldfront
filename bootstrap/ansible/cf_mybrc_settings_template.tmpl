@@ -9,6 +9,7 @@ CENTER_BASE_URL = '{{ full_host_path }}'
 CENTER_HELP_URL = CENTER_BASE_URL + '/help'
 CENTER_PROJECT_RENEWAL_HELP_URL = CENTER_BASE_URL + '/help'
 
+EMAIL_PORT = {{ email_port }}
 EMAIL_SUBJECT_PREFIX = '{{ email_subject_prefix }}'
 EMAIL_ADMIN_LIST = ['admin@{{ hostname }}']
 EMAIL_SENDER = '{{ from_email }}'
@@ -37,6 +38,9 @@ DATABASES = {
         'PORT': '5432',
     },
 }
+
+LOG_PATH = '{{ log_path }}/{{ portal_log_file }}'
+API_LOG_PATH = '{{ log_path }}/{{ api_log_file }}'
 
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = {{ request_approval_cc_list }}

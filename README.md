@@ -1,6 +1,13 @@
-# ColdFront - Resource Allocation System
+# myBRC User Portal
 
 [![Documentation Status](https://readthedocs.org/projects/coldfront/badge/?version=latest)](https://coldfront.readthedocs.io/en/latest/?badge=latest)
+
+The myBRC User Portal is an access management system for Berkeley Research
+Computing. It enables users to create or join projects, gain access to the
+clusters managed by BRC, view the statuses of their requests and access, view
+their allocation quotas and usages, and update personal information. It enables
+administrators to handle these requests and manage users and projects. The
+portal is built on top of ColdFront.
 
 ColdFront is an open source resource allocation system designed to provide a
 central portal for administration, reporting, and measuring scientific impact
@@ -8,37 +15,6 @@ of HPC resources. ColdFront was created to help HPC centers manage access to a
 diverse set of resources across large groups of users and provide a rich set of
 extensible meta data for comprehensive reporting. ColdFront is written in
 Python and released under the GPLv3 license.
-
-## Features
-
-- Allocation based system for managing access to resources
-- Collect Project, Grant, and Publication data from users
-- Define custom attributes on resources and allocations
-- Email notifications for expiring/renewing access to resources
-- Integration with 3rd party systems for automation and access control
-- Center director approval system and annual project reviews
-
-## Plug-in Documentation
- - [Slurm](coldfront/plugins/slurm)
- - [FreeIPA](coldfront/plugins/freeipa)
- - [LDAP](coldfront/plugins/ldap_user_search)
- - [Mokey/Hydra OpenID Connect](coldfront/plugins/mokey_oidc)
- - [iQuota (Isilon)](coldfront/plugins/iquota)
- - [XDMoD](coldfront/plugins/xdmod)
- - [System Monitor](coldfront/plugins/system_monitor) (example of ways to integrate your own plug-ins)
-
-## Contact Information
-If you would like a live demo followed by QA, please contact us at ccr-coldfront-admin-list@listserv.buffalo.edu. You can also contact us for general inquiries and installation troubleshooting. 
-
-If you would like to join our mailing list to receive news and updates, please send an email to listserv@listserv.buffalo.edu with no subject, and the following command in the body of the message:
-
-subscribe ccr-open-coldfront-list@listserv.buffalo.edu first_name last_name
-
-
-## Installation Demo
-![Installation](coldfront/docs/source/user_guide/images/installation.gif "Installation")
-
-[Click here for more demos](#demos)
 
 ## Quick Install
 
@@ -131,6 +107,117 @@ You can log in as another PI using username `sfoster` with password `test1234`.
 
 Password for all users is also `test1234`.
 
+### Additional myBRC Setup Steps
+
+10. Run a command to create database objects needed for accounting.
+
+```
+python manage.py add_brc_accounting_defaults
+```
+
+## Vagrant VM Install
+
+Alternatively, the application may be installed within a Vagrant VM, running
+Scientific Linux 7. The VM is provisioned using an Ansible playbook similar to
+the one used in production.
+
+1. Install [VirtualBox](https://www.virtualbox.org/).
+2. Clone the repository.
+   ```
+   git clone https://github.com/ucb-rit/coldfront.git
+   cd coldfront
+   ```
+3. Prevent Git from detecting changes to file permissions.
+   ```
+   git config core.fileMode false
+   ```
+4. Checkout the desired branch (probably `develop`).
+5. Install vagrant-vbguest.
+   ```
+   vagrant plugin install vagrant-vbguest
+   ```
+6. Create a `main.yml` file in the top-level of the repository. This is a file
+of variables used by Ansible to configure the system.
+   ```
+   cp bootstrap/development/main.copyme main.yml
+   ```
+7. Customize `main.yml`. In particular, fill in the below variables. Note
+that quotes should not be provided, except in the list variable.
+   ```
+   db_admin_passwd: password_here
+   from_email: you@email.com
+   admin_email: you@email.com
+   request_approval_cc_list: ["you@email.com"]
+   ```
+8. Provision the VM. This should run the Ansible playbook. Expect this to take
+a few minutes on the first run.
+   ```
+   vagrant up
+   ```
+9. SSH into the VM.
+   ```
+   vagrant ssh
+   ```
+10. On the host machine, navigate to `http://localhost:8880`, where the
+application should be served.
+11. Load test data or (TODO) load a backup of the production database.
+
+### Miscellanea
+
+#### Virtual Machine
+
+- Once the VM has been provisioned the first time, starting and accessing it 
+can be done with:
+  ```
+  vagrant up
+  vagrant ssh
+  ```
+
+- To stop the VM, run:
+  ```
+  vagrant halt
+  ```
+
+- To re-provision the VM, run:
+  ```
+  vagrant provision
+  ```
+
+#### Environment
+
+- The application is served via Apache, so any changes to the application
+(excluding changes to templates) are not applied until Apache is restarted,
+which can be done with:
+  ```
+  sudo service httpd restart
+  ```
+- The Ansible playbook can be run manually with:
+  ```
+  cd /vagrant/coldfront_app/coldfront
+  # Assert that there is a properly-configured main.yml in the current directory.
+  ansible-playbook bootstrap/development/playbook.yml
+  ```
+- Any custom Django settings can be applied by modifying `dev_settings.py`.
+Note that running the Ansible playbook will overwrite these.
+- It may be convenient to add the following to `/home/vagrant/.bashrc`:
+  ```
+  # Upon login, navigate to the ColdFront directory and source the virtual environment.
+  cd /vagrant/coldfront_app/coldfront
+  source /vagrant/coldfront_app/venv/bin/activate
+  # Restart Apache with a keyword.
+  alias reload="sudo service httpd restart"
+  ```
+
+#### Emails
+
+- By default, emails are configured to be sent via SMTP on port 1025. If no
+such server is running on that port, many operations will fail. To start a
+server, start a separate SSH session (`vagrant ssh`), and run the below. All
+emails will be outputted here for inspection.
+  ```
+  python -m smtpd -n -c DebuggingServer localhost:1025
+  ```
+
 ## Directory structure
 
 - coldfront
@@ -141,6 +228,7 @@ Password for all users is also `test1234`.
         - project
         - publication
         - resource
+        - statistics
         - allocation
         - user
         - utils
@@ -153,36 +241,41 @@ Password for all users is also `test1234`.
         - slurm
         - system_monitor
 
+## Accessibility
 
+The service should be accessible to people with disabilities.
 
-## <a name="demos"></a>ColdFront Demonstration
+In practice, when contributing to the code, ensure that changes do not cause
+accessibility issues to be flagged by the
+[tota11y](https://khan.github.io/tota11y/) tool. This will be considered
+during the code review process.
 
-### Adding a Project
-![Adding Project](coldfront/docs/source/user_guide/images/adding_project.gif "Adding a project")
+## Deployments
 
-### Adding Users
-![Adding Users](coldfront/docs/source/user_guide/images/adding_users.gif "Adding Users")
+Deployments and configuration management are handled by Ansible, located in
+the `bootstrap/ansible` directory.
 
-### Requesting an Allocation
-![Requesting an Allocation](coldfront/docs/source/user_guide/images/requesting_allocation.gif "Requesting an Allocation")
+In particular, the Ansible playbook installs, enables, and configures
+PostgreSQL, creates log files, installs Pip requirements, copies ColdFront
+settings files, runs initial setup, migrates the database, collects static
+files, creates WSGI files for Apache, and restarts Apache.
 
-### Adding a Grant
-![Adding a Grant](coldfront/docs/source/user_guide/images/adding_grant.gif "Adding a Grant")
+Note that there are some additional server setup steps that are not currently
+captured in the Ansible playbook.
 
-### Adding Publications
-![Adding Publications](coldfront/docs/source/user_guide/images/adding_publications.gif "Adding Publications")
+1. Create `main.yml`.
 
-### Adding a User to an Allocation
-![Adding a User to Allocation](coldfront/docs/source/user_guide/images/adding_user_to_allocation.gif "Adding a User to an Allocation")
+```
+cp bootstrap/ansible/main.copyme main.yml
+```
 
-### Managing an Allocation as an Admin
-![Managing an Allocation as and Admin](coldfront/docs/source/user_guide/images/managing_allocation.gif "Managing an Allocation as an Admin")
+2. Modify `main.yml` depending on the current deployment.
 
-### Adding a Resource
-![Adding a Resource](coldfront/docs/source/user_guide/images/adding_resource.gif "Adding a Resource")
+3. Run the Ansible playbook as the `djangooperator` user defined in `main.yml`.
 
-### Generate Slurm Association Data 
-![Generate Slurm Association Data](coldfront/docs/source/user_guide/images/slurm_dump.gif "Generate Slurm Association Data")
+```
+ansible-playbook bootstrap/ansible/setup_cf_mybrc.yml
+```
 
 ## License
 

@@ -4,7 +4,7 @@
 
 
 {% block title %}
-Savio Project Request - Memorandum of Understanding Details
+Project Renewal - Pooling Preference
 {% endblock %}
 
 
@@ -14,15 +14,16 @@ Savio Project Request - Memorandum of Understanding Details
 
 
 {% block content %}
-<h1>Savio: Memorandum of Understanding Details</h1><hr>
+<h1>Update Pooling Preference</h1><hr>
 
 <ol class="breadcrumb">
-  <li>Allocation Type: {{ allocation_type }}</li>
-  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
-  <li>{{ breadcrumb_pi }}</li>
+  <li>PI: {{ PI.user.username }}, Current Project: {{ current_project }}</li>
 </ol>
 
-<p>Please provide the following details to buy time on Savio. You will also need to return a signed copy of a Memorandum of Understanding that will be sent to you.</p>
+<p>
+  Update the pooling preference for the PI, whose allocation is currently under
+  Project: {{ current_project }}.
+</p>
 
 <form action="" method="post">
   {% csrf_token %}

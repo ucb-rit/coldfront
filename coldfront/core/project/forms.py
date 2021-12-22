@@ -57,6 +57,7 @@ class ProjectAddUserForm(forms.Form):
         queryset=ProjectUserRoleChoice.objects.all().filter(~Q(name='Principal Investigator')),
         empty_label=None)
     selected = forms.BooleanField(initial=False, required=False)
+    user_access_agreement = forms.CharField(max_length=16, required=False, disabled=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -191,8 +192,10 @@ class ProjectUpdateForm(forms.ModelForm):
             'joins_auto_approval_delay')
 
 # TODO: Once finalized, move these imports above.
+from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import SavioProjectAllocationRequest
+from coldfront.core.project.utils_.renewal_utils import get_current_allocation_period
 from coldfront.core.utils.common import utc_now_offset_aware
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -251,39 +254,65 @@ class SavioProjectExistingPIForm(forms.Form):
 
         super().__init__(*args, **kwargs)
 
-        # PIs may only have one FCA, so only allow those without an active FCA
-        # to be selected. The same applies for PCA.
         queryset = User.objects.all()
         exclude_user_pks = set()
         pi_role = ProjectUserRoleChoice.objects.get(
             name='Principal Investigator')
+
+        ineligible_project_status_names = ['New', 'Active', 'Inactive']
+        ineligible_project_request_status_names = [
+            'Under Review', 'Approved - Processing', 'Approved - Complete']
+        ineligible_renewal_request_status_names = [
+            'Under Review', 'Approved', 'Complete']
+
         if self.allocation_type == 'FCA':
+
+            # PIs may only have one FCA, so disable any PIs who:
+            #     (a) have an existing 'New', 'Active', or 'Inactive' FCA,
+            #     (b) have non-denied AllocationRenewalRequests during this
+            #         AllocationPeriod, or
+            #     (c) have non-denied SavioProjectAllocationRequests.
+            #         TODO: Once the first AllocationPeriod has ended, this
+            #         TODO: will need to be refined to filter on time.
+
             pis_with_existing_fcas = set(ProjectUser.objects.filter(
                 role=pi_role,
                 project__name__startswith='fc_',
-                project__status__name__in=['New', 'Active']
+                project__status__name__in=ineligible_project_status_names
             ).values_list('user__pk', flat=True))
-            status = ProjectAllocationRequestStatusChoice.objects.get(
-                name='Under Review')
             pis_with_pending_requests = set(
                 SavioProjectAllocationRequest.objects.filter(
                     allocation_type=SavioProjectAllocationRequest.FCA,
-                    status=status
+                    status__name__in=ineligible_project_request_status_names
+                ).values_list('pi__pk', flat=True))
+            allocation_period = get_current_allocation_period()
+            pis_with_renewal_requests = set(
+                AllocationRenewalRequest.objects.filter(
+                    allocation_period=allocation_period,
+                    status__name__in=ineligible_renewal_request_status_names
                 ).values_list('pi__pk', flat=True))
             exclude_user_pks.update(
-                set.union(pis_with_existing_fcas, pis_with_pending_requests))
+                set.union(
+                    pis_with_existing_fcas,
+                    pis_with_pending_requests,
+                    pis_with_renewal_requests))
         elif self.allocation_type == 'PCA':
+
+            # PIs may only have one PCA, so disable any PIs who:
+            #    (a) have an existing 'New' or 'Active' PCA, or
+            #    (b) have non-denied SavioProjectAllocationRequests.
+            #        TODO: Once the first AllocationPeriod has ended, this
+            #        TODO: will need to be refined to filter on time.
+
             pis_with_existing_pcas = set(ProjectUser.objects.filter(
                 role=pi_role,
                 project__name__startswith='pc_',
-                project__status__name__in=['New', 'Active']
+                project__status__name__in=ineligible_project_status_names
             ).values_list('user__pk', flat=True))
-            status = ProjectAllocationRequestStatusChoice.objects.get(
-                name='Under Review')
             pis_with_pending_requests = set(
                 SavioProjectAllocationRequest.objects.filter(
                     allocation_type=SavioProjectAllocationRequest.PCA,
-                    status=status
+                    status__name__in=ineligible_project_request_status_names
                 ).values_list('pi__pk', flat=True))
             exclude_user_pks.update(
                 set.union(pis_with_existing_pcas, pis_with_pending_requests))
@@ -319,7 +348,7 @@ class SavioProjectNewPIForm(forms.Form):
 
 
 class SavioProjectExtraFieldsForm(forms.Form):
-    """A placeholder for extra fields for non-ICA/MOU projects."""
+    """A placeholder for extra fields for non-ICA/Recharge projects."""
 
     def __init__(self, *args, **kwargs):
         disable_fields = kwargs.pop('disable_fields', False)
@@ -454,7 +483,7 @@ class SavioProjectICAExtraFieldsForm(SavioProjectExtraFieldsForm):
         )
 
 
-class SavioProjectMOUExtraFieldsForm(SavioProjectExtraFieldsForm):
+class SavioProjectRechargeExtraFieldsForm(SavioProjectExtraFieldsForm):
 
     num_service_units = forms.IntegerField(
         help_text=(
@@ -624,7 +653,7 @@ class SavioProjectDetailsForm(forms.Form):
             name = f'fc_{name}'
         elif self.allocation_type == SavioProjectAllocationRequest.ICA:
             name = f'ic_{name}'
-        elif self.allocation_type == SavioProjectAllocationRequest.MOU:
+        elif self.allocation_type == SavioProjectAllocationRequest.RECHARGE:
             name = f'ac_{name}'
         elif self.allocation_type == SavioProjectAllocationRequest.PCA:
             name = f'pc_{name}'
@@ -700,7 +729,7 @@ class SavioProjectSurveyForm(forms.Form):
             'allocated up to 30 GB of not-backed-up shared filesystem space '
             'on request. Users needing more storage can choose to join the '
             'Condo Storage service by purchasing 42TB at the cost of $6539. '
-            'More details about this program are available <a href="https://docs-research-it.berkeley.edu/services/high-performance-computing/condos/condo-storage-service/">here</a>. '
+            'More details about this program are available <a href="https://docs-research-it.berkeley.edu/services/high-performance-computing/condos/condo-storage-service/"><span class="accessibility-link-text">Data Storage program details</span>here</a>. '
             'Please indicate if you need additional space and how much.'),
         label='Data Storage Space',
         required=False)
@@ -792,7 +821,7 @@ class SavioProjectSurveyForm(forms.Form):
                 self.fields[field].disabled = True
 
 
-class ProjectAllocationReviewForm(forms.Form):
+class ReviewStatusForm(forms.Form):
 
     status = forms.ChoiceField(
         choices=(
@@ -955,7 +984,7 @@ class SavioProjectReviewSetupForm(forms.Form):
         return final_name
 
 
-class SavioProjectReviewDenyForm(forms.Form):
+class ReviewDenyForm(forms.Form):
 
     justification = forms.CharField(
         help_text=(

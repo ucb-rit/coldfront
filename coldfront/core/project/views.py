@@ -54,19 +54,21 @@ from coldfront.core.project.models import (Project, ProjectReview,
 from coldfront.core.project.utils import (add_vector_user_to_designated_savio_project,
                                           auto_approve_project_join_requests,
                                           get_project_compute_allocation,
-                                          project_allocation_request_latest_update_timestamp,
                                           ProjectClusterAccessRequestRunner,
                                           ProjectDenialRunner,
                                           SavioProjectApprovalRunner,
-                                          savio_request_denial_reason,
                                           send_added_to_project_notification_email,
                                           send_new_cluster_access_request_notification_email,
                                           send_project_join_notification_email,
                                           send_project_join_request_approval_email,
                                           send_project_join_request_denial_email,
                                           send_project_request_pooling_email,
-                                          VectorProjectApprovalRunner,
-                                          vector_request_denial_reason)
+                                          VectorProjectApprovalRunner)
+from coldfront.core.project.utils_.renewal_utils import get_current_allocation_period
+from coldfront.core.project.utils_.renewal_utils import is_any_project_pi_renewable
+from coldfront.core.project.utils_.request_utils import project_allocation_request_latest_update_timestamp
+from coldfront.core.project.utils_.request_utils import savio_request_denial_reason
+from coldfront.core.project.utils_.request_utils import vector_request_denial_reason
 # from coldfront.core.publication.models import Publication
 # from coldfront.core.research_output.models import ResearchOutput
 from coldfront.core.resource.models import Resource
@@ -229,6 +231,23 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         context['joins_auto_approved'] = (
             self.object.joins_auto_approval_delay == datetime.timedelta())
 
+        context['join_request_delay_period'] = \
+            str(self.object.joins_auto_approval_delay).rsplit(':', 1)[0]
+
+        # Only display the "Renew Allowance" button for applicable allocation
+        # types.
+        # TODO: Display these for ic_ and pc_ when ready.
+        context['renew_allowance_current_visible'] = \
+            self.object.name.startswith('fc_')
+            # self.object.name.startswith(('fc_', 'ic_', 'pc_'))
+        # Only allow the "Renew Allowance" button to be clickable if any PIs do
+        # not have pending/approved renewal requests.
+        context['renew_allowance_current_clickable'] = (
+            # Short-circuit if the button is not visible.
+                context['renew_allowance_current_visible'] and
+                is_any_project_pi_renewable(
+                    self.object, get_current_allocation_period()))
+
         return context
 
 
@@ -259,7 +278,7 @@ class ProjectListView(LoginRequiredMixin, ListView):
             data = project_search_form.cleaned_data
             if data.get('show_all_projects') and (self.request.user.is_superuser or self.request.user.has_perm('project.can_view_all_projects')):
                 projects = Project.objects.prefetch_related('field_of_science', 'status',).filter(
-                    status__name__in=['New', 'Active', ]
+                    status__name__in=['New', 'Active', 'Inactive', ]
                 ).annotate(
                     cluster_name=Case(
                         When(name='abc', then=Value('ABC')),
@@ -270,7 +289,7 @@ class ProjectListView(LoginRequiredMixin, ListView):
                 ).order_by(order_by)
             else:
                 projects = Project.objects.prefetch_related('field_of_science', 'status',).filter(
-                    Q(status__name__in=['New', 'Active', ]) &
+                    Q(status__name__in=['New', 'Active', 'Inactive', ]) &
                     Q(projectuser__user=self.request.user) &
                     Q(projectuser__status__name='Active')
                 ).annotate(
@@ -320,7 +339,7 @@ class ProjectListView(LoginRequiredMixin, ListView):
 
         else:
             projects = Project.objects.prefetch_related('field_of_science', 'status',).filter(
-                Q(status__name__in=['New', 'Active', ]) &
+                Q(status__name__in=['New', 'Active', 'Inactive', ]) &
                 Q(projectuser__user=self.request.user) &
                 Q(projectuser__status__name='Active')
             ).annotate(
@@ -386,6 +405,15 @@ class ProjectListView(LoginRequiredMixin, ListView):
             project_list = paginator.page(1)
         except EmptyPage:
             project_list = paginator.page(paginator.num_pages)
+
+        # The "Renew a PI's Allowance" button should only be visible to
+        # Managers and PIs.
+        role_names = ['Manager', 'Principal Investigator']
+        status = ProjectUserStatusChoice.objects.get(name='Active')
+        context['renew_allowance_current_visible'] = \
+            ProjectUser.objects.filter(
+                user=self.request.user, role__name__in=role_names,
+                status=status)
 
         return context
 
@@ -766,8 +794,15 @@ class ProjectAddUsersSearchResultsView(LoginRequiredMixin, UserPassesTestMixin, 
 
         matches = context.get('matches')
         for match in matches:
+
+            # add data for access agreements
             match.update(
-                {'role': ProjectUserRoleChoice.objects.get(name='User')})
+                {'role': ProjectUserRoleChoice.objects.get(name='User'),
+                 'user_access_agreement':
+                     'Signed' if User.objects.get(username=match['username']).
+                                       userprofile.access_agreement_signed_date
+                                 is not None else 'Unsigned'
+                 })
 
         if matches:
             formset = formset_factory(ProjectAddUserForm, max_num=len(matches))
@@ -776,10 +811,8 @@ class ProjectAddUsersSearchResultsView(LoginRequiredMixin, UserPassesTestMixin, 
             # cache User objects
             match_users = User.objects.filter(username__in=[form._username for form in formset])
             for form in formset:
-
                 # disable user matches with unsigned signed user agreement
-                if not match_users.get(username=form._username)\
-                        .userprofile.access_agreement_signed_date is not None:
+                if not match_users.get(username=form._username).userprofile.access_agreement_signed_date is not None:
                     form.fields.pop('selected')
 
             context['formset'] = formset
@@ -851,7 +884,12 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
         matches = context.get('matches')
         for match in matches:
             match.update(
-                {'role': ProjectUserRoleChoice.objects.get(name='User')})
+                {'role': ProjectUserRoleChoice.objects.get(name='User'),
+                 'user_access_agreement':
+                     'Signed' if User.objects.get(username=match['username']).
+                                     userprofile.access_agreement_signed_date
+                                 is not None else 'Unsigned'
+                 })
 
         formset = formset_factory(ProjectAddUserForm, max_num=len(matches))
         formset = formset(request.POST, initial=matches, prefix='userform')
@@ -869,10 +907,20 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
             allocation_form_data = allocation_form.cleaned_data['allocation']
             if '__select_all__' in allocation_form_data:
                 allocation_form_data.remove('__select_all__')
+
+            unsigned_users = []
+            added_users = []
             for form in formset:
                 user_form_data = form.cleaned_data
+
+                # recording users with unsigned user access agreements
+                if user_form_data['user_access_agreement'] == 'Unsigned':
+                    unsigned_users.append(user_form_data['username'])
+                    continue
+
                 if user_form_data['selected']:
                     added_users_count += 1
+                    added_users.append(user_form_data['username'])
 
                     # Will create local copy of user if not already present in local database
                     user_obj, _ = User.objects.get_or_create(
@@ -941,14 +989,31 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
                             self.logger.error(message)
                             self.logger.exception(e)
 
+            # checking if there were any users with unsigned user access agreements in the form
+            if unsigned_users:
+                unsigned_users_string = ", ".join(unsigned_users)
+
+                # changing grammar for one vs multiple users
+                if len(unsigned_users) == 1:
+                    message = f'User [{unsigned_users_string}] does not have ' \
+                              f'a signed User Access Agreement and was ' \
+                              f'therefore not added to the project.'
+                else:
+                    message = f'Users [{unsigned_users_string}] do not have ' \
+                              f'a signed User Access Agreement and were ' \
+                              f'therefore not added to the project.'
+                messages.error(request, message)
+
             if added_users_count != 0:
+                added_users_string = ", ".join(added_users)
                 messages.success(
-                    request, 'Added {} users to project.'.format(added_users_count))
+                    request, 'Added [{}] to project.'.format(added_users_string))
 
                 message = (
                     f'Requested cluster access under project for '
                     f'{cluster_access_requests_count} users.')
                 messages.success(request, message)
+
             else:
                 messages.info(request, 'No users selected to add.')
 
@@ -1462,6 +1527,15 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                 self.request, 'You must sign the User Access Agreement before you can join a project.')
             return False
 
+        inactive_project_status = ProjectStatusChoice.objects.get(
+            name='Inactive')
+        if project_obj.status == inactive_project_status:
+            message = (
+                f'Project {project_obj.name} is inactive, and may not be '
+                f'joined.')
+            messages.error(self.request, message)
+            return False
+
         if project_users.exists():
             project_user = project_users.first()
             if project_user.status.name == 'Active':
@@ -1580,14 +1654,14 @@ class ProjectJoinListView(ProjectListView, UserPassesTestMixin):
     template_name = 'project/project_join_list.html'
 
     def test_func(self):
-        if self.request.user.is_superuser:
-            return True
-
-        if self.request.user.userprofile.access_agreement_signed_date is not None:
-            return True
-
-        messages.error(
-            self.request, 'You must sign the User Access Agreement before you can join a project.')
+        user = self.request.user
+        if user.userprofile.access_agreement_signed_date is None:
+            message = (
+                'You must sign the User Access Agreement before you can join '
+                'a project.')
+            messages.error(self.request, message)
+            return False
+        return True
 
     def get_queryset(self):
 
@@ -1725,6 +1799,9 @@ class ProjectReviewJoinRequestsView(LoginRequiredMixin, UserPassesTestMixin,
         if self.request.user.is_superuser:
             return True
 
+        if self.request.user.has_perm('project.can_view_all_projects'):
+            return True
+
         project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
 
         if project_obj.projectuser_set.filter(
@@ -1789,11 +1866,41 @@ class ProjectReviewJoinRequestsView(LoginRequiredMixin, UserPassesTestMixin,
             context['formset'] = formset
 
         context['project'] = get_object_or_404(Project, pk=pk)
+
+        context['can_add_users'] = False
+        if self.request.user.is_superuser:
+            context['can_add_users'] = True
+
+        project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
+
+        if project_obj.projectuser_set.filter(
+                user=self.request.user,
+                role__name__in=['Manager', 'Principal Investigator'],
+                status__name='Active').exists():
+            context['can_add_users'] = True
+
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
         project_obj = get_object_or_404(Project, pk=pk)
+
+        allowed_to_approve_users = False
+        if project_obj.projectuser_set.filter(
+                user=self.request.user,
+                role__name__in=['Manager', 'Principal Investigator'],
+                status__name='Active').exists():
+            allowed_to_approve_users = True
+
+        if self.request.user.is_superuser:
+            allowed_to_approve_users = True
+
+        if not allowed_to_approve_users:
+            message = 'You do not have permission to view the this page.'
+            messages.error(request, message)
+
+            return HttpResponseRedirect(
+                reverse('project-review-join-requests', kwargs={'pk': pk}))
 
         users_to_review = self.get_users_to_review(project_obj)
 
@@ -1885,7 +1992,7 @@ class ProjectAutoApproveJoinRequestsView(LoginRequiredMixin,
                                          UserPassesTestMixin, View):
 
     def test_func(self):
-        if self.request.user.is_superuser or self.request.user.is_staff:
+        if self.request.user.is_superuser:
             return True
         message = (
             'You do not have permission to automatically approve project '
@@ -1913,18 +2020,19 @@ class ProjectAutoApproveJoinRequestsView(LoginRequiredMixin,
 
 
 # TODO: Once finalized, move these imports above.
-from coldfront.core.project.forms import ProjectAllocationReviewForm
+from coldfront.core.allocation.models import AllocationRenewalRequest
+from coldfront.core.project.forms import ReviewDenyForm
+from coldfront.core.project.forms import ReviewStatusForm
 from coldfront.core.project.forms import SavioProjectAllocationTypeForm
 from coldfront.core.project.forms import SavioProjectDetailsForm
 from coldfront.core.project.forms import SavioProjectExistingPIForm
 from coldfront.core.project.forms import SavioProjectExtraFieldsForm
 from coldfront.core.project.forms import SavioProjectICAExtraFieldsForm
-from coldfront.core.project.forms import SavioProjectMOUExtraFieldsForm
 from coldfront.core.project.forms import SavioProjectNewPIForm
 from coldfront.core.project.forms import SavioProjectPoolAllocationsForm
 from coldfront.core.project.forms import SavioProjectPooledProjectSelectionForm
+from coldfront.core.project.forms import SavioProjectRechargeExtraFieldsForm
 from coldfront.core.project.forms import SavioProjectReviewAllocationDatesForm
-from coldfront.core.project.forms import SavioProjectReviewDenyForm
 from coldfront.core.project.forms import SavioProjectReviewMemorandumSignedForm
 from coldfront.core.project.forms import SavioProjectReviewSetupForm
 from coldfront.core.project.forms import SavioProjectSurveyForm
@@ -1933,8 +2041,8 @@ from coldfront.core.project.forms import VectorProjectReviewSetupForm
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.project.models import savio_project_request_ica_extra_fields_schema
 from coldfront.core.project.models import savio_project_request_ica_state_schema
-from coldfront.core.project.models import savio_project_request_mou_extra_fields_schema
-from coldfront.core.project.models import savio_project_request_mou_state_schema
+from coldfront.core.project.models import savio_project_request_recharge_extra_fields_schema
+from coldfront.core.project.models import savio_project_request_recharge_state_schema
 from coldfront.core.project.models import VectorProjectAllocationRequest
 from coldfront.core.project.utils import savio_request_state_status
 from coldfront.core.project.utils import send_new_project_request_admin_notification_email
@@ -1987,7 +2095,7 @@ class SavioProjectRequestWizard(UserPassesTestMixin, SessionWizardView):
         ('existing_pi', SavioProjectExistingPIForm),
         ('new_pi', SavioProjectNewPIForm),
         ('ica_extra_fields', SavioProjectICAExtraFieldsForm),
-        ('mou_extra_fields', SavioProjectMOUExtraFieldsForm),
+        ('recharge_extra_fields', SavioProjectRechargeExtraFieldsForm),
         ('pool_allocations', SavioProjectPoolAllocationsForm),
         ('pooled_project_selection', SavioProjectPooledProjectSelectionForm),
         ('details', SavioProjectDetailsForm),
@@ -1999,7 +2107,7 @@ class SavioProjectRequestWizard(UserPassesTestMixin, SessionWizardView):
         'existing_pi': 'project/project_request/savio/project_existing_pi.html',
         'new_pi': 'project/project_request/savio/project_new_pi.html',
         'ica_extra_fields': 'project/project_request/savio/project_ica_extra_fields.html',
-        'mou_extra_fields': 'project/project_request/savio/project_mou_extra_fields.html',
+        'recharge_extra_fields': 'project/project_request/savio/project_recharge_extra_fields.html',
         'pool_allocations': 'project/project_request/savio/project_pool_allocations.html',
         'pooled_project_selection': 'project/project_request/savio/project_pooled_project_selection.html',
         'details': 'project/project_request/savio/project_details.html',
@@ -2011,7 +2119,7 @@ class SavioProjectRequestWizard(UserPassesTestMixin, SessionWizardView):
         SavioProjectExistingPIForm,
         SavioProjectNewPIForm,
         SavioProjectICAExtraFieldsForm,
-        SavioProjectMOUExtraFieldsForm,
+        SavioProjectRechargeExtraFieldsForm,
         SavioProjectPoolAllocationsForm,
         SavioProjectPooledProjectSelectionForm,
         SavioProjectDetailsForm,
@@ -2024,7 +2132,7 @@ class SavioProjectRequestWizard(UserPassesTestMixin, SessionWizardView):
         'existing_pi': 1,
         'new_pi': 2,
         'ica_extra_fields': 3,
-        'mou_extra_fields': 4,
+        'recharge_extra_fields': 4,
         'pool_allocations': 5,
         'pooled_project_selection': 6,
         'details': 7,
@@ -2074,14 +2182,13 @@ class SavioProjectRequestWizard(UserPassesTestMixin, SessionWizardView):
         """Perform processing and store information in a request
         object."""
         redirect_url = '/'
-
-        # Retrieve form data; include empty dictionaries for skipped steps.
-        data = iter([form.cleaned_data for form in form_list])
-        form_data = [{} for _ in range(len(self.form_list))]
-        for step in sorted(form_dict.keys()):
-            form_data[int(step)] = next(data)
-
         try:
+            # Retrieve form data; include empty dictionaries for skipped steps.
+            data = iter([form.cleaned_data for form in form_list])
+            form_data = [{} for _ in range(len(self.form_list))]
+            for step in sorted(form_dict.keys()):
+                form_data[int(step)] = next(data)
+
             request_kwargs = {
                 'requester': self.request.user,
             }
@@ -2089,8 +2196,9 @@ class SavioProjectRequestWizard(UserPassesTestMixin, SessionWizardView):
             pi = self.__handle_pi_data(form_data)
             if allocation_type == SavioProjectAllocationRequest.ICA:
                 self.__handle_ica_allocation_type(form_data, request_kwargs)
-            if allocation_type == SavioProjectAllocationRequest.MOU:
-                self.__handle_mou_allocation_type(form_data, request_kwargs)
+            if allocation_type == SavioProjectAllocationRequest.RECHARGE:
+                self.__handle_recharge_allocation_type(
+                    form_data, request_kwargs)
             pooling_requested = self.__get_pooling_requested(form_data)
             if pooling_requested:
                 project = self.__handle_pool_with_existing_project(form_data)
@@ -2148,11 +2256,6 @@ class SavioProjectRequestWizard(UserPassesTestMixin, SessionWizardView):
         self.logger.error(
             f'Form received unexpected allocation type {allocation_type}.')
         raise ValueError(f'Invalid allocation type {allocation_type}.')
-
-    def __get_mou_extra_data(self, form_data):
-        """Return provided, extra MOU-related data."""
-        step_number = self.step_numbers_by_form_name['mou_extra_fields']
-        return form_data[step_number]
 
     def __get_pooling_requested(self, form_data):
         """Return whether or not pooling was requested."""
@@ -2217,20 +2320,20 @@ class SavioProjectRequestWizard(UserPassesTestMixin, SessionWizardView):
 
         return pi
 
-    def __handle_mou_allocation_type(self, form_data, request_kwargs):
-        """Perform MOU-specific handling.
+    def __handle_recharge_allocation_type(self, form_data, request_kwargs):
+        """Perform Recharge-specific handling.
 
         In particular, set fields in the given dictionary to be used
         during request creation. Set the extra_fields field from the
         given form data and set the state field to include an additional
         step."""
-        step_number = self.step_numbers_by_form_name['mou_extra_fields']
+        step_number = self.step_numbers_by_form_name['recharge_extra_fields']
         data = form_data[step_number]
-        extra_fields = savio_project_request_mou_extra_fields_schema()
+        extra_fields = savio_project_request_recharge_extra_fields_schema()
         for field in extra_fields:
             extra_fields[field] = data[field]
         request_kwargs['extra_fields'] = extra_fields
-        request_kwargs['state'] = savio_project_request_mou_state_schema()
+        request_kwargs['state'] = savio_project_request_recharge_state_schema()
 
     def __handle_create_new_project(self, form_data):
         """Create a new project and an allocation to the Savio Compute
@@ -2322,7 +2425,7 @@ class SavioProjectRequestWizard(UserPassesTestMixin, SessionWizardView):
             allocation_type = dictionary['allocation_type']
             non_poolable_allocation_types = (
                 SavioProjectAllocationRequest.ICA,
-                SavioProjectAllocationRequest.MOU,
+                SavioProjectAllocationRequest.RECHARGE,
             )
             if allocation_type not in non_poolable_allocation_types:
                 pool_allocations_form_data = self.get_cleaned_data_for_step(
@@ -2373,12 +2476,13 @@ def show_ica_extra_fields_form_condition(wizard):
     return cleaned_data.get('allocation_type', None) == ica_allocation_type
 
 
-def show_mou_extra_fields_form_condition(wizard):
+def show_recharge_extra_fields_form_condition(wizard):
     step_name = 'allocation_type'
     step = str(SavioProjectRequestWizard.step_numbers_by_form_name[step_name])
     cleaned_data = wizard.get_cleaned_data_for_step(step) or {}
-    mou_allocation_type = SavioProjectAllocationRequest.MOU
-    return cleaned_data.get('allocation_type', None) == mou_allocation_type
+    recharge_allocation_type = SavioProjectAllocationRequest.RECHARGE
+    return (
+        cleaned_data.get('allocation_type', None) == recharge_allocation_type)
 
 
 def show_pool_allocations_form_condition(wizard):
@@ -2387,7 +2491,7 @@ def show_pool_allocations_form_condition(wizard):
     cleaned_data = wizard.get_cleaned_data_for_step(step) or {}
     non_poolable_allocation_types = (
         SavioProjectAllocationRequest.ICA,
-        SavioProjectAllocationRequest.MOU,
+        SavioProjectAllocationRequest.RECHARGE,
     )
     allocation_type = cleaned_data.get('allocation_type', None)
     return allocation_type not in non_poolable_allocation_types
@@ -2403,32 +2507,44 @@ def show_pooled_project_selection_form_condition(wizard):
 class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
     template_name = 'project/project_request/savio/project_request_list.html'
     login_url = '/'
-
     # Show completed requests if True; else, show pending requests.
     completed = False
+
+    def get_queryset(self):
+        order_by = self.request.GET.get('order_by')
+        if order_by:
+            direction = self.request.GET.get('direction')
+            if direction == 'asc':
+                direction = ''
+            else:
+                direction = '-'
+            order_by = direction + order_by
+        else:
+            order_by = 'id'
+
+        return SavioProjectAllocationRequest.objects.order_by(order_by)
 
     def get_context_data(self, **kwargs):
         """Include either pending or completed requests. If the user is
         a superuser, show all such requests. Otherwise, show only those
         for which the user is a requester or PI."""
         context = super().get_context_data(**kwargs)
-
         args, kwargs = [], {}
 
+        request_list = self.get_queryset()
         user = self.request.user
-        if not user.is_superuser:
+        if not (user.is_superuser or user.has_perm('project.view_savioprojectallocationrequest')):
             args.append(Q(requester=user) | Q(pi=user))
-
         if self.completed:
             status__name__in = ['Approved - Complete', 'Denied']
         else:
             status__name__in = ['Under Review', 'Approved - Processing']
         kwargs['status__name__in'] = status__name__in
-
+        context['savio_project_request_list'] = request_list.filter(
+            *args, **kwargs)
         context['request_filter'] = (
             'completed' if self.completed else 'pending')
-        context['savio_project_request_list'] = \
-            SavioProjectAllocationRequest.objects.filter(*args, **kwargs)
+
         return context
 
 
@@ -2442,8 +2558,8 @@ class SavioProjectRequestMixin(object):
         }
         if allocation_type == SavioProjectAllocationRequest.ICA:
             form = SavioProjectICAExtraFieldsForm
-        elif allocation_type == SavioProjectAllocationRequest.MOU:
-            form = SavioProjectMOUExtraFieldsForm
+        elif allocation_type == SavioProjectAllocationRequest.RECHARGE:
+            form = SavioProjectRechargeExtraFieldsForm
         else:
             form = SavioProjectExtraFieldsForm
         return form(**kwargs)
@@ -2466,6 +2582,10 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         """UserPassesTestMixin tests."""
         if self.request.user.is_superuser:
             return True
+
+        if self.request.user.has_perm('project.view_savioprojectallocationrequest'):
+            return True
+
         if (self.request.user == self.request_obj.requester or
                 self.request.user == self.request_obj.pi):
             return True
@@ -2538,12 +2658,19 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         context['setup_status'] = self.__get_setup_status()
         context['is_checklist_complete'] = self.__is_checklist_complete()
 
-        context['is_allowed_to_manage_request'] = (
-            self.request.user.is_superuser)
+        context['is_allowed_to_manage_request'] = self.request.user.is_superuser
 
         return context
 
     def post(self, request, *args, **kwargs):
+        if not self.request.user.is_superuser:
+            message = 'You do not have permission to access this page.'
+            messages.error(request, message)
+            pk = self.request_obj.pk
+
+            return HttpResponseRedirect(
+                reverse('savio-project-request-detail', kwargs={'pk': pk}))
+
         if not self.__is_checklist_complete():
             message = 'Please complete the checklist before final activation.'
             messages.error(request, message)
@@ -2575,8 +2702,17 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         return HttpResponseRedirect(self.redirect)
 
     def __get_service_units_to_allocate(self):
-        """Return the number of service units to allocate to the
-        project if it were to be approved now."""
+        """Return the number of service units to allocate to the project
+        if it were to be approved now.
+
+        If the request was created as part of an allocation renewal, it
+        may be associated with at most one AllocationRenewalRequest. If
+        so, service units will be allocated when the latter request is
+        approved."""
+        if AllocationRenewalRequest.objects.filter(
+                new_project_request=self.request_obj).exists():
+            return settings.ALLOCATION_MIN
+
         allocation_type = self.request_obj.allocation_type
         now = utc_now_offset_aware()
         if allocation_type == SavioProjectAllocationRequest.CO:
@@ -2589,7 +2725,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         elif allocation_type == SavioProjectAllocationRequest.PCA:
             return prorated_allocation_amount(
                 settings.PCA_DEFAULT_ALLOCATION, now)
-        elif allocation_type == SavioProjectAllocationRequest.MOU:
+        elif allocation_type == SavioProjectAllocationRequest.RECHARGE:
             num_service_units = \
                 self.request_obj.extra_fields['num_service_units']
             return Decimal(f'{num_service_units:.2f}')
@@ -2607,8 +2743,8 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         else:
             pending = 'Pending'
             ica = SavioProjectAllocationRequest.ICA
-            mou = SavioProjectAllocationRequest.MOU
-            if allocation_type in (ica, mou):
+            recharge = SavioProjectAllocationRequest.RECHARGE
+            if allocation_type in (ica, recharge):
                 if allocation_type == ica:
                     if state['allocation_dates']['status'] == pending:
                         return pending
@@ -2625,7 +2761,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 class SavioProjectReviewEligibilityView(LoginRequiredMixin,
                                         UserPassesTestMixin,
                                         SavioProjectRequestMixin, FormView):
-    form_class = ProjectAllocationReviewForm
+    form_class = ReviewStatusForm
     template_name = (
         'project/project_request/savio/project_review_eligibility.html')
     login_url = '/'
@@ -2700,7 +2836,7 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
 
 class SavioProjectReviewReadinessView(LoginRequiredMixin, UserPassesTestMixin,
                                       SavioProjectRequestMixin, FormView):
-    form_class = ProjectAllocationReviewForm
+    form_class = ReviewStatusForm
     template_name = (
         'project/project_request/savio/project_review_readiness.html')
     login_url = '/'
@@ -2918,7 +3054,7 @@ class SavioProjectReviewMemorandumSignedView(LoginRequiredMixin,
         allocation_type = self.request_obj.allocation_type
         memorandum_types = (
             SavioProjectAllocationRequest.ICA,
-            SavioProjectAllocationRequest.MOU,
+            SavioProjectAllocationRequest.RECHARGE,
         )
         if allocation_type not in memorandum_types:
             message = (
@@ -3071,7 +3207,7 @@ class SavioProjectReviewSetupView(LoginRequiredMixin, UserPassesTestMixin,
 
 class SavioProjectReviewDenyView(LoginRequiredMixin, UserPassesTestMixin,
                                  SavioProjectRequestMixin, FormView):
-    form_class = SavioProjectReviewDenyForm
+    form_class = ReviewDenyForm
     template_name = (
         'project/project_request/savio/project_review_deny.html')
     login_url = '/'
@@ -3151,6 +3287,10 @@ class VectorProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
     def test_func(self):
         if self.request.user.is_superuser:
             return True
+
+        if self.request.user.has_perms('project.view_vectorprojectallocationrequest'):
+            return True
+
         signed_date = (
             self.request.user.userprofile.access_agreement_signed_date)
         if signed_date is not None:
@@ -3164,6 +3304,7 @@ class VectorProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
         try:
             project = self.__handle_create_new_project(form.cleaned_data)
             # Store form data in a request.
+
             pi = User.objects.get(username=settings.VECTOR_PI_USERNAME)
             status = ProjectAllocationRequestStatusChoice.objects.get(
                 name='Under Review')
@@ -3223,9 +3364,21 @@ class VectorProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
 class VectorProjectRequestListView(LoginRequiredMixin, TemplateView):
     template_name = 'project/project_request/vector/project_request_list.html'
     login_url = '/'
-
     # Show completed requests if True; else, show pending requests.
     completed = False
+
+    def get_queryset(self):
+        order_by = self.request.GET.get('order_by')
+        if order_by:
+            direction = self.request.GET.get('direction')
+            if direction == 'asc':
+                direction = ''
+            else:
+                direction = '-'
+            order_by = direction + order_by
+        else:
+            order_by = 'id'
+        return VectorProjectAllocationRequest.objects.order_by(order_by)
 
     def get_context_data(self, **kwargs):
         """Include either pending or completed requests. If the user is
@@ -3236,19 +3389,21 @@ class VectorProjectRequestListView(LoginRequiredMixin, TemplateView):
         args, kwargs = [], {}
 
         user = self.request.user
-        if not user.is_superuser:
-            args.append(Q(requester=user) | Q(pi=user))
 
+        request_list = self.get_queryset()
+        permission = 'project.view_vectorprojectallocationrequest'
+        if not (user.is_superuser or user.has_perm(permission)):
+            args.append(Q(requester=user) | Q(pi=user))
         if self.completed:
             status__name__in = ['Approved - Complete', 'Denied']
         else:
             status__name__in = ['Under Review', 'Approved - Processing']
         kwargs['status__name__in'] = status__name__in
-
+        context['vector_project_request_list'] = request_list.filter(
+            *args, **kwargs)
         context['request_filter'] = (
             'completed' if self.completed else 'pending')
-        context['vector_project_request_list'] = \
-            VectorProjectAllocationRequest.objects.filter(*args, **kwargs)
+
         return context
 
 
@@ -3270,6 +3425,11 @@ class VectorProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         """UserPassesTestMixin tests."""
         if self.request.user.is_superuser:
             return True
+
+        permission = 'project.view_vectorprojectallocationrequest'
+        if self.request.user.has_perm(permission):
+            return True
+
         if (self.request.user == self.request_obj.requester or
                 self.request.user == self.request_obj.pi):
             return True
@@ -3334,6 +3494,14 @@ class VectorProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         return context
 
     def post(self, request, *args, **kwargs):
+        if not self.request.user.is_superuser:
+            message = 'You do not have permission to view the this page.'
+            messages.error(request, message)
+            pk = self.request_obj.pk
+
+            return HttpResponseRedirect(
+                reverse('vector-project-request-detail', kwargs={'pk': pk}))
+
         if not self.__is_checklist_complete():
             message = 'Please complete the checklist before final activation.'
             messages.error(request, message)
@@ -3370,7 +3538,7 @@ class VectorProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
 class VectorProjectReviewEligibilityView(LoginRequiredMixin,
                                          UserPassesTestMixin, FormView):
-    form_class = ProjectAllocationReviewForm
+    form_class = ReviewStatusForm
     template_name = (
         'project/project_request/vector/project_review_eligibility.html')
     login_url = '/'
@@ -3526,3 +3694,108 @@ class VectorProjectReviewSetupView(LoginRequiredMixin, UserPassesTestMixin,
         return reverse(
             'vector-project-request-detail',
             kwargs={'pk': self.kwargs.get('pk')})
+
+
+class SavioProjectUndenyRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
+    login_url = '/'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user.is_superuser:
+            return True
+
+        message = (
+            'You do not have permission to undeny a project request.')
+        messages.error(self.request, message)
+
+    def dispatch(self, request, *args, **kwargs):
+        project_request = get_object_or_404(
+            SavioProjectAllocationRequest, pk=self.kwargs.get('pk'))
+
+        state_status = savio_request_state_status(project_request)
+        denied_status = ProjectAllocationRequestStatusChoice.objects.get(name='Denied')
+
+        if state_status != denied_status:
+            message = 'Savio project request has an unexpected status.'
+            messages.error(request, message)
+
+            return HttpResponseRedirect(
+                reverse('savio-project-request-detail',
+                        kwargs={'pk': self.kwargs.get('pk')}))
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        project_request = get_object_or_404(
+            SavioProjectAllocationRequest, pk=kwargs.get('pk'))
+        
+        if project_request.state['eligibility']['status'] == 'Denied':
+            project_request.state['eligibility']['status'] = 'Pending'
+
+        if project_request.state['readiness']['status'] == 'Denied':
+            project_request.state['readiness']['status'] = 'Pending'
+            
+        if project_request.state['other']['timestamp']:
+            project_request.state['other']['justification'] = ''
+            project_request.state['other']['timestamp'] = ''
+
+        project_request.status = savio_request_state_status(project_request)
+        project_request.save()
+
+        message = (
+            f'Project request {project_request.project.name} '
+            f'has been UNDENIED and will need to be reviewed again.')
+        messages.success(request, message)
+
+        return HttpResponseRedirect(
+            reverse('savio-project-request-detail',
+                    kwargs={'pk': kwargs.get('pk')}))
+
+
+class VectorProjectUndenyRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
+    login_url = '/'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user.is_superuser:
+            return True
+
+        message = (
+            'You do not have permission to undeny a project request.')
+        messages.error(self.request, message)
+
+    def dispatch(self, request, *args, **kwargs):
+        project_request = get_object_or_404(
+            VectorProjectAllocationRequest, pk=self.kwargs.get('pk'))
+
+        state_status = vector_request_state_status(project_request)
+        denied_status = ProjectAllocationRequestStatusChoice.objects.get(name='Denied')
+
+        if state_status != denied_status:
+            message = 'Vector project request has an unexpected status.'
+            messages.error(request, message)
+
+            return HttpResponseRedirect(
+                reverse('vector-project-request-detail',
+                        kwargs={'pk': self.kwargs.get('pk')}))
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        project_request = get_object_or_404(
+            VectorProjectAllocationRequest, pk=kwargs.get('pk'))
+
+        if project_request.state['eligibility']['status'] == 'Denied':
+            project_request.state['eligibility']['status'] = 'Pending'
+
+        project_request.status = vector_request_state_status(project_request)
+        project_request.save()
+
+        message = (
+            f'Project request {project_request.project.name} '
+            f'has been UNDENIED and will need to be reviewed again.')
+        messages.success(request, message)
+
+        return HttpResponseRedirect(
+            reverse('vector-project-request-detail',
+                    kwargs={'pk': kwargs.get('pk')}))
