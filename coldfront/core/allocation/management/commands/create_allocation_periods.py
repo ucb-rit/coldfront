@@ -18,8 +18,8 @@ class Command(BaseCommand):
         periods = [
             {
                 'name': 'AY21-22',
-                'start_date': date(2021, 6, 1),
-                'end_date': date(2022, 5, 31),
+                'start_date': date(2021, 10, 1),
+                'end_date': date(2022, 9, 30),
             },
         ]
         for period in periods:

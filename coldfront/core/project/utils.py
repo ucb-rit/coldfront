@@ -70,13 +70,7 @@ def add_project_user_status_choices(apps, schema_editor):
 def get_project_compute_resource_name(project_obj):
     """Return the name of the Compute Resource that corresponds to the
     given Project."""
-    if project_obj.name == 'abc':
-        resource_name = 'ABC Compute'
-    elif project_obj.name.startswith('vector_'):
-        resource_name = 'Vector Compute'
-    else:
-        resource_name = 'Savio Compute'
-    return resource_name
+    return 'Lawrencium Compute'
 
 
 def get_project_compute_allocation(project_obj):
