@@ -12,7 +12,7 @@ reponame: coldfront
 djangoprojname: coldfront 
 
 #####################################
-#BRC Config
+#LRC Config
 #####################################
 
 # The name of the PostgreSQL database.
