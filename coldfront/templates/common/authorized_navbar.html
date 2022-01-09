@@ -9,10 +9,10 @@
     <div class="navbar-collapse collapse" id="navbar-main">
       <ul class="navbar-nav">
         <li id="navbar-home" class="nav-item active">
-          <a class="nav-link" href="/">Home</a>
+          <a class="nav-link" id="navbar-home" href="/">Home</a>
         </li>
         <li id="navbar-center-summary" class="nav-item">
-          <a class="nav-link" href="{% url 'center-summary' %}">Center Summary</a>
+          <a class="nav-link" id="navbar-center-summary" href="{% url 'center-summary' %}">Center Summary</a>
         </li>
         <li id="navbar-project-menu" class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">Project</a>
@@ -40,7 +40,7 @@
         {% include 'common/navbar_invoice.html' %}
         {% endif %}
         <li id="navbar-help" class="nav-item">
-          <a class="nav-link" href="{% settings_value 'CENTER_HELP_URL' %}">Help</a>
+          <a class="nav-link" id="navbar-help" href="{% settings_value 'CENTER_HELP_URL' %}">Help</a>
         </li>
       </ul>
       <ul class="navbar-nav ml-auto">

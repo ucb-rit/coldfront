@@ -33,7 +33,7 @@ Savio Project Request - Existing PI
   <p>Note: Each PI may only have one PCA at a time, so any that have pending requests or active allocations are not selectable.</p>
 {% endif %}
 
-<form action="" method="post">
+<form action="" id="existingPiForm" name="existingPiForm" method="post">
   {% csrf_token %}
   <table>
     {{ wizard.management_form }}
@@ -64,7 +64,7 @@ Savio Project Request - Existing PI
       Previous Step
     </button>
   {% endif %}
-  <input class="btn btn-primary" type="submit" value="Next Step"/>
+  <input class="btn btn-primary" type="submit" id="next" value="Next Step"/>
 </form>
 <br>
 
@@ -75,6 +75,36 @@ Savio Project Request - Existing PI
     create: false,
     sortField: 'text'
   })
+</script>
+
+<script>
+
+    $('body').on('click', function(e) {
+        var target, href;
+        //Identifying target object
+        target = $(e.target);
+        //console.log('HERE', "|", e.target.tagName,"|", e.target.id,"|");
+        //If the target object is a link or is contained in a link we show the confirmation message
+        if (e.target.tagName === 'A' && e.target.id !== '') {
+            //Default behavior is prevented (the link doesn't work)
+            e.preventDefault();
+
+            if (window.confirm("Are you sure you want to leave? You will lose progress on the current form.")) {
+
+                //Identify link target
+                if (e.target.tagName === 'A') {
+                    href = target.attr('href');
+                } else {
+                    href = target.parents('a').first().attr('href');
+                }
+
+                //Redirect
+                window.location.href = href;
+
+            }
+        }
+    });
+
 </script>
 
 {% endblock %}
