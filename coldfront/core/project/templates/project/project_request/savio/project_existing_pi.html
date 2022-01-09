@@ -81,26 +81,17 @@ Savio Project Request - Existing PI
 
     $('body').on('click', function(e) {
         var target, href;
-        //Identifying target object
         target = $(e.target);
-        //console.log('HERE', "|", e.target.tagName,"|", e.target.id,"|");
-        //If the target object is a link or is contained in a link we show the confirmation message
         if (e.target.tagName === 'A' && e.target.id !== '') {
-            //Default behavior is prevented (the link doesn't work)
             e.preventDefault();
 
             if (window.confirm("Are you sure you want to leave? You will lose progress on the current form.")) {
-
-                //Identify link target
                 if (e.target.tagName === 'A') {
                     href = target.attr('href');
                 } else {
                     href = target.parents('a').first().attr('href');
                 }
-
-                //Redirect
                 window.location.href = href;
-
             }
         }
     });
