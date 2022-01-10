@@ -14,6 +14,7 @@ Savio Project Request - Survey
 
 
 {% block content %}
+<script type='text/javascript' src="{% static 'common/js/click_away_alert.js' %}"></script>
 <script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
 <link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
 
@@ -73,26 +74,5 @@ Savio Project Request - Survey
 <br>
 
 <p>Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}</p>
-
-<script>
-
-    $('body').on('click', function(e) {
-        var target, href;
-        target = $(e.target);
-        if (e.target.tagName === 'A' && e.target.id !== '') {
-            e.preventDefault();
-
-            if (window.confirm("Are you sure you want to leave? You will lose progress on the current form.")) {
-                if (e.target.tagName === 'A') {
-                    href = target.attr('href');
-                } else {
-                    href = target.parents('a').first().attr('href');
-                }
-                window.location.href = href;
-            }
-        }
-    });
-
-</script>
 
 {% endblock %}
