@@ -41,9 +41,9 @@ class Job(TimeStampedModel):
     startdate = models.DateTimeField(blank=True, null=True)
     enddate = models.DateTimeField(blank=True, null=True)
     userid = models.ForeignKey(
-        User, on_delete=models.CASCADE, blank=True, null=True)
+        User, on_delete=models.SET_NULL, blank=True, null=True)
     accountid = models.ForeignKey(
-        Project, on_delete=models.CASCADE, blank=True, null=True)
+        Project, on_delete=models.SET_NULL, blank=True, null=True)
     amount = models.DecimalField(
         max_digits=settings.DECIMAL_MAX_DIGITS,
         decimal_places=settings.DECIMAL_MAX_PLACES,
