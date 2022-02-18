@@ -40,3 +40,8 @@ if 'mozilla_django_oidc' in settings.EXTRA_APPS:
 
 if 'django_su.backends.SuBackend' in settings.EXTRA_AUTHENTICATION_BACKENDS:
     urlpatterns.append(path('su/', include('django_su.urls')))
+
+
+urlpatterns += [
+    path('__debug__/', include('debug_toolbar.urls')),
+]

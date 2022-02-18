@@ -59,8 +59,10 @@ INSTALLED_APPS += [
 
 # Savio-specific Additional Apps
 INSTALLED_APPS += [
+    'debug_toolbar',
     'flags',
     'formtools',
+    'mail_panel',
 ]
 
 # ------------------------------------------------------------------------------

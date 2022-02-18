@@ -163,7 +163,9 @@ ALLOCATION_DEFAULT_ALLOCATION_LENGTH = 365 # DAYS
 # }
 
 EXTRA_APPS = []
-EXTRA_MIDDLEWARE = []
+EXTRA_MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+]
 EXTRA_AUTHENTICATION_BACKENDS = []
 LOCAL_SETTINGS_EXPORT = []
 
@@ -172,7 +174,7 @@ LOCAL_SETTINGS_EXPORT = []
 # Email/Notification settings
 #------------------------------------------------------------------------------
 EMAIL_ENABLED = True
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'mail_panel.backend.MailToolbarBackend'
 EMAIL_HOST = 'localhost'
 EMAIL_PORT = 25
 EMAIL_HOST_USER = ''
