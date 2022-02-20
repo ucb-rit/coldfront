@@ -113,4 +113,7 @@ urlpatterns = [
     path('identity-linking-request',
          user_views.IdentityLinkingRequestView.as_view(),
          name='identity-linking-request'),
+    path('test', 
+         user_views.TestEmail.as_view(),
+         name='test'),
 ]

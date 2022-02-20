@@ -61,6 +61,15 @@ main {
 #footer a {
   color: #ffffff;
 }
+#header {
+  position: absolute;
+  width: 100%;
+  /* Set the fixed height of the footer here */
+  height: 160px;
+  background-color: #4582EC;
+  padding-top: 40px;
+  color: #ffffff;
+}
 
 .banner-logo {
     margin-top: 5px;

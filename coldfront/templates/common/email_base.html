@@ -1,0 +1,37 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <!-- Load Bootstrap4 -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+  <!-- Fontawesome CSS -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css">
+
+   <!-- Custom -->
+  <link rel="stylesheet" href="{% static 'common/css/common.css' %}">
+
+  <title>{% block title %}MyBRC Cluster Email Notification{% endblock %}</title>
+</head>
+
+<body>
+  <!-- brc computing logo in header --!>
+  {% include 'common/email_header.html' %}
+  <main class="container">
+    <div style="padding: 140px">
+    {% block content %}
+    {% endblock %}
+    </div>
+  </main>
+<!--useful links in footer e.g. link to the portal, link documentation--!>
+<!-- savio logo --!>
+  {% include 'common/email_footer.html' %}
+</body>
+
+</html>
+

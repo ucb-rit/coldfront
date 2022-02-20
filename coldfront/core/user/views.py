@@ -52,6 +52,12 @@ if EMAIL_ENABLED:
         'EMAIL_TICKET_SYSTEM_ADDRESS')
 
 
+class TestEmail(TemplateView):
+    template_name = 'user/account_activation_required.txt'
+    
+    def post(self, request):
+        return HttpResponse(template_name)
+
 @method_decorator(login_required, name='dispatch')
 class UserProfile(TemplateView):
     template_name = 'user/user_profile.html'

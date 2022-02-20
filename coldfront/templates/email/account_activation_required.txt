@@ -1,3 +1,9 @@
+{% extends "common/base.html" %} {% load common_tags %} {% block content %}
+{% load portal_tags %}
+{% load static %}
+
+#block of color with MyBRC Portal written
+#the text below should be centered
 Dear MyBRC Portal user,
 
 Thank you for registering for a MyBRC User Portal account. Please click on the link below to complete registration and activate your account.
@@ -6,3 +12,4 @@ Thank you for registering for a MyBRC User Portal account. Please click on the l
 
 Thank you,
 {{signature}}
+

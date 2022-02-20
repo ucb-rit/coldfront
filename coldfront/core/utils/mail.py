@@ -64,5 +64,6 @@ def send_email_template(subject, template_name, context, sender,
     receiver_list and cc list.
     """
     body = render_to_string(template_name, context)
+#    html = render_to_string(html_template_name, context)
 
     return send_email(subject, body, sender, receiver_list, cc=cc)
