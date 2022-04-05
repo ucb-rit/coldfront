@@ -194,7 +194,7 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
             is_billing_activity = (
                 attribute.allocation_attribute_type.name == 'Billing Activity')
             if is_billing_activity:
-                attribute.display_name = 'Billing ID'
+                attribute.display_name = 'Project ID'
                 try:
                     attribute.display_value = BillingActivity.objects.get(
                         pk=int(attribute.value)).full_id()

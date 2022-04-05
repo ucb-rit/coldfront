@@ -159,7 +159,7 @@ Allocation Detail
             </td>
             <td>
               {{ attribute.display_value }}
-              {% if attribute.display_name == 'Billing ID' and is_allowed_to_update_project %}
+              {% if attribute.display_name == 'Project ID' and is_allowed_to_update_project %}
                 <a href="{% url 'allocation-update-billing-id' allocation.pk %}">
                   <i class="fas fa-edit" aria-hidden="true"></i>
                 </a>
@@ -206,7 +206,7 @@ Allocation Detail
             <th scope="col">Usage</th>
             {% flag_enabled 'LRC_ONLY' as lrc_only %}
             {% if lrc_only %}
-              <th scope="col">Billing ID</th>
+              <th scope="col">Project ID</th>
             {% endif %}
           </tr>
         </thead>
@@ -228,7 +228,9 @@ Allocation Detail
             <td>{{ allocation_user_su_usages|get_value_from_dict:user.user.username }}</td>
             {% flag_enabled 'LRC_ONLY' as lrc_only %}
             {% if lrc_only %}
-              <td>{{ allocation_user_billing_ids|get_value_from_dict:user.user.username}}</td>
+              <td>
+                {{ allocation_user_billing_ids|get_value_from_dict:user.user.username}}
+              </td>
             {% endif %}
           </tr>
           {% endfor %}
