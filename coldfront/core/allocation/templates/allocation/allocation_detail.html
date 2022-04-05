@@ -150,17 +150,22 @@ Allocation Detail
         </thead>
         <tbody>
           {% for attribute in attributes %}
-          {% if attribute.allocation_attribute_type.is_private %}
-          <tr style="background-color:#eee">
-            <td><i class="fas fa-lock" aria-hidden="true"></i> {{attribute.display_name}}</td>
-            <td>{{attribute.display_value}}</td>
+          <tr style="{% if attribute.allocation_attribute_type.is_private %}background-color:#eee{% endif %}">
+            <td>
+              {% if attribute.allocation_attribute_type.is_private %}
+                <i class="fas fa-lock" aria-hidden="true"></i>
+              {% endif %}
+              {{ attribute.display_name }}
+            </td>
+            <td>
+              {{ attribute.display_value }}
+              {% if attribute.display_name == 'Billing ID' and is_allowed_to_update_project %}
+                <a href="{% url 'allocation-update-billing-id' allocation.pk %}">
+                  <i class="fas fa-edit" aria-hidden="true"></i>
+                </a>
+              {% endif %}
+            </td>
           </tr>
-          {% else %}
-          <tr>
-            <td>{{attribute.display_name}}</td>
-            <td>{{attribute.display_value}}</td>
-          </tr>
-          {% endif %}
           {% endfor %}
         </tbody>
       </table>

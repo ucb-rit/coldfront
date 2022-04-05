@@ -188,7 +188,7 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
             attributes = [attribute for attribute in allocation_obj.allocationattribute_set.filter(
                 allocation_attribute_type__is_private=False)]
 
-        # Annotate each attribute with a display value.
+        # Annotate each attribute.
         filtered_attributes = []
         for attribute in attributes:
             is_billing_activity = (
@@ -206,6 +206,7 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                 attribute.display_name = str(attribute)
                 attribute.display_value = attribute.value
                 filtered_attributes.append(attribute)
+        filtered_attributes.sort(key=lambda attribute: attribute.display_name)
 
         guage_data = []
         invalid_attributes = []
