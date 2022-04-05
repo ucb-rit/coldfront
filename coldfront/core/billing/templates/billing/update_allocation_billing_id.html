@@ -1,0 +1,52 @@
+{% extends "common/base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Allocation: Update Project ID
+{% endblock %}
+
+
+{% block content %}
+<script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
+<link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
+
+<h1>Update Project ID for {{ allocation.project.name }}</h1>
+<hr>
+
+<p>TODO.</p>
+
+<form action="" method="post">
+  {% csrf_token %}
+  {{ form|crispy }}
+  <input class="btn btn-primary" type="submit" value="Submit" />
+  <a href="{% url 'allocation-detail' allocation.pk %}" class="btn btn-secondary">
+    Cancel
+  </a>
+</form>
+
+{{ choices|json_script:"choices-data" }}
+
+<script>
+
+  let choices = JSON.parse(document.getElementById("choices-data").textContent);
+
+  let input = $('#id_billing_id').selectize({
+    create: function(input) {
+      return { value: input, text: input};
+    },
+    maxItems: 1,
+    sortField: 'text'
+  });
+  let selectize = input[0].selectize;
+  for (let i = 0; i < choices.length; i++) {
+    let choice = choices[i];
+    selectize.addOption({value: choice, text: choice});
+    selectize.addItem(choice);
+  }
+  selectize.setValue(choices[0]);
+
+</script>
+
+{% endblock %}

@@ -58,3 +58,15 @@ urlpatterns = [
     path('allocation-account-list/', allocation_views.AllocationAccountListView.as_view(),
          name='allocation-account-list'),
 ]
+
+
+from flags.state import flag_enabled
+import coldfront.core.billing.views as billing_views
+
+
+if flag_enabled('LRC_ONLY'):
+    urlpatterns += [
+        path('<int:pk>/update-billing-id',
+             billing_views.UpdateAllocationBillingIDView.as_view(),
+             name='allocation-update-billing-id'),
+    ]
