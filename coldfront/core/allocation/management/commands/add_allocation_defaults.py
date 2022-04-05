@@ -68,7 +68,7 @@ class Command(BaseCommand):
                     'has_usage': False,
                     'is_required': False,
                     'is_unique': True,
-                    'is_private': True,
+                    'is_private': False,
                 })
 
         choices = [
