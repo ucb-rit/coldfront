@@ -1,0 +1,71 @@
+{% load static %}
+
+
+<p>
+  Apply an action to the <i>selected</i> users. Changes will not be saved until
+  the "Save changes" button is clicked.
+</p>
+<form class="form-inline" id="applyActionForm">
+  <div class="form-group" style="margin-right: 4px;">
+    <label class="sr-only" for="selectAction">Select an action</label>
+    <select class="form-control" id="selectAction">
+
+      {% comment %}
+        make Project ID a select
+      {% endcomment %}
+
+      <option value="find_and_replace">Find and replace</option>
+      <option value="set_to">Set to</option>
+    </select>
+  </div>
+  <div class="form-group" id="findInput" style="margin-right: 4px;">
+    <label class="sr-only">Current Project ID</label>
+    <input class="form-control" id="currentProjectId" placeholder="Current Project ID" type="text">
+  </div>
+  <div class="form-group" style="margin-right: 4px;">
+    <label class="sr-only">Updated Project ID</label>
+    <input class="form-control" id="updatedProjectId" placeholder="Updated Project ID" type="text">
+  </div>
+  <button class="btn btn-primary" type="submit">Apply</button>
+</form>
+<hr>
+<br>
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover" id="updateUserFormsTable">
+    <thead>
+      <tr>
+        <th><input type="checkbox" class="check" id="selectAll"></th>
+        <th scope="col">Name</th>
+        <th scope="col">Email</th>
+        <th scope="col">Username</th>
+        <th scope="col">Current Project ID</th>
+
+        {% comment %}
+          add a column: whether the current is valid (check or x)
+        {% endcomment %}
+
+        <th scope="col">Updated Project ID</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for form in formset %}
+      <tr>
+        <td>{{ form.selected }}</td>
+        <td>{{ form.name.value }}</td>
+        <td>{{ form.email.value }}</td>
+        <td>{{ form.username.value }}</td>
+        <td>{{ form.current_billing_id.value }}</td>
+        <td>{{ form.updated_billing_id }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{{ formset.management_form }}
+
+
+<button class="btn btn-primary">Save changes</button>
+
+
+<script src="{% static 'core/billing/js/update_billing_ids_tool.js' %}" type="text/javascript"></script>

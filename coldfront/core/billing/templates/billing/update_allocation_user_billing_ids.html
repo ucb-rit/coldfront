@@ -1,0 +1,31 @@
+{% extends "common/base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Recharge Usage: Update Project IDs
+{% endblock %}
+
+
+{% block content %}
+
+<h1>Update Project IDs for Recharge Usage Fees for {{ allocation.project.name }}</h1>
+<hr>
+
+<p>
+  Update the Project IDs charged for job usage for each user in the allocation.
+</p>
+
+<hr>
+
+{% if formset|length > 0 %}
+  {% include "billing/update_billing_ids_tool.html" with formset=formset %}
+{% else %}
+  <div class="alert alert-info">
+    There are no users in the allocation.
+  </div>
+{% endif %}
+
+
+{% endblock %}

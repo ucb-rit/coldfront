@@ -193,6 +193,17 @@ Allocation Detail
   <div class="card-header">
     <h2 class="d-inline"><i class="fas fa-users" aria-hidden="true"></i> Users in Allocation </h2> <span
       class="badge badge-secondary">{{allocation_users.count}}</span>
+    {% if is_allowed_to_update_project %}
+      <div class="float-right">
+        <a
+            class="btn btn-success"
+            href="{% url 'allocation-users-update-billing-ids' allocation.pk %}"
+            role="button">
+          <i class="fas fa-edit" aria-hidden="true"></i>
+          Manage Project IDs
+        </a>
+      </div>
+    {% endif %}
   </div>
   <div class="card-body">
     <div class="table-responsive">

@@ -69,4 +69,7 @@ if flag_enabled('LRC_ONLY'):
         path('<int:pk>/update-billing-id',
              billing_views.UpdateAllocationBillingIDView.as_view(),
              name='allocation-update-billing-id'),
+        path('<int:pk>/update-user-billing-ids',
+             billing_views.UpdateAllocationUserBillingIDsView.as_view(),
+             name='allocation-users-update-billing-ids'),
     ]

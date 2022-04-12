@@ -6,6 +6,8 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
+from flags.state import flag_enabled
+
 import coldfront.core.portal.views as portal_views
 
 admin.site.site_header = 'ColdFront Administration'
@@ -40,3 +42,9 @@ if 'mozilla_django_oidc' in settings.EXTRA_APPS:
 
 if 'django_su.backends.SuBackend' in settings.EXTRA_AUTHENTICATION_BACKENDS:
     urlpatterns.append(path('su/', include('django_su.urls')))
+
+
+if flag_enabled('LRC_ONLY'):
+    urlpatterns += [
+        path('billing/', include('coldfront.core.billing.urls')),
+    ]
