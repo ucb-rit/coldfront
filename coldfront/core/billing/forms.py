@@ -33,3 +33,47 @@ class BillingIDValidationForm(forms.Form):
             raise forms.ValidationError(
                 f'Project ID {billing_id} is not currently valid.')
         return billing_id
+
+
+class BillingIDUpdateForm(BillingIDValidationForm):
+
+    selected = forms.BooleanField(initial=False, required=False)
+
+    name = forms.CharField(max_length=300, disabled=True, required=False)
+    email = forms.EmailField(max_length=100, disabled=True, required=False)
+    username = forms.CharField(max_length=150, disabled=True, required=False)
+
+    current_billing_id = forms.CharField(
+        disabled=True,
+        label='Current Project ID',
+        max_length=10,
+        required=False)
+
+    updated_billing_id = forms.CharField(
+        label='New Project ID',
+        max_length=10,
+        required=True,
+        validators=[
+            MinLengthValidator(10),
+            RegexValidator(
+                regex=r'^\d{6}-\d{3}$',
+                message=(
+                    'Project ID must have six digits, then a hyphen, then '
+                    'three digits (e.g., 123456-789).')),
+        ])
+
+    def clean_updated_billing_id(self):
+        billing_id = self.cleaned_data['updated_billing_id']
+        project_identifier, activity_identifier = billing_id.split('-')
+        if not BillingActivity.objects.filter(
+                billing_project__identifier=project_identifier,
+                identifier=activity_identifier,
+                is_valid=True).exists():
+            raise forms.ValidationError(
+                f'Project ID {billing_id} is not currently valid.')
+        return billing_id
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['updated_billing_id'].widget.attrs.update(
+            {'class': 'form-control'})
