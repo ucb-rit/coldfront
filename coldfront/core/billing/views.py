@@ -36,6 +36,27 @@ class BillableAllocationListView(LoginRequiredMixin, UserPassesTestMixin,
     template_name = 'billing/billable_allocation_list.html'
     context_object_name = 'allocation_list'
 
+    managed_project_pks = None
+
+    def dispatch(self, request, *args, **kwargs):
+        """TODO"""
+        # Retrieve primary keys for active Recharge Lawrencium Projects for
+        # which the requesting User is an active PI or Manager.
+        self.managed_project_pks = set(
+            ProjectUser.objects.filter(
+                Q(project__name__startswith='ac_') &
+                Q(project__status__name='Active') &
+                Q(role__name__in=['Principal Investigator', 'Manager']) &
+                Q(status__name='Active') &
+                Q(user=request.user)).values_list('project__pk', flat=True))
+        if not self.managed_project_pks:
+            message = (
+                'You do not have permission to update Project IDs for '
+                'recharge usage fees.')
+            messages.error(request, message)
+            return HttpResponseRedirect(reverse('home'))
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         """TODO"""
         context = super().get_context_data(**kwargs)
@@ -43,17 +64,9 @@ class BillableAllocationListView(LoginRequiredMixin, UserPassesTestMixin,
 
     def get_queryset(self):
         """TODO"""
-        requester = self.request.user
-        managed_project_pks = set(
-            ProjectUser.objects.filter(
-                Q(project__name__startswith='ac_') &
-                Q(project__status__name='Active') &
-                Q(role__name__in=['Principal Investigator', 'Manager']) &
-                Q(status__name='Active') &
-                Q(user=requester)).values_list('project__pk', flat=True))
         resource_name = 'LAWRENCIUM Compute'
         return Allocation.objects.filter(
-            project__pk__in=managed_project_pks,
+            project__pk__in=self.managed_project_pks,
             resources__name=resource_name,
             status__name='Active').order_by('pk')
 
