@@ -1,0 +1,64 @@
+{% extends "common/base.html" %}
+{% load common_tags %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Recharge Usage Fees
+{% endblock %}
+
+
+{% block content %}
+
+<h1>Recharge Usage Fees</h1>
+<hr>
+
+<p>
+  Below are all the Recharge allocations that you manage. You may update the
+  default Project ID for each allocation, as well as the Project IDs that are
+  charged for job usage for individual users under each allocation.
+</p>
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Project</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for allocation in allocation_list %}
+      <tr>
+        <td>
+          <a href="{% url 'allocation-detail' allocation.pk %}">
+            {{ allocation.pk }}
+          </a>
+        </td>
+        <td>{{ allocation.project.name }}</td>
+        <td>
+          <a
+              class="btn btn-success"
+              href="{% url 'allocation-update-billing-id' allocation.pk%}"
+              role="button">
+            <i class="fas fa-edit" aria-hidden="true"></i>
+            Default PID
+          </a>
+          <a
+              class="btn btn-success"
+              href="{% url 'allocation-users-update-billing-ids' allocation.pk %}"
+              role="button">
+            <i class="fas fa-edit" aria-hidden="true"></i>
+            User PIDs
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+
+{% endblock %}

@@ -16,6 +16,7 @@ from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
+from django.views.generic import ListView
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 
@@ -25,6 +26,40 @@ import logging
 
 
 logger = logging.getLogger(__name__)
+
+
+class BillableAllocationListView(LoginRequiredMixin, UserPassesTestMixin,
+                                 ListView):
+    """TODO"""
+
+    model = Allocation
+    template_name = 'billing/billable_allocation_list.html'
+    context_object_name = 'allocation_list'
+
+    def get_context_data(self, **kwargs):
+        """TODO"""
+        context = super().get_context_data(**kwargs)
+        return context
+
+    def get_queryset(self):
+        """TODO"""
+        requester = self.request.user
+        managed_project_pks = set(
+            ProjectUser.objects.filter(
+                Q(project__name__startswith='ac_') &
+                Q(project__status__name='Active') &
+                Q(role__name__in=['Principal Investigator', 'Manager']) &
+                Q(status__name='Active') &
+                Q(user=requester)).values_list('project__pk', flat=True))
+        resource_name = 'LAWRENCIUM Compute'
+        return Allocation.objects.filter(
+            project__pk__in=managed_project_pks,
+            resources__name=resource_name,
+            status__name='Active').order_by('pk')
+
+    def test_func(self):
+        """TODO"""
+        return True
 
 
 class UpdateAllocationBillingIDView(LoginRequiredMixin, UserPassesTestMixin,
@@ -88,7 +123,7 @@ class UpdateAllocationBillingIDView(LoginRequiredMixin, UserPassesTestMixin,
                     f'does not exist.')
                 logger.error(log_message)
                 messages.error(request, self.error_message)
-                return update_view_redirect
+                return allocation_view_redirect
             self.allocation_attribute_obj = attribute
             self.current_billing_id = billing_activity.full_id()
         else:
@@ -98,7 +133,7 @@ class UpdateAllocationBillingIDView(LoginRequiredMixin, UserPassesTestMixin,
                 f'{self.allocation_obj.pk}.')
             logger.error(log_message)
             messages.error(request, self.error_message)
-            return update_view_redirect
+            return allocation_view_redirect
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
