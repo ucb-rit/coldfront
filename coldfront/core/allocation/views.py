@@ -259,6 +259,13 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         context['allocation_users_removed_from_proj'] = \
             allocation_users.filter(status=allocation_user_status_choice_removed)
 
+        # Should the "Manage Project IDs" button be visible?
+        is_recharge_allocation = allocation_obj.project.name.startswith('ac_')
+        context['manage_project_ids_button_visible'] = (
+            context['is_allowed_to_update_project'] and is_recharge_allocation)
+        # Should the Project ID column be visible?
+        context['project_id_column_visible'] = is_recharge_allocation
+
         if self.request.user.is_superuser:
             notes = allocation_obj.allocationusernote_set.all()
         else:

@@ -193,7 +193,7 @@ Allocation Detail
   <div class="card-header">
     <h2 class="d-inline"><i class="fas fa-users" aria-hidden="true"></i> Users in Allocation </h2> <span
       class="badge badge-secondary">{{allocation_users.count}}</span>
-    {% if is_allowed_to_update_project %}
+    {% if manage_project_ids_button_visible %}
       <div class="float-right">
         <a
             class="btn btn-success"
@@ -216,7 +216,7 @@ Allocation Detail
 <!--            <th scope="col">Last Modified</th>-->
             <th scope="col">Usage</th>
             {% flag_enabled 'LRC_ONLY' as lrc_only %}
-            {% if lrc_only %}
+            {% if lrc_only and project_id_column_visible %}
               <th scope="col">Project ID</th>
             {% endif %}
           </tr>
@@ -238,7 +238,7 @@ Allocation Detail
 <!--            <td>{{ user.modified|date:"M. d, Y" }}</td>-->
             <td>{{ allocation_user_su_usages|get_value_from_dict:user.user.username }}</td>
             {% flag_enabled 'LRC_ONLY' as lrc_only %}
-            {% if lrc_only %}
+            {% if lrc_only and project_id_column_visible %}
               <td>
                 {{ allocation_user_billing_ids|get_value_from_dict:user.user.username}}
               </td>
