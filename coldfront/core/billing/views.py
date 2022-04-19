@@ -338,7 +338,8 @@ class UpdateUserBillingIDsView(LoginRequiredMixin, UserPassesTestMixin,
         managed_users = User.objects.filter(
             pk__in=managed_user_pks).order_by('username')
 
-        formset_class = formset_factory(BillingIDUpdateForm, max_num=managed_users.count())
+        formset_class = formset_factory(
+            BillingIDUpdateForm, max_num=managed_users.count())
         initial = []
         for user in managed_users:
             billing_activity = user.userprofile.billing_activity

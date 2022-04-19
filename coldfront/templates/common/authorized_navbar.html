@@ -34,15 +34,19 @@
         <li id="navbar-jobs-list" class="nav-item">
           <a class="nav-link" href="{% url 'slurm-job-list' %}">Jobs</a>
         </li>
-        <li id="navbar-billing-menu" class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
-            Billing
-          </a>
-          <div class="dropdown-menu">
-            <a id="navbar-billable-allocation-list" class="dropdown-item" href="{% url 'billable-allocation-list' %}">Recharge Usage Fees</a>
-            <a id="navbar-user-billing-ids" class="dropdown-item" href="{% url 'update-user-billing-ids' %}">User Account Fees</a>
-          </div>
-        </li>
+        {% if BILLING_MENU_VISIBLE %}
+          <li id="navbar-billing-menu" class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
+              Billing
+            </a>
+            <div class="dropdown-menu">
+              {% if BILLING_MENU_RECHARGE_TAB_VISIBLE %}
+                <a id="navbar-billable-allocation-list" class="dropdown-item" href="{% url 'billable-allocation-list' %}">Recharge Usage Fees</a>
+              {% endif %}
+              <a id="navbar-user-billing-ids" class="dropdown-item" href="{% url 'update-user-billing-ids' %}">User Account Fees</a>
+            </div>
+          </li>
+        {% endif %}
         {% if request.user.is_superuser %}
         {% include 'common/navbar_admin.html' %}
         {% elif request.user.is_staff %}
