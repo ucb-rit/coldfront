@@ -120,8 +120,15 @@ User Profile{% if not user == viewed_user %}: {{ viewed_user.username }}{% endif
         {% flag_enabled 'LRC_ONLY' as lrc_only %}
         {% if lrc_only %}
           <tr>
-            <th>Project ID for Monthly User Account Fee</th>
-            <td>{{ monthly_user_account_fee_billing_id }}</td>
+            <th>
+              Project ID for Monthly User Account Fee
+              {% with content='This is the Project ID that will be charged for the monthly user account fee, applicable to users of the Lawrencium cluster only. It may be modified by PIs and managers of your projects.' %}
+                {% include 'common/help_text_popover.html' with content=content title='Monthly User Account Fee Project ID' accessibility_help_text='Monthly User Account Fee Project ID Help Text' %}
+              {% endwith %}:
+            </th>
+            <td>
+              <p>{{ monthly_user_account_fee_billing_id }}</p>
+            </td>
           </tr>
         {% endif %}
         <tr>
