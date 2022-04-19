@@ -1,13 +1,3 @@
-<a href="#" data-toggle="popover" title="Service Units" data-trigger="hover" data-content=
-        "For <span class='badge badge-primary'>RUNNING</span> jobs, the amount reflects the estimated number of service units
-                              that a job will use. For <span class='badge badge-success'>COMPLETED</span> jobs, the amount is the number of service
-                              units that a job did use.">
-  <span class="accessibility-link-text">Service Units</span>
-  <i class="fas fa-info-circle"></i>
-</a>
-
-<script>
-  $(document).ready(function() {
-      $('[data-toggle="popover"]').popover({html:true});
-  });
-</script>
+{% with content="For <span class='badge badge-primary'>RUNNING</span> jobs, the amount reflects the estimated number of service units that a job will use. For <span class='badge badge-success'>COMPLETED</span> jobs, the amount is the number of service units that a job did use." %}
+  {% include 'common/help_text_popover.html' with content=content title='Service Units' accessibility_link_text='Service Units Help Text' %}
+{% endwith %}

@@ -285,10 +285,9 @@ Project Detail
             <th>Email</th>
             <th>
               Role
-              <a href="#" data-toggle="popover" title="Role" data-trigger="hover" data-content="Manager role grants user access to add/remove users, and allocations to the project.">
-                <span class="accessibility-link-text">Role Help Text</span>
-                <i class="fas fa-info-circle"></i>
-              </a>
+              {% with content="Manager role grants user access to add/remove users, and allocations to the project." %}
+                {% include 'common/help_text_popover.html' with content=content title='Role' accessibility_link_text='Role Help Text' %}
+              {% endwith %}
             </th>
             <th>Cluster Username</th>
             <th>Project Access on Cluster</th>

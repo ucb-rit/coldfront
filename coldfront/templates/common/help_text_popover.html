@@ -1,0 +1,15 @@
+<a
+    data-content="{{ content }}"
+    data-toggle="popover"
+    data-trigger="hover"
+    href="#"
+    title="{{ title }}">
+  <span class="accessibility-link-text">{{ accessibility_link_text }}</span>
+  <i class="fas fa-info-circle"></i>
+</a>
+
+<script>
+  $(document).ready(function() {
+    $('[data-toggle="popover"]').popover({html: true});
+  });
+</script>
