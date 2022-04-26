@@ -1,7 +1,8 @@
 from django.urls import path
+from flags.urls import flagged_paths
 
 import coldfront.core.allocation.views as allocation_views
-
+import coldfront.core.billing.views as billing_views
 
 urlpatterns = [
     path('', allocation_views.AllocationListView.as_view(), name='allocation-list'),
@@ -60,16 +61,12 @@ urlpatterns = [
 ]
 
 
-from flags.state import flag_enabled
-import coldfront.core.billing.views as billing_views
-
-
-if flag_enabled('LRC_ONLY'):
+with flagged_paths('LRC_ONLY') as f_path:
     urlpatterns += [
-        path('<int:pk>/update-billing-id',
-             billing_views.UpdateAllocationBillingIDView.as_view(),
-             name='allocation-update-billing-id'),
-        path('<int:pk>/update-user-billing-ids',
-             billing_views.UpdateAllocationUserBillingIDsView.as_view(),
-             name='allocation-users-update-billing-ids'),
+        f_path('<int:pk>/update-billing-id',
+               billing_views.UpdateAllocationBillingIDView.as_view(),
+               name='allocation-update-billing-id'),
+        f_path('<int:pk>/update-user-billing-ids',
+               billing_views.UpdateAllocationUserBillingIDsView.as_view(),
+               name='allocation-users-update-billing-ids'),
     ]
