@@ -10,7 +10,7 @@ administrators to handle these requests and manage users and projects. The
 portal is built on top of ColdFront.
 
 The MyLRC User Portal is an upcoming second instance of the same system,
-developed for Lawrencium Research Computing.
+developed for Laboratory Research Computing.
 
 ColdFront is an open source resource allocation system designed to provide a
 central portal for administration, reporting, and measuring scientific impact
