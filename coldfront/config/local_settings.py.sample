@@ -395,8 +395,8 @@ GOOGLE_OAUTH2_KEY_FILE = "/tmp/credentials.json"
 #------------------------------------------------------------------------------
 
 FLAGS = {
-    'BRC_ONLY': [],
-    'LRC_ONLY': [],
+    'BRC_ONLY': [{'condition': 'boolean', 'value': False}],
+    'LRC_ONLY': [{'condition': 'boolean', 'value': True}],
 }
 
 # -----------------------------------------------------------------------------
