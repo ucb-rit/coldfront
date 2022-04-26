@@ -3,6 +3,7 @@ from coldfront.core.allocation.models import AllocationUserAttribute
 from coldfront.core.billing.forms import BillingIDUpdateForm
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.models import BillingActivity
+from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 
 from django.contrib import messages
@@ -20,6 +21,7 @@ from django.views.generic import ListView
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 
+import functools
 import logging
 
 # TODO: Replace this module with a directory as needed.
@@ -40,15 +42,26 @@ class BillableAllocationListView(LoginRequiredMixin, UserPassesTestMixin,
 
     def dispatch(self, request, *args, **kwargs):
         """TODO"""
-        # Retrieve primary keys for active Recharge Lawrencium Projects for
-        # which the requesting User is an active PI or Manager.
-        self.managed_project_pks = set(
-            ProjectUser.objects.filter(
-                Q(project__name__startswith='ac_') &
-                Q(project__status__name='Active') &
-                Q(role__name__in=['Principal Investigator', 'Manager']) &
-                Q(status__name='Active') &
-                Q(user=request.user)).values_list('project__pk', flat=True))
+        # TODO: Create a new staff permission instead of using is_staff.
+        # TODO: Consider allowing owners, even if they don't have Recharge
+        # TODO: projects.
+        if self.request.user.is_superuser or self.request.user.is_staff:
+            self.managed_project_pks = set(
+                Project.objects.filter(
+                    Q(name__startswith='ac_') &
+                    Q(status__name='Active')
+                ).values_list('pk', flat=True))
+        else:
+            # Retrieve primary keys for active Recharge Lawrencium Projects for
+            # which the requesting User is an active PI or Manager.
+            self.managed_project_pks = set(
+                ProjectUser.objects.filter(
+                    Q(project__name__startswith='ac_') &
+                    Q(project__status__name='Active') &
+                    Q(role__name__in=['Principal Investigator', 'Manager']) &
+                    Q(status__name='Active') &
+                    Q(user=request.user)
+                ).values_list('project__pk', flat=True))
         if not self.managed_project_pks:
             message = (
                 'You do not have permission to update Project IDs for '
@@ -295,19 +308,31 @@ class UpdateUserBillingIDsView(LoginRequiredMixin, UserPassesTestMixin,
 
     def dispatch(self, request, *args, **kwargs):
         """TODO"""
-        # Retrieve primary keys for active Lawrencium Projects for which the
-        # requesting User is an active PI or Manager.
-        prefix_condition = (
-            Q(project__name__startswith='ac_') |
-            Q(project__name__startswith='fc_') |
-            Q(project__name__startswith='lr_'))
-        self.managed_project_pks = set(
-            ProjectUser.objects.filter(
-                prefix_condition &
-                Q(project__status__name='Active') &
-                Q(role__name__in=['Principal Investigator', 'Manager']) &
-                Q(status__name='Active') &
-                Q(user=request.user)).values_list('project__pk', flat=True))
+        # TODO: Create a new staff permission instead of using is_staff.
+        # TODO: Consider allowing owners, even if they don't have Lawrencium.
+        # TODO: projects.
+        if self.request.user.is_superuser or self.request.user.is_staff:
+            is_lawrencium_project_condition = \
+                self.is_lawrencium_project_q_condition('name__startswith')
+            self.managed_project_pks = set(
+                Project.objects.filter(
+                    is_lawrencium_project_condition &
+                    Q(status__name='Active')
+                ).values_list('pk', flat=True))
+            # Retrieve primary keys for active Lawrencium Projects for which
+            # the requesting User is an active PI or Manager.
+        else:
+            is_lawrencium_project_condition = \
+                self.is_lawrencium_project_q_condition(
+                    'project__name__startswith')
+            self.managed_project_pks = set(
+                ProjectUser.objects.filter(
+                    is_lawrencium_project_condition &
+                    Q(project__status__name='Active') &
+                    Q(role__name__in=['Principal Investigator', 'Manager']) &
+                    Q(status__name='Active') &
+                    Q(user=request.user)
+                ).values_list('project__pk', flat=True))
         if not self.managed_project_pks:
             message = (
                 'You do not have permission to update Project IDs for user '
@@ -365,3 +390,21 @@ class UpdateUserBillingIDsView(LoginRequiredMixin, UserPassesTestMixin,
     def test_func(self):
         """TODO"""
         return True
+
+    @staticmethod
+    def is_lawrencium_project_q_condition(lookup_parameter_name):
+        """Return a Q object used to filter a queryset based on whether
+        each instance's related project is a Lawrencium project.
+
+        Parameters:
+            - lookup_parameter_name: A string ending in
+              'name__startswith' that depends on the queryset's
+              relationship to the Project model. For example, to filter
+              Projects, use 'name__startswith'; to filter ProjectUsers,
+              use 'project__name__startswith'.
+        """
+        project_prefixes = ('ac_', 'lr_', 'pc_')
+        q_conditions = [
+            Q(**{lookup_parameter_name: prefix})
+            for prefix in project_prefixes]
+        return functools.reduce(lambda a, b: a | b, q_conditions)
