@@ -3,6 +3,8 @@ from coldfront.core.allocation.models import AllocationUserAttribute
 from coldfront.core.billing.forms import BillingIDUpdateForm
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.models import BillingActivity
+from coldfront.core.billing.utils import is_billing_id_well_formed
+from coldfront.core.billing.utils import is_project_activity_pair_valid
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 
@@ -13,10 +15,12 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.forms import formset_factory
 from django.http import HttpResponseRedirect
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import ListView
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
@@ -82,6 +86,40 @@ class BillableAllocationListView(LoginRequiredMixin, UserPassesTestMixin,
             project__pk__in=self.managed_project_pks,
             resources__name=resource_name,
             status__name='Active').order_by('pk')
+
+    def test_func(self):
+        """TODO"""
+        return True
+
+
+class IsBillingIDValidView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """A view for returning whether a provided billing ID is valid,
+    based on a response from an external service."""
+
+    def get(self, request, *args, **kwargs):
+        """Return a JsonResponse with a key 'is_valid' and boolean
+        value."""
+        billing_id = self.kwargs.get('billing_id')
+
+        key = 'is_valid'
+        response_dict = {key: True}
+
+        if not is_billing_id_well_formed(billing_id):
+            response_dict[key] = False
+            return JsonResponse(response_dict)
+
+        project_id, activity_id = billing_id.split('-')
+        try:
+            response_dict[key] = is_project_activity_pair_valid(
+                project_id, activity_id)
+        except Exception as e:
+            message = (
+                f'Failed to determine if Billing ID pair ({project_id}, '
+                f'{activity_id}) is valid.')
+            logger.error(message)
+            raise e
+
+        return JsonResponse(response_dict)
 
     def test_func(self):
         """TODO"""

@@ -48,6 +48,9 @@ REQUEST_APPROVAL_CC_LIST = []
 # The regex for a valid LBL billing ID (six digits, a hyphen, three digits.)
 LBL_BILLING_ID_REGEX = "^\d{6}-\d{3}$"
 
+# The URL to the LBL-run API that returns data about billing IDs.
+LBL_BILLING_API_URL = ""
+
 #------------------------------------------------------------------------------
 # General Center Information
 #------------------------------------------------------------------------------
