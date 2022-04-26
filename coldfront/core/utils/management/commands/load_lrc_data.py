@@ -11,6 +11,7 @@ from coldfront.core.allocation.utils import next_allocation_start_datetime
 from coldfront.core.allocation.utils import set_allocation_user_attribute_value
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.billing.models import BillingProject
+from coldfront.core.billing.utils import is_billing_id_well_formed
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
@@ -506,7 +507,7 @@ class Command(BaseCommand):
                     {user_account_fee_pid},
                     set(job_usage_fee_pids.values()))
                 all_pids_well_formed = all(
-                    self.is_billing_id_well_formed(pid) for pid in all_pids)
+                    is_billing_id_well_formed(pid) for pid in all_pids)
                 if not all_pids_well_formed:
                     self.logger.error(
                         f'The entry {fields} has one or more malformed PIDs.')
@@ -701,11 +702,6 @@ class Command(BaseCommand):
                     'email': user_email,
                 }
         return user_data
-
-    @staticmethod
-    def is_billing_id_well_formed(billing_id):
-        """Return whether the given string is a valid billing ID."""
-        return bool(re.match('\d{6}-\d{3}', billing_id))
 
     @staticmethod
     def is_email_address_valid(email):

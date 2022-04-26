@@ -1,6 +1,7 @@
 from coldfront.core.billing.models import BillingActivity
 
 from django import forms
+from django.conf import settings
 from django.core.validators import MinLengthValidator
 from django.core.validators import RegexValidator
 
@@ -17,7 +18,7 @@ class BillingIDValidationForm(forms.Form):
         validators=[
             MinLengthValidator(10),
             RegexValidator(
-                regex=r'^\d{6}-\d{3}$',
+                regex=settings.LBL_BILLING_ID_REGEX,
                 message=(
                     'Project ID must have six digits, then a hyphen, then '
                     'three digits (e.g., 123456-789).')),
@@ -56,7 +57,7 @@ class BillingIDUpdateForm(BillingIDValidationForm):
         validators=[
             MinLengthValidator(10),
             RegexValidator(
-                regex=r'^\d{6}-\d{3}$',
+                regex=settings.LBL_BILLING_ID_REGEX,
                 message=(
                     'Project ID must have six digits, then a hyphen, then '
                     'three digits (e.g., 123456-789).')),
