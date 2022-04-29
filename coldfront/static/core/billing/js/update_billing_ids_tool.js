@@ -4,6 +4,22 @@
 
 $(document).ready(function() {
 
+  // Run a function when the user stops typing.
+  // Source: https://stackoverflow.com/a/4220182
+  var doneTypingMs = 200;
+
+  // Detect when the user stops typing in the updatedProjectId field.
+  var updatedProjectIdTypingTimer;
+
+  $('#updatedProjectId').on('keyup', function() {
+    clearTimeout(updatedProjectIdTypingTimer);
+    updatedProjectIdTypingTimer = setTimeout(validateProjectId, doneTypingMs);
+  });
+
+  $('#updatedProjectId').on('keydown', function() {
+    clearTimeout(updatedProjectIdTypingTimer);
+  });
+
   $('#applyActionForm').on('submit', function(event) {
     event.preventDefault();
     let action = $('#selectAction').find('option:selected').val();
@@ -60,6 +76,42 @@ $(document).ready(function() {
         $(`#id_update_ids_form-${index}-updated_billing_id`).val(setId);
       }
     });
+  }
+
+  function validateProjectId() {
+
+    let updatedProjectIdElement = document.getElementById('updatedProjectId');
+
+    document.getElementById('validating-tooltip').style.display = 'none';
+    updatedProjectIdElement.classList.remove('is-invalid');
+    updatedProjectIdElement.classList.remove('is-valid');
+
+    let updatedProjectId = updatedProjectIdElement.value;
+
+    if (updatedProjectId.length === 0) {
+      return;
+    }
+
+    const regex = new RegExp('^\\d{6}-\\d{3}$');
+    if (!regex.test(updatedProjectId)) {
+      updatedProjectIdElement.classList.add('is-invalid');
+      return;
+    }
+
+    document.getElementById('validating-tooltip').style.display = '';
+
+    let url = `/billing/is-billing-id-valid/${updatedProjectId}/`;
+    axios.get(url)
+      .then(response => {
+        let data = response.data;
+        let isValid = data.is_valid;
+        document.getElementById('validating-tooltip').style.display = 'none';
+        if (isValid) {
+            updatedProjectIdElement.classList.add('is-valid');
+        } else {
+            updatedProjectIdElement.classList.add('is-invalid');
+        }
+      });
   }
 
 });
