@@ -234,7 +234,7 @@ def send_account_activation_email(user):
     sender = import_from_settings('EMAIL_SENDER')
     receiver_list = [user.email, ]
 
-    send_email_template(subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 def send_account_already_active_email(user):

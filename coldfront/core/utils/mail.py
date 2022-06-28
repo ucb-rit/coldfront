@@ -67,6 +67,11 @@ def send_email_template(subject, template_name, context, sender,
     html_body = None
     if html_template:
         html_body = render_to_string(html_template, context)
+        template_name = 'common/email_base.html'
+        context = {
+            'message': html_body
+        }
+        html_body = render_to_string(template_name, context)
 
     return send_email(subject,
                       plain_body,

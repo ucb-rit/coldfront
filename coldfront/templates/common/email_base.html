@@ -1,37 +1,70 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
+<!-- 
+explaination of the use of tables 
+There is basically no documentation except for all of these email service marketin-style documentation
+
+where I found that it's best to use <table>:
+https://templates.mailchimp.com/getting-started/html-email-basics/
+
+the basic template I used:
+https://blog.hubspot.com/website/html-email-table
+
+--!>
+
 
 <head>
   <!-- Required meta tags -->
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-  <!-- Load Bootstrap4 -->
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-
-  <!-- Fontawesome CSS -->
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css">
-
-   <!-- Custom -->
-  <link rel="stylesheet" href="{% static 'common/css/common.css' %}">
-
-  <title>{% block title %}MyBRC Cluster Email Notification{% endblock %}</title>
 </head>
 
-<body>
-  <!-- brc computing logo in header --!>
-  {% include 'common/email_header.html' %}
-  <main class="container">
-    <div style="padding: 140px">
-    {% block content %}
-    {% endblock %}
-    </div>
-  </main>
-<!--useful links in footer e.g. link to the portal, link documentation--!>
-<!-- savio logo --!>
-  {% include 'common/email_footer.html' %}
-</body>
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+  <tr style="background-color: #eeeeee;">
+<!-- header --!>
+     <table role="presentation" border="0" cellspacing="0" width="40%" height="2%" align="center"style="
+          background-color: #0c2d4d; 
+          font-size: .4vw;
+          color: white;
+          letter-spacing: 1px;
+        "> 
+       <tr>
+        <td>
+         <h1 style="float: left; font-weight: lighter; margin: 8px;"> MyBRC - <small>Berkeley Research Computing <br>  Access Management System</small></h1>
+         <img style="float: right; margin: 8px; max-width: 10%; height: auto; width: auto;" src="https://mybrc.brc.berkeley.edu/static/core/portal/imgs/brc_logo.png" alt="brc_logo">
+        </td>
+       </tr>
+     </table>
+
+<!-- body --!>
+     <table role="presentation" border="0" cellspacing="0" width="40%" height="90%" align="center">
+      <tr>
+       <td align="left" style="padding-left: 10px; background-color: white; color: black; font-size: 1vw; font-weight: light">
+        {{ message|safe }}         
+        <!--useful links in footer e.g. link to the portal, link documentation--!>
+        <p align=center style="font-size: .6vw">
+         <a href="https://mybrc.brc.berkeley.edu">MyBRC Portal</a> 
+         <a href="https://docs-research-it.berkeley.edu/services/high-performance-computing/">Savio Documentation</a>
+       </p> 
+      </td>
+     </tr> 
+    </table>
+
+<!-- footer --!>
+   <table role="presentation" border="0" cellspacing="0" width="40%" height="2%" align="center"> 
+   <tr align="center" style="
+     background-color: #0c2d4d; 
+     justify-content: center;
+     font-size: .4vw;
+     font-weight: light">
+    <td>
+     <img src="https://mybrc.brc.berkeley.edu/static/core/portal/imgs/research_it_logo.png" style="max-width: 20%; height: auto; width: auto;"</img>
+     <img src="https://mybrc.brc.berkeley.edu/static/core/portal/imgs/uc_berkeley_logo.png" style="max-width: 10%; height: auto; width: auto;"</img>
+    </td>
+   </tr>
+   <tr>
+  </table>
+
+ </tr>
 
 </html>
 
