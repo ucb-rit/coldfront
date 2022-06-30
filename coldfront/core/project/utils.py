@@ -63,7 +63,7 @@ def send_added_to_project_notification_email(project, project_user):
     receiver_list = [user.email]
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list)
+        subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 def send_project_join_notification_email(project, project_user):
@@ -115,7 +115,7 @@ def send_project_join_request_approval_email(project, project_user):
     sender = settings.EMAIL_SENDER
     receiver_list = [user.email]
 
-    send_email_template(subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 def send_project_join_request_denial_email(project, project_user):
@@ -140,7 +140,7 @@ def send_project_join_request_denial_email(project, project_user):
     sender = settings.EMAIL_SENDER
     receiver_list = [user.email]
 
-    send_email_template(subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 def send_new_cluster_access_request_notification_email(project, project_user):
@@ -165,7 +165,7 @@ def send_new_cluster_access_request_notification_email(project, project_user):
     sender = settings.EMAIL_SENDER
     receiver_list = settings.EMAIL_ADMIN_LIST
 
-    send_email_template(subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 class ProjectClusterAccessRequestRunnerError(Exception):
