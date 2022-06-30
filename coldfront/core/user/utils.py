@@ -261,7 +261,7 @@ def send_account_already_active_email(user):
     receiver_list = [user.email]
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list)
+        subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 def send_email_verification_email(email_address):
@@ -281,7 +281,7 @@ def send_email_verification_email(email_address):
     sender = import_from_settings('EMAIL_SENDER')
     receiver_list = [email_address.email, ]
 
-    send_email_template(subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 def update_user_primary_email_address(email_address):
