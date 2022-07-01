@@ -516,7 +516,7 @@ def send_new_project_request_admin_notification_email(request):
     sender = settings.EMAIL_SENDER
     receiver_list = settings.EMAIL_ADMIN_LIST
 
-    send_email_template(subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 def send_new_project_request_pi_notification_email(request):
@@ -574,7 +574,7 @@ def send_new_project_request_pi_notification_email(request):
     sender = settings.EMAIL_SENDER
     receiver_list = [pi.email]
 
-    send_email_template(subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 def send_project_request_approval_email(request, num_service_units):
@@ -611,7 +611,7 @@ def send_project_request_approval_email(request, num_service_units):
     cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc)
+        subject, template_name, context, sender, receiver_list, cc=cc, html_template=template_name)
 
 
 def send_project_request_denial_email(request):
@@ -646,7 +646,7 @@ def send_project_request_denial_email(request):
     cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc)
+        subject, template_name, context, sender, receiver_list, cc=cc, html_template=template_name)
 
 
 def send_project_request_pooling_email(request):
@@ -682,7 +682,7 @@ def send_project_request_pooling_email(request):
 
     sender = settings.EMAIL_SENDER
     receiver_list = request.project.managers_and_pis_emails()
-    send_email_template(subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 def send_project_request_processing_email(request):
@@ -716,7 +716,7 @@ def send_project_request_processing_email(request):
     cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc)
+        subject, template_name, context, sender, receiver_list, cc=cc, html_template=template_name)
 
 
 class VectorProjectProcessingRunner(ProjectProcessingRunner):

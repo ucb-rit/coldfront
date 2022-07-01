@@ -402,7 +402,8 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                         'email/allocation_denied.txt',
                         template_context,
                         EMAIL_SENDER,
-                        email_receiver_list
+                        email_receiver_list,
+                        html_template='email/allocation_denied.txt'
                     )
 
             allocation_obj.refresh_from_db()
@@ -747,7 +748,8 @@ class AllocationCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
                 'email/new_allocation_request.txt',
                 template_context,
                 EMAIL_SENDER,
-                [EMAIL_TICKET_SYSTEM_ADDRESS, ]
+                [EMAIL_TICKET_SYSTEM_ADDRESS, ],
+                html_template='email/new_allocation_request.txt'
             )
 
         return super().form_valid(form)
@@ -1183,7 +1185,8 @@ class AllocationActivateRequestView(LoginRequiredMixin, UserPassesTestMixin, Vie
                 'email/allocation_activated.txt',
                 template_context,
                 EMAIL_SENDER,
-                email_receiver_list
+                email_receiver_list,
+                html_template='email/allocation_activated.txt'
             )
 
         return HttpResponseRedirect(reverse('allocation-request-list'))
@@ -1242,7 +1245,8 @@ class AllocationDenyRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
                 'email/allocation_denied.txt',
                 template_context,
                 EMAIL_SENDER,
-                email_receiver_list
+                email_receiver_list,
+                html_template='email/allocation_denied.txt'
             )
 
         return HttpResponseRedirect(reverse('allocation-request-list'))
@@ -1420,7 +1424,8 @@ class AllocationRenewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView)
                     'email/allocation_renewed.txt',
                     template_context,
                     EMAIL_SENDER,
-                    [EMAIL_TICKET_SYSTEM_ADDRESS, ]
+                    [EMAIL_TICKET_SYSTEM_ADDRESS, ],
+                    html_template='email/allocation_renewed.txt'
                 )
 
             messages.success(request, 'Allocation renewed successfully')
@@ -2051,7 +2056,9 @@ class AllocationClusterAccountActivateRequestView(LoginRequiredMixin,
                 template_context,
                 EMAIL_SENDER,
                 [self.user_obj.email],
-                cc=cc_list)
+                cc=cc_list,
+                html_template=template
+            )
 
         return super().form_valid(form)
 
@@ -2169,7 +2176,9 @@ class AllocationClusterAccountDenyRequestView(LoginRequiredMixin,
                 template_context,
                 EMAIL_SENDER,
                 [self.user_obj.email],
-                cc=cc_list)
+                cc=cc_list,
+                html_template=template
+            )
 
         return HttpResponseRedirect(
             reverse('allocation-cluster-account-request-list'))

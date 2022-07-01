@@ -105,7 +105,7 @@ class Command(BaseCommand):
 
         try:
             send_email_template(
-                subject, template_name, context, sender, recipients)
+                subject, template_name, context, sender, recipients, html_template=template_name)
         except Exception as e:
             message = 'Failed to send notification email. Details:'
             self.stderr.write(self.style.ERROR(message))

@@ -89,7 +89,7 @@ class AllocationAdditionDenialRunner(AllocationAdditionRunnerBase):
             sender = settings.EMAIL_SENDER
             receiver_list = project_email_receiver_list(project)
             send_email_template(
-                subject, template_name, context, sender, receiver_list)
+                subject, template_name, context, sender, receiver_list, html_template=template_name)
         except Exception as e:
             logger.error('Failed to send notification email. Details:')
             logger.exception(e)
@@ -166,7 +166,7 @@ class AllocationAdditionProcessingRunner(AllocationAdditionRunnerBase):
             sender = settings.EMAIL_SENDER
             receiver_list = project_email_receiver_list(project)
             send_email_template(
-                subject, template_name, context, sender, receiver_list)
+                subject, template_name, context, sender, receiver_list, html_template=template_name)
         except Exception as e:
             logger.error('Failed to send notification email. Details:')
             logger.exception(e)

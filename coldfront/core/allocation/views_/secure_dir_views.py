@@ -629,7 +629,9 @@ class SecureDirManageUsersCompleteStatusView(LoginRequiredMixin,
                         f'secure_dir_manage_user_request_complete.txt',
                         context,
                         settings.EMAIL_SENDER,
-                        [user.email])
+                        [user.email],
+                        html_template='email/secure_dir_request/secure_dir_manage_user_request_complete.txt'
+                    )
 
                 except Exception as e:
                     message = f'Failed to send notification email.'
@@ -746,7 +748,9 @@ class SecureDirManageUsersDenyRequestView(LoginRequiredMixin,
                         f'secure_dir_manage_user_request_denied.txt',
                         context,
                         settings.EMAIL_SENDER,
-                        [user.email])
+                        [user.email],
+                        html_template='email/secure_dir_request/secure_dir_manage_user_request_denied.txt'
+                    )
 
                 except Exception as e:
                     message = 'Failed to send notification email.'

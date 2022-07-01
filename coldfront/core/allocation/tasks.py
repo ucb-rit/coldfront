@@ -89,7 +89,8 @@ def send_expiry_emails():
                                 'email/allocation_expiring.txt',
                                 template_context,
                                 EMAIL_SENDER,
-                                email_receiver_list
+                                email_receiver_list,
+                                html_template='email/allocation_expiring.txt'
                                 )
 
             logger.info('Allocation to {} expiring in {} days email sent to {}.'.format(
@@ -134,7 +135,8 @@ def send_expiry_emails():
                             'email/allocation_expiring.txt',
                             template_context,
                             EMAIL_SENDER,
-                            email_receiver_list
+                            email_receiver_list,
+                            html_template='email/allocation_expiring.txt'
                             )
 
         logger.info('Allocation to {} expiring in {} days email sent to {}.'.format(
@@ -181,7 +183,8 @@ def send_expiry_emails():
                             'email/allocation_expired.txt',
                             template_context,
                             EMAIL_SENDER,
-                            email_receiver_list
+                            email_receiver_list,
+                            html_template='email/allocation_expired.txt'
                             )
 
         logger.info('Allocation to {} expired email sent to {}.'.format(

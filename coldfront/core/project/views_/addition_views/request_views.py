@@ -252,7 +252,7 @@ class AllocationAdditionRequestView(LoginRequiredMixin, UserPassesTestMixin,
             receiver_list = settings.EMAIL_ADMIN_LIST
 
             send_email_template(
-                subject, template_name, context, sender, receiver_list)
+                subject, template_name, context, sender, receiver_list, html_template=template_name)
         except Exception as e:
             message = 'Failed to send notification email. Details:'
             logger.error(message)

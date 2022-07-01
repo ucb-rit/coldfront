@@ -118,7 +118,9 @@ class ProjectRemovalRequestRunner(object):
                     'email/project_removal/project_removal.txt',
                     template_context,
                     email_sender,
-                    [user.email])
+                    [user.email],
+                    html_template='email/project_removal/project_removal.txt'
+                )
 
             # Email cluster administrators.
             template_context = {
@@ -131,4 +133,6 @@ class ProjectRemovalRequestRunner(object):
                 'email/project_removal/project_removal_admin.txt',
                 template_context,
                 email_sender,
-                email_admin_list)
+                email_admin_list,
+                html_template='email/project_removal/project_removal_admin.txt'
+                )
