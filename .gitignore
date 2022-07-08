@@ -27,3 +27,4 @@ main.yml
 .vagrant
 .coverage
 htmlcov
+*.sh

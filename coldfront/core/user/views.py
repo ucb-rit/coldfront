@@ -56,7 +56,7 @@ if EMAIL_ENABLED:
 
 
 class TestEmail(TemplateView):
-    template_name = 'user/account_activation_required.txt'
+    template_name = 'user/account_activation_required.html'
     
     def post(self, request):
         return HttpResponse(template_name)

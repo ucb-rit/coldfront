@@ -630,7 +630,7 @@ class SecureDirManageUsersCompleteStatusView(LoginRequiredMixin,
                         context,
                         settings.EMAIL_SENDER,
                         [user.email],
-                        html_template='email/secure_dir_request/secure_dir_manage_user_request_complete.txt'
+                        html_template='email/secure_dir_request/secure_dir_manage_user_request_complete.html'
                     )
 
                 except Exception as e:
@@ -749,7 +749,7 @@ class SecureDirManageUsersDenyRequestView(LoginRequiredMixin,
                         context,
                         settings.EMAIL_SENDER,
                         [user.email],
-                        html_template='email/secure_dir_request/secure_dir_manage_user_request_denied.txt'
+                        html_template='email/secure_dir_request/secure_dir_manage_user_request_denied.html'
                     )
 
                 except Exception as e:

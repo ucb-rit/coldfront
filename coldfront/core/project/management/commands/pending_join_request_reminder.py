@@ -108,7 +108,7 @@ class Command(BaseCommand):
                         context,
                         settings.EMAIL_SENDER,
                         [user.email],
-                        html_template='email/project_join_request/pending_project_join_request_user.txt')
+                        html_template='email/project_join_request/pending_project_join_request_user.html')
                     emails_sent += 1
                 except Exception as e:
                     message = 'Failed to send reminder email. Details:'

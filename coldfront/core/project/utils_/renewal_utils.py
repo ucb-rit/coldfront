@@ -222,8 +222,10 @@ def send_allocation_renewal_request_approval_email(request, num_service_units):
         return
 
     subject = f'{str(request)} Approved'
-    template_name = (
+    plain_body = (
         'email/project_renewal/project_renewal_request_approved.txt')
+    html_body = (
+        'email/project_renewal/project_renewal_request_approved.html')
 
     context = {
         'allocation_period': request.allocation_period,
@@ -241,7 +243,7 @@ def send_allocation_renewal_request_approval_email(request, num_service_units):
     cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc, html_template=template_name)
+        subject, plain_body, context, sender, receiver_list, cc=cc, html_template=html_body)
 
 
 def send_allocation_renewal_request_denial_email(request):
@@ -253,7 +255,8 @@ def send_allocation_renewal_request_denial_email(request):
         return
 
     subject = f'{str(request)} Denied'
-    template_name = 'email/project_renewal/project_renewal_request_denied.txt'
+    plain_body = 'email/project_renewal/project_renewal_request_denied.txt'
+    html_body = 'email/project_renewal/project_renewal_request_denied.html'
     reason = allocation_renewal_request_denial_reason(request)
 
     context = {
@@ -273,7 +276,7 @@ def send_allocation_renewal_request_denial_email(request):
     cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc, html_template=template_name)
+        subject, plain_body, context, sender, receiver_list, cc=cc, html_template=html_body)
 
 
 def send_allocation_renewal_request_processing_email(request,
@@ -286,8 +289,10 @@ def send_allocation_renewal_request_processing_email(request,
         return
 
     subject = f'{str(request)} Processed'
-    template_name = (
+    plain_body = (
         'email/project_renewal/project_renewal_request_processed.txt')
+    html_body = (
+        'email/project_renewal/project_renewal_request_processed.html')
 
     context = {
         'center_name': settings.CENTER_NAME,
@@ -304,7 +309,7 @@ def send_allocation_renewal_request_processing_email(request,
     cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc, html_template=template_name)
+        subject, plain_body, context, sender, receiver_list, cc=cc, html_template=html_body)
 
 
 def send_new_allocation_renewal_request_admin_notification_email(request):
@@ -315,8 +320,10 @@ def send_new_allocation_renewal_request_admin_notification_email(request):
         return
 
     subject = 'New Allocation Renewal Request'
-    template_name = (
+    plain_body = (
         'email/project_renewal/admins_new_project_renewal_request.txt')
+    html_email = (
+        'email/project_renewal/admins_new_project_renewal_request.html')
 
     requester = request.requester
     requester_str = (
@@ -339,7 +346,7 @@ def send_new_allocation_renewal_request_admin_notification_email(request):
     sender = settings.EMAIL_SENDER
     receiver_list = settings.EMAIL_ADMIN_LIST
 
-    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_email)
 
 
 def send_new_allocation_renewal_request_pi_notification_email(request):
@@ -354,7 +361,8 @@ def send_new_allocation_renewal_request_pi_notification_email(request):
         return
 
     subject = 'New Allocation Renewal Request under Your Name'
-    template_name = 'email/project_renewal/pi_new_project_renewal_request.txt'
+    plain_body = 'email/project_renewal/pi_new_project_renewal_request.txt'
+    html_email = 'email/project_renewal/pi_new_project_renewal_request.html'
 
     requester = request.requester
     requester_str = (
@@ -382,7 +390,7 @@ def send_new_allocation_renewal_request_pi_notification_email(request):
     sender = settings.EMAIL_SENDER
     receiver_list = [pi.email]
 
-    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_email)
 
 
 def send_new_allocation_renewal_request_pooling_notification_email(request):
@@ -395,9 +403,12 @@ def send_new_allocation_renewal_request_pooling_notification_email(request):
 
     subject = (
         f'New request to pool with your project {request.post_project.name}')
-    template_name = (
+    plain_body = (
         'email/project_renewal/'
         'managers_new_pooled_project_renewal_request.txt')
+    html_body = (
+        'email/project_renewal/'
+        'managers_new_pooled_project_renewal_request.html')
 
     requester = request.requester
     requester_str = (
@@ -418,7 +429,7 @@ def send_new_allocation_renewal_request_pooling_notification_email(request):
     sender = settings.EMAIL_SENDER
     receiver_list = request.post_project.managers_and_pis_emails()
 
-    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
 
 def allocation_renewal_request_denial_reason(request):

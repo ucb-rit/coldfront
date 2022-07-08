@@ -1232,7 +1232,7 @@ class ProjectReviewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                     {'url': url},
                     EMAIL_SENDER,
                     [EMAIL_DIRECTOR_EMAIL_ADDRESS, ],
-                    html_template='email/new_project_review.txt'
+                    html_template='email/new_project_review.html'
                 )
 
             messages.success(request, 'Project reviewed successfully.')

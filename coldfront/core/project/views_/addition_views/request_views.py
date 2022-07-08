@@ -228,8 +228,10 @@ class AllocationAdditionRequestView(LoginRequiredMixin, UserPassesTestMixin,
         given new AllocationAdditionRequest."""
         try:
             subject = 'New Service Units Purchase Request'
-            template_name = (
+            plain_body = (
                 'email/project_allocation_addition/admins_new_request.txt')
+            html_body = (
+                'email/project_allocation_addition/admins_new_request.html')
 
             requester = request.requester
             requester_str = (
@@ -252,7 +254,7 @@ class AllocationAdditionRequestView(LoginRequiredMixin, UserPassesTestMixin,
             receiver_list = settings.EMAIL_ADMIN_LIST
 
             send_email_template(
-                subject, template_name, context, sender, receiver_list, html_template=template_name)
+                subject, plain_body, context, sender, receiver_list, html_template=html_body)
         except Exception as e:
             message = 'Failed to send notification email. Details:'
             logger.error(message)

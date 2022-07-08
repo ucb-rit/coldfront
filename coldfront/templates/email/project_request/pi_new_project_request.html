@@ -1,0 +1,16 @@
+Dear {{ pi_str }},<br>
+<br>
+A user ({{ requester_str }}) has made a {% if pooling %}pooled {% endif %}project request with you as the Principal Investigator (PI) via the MyBRC User Portal.<br>
+<br>
+You may view the details of the request here: {{ review_url }}.<br>
+<br>
+If approved, you will become a PI on the project. The requesting user will become a manager and gain cluster access under the project's allowance.<br>
+<br>
+If you would like to prevent this, or have any questions, please contact us at {{ support_email }}.<br>
+<br>
+{% if pi_is_active %}You already have a portal account and may log in here: {{ login_url }}{% else %}A portal account was automatically created on your behalf. Please complete the following steps:<br>
+1. Click on the following link to complete registration and activate your account: {{ activation_url }}<br>
+2. Set your password here: {{ password_reset_url }}{% endif %}<br>
+<br>
+Thank you,<br>
+{{ signature }}<br>

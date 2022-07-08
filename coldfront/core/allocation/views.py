@@ -375,7 +375,8 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                         'email/allocation_activated.txt',
                         template_context,
                         EMAIL_SENDER,
-                        email_receiver_list
+                        email_receiver_list,
+                        html_template='email/allocation_activated.html'
                     )
 
             elif old_status != 'Denied' and new_status == 'Denied':
@@ -403,7 +404,7 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                         template_context,
                         EMAIL_SENDER,
                         email_receiver_list,
-                        html_template='email/allocation_denied.txt'
+                        html_template='email/allocation_denied.html'
                     )
 
             allocation_obj.refresh_from_db()
@@ -749,7 +750,7 @@ class AllocationCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
                 template_context,
                 EMAIL_SENDER,
                 [EMAIL_TICKET_SYSTEM_ADDRESS, ],
-                html_template='email/new_allocation_request.txt'
+                html_template='email/new_allocation_request.html'
             )
 
         return super().form_valid(form)
@@ -1186,7 +1187,7 @@ class AllocationActivateRequestView(LoginRequiredMixin, UserPassesTestMixin, Vie
                 template_context,
                 EMAIL_SENDER,
                 email_receiver_list,
-                html_template='email/allocation_activated.txt'
+                html_template='email/allocation_activated.html'
             )
 
         return HttpResponseRedirect(reverse('allocation-request-list'))
@@ -1246,7 +1247,7 @@ class AllocationDenyRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
                 template_context,
                 EMAIL_SENDER,
                 email_receiver_list,
-                html_template='email/allocation_denied.txt'
+                html_template='email/allocation_denied.html'
             )
 
         return HttpResponseRedirect(reverse('allocation-request-list'))
@@ -1425,7 +1426,7 @@ class AllocationRenewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView)
                     template_context,
                     EMAIL_SENDER,
                     [EMAIL_TICKET_SYSTEM_ADDRESS, ],
-                    html_template='email/allocation_renewed.txt'
+                    html_template='email/allocation_renewed.html'
                 )
 
             messages.success(request, 'Allocation renewed successfully')
@@ -2033,8 +2034,8 @@ class AllocationClusterAccountActivateRequestView(LoginRequiredMixin,
 
         if EMAIL_ENABLED:
             subject = 'Cluster Access Activated'
-            template = 'email/cluster_access_activated.txt'
-
+            plain_body = 'email/cluster_access_activated.txt'
+            html_body = 'email/cluster_access_activated.html'
             CENTER_USER_GUIDE = import_from_settings('CENTER_USER_GUIDE')
             CENTER_LOGIN_GUIDE = import_from_settings('CENTER_LOGIN_GUIDE')
             CENTER_HELP_EMAIL = import_from_settings('CENTER_HELP_EMAIL')
@@ -2052,12 +2053,12 @@ class AllocationClusterAccountActivateRequestView(LoginRequiredMixin,
 
             send_email_template(
                 subject,
-                template,
+                plain_body,
                 template_context,
                 EMAIL_SENDER,
                 [self.user_obj.email],
                 cc=cc_list,
-                html_template=template
+                html_template=html_body
             )
 
         return super().form_valid(form)
@@ -2158,7 +2159,8 @@ class AllocationClusterAccountDenyRequestView(LoginRequiredMixin,
             view = reverse(view_name, kwargs={'pk': allocation_obj.pk})
 
             subject = 'Cluster Access Denied'
-            template = 'email/cluster_access_denied.txt'
+            plain_body = 'email/cluster_access_denied.txt'
+            html_body = 'email/cluster_access_denied.html'
             template_context = {
                 'user': self.user_obj,
                 'center_name': EMAIL_CENTER_NAME,
@@ -2172,12 +2174,12 @@ class AllocationClusterAccountDenyRequestView(LoginRequiredMixin,
 
             send_email_template(
                 subject,
-                template,
+                plain_body,
                 template_context,
                 EMAIL_SENDER,
                 [self.user_obj.email],
                 cc=cc_list,
-                html_template=template
+                html_template=html_body
             )
 
         return HttpResponseRedirect(

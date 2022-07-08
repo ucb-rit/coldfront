@@ -48,8 +48,8 @@ def send_added_to_project_notification_email(project, project_user):
         return
 
     subject = f'Added to Project {project.name}'
-    template_name = 'email/added_to_project.txt'
-
+    plain_body = 'email/added_to_project.txt'
+    html_body = 'email/added_to_project.html'
     user = project_user.user
 
     context = {
@@ -63,7 +63,7 @@ def send_added_to_project_notification_email(project, project_user):
     receiver_list = [user.email]
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, html_template=template_name)
+        subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
 
 def send_project_join_notification_email(project, project_user):
@@ -101,7 +101,8 @@ def send_project_join_request_approval_email(project, project_user):
         return
 
     subject = f'Request to Join {project.name} Approved'
-    template_name = 'email/project_join_request_approved.txt'
+    plain_body = 'email/project_join_request_approved.txt'
+    html_body = 'email/project_join_request_approved.html'
 
     user = project_user.user
 
@@ -115,7 +116,7 @@ def send_project_join_request_approval_email(project, project_user):
     sender = settings.EMAIL_SENDER
     receiver_list = [user.email]
 
-    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
 
 def send_project_join_request_denial_email(project, project_user):
@@ -126,8 +127,8 @@ def send_project_join_request_denial_email(project, project_user):
         return
 
     subject = f'Request to Join {project.name} Denied'
-    template_name = 'email/project_join_request_denied.txt'
-
+    plain_body = 'email/project_join_request_denied.txt'
+    html_body = 'email/project_join_request_denied.html'
     user = project_user.user
 
     context = {
@@ -140,7 +141,7 @@ def send_project_join_request_denial_email(project, project_user):
     sender = settings.EMAIL_SENDER
     receiver_list = [user.email]
 
-    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
 
 def send_new_cluster_access_request_notification_email(project, project_user):
@@ -151,7 +152,8 @@ def send_new_cluster_access_request_notification_email(project, project_user):
         return
 
     subject = 'New Cluster Access Request'
-    template_name = 'email/new_cluster_access_request.txt'
+    plain_body = 'email/new_cluster_access_request.txt'
+    html_body = 'email/new_cluster_access_request.txt'
 
     user = project_user.user
     user_string = f'{user.first_name} {user.last_name} ({user.email})'
@@ -164,7 +166,7 @@ def send_new_cluster_access_request_notification_email(project, project_user):
 
     sender = settings.EMAIL_SENDER
     receiver_list = settings.EMAIL_ADMIN_LIST
-    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
 
 class ProjectClusterAccessRequestRunnerError(Exception):

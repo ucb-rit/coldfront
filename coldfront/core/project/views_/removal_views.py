@@ -523,7 +523,7 @@ class ProjectRemovalRequestCompleteStatusView(LoginRequiredMixin,
                     template_context,
                     EMAIL_SENDER,
                     [curr_user.email],
-                    html_template='email/project_removal/project_removal_complete.txt'
+                    html_template='email/project_removal/project_removal_complete.html'
                 )
 
         return super().form_valid(form)

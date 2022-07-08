@@ -486,7 +486,8 @@ def send_new_project_request_admin_notification_email(request):
     else:
         subject = 'New Project Request'
         pooling = False
-    template_name = 'email/project_request/admins_new_project_request.txt'
+    plain_body= 'email/project_request/admins_new_project_request.txt'
+    html_body = 'email/project_request/admins_new_project_request.html'
 
     requester = request.requester
     requester_str = (
@@ -516,7 +517,7 @@ def send_new_project_request_admin_notification_email(request):
     sender = settings.EMAIL_SENDER
     receiver_list = settings.EMAIL_ADMIN_LIST
 
-    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
 
 def send_new_project_request_pi_notification_email(request):
@@ -536,7 +537,8 @@ def send_new_project_request_pi_notification_email(request):
     else:
         subject = 'New Project Request under Your Name'
         pooling = False
-    template_name = 'email/project_request/pi_new_project_request.txt'
+    plain_body = 'email/project_request/pi_new_project_request.txt'
+    html_body = 'email/project_request/pi_new_project_request.html'
 
     requester = request.requester
     requester_str = (
@@ -574,7 +576,7 @@ def send_new_project_request_pi_notification_email(request):
     sender = settings.EMAIL_SENDER
     receiver_list = [pi.email]
 
-    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
 
 def send_project_request_approval_email(request, num_service_units):
@@ -588,12 +590,16 @@ def send_project_request_approval_email(request, num_service_units):
 
     if isinstance(request, SavioProjectAllocationRequest) and request.pool:
         subject = f'Pooled Project Request ({request.project.name}) Approved'
-        template_name = (
+        plain_body = (
             'email/project_request/pooled_project_request_approved.txt')
+        html_body = (
+            'email/project_request/pooled_project_request_approved.html')
     else:
         subject = f'New Project Request ({request.project.name}) Approved'
-        template_name = (
+        plain_body = (
             'email/project_request/new_project_request_approved.txt')
+        html_body = (
+            'email/project_request/new_project_request_approved.html')
 
     project_url = project_detail_url(request.project)
     context = {
@@ -611,7 +617,7 @@ def send_project_request_approval_email(request, num_service_units):
     cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc, html_template=template_name)
+        subject, plain_body, context, sender, receiver_list, cc=cc, html_template=html_body)
 
 
 def send_project_request_denial_email(request):
@@ -624,11 +630,14 @@ def send_project_request_denial_email(request):
 
     if isinstance(request, SavioProjectAllocationRequest) and request.pool:
         subject = f'Pooled Project Request ({request.project.name}) Denied'
-        template_name = (
+        plain_body = (
             'email/project_request/pooled_project_request_denied.txt')
+        html_body = (
+            'email/project_request/pooled_project_request_denied.html')
     else:
         subject = f'New Project Request ({request.project.name}) Denied'
-        template_name = 'email/project_request/new_project_request_denied.txt'
+        plain_body = 'email/project_request/new_project_request_denied.txt'
+        html_body = 'email/project_request/new_project_request_denied.html'
 
     reason = request.denial_reason()
 
@@ -646,7 +655,7 @@ def send_project_request_denial_email(request):
     cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc, html_template=template_name)
+        subject, plain_body, context, sender, receiver_list, cc=cc, html_template=html_body)
 
 
 def send_project_request_pooling_email(request):
@@ -695,12 +704,16 @@ def send_project_request_processing_email(request):
 
     if isinstance(request, SavioProjectAllocationRequest) and request.pool:
         subject = f'Pooled Project Request ({request.project.name}) Processed'
-        template_name = (
+        plain_body = (
             'email/project_request/pooled_project_request_processed.txt')
+        html_body= (
+            'email/project_request/pooled_project_request_processed.html')
     else:
         subject = f'New Project Request ({request.project.name}) Processed'
-        template_name = (
+        plain_body = (
             'email/project_request/new_project_request_processed.txt')
+        html_body = (
+            'email/project_request/new_project_request_processed.html')
 
     project_url = project_detail_url(request.project)
     context = {
@@ -716,7 +729,7 @@ def send_project_request_processing_email(request):
     cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc, html_template=template_name)
+        subject, plain_body, context, sender, receiver_list, cc=cc, html_template=html_body)
 
 
 class VectorProjectProcessingRunner(ProjectProcessingRunner):

@@ -76,8 +76,10 @@ class AllocationAdditionDenialRunner(AllocationAdditionRunnerBase):
             reason = request.denial_reason()
 
             subject = f'Service Units Purchase Request ({project.name}) Denied'
-            template_name = (
+            plain_body= (
                 'email/project_allocation_addition/request_denied.txt')
+            html_body = (
+                'email/project_allocation_addition/request_denied.html')
             context = {
                 'num_sus': str(request.num_service_units),
                 'project_name': project.name,
@@ -89,7 +91,7 @@ class AllocationAdditionDenialRunner(AllocationAdditionRunnerBase):
             sender = settings.EMAIL_SENDER
             receiver_list = project_email_receiver_list(project)
             send_email_template(
-                subject, template_name, context, sender, receiver_list, html_template=template_name)
+                subject, plain_body, context, sender, receiver_list, html_template=html_body)
         except Exception as e:
             logger.error('Failed to send notification email. Details:')
             logger.exception(e)
@@ -153,8 +155,10 @@ class AllocationAdditionProcessingRunner(AllocationAdditionRunnerBase):
             project = request.project
             subject = (
                 f'Service Units Purchase Request ({project.name}) Processed')
-            template_name = (
+            plain_body = (
                 'email/project_allocation_addition/request_processed.txt')
+            html_body = (
+                'email/project_allocation_addition/request_processed.html')
             context = {
                 'added_sus': str(added_service_units),
                 'project_name': project.name,
@@ -166,7 +170,7 @@ class AllocationAdditionProcessingRunner(AllocationAdditionRunnerBase):
             sender = settings.EMAIL_SENDER
             receiver_list = project_email_receiver_list(project)
             send_email_template(
-                subject, template_name, context, sender, receiver_list, html_template=template_name)
+                subject, plain_body, context, sender, receiver_list, html_template=html_body)
         except Exception as e:
             logger.error('Failed to send notification email. Details:')
             logger.exception(e)

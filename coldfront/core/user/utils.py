@@ -220,7 +220,8 @@ def send_account_activation_email(user):
         return
 
     subject = 'Account Activation Required'
-    template_name = 'email/account_activation_required.txt'
+    plain_body = 'email/account_activation_required.txt'
+    html_body = 'email/account_activation_required.html'
     context = {
         'center_name': import_from_settings('CENTER_NAME', ''),
         'activation_url': account_activation_url(user),
@@ -234,7 +235,7 @@ def send_account_activation_email(user):
     sender = import_from_settings('EMAIL_SENDER')
     receiver_list = [user.email, ]
 
-    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
 
 def send_account_already_active_email(user):
@@ -245,7 +246,8 @@ def send_account_already_active_email(user):
         return
 
     subject = 'Account already active'
-    template_name = 'email/account_already_active.txt'
+    plain_body = 'email/account_already_active.txt'
+    html_body = 'email/account_already_active.html'
 
     center_base_url = settings.CENTER_BASE_URL
     login_url = urljoin(center_base_url, reverse('login'))
@@ -261,7 +263,7 @@ def send_account_already_active_email(user):
     receiver_list = [user.email]
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, html_template=template_name)
+        subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
 
 def send_email_verification_email(email_address):
@@ -271,7 +273,8 @@ def send_email_verification_email(email_address):
         return
 
     subject = 'Email Verification Required'
-    template_name = 'email/email_verification_required.txt'
+    plain_body = 'email/email_verification_required.txt'
+    html_body = 'email/email_verification_required.html'
     context = {
         'center_name': import_from_settings('CENTER_NAME', ''),
         'verification_url': __email_verification_url(email_address),
@@ -281,7 +284,7 @@ def send_email_verification_email(email_address):
     sender = import_from_settings('EMAIL_SENDER')
     receiver_list = [email_address.email, ]
 
-    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
 
 def update_user_primary_email_address(email_address):

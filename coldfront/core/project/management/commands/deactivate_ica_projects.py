@@ -94,7 +94,8 @@ class Command(BaseCommand):
             return
 
         subject = 'Expired ICA Project Deactivation'
-        template_name = 'email/expired_ica_project.txt'
+        plain_body = 'email/expired_ica_project.txt'
+        html_body = 'email/expired_ica_project.html'
         context = {
             'project_name': project.name,
             'expiry_date': expiry_date.strftime('%m-%d-%Y'),
@@ -105,7 +106,7 @@ class Command(BaseCommand):
 
         try:
             send_email_template(
-                subject, template_name, context, sender, recipients, html_template=template_name)
+                subject, plain_body, context, sender, recipients, html_template=html_body)
         except Exception as e:
             message = 'Failed to send notification email. Details:'
             self.stderr.write(self.style.ERROR(message))
