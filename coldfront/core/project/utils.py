@@ -164,7 +164,7 @@ def send_new_cluster_access_request_notification_email(project, project_user):
 
     sender = settings.EMAIL_SENDER
     receiver_list = settings.EMAIL_ADMIN_LIST
-send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
+    send_email_template(subject, template_name, context, sender, receiver_list, html_template=template_name)
 
 
 class ProjectClusterAccessRequestRunnerError(Exception):
