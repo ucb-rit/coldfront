@@ -669,3 +669,25 @@ class SecureDirRemoveUserRequest(TimeStampedModel):
     completion_time = models.DateTimeField(null=True)
     status = models.ForeignKey(
         SecureDirRemoveUserRequestStatusChoice, on_delete=models.CASCADE)
+
+
+class ClusterAccountDeletionRequestStatusChoice(TimeStampedModel):
+    name = models.CharField(max_length=64)
+    # Queued, Ready, Processing, Complete, Canceled
+
+
+class ClusterAccountDeletionRequestRequesterChoice(TimeStampedModel):
+    name = models.CharField(max_length=64)
+    # User, System, PI
+
+
+class ClusterAccountDeletionRequest(TimeStampedModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.ForeignKey(
+        ClusterAccountDeletionRequestStatusChoice, on_delete=models.CASCADE)
+    requester = models.ForeignKey(
+        ClusterAccountDeletionRequestRequesterChoice, on_delete=models.CASCADE)
+    expiration = models.DateTimeField()
+    state = models.JSONField()  # TODO: This needs a schema.
+    history = HistoricalRecords()
+

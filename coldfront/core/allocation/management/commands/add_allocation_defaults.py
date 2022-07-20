@@ -5,7 +5,9 @@ from coldfront.core.allocation.models import (AttributeType,
                                               AllocationAttributeType,
                                               AllocationRenewalRequestStatusChoice,
                                               AllocationStatusChoice,
-                                              AllocationUserStatusChoice)
+                                              AllocationUserStatusChoice,
+                                              ClusterAccountDeletionRequestRequesterChoice,
+                                              ClusterAccountDeletionRequestStatusChoice)
 
 from flags.state import flag_enabled
 
@@ -88,4 +90,14 @@ class Command(BaseCommand):
         ]
         for choice in choices:
             AllocationAdditionRequestStatusChoice.objects.get_or_create(
+                name=choice)
+
+        choices = ['Queued', 'Ready', 'Processing', 'Complete', 'Canceled']
+        for choice in choices:
+            ClusterAccountDeletionRequestStatusChoice.objects.get_or_create(
+                name=choice)
+
+        choices = ['User', 'System', 'PI']
+        for choice in choices:
+            ClusterAccountDeletionRequestRequesterChoice.objects.get_or_create(
                 name=choice)

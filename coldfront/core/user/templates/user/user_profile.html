@@ -21,6 +21,7 @@ User Profile{% if not user == viewed_user %}: {{ viewed_user.username }}{% endif
       <div class="float-right">
         <a class="btn btn-primary" href="{% url 'user-projects-managers' viewed_user %}" role="button"><i class="far fa-user-circle" aria-hidden="true"></i> View user projects and managers</a>
       </div>
+      {% flag_enabled 'CLUSTER_ACCOUNTS_DELETABLE' as cluster_accounts_deletable %}
     </div>
     <div class="card-body">
       <h2 class="card-title text-center">
@@ -38,7 +39,7 @@ User Profile{% if not user == viewed_user %}: {{ viewed_user.username }}{% endif
         {% endif %}
 
       </h2>
-      <div class="table-responsive">
+      <tr class="table-responsive">
     <table class="table">
       <tbody>
         <tr>
@@ -170,6 +171,14 @@ User Profile{% if not user == viewed_user %}: {{ viewed_user.username }}{% endif
                 <i class="fas fa-lock" aria-hidden="true"></i>
                 Change Password
               </a>
+            </td>
+          </tr>
+        {% endif %}
+        {% if user == viewed_user and cluster_accounts_deletable %}
+          <tr>
+            <th>Delete Cluster Account</th>
+            <td>
+              <a class="btn btn-danger" href="{% url 'cluster-account-deletion-user' user.pk %}" role="button">Delete Cluster Account</a>
             </td>
           </tr>
         {% endif %}

@@ -1,7 +1,10 @@
 from django.urls import path
+from flags.urls import flagged_paths
 
 import coldfront.core.allocation.views as allocation_views
 import coldfront.core.allocation.views_.secure_dir_views as secure_dir_views
+import coldfront.core.allocation.views_.cluster_account_deletion_views as \
+    cluster_account_deletion_views
 
 
 urlpatterns = [
@@ -90,3 +93,13 @@ urlpatterns = [
          secure_dir_views.SecureDirManageUsersDenyRequestView.as_view(),
          name='secure-dir-manage-user-deny-request'),
 ]
+
+# Cluster Deletion Requests
+with flagged_paths('CLUSTER_ACCOUNTS_DELETABLE') as path:
+    flagged_url_patterns = [
+        path('<int:pk>/cluster-account-deletion-user',
+             cluster_account_deletion_views.ClusterAccountDeletionSelfView.as_view(),
+             name='cluster-account-deletion-user')
+    ]
+
+urlpatterns = urlpatterns + flagged_url_patterns
