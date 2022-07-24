@@ -1,6 +1,7 @@
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
+from django.db import transaction
+from flags.state import flag_enabled
 
+from coldfront.api.statistics.utils import get_accounting_allocation_objects
 from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationStatusChoice
@@ -9,9 +10,13 @@ from coldfront.core.allocation.utils import get_or_create_active_allocation_user
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.allocation.utils import review_cluster_access_requests_url
 from coldfront.core.allocation.utils import set_allocation_user_attribute_value
+from coldfront.core.allocation.utils_.accounting_utils import set_service_units
+from coldfront.core.project.models import Project
+from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserStatusChoice
 from coldfront.core.utils.common import import_from_settings
+from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import project_detail_url
 from coldfront.core.utils.mail import send_email_template
 from collections import namedtuple
@@ -54,6 +59,12 @@ def send_added_to_project_notification_email(project, project_user):
         'support_email': settings.CENTER_HELP_EMAIL,
         'signature': settings.EMAIL_SIGNATURE,
     }
+    if flag_enabled('BRC_ONLY'):
+        context['include_docs_txt'] = (
+            'deployments/brc/cluster_access_processing_docs.txt')
+    elif flag_enabled('LRC_ONLY'):
+        context['include_docs_txt'] = (
+            'deployments/lrc/cluster_access_processing_docs.txt')
 
     sender = settings.EMAIL_SENDER
     receiver_list = [user.email]
@@ -73,7 +84,8 @@ def send_project_join_notification_email(project, project_user):
     user = project_user.user
 
     subject = f'New request to join Project {project.name}'
-    context = {'project_name': project.name,
+    context = {'PORTAL_NAME': settings.PORTAL_NAME,
+               'project_name': project.name,
                'user_string': f'{user.first_name} {user.last_name} ({user.email})',
                'signature': import_from_settings('EMAIL_SIGNATURE', ''),
                'review_url': review_project_join_requests_url(project),
@@ -81,20 +93,12 @@ def send_project_join_notification_email(project, project_user):
 
     receiver_list = project.managers_and_pis_emails()
 
-    msg_plain = \
-        render_to_string('email/new_project_join_request.txt',
-                         context)
-    msg_html = \
-        render_to_string('email/new_project_join_request.html',
-                         context)
-
-    send_mail(
-        subject,
-        msg_plain,
-        settings.EMAIL_SENDER,
-        receiver_list,
-        html_message=msg_html,
-    )
+    send_email_template(subject,
+                        'email/new_project_join_request.txt',
+                        context,
+                        settings.EMAIL_SENDER,
+                        receiver_list,
+                        html_template='email/new_project_join_request.html')
 
 
 def send_project_join_request_approval_email(project, project_user):
@@ -115,6 +119,12 @@ def send_project_join_request_approval_email(project, project_user):
         'support_email': settings.CENTER_HELP_EMAIL,
         'signature': settings.EMAIL_SIGNATURE,
     }
+    if flag_enabled('BRC_ONLY'):
+        context['include_docs_txt'] = (
+            'deployments/brc/cluster_access_processing_docs.txt')
+    elif flag_enabled('LRC_ONLY'):
+        context['include_docs_txt'] = (
+            'deployments/lrc/cluster_access_processing_docs.txt')
 
     sender = settings.EMAIL_SENDER
     receiver_list = [user.email]
@@ -389,3 +399,55 @@ class ProjectClusterAccessRequestRunner(object):
             message = f'Failed to send notification email. Details:'
             self.logger.error(message)
             self.logger.exception(e)
+
+
+def deactivate_project_and_allocation(project, change_reason=None):
+    """For the given Project, perform the following:
+        1. Set its status to 'Inactive',
+        2. Set its corresponding "CLUSTER_NAME Compute" Allocation's
+           status to 'Expired', its start_date to the current date, and
+           its end_date to None, and
+        3. Reset the Service Units values and usages for the Allocation
+           and its AllocationUsers.
+
+    Parameters:
+        - project (Project): an instance of the Project model
+        - change_reason (str or None): An optional reason to set in
+                                       created historical objects
+
+    Returns:
+        - None
+
+    Raises:
+        - AssertionError
+        - MultipleObjectsReturned
+        - ObjectDoesNotExist
+        - TypeError"""
+    assert isinstance(project, Project)
+
+    if change_reason is None:
+        change_reason = 'Zeroing service units during allocation expiration.'
+
+    project.status = ProjectStatusChoice.objects.get(name='Inactive')
+
+    accounting_allocation_objects = get_accounting_allocation_objects(
+        project, enforce_allocation_active=False)
+    allocation = accounting_allocation_objects.allocation
+    allocation.status = AllocationStatusChoice.objects.get(name='Expired')
+    allocation.start_date = display_time_zone_current_date()
+    allocation.end_date = None
+
+    num_service_units = settings.ALLOCATION_MIN
+    set_su_kwargs = {
+        'allocation_allowance': num_service_units,
+        'allocation_usage': num_service_units,
+        'allocation_change_reason': change_reason,
+        'user_allowance': num_service_units,
+        'user_usage': num_service_units,
+        'user_change_reason': change_reason,
+    }
+
+    with transaction.atomic():
+        project.save()
+        allocation.save()
+        set_service_units(accounting_allocation_objects, **set_su_kwargs)

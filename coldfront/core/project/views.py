@@ -1,5 +1,6 @@
 import datetime
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
@@ -32,7 +33,8 @@ from coldfront.core.project.forms import (ProjectAddUserForm,
                                           ProjectSearchForm,
                                           ProjectUpdateForm,
                                           ProjectUserUpdateForm,
-                                          JoinRequestSearchForm)
+                                          JoinRequestSearchForm,
+                                          ProjectSelectHostUserForm)
 from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectReviewStatusChoice,
                                            ProjectStatusChoice, ProjectUser,
@@ -53,7 +55,9 @@ from coldfront.core.project.utils_.new_project_utils import add_vector_user_to_d
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.project.utils_.renewal_utils import is_any_project_pi_renewable
 from coldfront.core.user.forms import UserSearchForm
-from coldfront.core.user.utils import CombinedUserSearch
+from coldfront.core.user.models import UserProfile
+from coldfront.core.user.utils import CombinedUserSearch, is_lbl_employee, \
+    needs_host
 from coldfront.core.utils.common import (get_domain_url, import_from_settings)
 from coldfront.core.utils.mail import send_email, send_email_template
 
@@ -684,7 +688,7 @@ class ProjectAddUsersSearchView(LoginRequiredMixin, UserPassesTestMixin, Templat
 
     def dispatch(self, request, *args, **kwargs):
         project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
-        if project_obj.status.name not in ['Active', 'New', ]:
+        if project_obj.status.name not in ['Active', 'Inactive', 'New', ]:
             messages.error(
                 request, 'You cannot add users to an archived project.')
             return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': project_obj.pk}))
@@ -717,7 +721,7 @@ class ProjectAddUsersSearchResultsView(LoginRequiredMixin, UserPassesTestMixin, 
 
     def dispatch(self, request, *args, **kwargs):
         project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
-        if project_obj.status.name not in ['Active', 'New', ]:
+        if project_obj.status.name not in ['Active', 'Inactive', 'New', ]:
             messages.error(
                 request, 'You cannot add users to an archived project.')
             return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': project_obj.pk}))
@@ -806,7 +810,7 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
 
     def dispatch(self, request, *args, **kwargs):
         project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
-        if project_obj.status.name not in ['Active', 'New', ]:
+        if project_obj.status.name not in ['Active', 'Inactive', 'New', ]:
             messages.error(
                 request, 'You cannot add users to an archived project.')
             return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': project_obj.pk}))
@@ -1346,7 +1350,7 @@ class ProjectReivewEmailView(LoginRequiredMixin, UserPassesTestMixin, FormView):
             form_data.get('email_body'),
             EMAIL_DIRECTOR_EMAIL_ADDRESS,
             receiver_list,
-            cc
+            cc=cc
         )
 
         if receiver_list:
@@ -1448,6 +1452,15 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         status = ProjectUserStatusChoice.objects.get(name='Pending - Add')
         reason = self.request.POST['reason']
 
+        select_host_user_form = ProjectSelectHostUserForm(
+            project=project_obj.name,
+            data=self.request.POST)
+        host_user = None
+        if select_host_user_form.is_valid():
+            host_user = \
+                User.objects.get(
+                    username=select_host_user_form.cleaned_data['host_user'])
+
         if project_users.exists():
             project_user = project_users.first()
             project_user.role = role
@@ -1470,7 +1483,8 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
 
         # Create a join request
         ProjectUserJoinRequest.objects.create(project_user=project_user,
-                                              reason=reason)
+                                              reason=reason,
+                                              host_user=host_user)
 
         message = (
             f'You have requested to join Project {project_obj.name}. The '
@@ -1626,6 +1640,24 @@ class ProjectJoinListView(ProjectListView, UserPassesTestMixin):
 
         context['join_requests'] = join_requests
         context['not_joinable'] = not_joinable
+
+        # Only non-LBL employees without a host user and without any pending
+        # join requests need access to the SelectHostUserForm.
+        context['need_host'] = False
+        pending_status = ProjectUserStatusChoice.objects.get(name='Pending - Add')
+        if flag_enabled('LRC_ONLY') \
+                and needs_host(self.request.user) \
+                and not ProjectUser.objects.filter(user=self.request.user,
+                                                   status=pending_status).exists():
+            context['need_host'] = True
+
+            selecthostform_dict = {}
+            for project in context.get('project_list'):
+                selecthostform_dict[project.name] = \
+                    ProjectSelectHostUserForm(project=project.name)
+
+            context['selecthostform_dict'] = selecthostform_dict
+
         return context
 
 
@@ -1708,6 +1740,16 @@ class ProjectReviewJoinRequestsView(LoginRequiredMixin, UserPassesTestMixin,
                 role__name__in=['Manager', 'Principal Investigator'],
                 status__name='Active').exists():
             context['can_add_users'] = True
+
+        if flag_enabled('LRC_ONLY'):
+            host_dict = {}
+            for user in users_to_review:
+                username = user.get('username')
+                host_dict[username] = \
+                    ProjectUserJoinRequest.objects.filter(
+                        project_user__project=project_obj,
+                        project_user__user__username=username).latest('modified').host_user
+            context['host_dict'] = host_dict
 
         return render(request, self.template_name, context)
 
@@ -1796,6 +1838,27 @@ class ProjectReviewJoinRequestsView(LoginRequiredMixin, UserPassesTestMixin,
                                 self.logger.error(message)
                                 self.logger.exception(e)
 
+                        # Set the host user if one is provided.
+                        if flag_enabled('LRC_ONLY'):
+                            host_user = \
+                                ProjectUserJoinRequest.objects.filter(
+                                    project_user__project=project_obj,
+                                    project_user=project_user_obj).latest('modified').host_user
+
+                            user_profile = user_obj.userprofile
+
+                            if host_user:
+                                if is_lbl_employee(user_obj) or not needs_host(user_obj):
+                                    message = (
+                                        f'User {user_obj.username} requested '
+                                        f'a host user but already has '
+                                        f'{user_profile.host_user.username} as '
+                                        f'their host user.')
+                                    self.logger.error(message)
+                                else:
+                                    user_profile.host_user = host_user
+                                    user_profile.save()
+
                     # Send an email to the user.
                     try:
                         email_function(project_obj, project_user_obj)
@@ -1807,8 +1870,9 @@ class ProjectReviewJoinRequestsView(LoginRequiredMixin, UserPassesTestMixin,
 
             message = (
                 f'{message_verb} {reviewed_users_count} user requests to join '
-                f'the project. BRC staff have been notified to set up cluster '
-                f'access for each approved request.')
+                f'the project. {settings.PROGRAM_NAME_SHORT} staff have been '
+                f'notified to set up cluster access for each approved '
+                f'request.')
             messages.success(request, message)
         else:
             for error in formset.errors:

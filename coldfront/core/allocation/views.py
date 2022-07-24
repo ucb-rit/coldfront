@@ -153,9 +153,9 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                     AttributeError,
                     ValueError):
                 usage = '0.00'
+            allocation_user_su_usages[username] = usage
             if not flag_enabled('LRC_ONLY'):
                 continue
-            allocation_user_su_usages[username] = usage
             try:
                 billing_attribute = user_attributes.filter(
                     allocation_attribute_type__name='Billing Activity').first()
@@ -274,6 +274,23 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
 
         context['notes'] = notes
         context['ALLOCATION_ENABLE_ALLOCATION_RENEWAL'] = ALLOCATION_ENABLE_ALLOCATION_RENEWAL
+
+        context['secure_dir'] = \
+            allocation_obj.resources.filter(
+                name__icontains='Directory').exists()
+
+        can_edit_users = False
+        if allocation_obj.project.projectuser_set.filter(
+                user=self.request.user,
+                role__name='Principal Investigator',
+                status__name='Active').exists():
+            can_edit_users = True
+
+        if self.request.user.is_superuser:
+            can_edit_users = True
+
+        context['can_edit_users'] = can_edit_users
+
         return context
 
     def get(self, request, *args, **kwargs):
@@ -426,10 +443,16 @@ class AllocationListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     def test_func(self):
         """Temporary block: Only allow superusers access."""
         # TODO: Remove this block when allocations should be displayed.
-        if self.request.user.is_superuser:
+
+        if self.request.user.is_superuser or self.request.user.is_staff:
             return True
 
-        if self.request.user.has_perm('allocation.can_view_all_allocations'):
+        project_user = ProjectUser.objects.filter(
+            Q(role__name__in=['Manager', 'Principal Investigator']) &
+            Q(status__name='Active') &
+            Q(user=self.request.user))
+
+        if project_user.exists():
             return True
 
     def get_queryset(self):
@@ -2020,6 +2043,7 @@ class AllocationClusterAccountActivateRequestView(LoginRequiredMixin,
             CENTER_HELP_EMAIL = import_from_settings('CENTER_HELP_EMAIL')
 
             template_context = {
+                'PROGRAM_NAME_SHORT': settings.PROGRAM_NAME_SHORT,
                 'user': self.user_obj,
                 'project_name': project_obj.name,
                 'center_user_guide': CENTER_USER_GUIDE,
@@ -2027,21 +2051,16 @@ class AllocationClusterAccountActivateRequestView(LoginRequiredMixin,
                 'center_help_email': CENTER_HELP_EMAIL,
                 'signature': EMAIL_SIGNATURE,
             }
-            sender = EMAIL_SENDER
 
-            user_filter = Q(user=self.user_obj)
-            manager_pi_filter = Q(
-                role__name__in=['Manager', 'Principal Investigator'],
-                status__name='Active')
-            receiver_list = list(
-                project_obj.projectuser_set.filter(
-                    user_filter | manager_pi_filter, enable_notifications=True
-                ).values_list(
-                    'user__email', flat=True
-                ))
+            cc_list = project_obj.managers_and_pis_emails()
 
             send_email_template(
-                subject, template, template_context, sender, receiver_list)
+                subject,
+                template,
+                template_context,
+                EMAIL_SENDER,
+                [self.user_obj.email],
+                cc=cc_list)
 
         return super().form_valid(form)
 
@@ -2143,27 +2162,23 @@ class AllocationClusterAccountDenyRequestView(LoginRequiredMixin,
             subject = 'Cluster Access Denied'
             template = 'email/cluster_access_denied.txt'
             template_context = {
+                'user': self.user_obj,
                 'center_name': EMAIL_CENTER_NAME,
                 'project': project_obj.name,
                 'allocation': allocation_obj.pk,
                 'opt_out_instruction_url': EMAIL_OPT_OUT_INSTRUCTION_URL,
                 'signature': EMAIL_SIGNATURE,
             }
-            sender = EMAIL_SENDER
 
-            user_filter = Q(user=self.user_obj)
-            manager_pi_filter = Q(
-                role__name__in=['Manager', 'Principal Investigator'],
-                status__name='Active')
-            receiver_list = list(
-                project_obj.projectuser_set.filter(
-                    user_filter | manager_pi_filter, enable_notifications=True
-                ).values_list(
-                    'user__email', flat=True
-                ))
+            cc_list = project_obj.managers_and_pis_emails()
 
             send_email_template(
-                subject, template, template_context, sender, receiver_list)
+                subject,
+                template,
+                template_context,
+                EMAIL_SENDER,
+                [self.user_obj.email],
+                cc=cc_list)
 
         return HttpResponseRedirect(
             reverse('allocation-cluster-account-request-list'))

@@ -1,7 +1,9 @@
+import os
 from datetime import datetime
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db.models import BooleanField
 from django.db.models import Case
 from django.db.models import Q
@@ -14,8 +16,16 @@ from coldfront.core.allocation.models import (AllocationAttributeType,
                                               AllocationPeriod,
                                               AllocationUser,
                                               AllocationUserAttribute,
-                                              AllocationUserStatusChoice)
+                                              AllocationUserStatusChoice,
+                                              Allocation,
+                                              AllocationStatusChoice,
+                                              AllocationAttribute,
+                                              SecureDirAddUserRequest,
+                                              SecureDirAddUserRequestStatusChoice,
+                                              SecureDirRemoveUserRequest,
+                                              SecureDirRemoveUserRequestStatusChoice)
 from coldfront.core.allocation.signals import allocation_activate_user
+from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import utc_now_offset_aware
@@ -70,7 +80,9 @@ def get_user_resources(user_obj):
         resources = Resource.objects.filter(
             Q(is_allocatable=True) &
             Q(is_available=True) &
-            (Q(is_public=True) | Q(allowed_groups__in=user_obj.groups.all()) | Q(allowed_users__in=[user_obj,]))
+            (Q(is_public=True) |
+             Q(allowed_groups__in=user_obj.groups.all()) |
+             Q(allowed_users__in=[user_obj]))
         ).distinct()
 
     return resources
@@ -165,26 +177,6 @@ def get_project_compute_allocation(project_obj):
     return project_obj.allocation_set.get(resources__name=resource_name)
 
 
-def next_allocation_start_datetime():
-    """Return a timezone-aware datetime object representing the start of
-    the next allocation year.
-
-    Parameters:
-        - None
-
-    Returns:
-        - datetime
-    """
-    start_month = settings.ALLOCATION_YEAR_START_MONTH
-    start_day = settings.ALLOCATION_YEAR_START_DAY
-    local_tz = pytz.timezone(settings.DISPLAY_TIME_ZONE)
-    dt = utc_now_offset_aware().astimezone(local_tz)
-    start_year = dt.year + int(dt.month >= start_month)
-    return datetime(
-        start_year, start_month, start_day, tzinfo=local_tz).astimezone(
-            pytz.timezone(settings.TIME_ZONE))
-
-
 def prorated_allocation_amount(amount, dt, allocation_period):
     """Given a number of service units and a datetime, return the
     prorated number of service units that would be allocated in the
@@ -238,3 +230,105 @@ def review_cluster_access_requests_url():
     domain = settings.CENTER_BASE_URL
     view = reverse('allocation-cluster-account-request-list')
     return urljoin(domain, view)
+
+
+def create_secure_dirs(project, subdirectory_name, scratch_or_groups):
+    """
+    Creates one secure directory allocation: either a group directory or a
+    scratch directory, depending on scratch_or_groups. Additionally creates
+    an AllocationAttribute for the new allocation that corresponds to the
+    directory path on the cluster.
+
+    Parameters:
+        - project (Project): a Project object to create a secure directory
+                            allocation for
+        - subdirectory_name (str): the name of the subdirectory on the cluster
+        - scratch_or_groups (str): one of either 'scratch' or 'groups'
+
+
+    Returns:
+        - allocation
+
+    Raises:
+        - TypeError, if subdirectory_name has an invalid type
+        - ValueError, if scratch_or_groups does not have a valid value
+        - ValidationError, if the Allocations already exist
+    """
+
+    if not isinstance(project, Project):
+        raise TypeError(f'Invalid Project {project}.')
+    if not isinstance(subdirectory_name, str):
+        raise TypeError(f'Invalid subdirectory_name {subdirectory_name}.')
+    if scratch_or_groups not in ['scratch', 'groups']:
+        raise ValueError(f'Invalid scratch_or_groups arg {scratch_or_groups}.')
+
+    if scratch_or_groups == 'scratch':
+        p2p3_directory = Resource.objects.get(name='Scratch P2/P3 Directory')
+    else:
+        p2p3_directory = Resource.objects.get(name='Groups P2/P3 Directory')
+
+    query = Allocation.objects.filter(project=project,
+                                      resources__in=[p2p3_directory])
+
+    if query.exists():
+        raise ValidationError('Allocation already exist')
+
+    allocation = Allocation.objects.create(
+        project=project,
+        status=AllocationStatusChoice.objects.get(name='Active'),
+        start_date=utc_now_offset_aware())
+
+    p2p3_path = p2p3_directory.resourceattribute_set.get(
+        resource_attribute_type__name='path')
+
+    allocation.resources.add(p2p3_directory)
+
+    allocation_attribute_type = AllocationAttributeType.objects.get(
+        name='Cluster Directory Access')
+
+    p2p3_subdirectory = AllocationAttribute.objects.create(
+        allocation_attribute_type=allocation_attribute_type,
+        allocation=allocation,
+        value=os.path.join(p2p3_path.value, subdirectory_name))
+
+    return allocation
+
+
+def get_secure_dir_manage_user_request_objects(self, action):
+    """
+    Sets attributes pertaining to a secure directory based on the
+    action being performed.
+
+    Parameters:
+        - self (object): object to set attributes for
+        - action (str): the action being performed, either 'add' or 'remove'
+
+    Raises:
+        - TypeError, if the 'self' object is not an object
+        - ValueError, if action is not one of 'add' or 'remove'
+    """
+
+    action = action.lower()
+    if not isinstance(self, object):
+        raise TypeError(f'Invalid self {self}.')
+    if action not in ['add', 'remove']:
+        raise ValueError(f'Invalid action {action}.')
+
+    add_bool = action == 'add'
+
+    request_obj = SecureDirAddUserRequest \
+        if add_bool else SecureDirRemoveUserRequest
+    request_status_obj = SecureDirAddUserRequestStatusChoice \
+        if add_bool else SecureDirRemoveUserRequestStatusChoice
+
+    language_dict = {
+        'preposition': 'to' if add_bool else 'from',
+        'noun': 'addition' if add_bool else 'removal',
+        'verb': 'add' if add_bool else 'remove'
+    }
+
+    setattr(self, 'action', action.lower())
+    setattr(self, 'add_bool', add_bool)
+    setattr(self, 'request_obj', request_obj)
+    setattr(self, 'request_status_obj', request_status_obj)
+    setattr(self, 'language_dict', language_dict)

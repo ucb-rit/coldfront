@@ -13,14 +13,67 @@
     - "{{ cwd }}/main.yml"
 
   tasks:
-    - name: Install Postgresql repo
+    - name: Install redis
       yum:
-        name: https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+        name:
+          - redis
         state: present
 
-    - name: Install Postgresql Packages
+    - name: Set redis password
+      lineinfile:
+        path: /etc/redis.conf
+        regexp: '^requirepass '
+        insertafter: '^# requirepass foobared'
+        line: 'requirepass {{ redis_passwd }}'
+
+    - name: Restart and enable Redis service
+      service:
+        name: redis
+        state: restarted
+        enabled: yes
+
+    - name: Install Supervisor
       yum:
-        name: [ 'postgresql96', 'postgresql96-server', 'postgresql96-devel' ]
+        name:
+          - supervisor
+        state: present
+
+    # ini_file is included in community.general.
+    - name: Set django_q command in supervisord.conf
+      ini_file:
+        path: /etc/supervisord.conf
+        section: 'program:django_q'
+        option: 'command'
+        value: '{{ git_prefix }}/venv/bin/python3 {{ git_prefix }}/{{ reponame }}/manage.py qcluster'
+
+    - name: Set django_q stopasgroup in supervisord.conf
+      ini_file:
+        path: /etc/supervisord.conf
+        section: 'program:django_q'
+        option: 'stopasgroup'
+        value: 'true'
+
+    - name: Set django_q numprocs in supervisord.conf
+      ini_file:
+        path: /etc/supervisord.conf
+        section: 'program:django_q'
+        option: 'numprocs'
+        value: '1'
+
+    - name: Restart and enable Supervisor
+      service:
+        name: supervisord
+        state: restarted
+        enabled: yes
+
+    - name: Install Postgresql packages
+      yum:
+        name:
+          - 'https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/postgresql96-9.6.24-1PGDG.rhel7.x86_64.rpm'
+          - 'https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/postgresql96-libs-9.6.24-1PGDG.rhel7.x86_64.rpm'
+          - 'https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/postgresql96-devel-9.6.24-1PGDG.rhel7.x86_64.rpm'
+          - 'https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/postgresql96-test-9.6.24-1PGDG.rhel7.x86_64.rpm'
+          - 'https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/postgresql96-server-9.6.24-1PGDG.rhel7.x86_64.rpm'
         state: present
 
     - name: Create a folder for keeping Django app logs
@@ -126,7 +179,12 @@
     - name: Create the deployment-specific _settings.py file from a template
       template: src={{ git_prefix }}/{{ reponame }}/bootstrap/ansible/settings_template.tmpl
                 dest={{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}/config/{{ deployment }}_settings.py
-      become_user:  "{{ djangooperator }}"
+      become_user: "{{ djangooperator }}"
+
+    - name: Create the deployment-specific password reset email subject text file from a template
+      template: src={{ git_prefix }}/{{ reponame }}/bootstrap/ansible/password_reset_subject_template.tmpl
+                dest={{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}/core/user/templates/user/passwords/password_reset_subject.txt
+      become_user: "{{ djangooperator }}"
 
     - name: Run Django management command - initial_setup
       django_manage:
@@ -149,6 +207,24 @@
     - name: Run Django management command - add_accounting_defaults
       django_manage:
         command: add_accounting_defaults
+        app_path: "{{ git_prefix }}/{{ reponame }}"
+        settings: "config.settings"
+        pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+        virtualenv: "{{ git_prefix }}/venv"
+      become_user: "{{ djangooperator }}"
+
+    - name: Run Django management command - add_directory_defaults
+      django_manage:
+        command: add_directory_defaults
+        app_path: "{{ git_prefix }}/{{ reponame }}"
+        settings: "config.settings"
+        pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+        virtualenv: "{{ git_prefix }}/venv"
+      become_user: "{{ djangooperator }}"
+
+    - name: Run Django management command - create_allocation_periods
+      django_manage:
+        command: create_allocation_periods
         app_path: "{{ git_prefix }}/{{ reponame }}"
         settings: "config.settings"
         pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
@@ -200,3 +276,9 @@
 
     - name: Restart Apache
       service: name=httpd state=restarted enabled=yes
+
+    # supervisorctl is included in community.general.
+    - name: Ensure that a Supervisor worker is running a django_q cluster
+      supervisorctl:
+        name: 'django_q'
+        state: started

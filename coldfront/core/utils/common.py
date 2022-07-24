@@ -76,6 +76,16 @@ def add_argparse_dry_run_argument(parser):
         help='Display updates without performing them.')
 
 
+def assert_obj_type(obj, expected_obj_type, null_allowed=False):
+    """Raise an AssertionError if the given object does not have the
+    given type. If null_allowed is True, do nothing if the object is
+    None."""
+    if null_allowed and obj is None:
+        return
+    message = f'{obj} does not have type {expected_obj_type}.'
+    assert isinstance(obj, expected_obj_type), message
+
+
 def delete_scheduled_tasks(func, *args):
     """Delete scheduled tasks (Schedule objects) for running the given
     function with the given arguments. Write a message to the log."""
@@ -97,10 +107,15 @@ def display_time_zone_current_date():
 
 def display_time_zone_date_to_utc_datetime(date):
     """Return the given date, interpreted as being in
-    settings.DISPLAY_TIME_ZONE as a datetime object in the UTC
-    timezone."""
-    return datetime.combine(date, datetime.min.time()).replace(
-        tzinfo=pytz.timezone(settings.DISPLAY_TIME_ZONE)).astimezone(pytz.utc)
+    settings.DISPLAY_TIME_ZONE, as a datetime object in the UTC
+    timezone.
+
+    Source: https://stackoverflow.com/a/25390097
+    """
+    dt_tz_unaware = datetime.combine(date, datetime.min.time())
+    display_tz = pytz.timezone(settings.DISPLAY_TIME_ZONE)
+    dt_display_tz = display_tz.localize(dt_tz_unaware)
+    return pytz.utc.normalize(dt_display_tz)
 
 
 def format_date_month_name_day_year(date):
@@ -133,6 +148,16 @@ def session_wizard_all_form_data(submitted_forms_list, step_num_to_data,
     for step in sorted(step_num_to_data.keys()):
         all_form_data[int(step)] = next(data)
     return all_form_data
+
+
+def utc_datetime_to_display_time_zone_date(utc_dt):
+    """Return the given UTC datetime as a date object in
+    settings.DISPLAY_TIME_ZONE.
+
+    Source: https://stackoverflow.com/a/25390097
+    """
+    display_tz = pytz.timezone(settings.DISPLAY_TIME_ZONE)
+    return display_tz.normalize(utc_dt).date()
 
 
 def utc_now_offset_aware():
