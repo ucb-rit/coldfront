@@ -1,0 +1,64 @@
+{% extends "common/base.html" %}
+{% load crispy_forms_tags %}
+{% load common_tags %}
+{% load static %}
+
+
+{% block title %}
+  Cluster Account Deletion Request
+{% endblock %}
+
+
+{% block content %}
+  <h1>Cluster Account Deletion Request: {{ user_str }} ({{ user_obj.username }})</h1>
+
+  <p>
+    This form begins the process of requesting to have {{ user_str }}'s cluster
+    account deleted.
+  </p>
+
+  <p>
+    After a standard waiting period of {{ waiting_period }}, {{ user_str }} will be
+    removed from all projects they are a part of. {{ user_str }} will lose access to
+    the cluster. Their data will be deleted off of the cluster. Additionally, their
+    current project will no longer be charged the $25 monthly fee.
+  </p>
+
+  <p>
+    Please note that while {{ user_str }} may regain access to the cluster and may rejoin
+    projects, their data will not be recoverable after this request is completed.
+    It is therefore important that {{ user_str }} move all data that the PI or group wish
+    to keep that is currently in their personal cluster directories out of their
+    personal cluster directories.
+  </p>
+
+  <p>Note about cancelling the request.</p>
+
+  <div class="card mb-3">
+    <div class="card-header">
+      <h2>
+        Cluster Account Deletion Form
+      </h2>
+    </div>
+    <div class="card-body">
+      <p>
+        Please complete the below form to confirm that you
+        understand the implications of cluster account deletion and
+        wish to proceed.
+      </p>
+
+      <form method="post">
+        {% csrf_token %}
+        {{form|crispy}}
+        <input class="btn btn-success" type="Submit" value="Submit">
+        <a class="btn btn-secondary" href="{% url back_url %}" role="button">Cancel</a>
+      </form>
+    </div>
+  </div>
+
+  <script>
+      $("#navbar-main > ul > li.active").removeClass("active");
+      $("#navbar-admin").addClass("active");
+  </script>
+
+{% endblock %}
