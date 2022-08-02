@@ -1,0 +1,46 @@
+<div class="card mb-3">
+  <div class="card-header">
+    <h2>
+      <i class="fas fa-info-circle" aria-hidden="true"></i>
+      Request Information
+    </h2>
+  </div>
+  <div class="card-body">
+    <p class="card-text text-justify">
+      <strong>Request ID: </strong>
+      {{ request_obj.pk }}
+    </p>
+    <p class="card-text text-justify">
+      <strong>User: </strong>
+      {{ request_obj.user.first_name }} {{ request_obj.user.last_name }} ({{ request_obj.user.username }})
+    </p>
+    <p class="card-text text-justify">
+      <strong>User Projects: </strong>
+      {{ user_projects }}
+    </p>
+    <p class="card-text text-justify">
+      <strong>Date Requested: </strong>
+      {{ request_obj.created|date:"M. d, Y" }}
+    </p>
+    <p class="card-text text-justify">
+      <strong>Expiration Date: </strong>
+      {{ request_obj.expiration|date:"M. d, Y" }}
+    </p>
+    {% if request_obj.status.name == 'Complete' %}
+      <p class="card-text text-justify">
+        <strong>Date Completed: </strong>
+        {{ request_obj.modified|date:"M. d, Y" }}
+      </p>
+    {% endif %}
+    {% if request_obj.status.name == 'Cancelled' %}
+      <p class="card-text text-justify">
+        <strong>Date Cancelled: </strong>
+        {{ request_obj.modified|date:"M. d, Y" }}
+      </p>
+    {% endif %}
+    <p class="card-text text-justify">
+      <strong>Requester: </strong>
+      {{ request_obj.requester.name }}
+    </p>
+  </div>
+</div>
