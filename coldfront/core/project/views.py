@@ -420,6 +420,14 @@ class ProjectListView(LoginRequiredMixin, ListView):
                 user=self.request.user, role__name__in=role_names,
                 status=status)
 
+        context['can_request_deletion'] = \
+            ProjectUser.objects.filter(
+                user=self.request.user,
+                role__name='Principal Investigator',
+                status__name='Active').exists() \
+            or self.request.user.is_superuser \
+            and flag_enabled('CLUSTER_ACCOUNTS_DELETABLE')
+
         return context
 
 
