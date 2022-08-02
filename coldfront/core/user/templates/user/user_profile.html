@@ -178,7 +178,10 @@ User Profile{% if not user == viewed_user %}: {{ viewed_user.username }}{% endif
           <tr>
             <th>Delete Cluster Account</th>
             <td>
-              <a class="btn btn-danger" href="{% url 'cluster-account-deletion-user' user.pk %}" role="button">Delete Cluster Account</a>
+              <a class="btn btn-danger" href="{% url 'cluster-account-deletion-request' user.pk %}" role="button">
+                <i class="fa fa-times" aria-hidden="true"></i>
+                Delete Cluster Account
+              </a>
             </td>
           </tr>
         {% endif %}
