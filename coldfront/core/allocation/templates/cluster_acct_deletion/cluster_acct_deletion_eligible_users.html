@@ -11,9 +11,11 @@
     <tr>
         <td>
             Below is a list of users who are eligible to have their cluster accounts deleted. 
-            To initiate a cluster account deletion request, click the "Remove" button and 
+            To initiate a cluster account deletion request, click the "Delete" button and
             complete the subsequent form to confirm the request. Once a deletion 
-            request is initiated, it must be reviewed and processed by admins.
+            request is initiated, it must will be queued for a standard waiting period of
+            {{ waiting_period }}. After this period, the request will be reviewed and processed
+            by system administrators.
         </td>
         <p></p>
         {% if expand_accordion == "show" or user_list or user.is_superuser%}
@@ -50,8 +52,8 @@
                                 <th scope="col" class="text-nowrap">First Name</th>
                                 <th scope="col" class="text-nowrap">Last Name</th>
                                 <th scope="col" class="text-nowrap">Email</th>
-                                <th scope="col" class="text-nowrap">Project</th>
-                                <th scope="col" class="text-nowrap">Remove</th>
+                                <th scope="col" class="text-nowrap">User Projects</th>
+                                <th scope="col" class="text-nowrap">Delete</th>
                                 </thead>
                                 <tbody>
                                 {% for user_dict in users_to_delete %}
@@ -63,7 +65,7 @@
                                         <td>{{ user_dict.projects }}</td>
                                         <td>
                                           <a class="btn btn-danger" href="{% url 'cluster-account-deletion-request' user_dict.user.pk %}" role="button" style="white-space:nowrap">
-                                            <i class="fa fa-times" aria-hidden="true"></i> Remove
+                                            <i class="fa fa-times" aria-hidden="true"></i> Delete
                                           </a>
                                         </td>
                                     </tr>
@@ -76,7 +78,7 @@
                         </div>
             {% else %}
                 <div class="alert alert-info">
-                    No users to remove!
+                    No users eligible to delete!
                 </div>
               <a class="btn btn-secondary mb-3" href="{% url 'project-list' %}" role="button"><i class="fas fa-long-arrow-left" aria-hidden="true"></i> Back </a>
             {% endif %}
