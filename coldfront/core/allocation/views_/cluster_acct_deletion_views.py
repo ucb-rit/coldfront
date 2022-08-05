@@ -301,7 +301,6 @@ class ClusterAcctDeletionRequestListView(LoginRequiredMixin,
     def get_queryset(self):
         request_search_form = ClusterAcctDeletionRequestSearchForm(
             self.request.GET)
-        print(request_search_form, request_search_form.is_valid())
         if request_search_form.is_valid():
             # TODO: ordery by
             data = request_search_form.cleaned_data
