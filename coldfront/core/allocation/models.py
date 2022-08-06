@@ -780,3 +780,39 @@ class SecureDirRequest(TimeStampedModel):
             max_timestamp = max(
                 max_timestamp, state[field].get('timestamp', ''))
         return max_timestamp
+
+
+def cluster_account_deactivation_state_default():
+    """Return the schema for the
+    ClusterAccountDeactivationRequestReasonChoice.no_recharge_state field."""
+    return {
+        'recharge': {
+            'project': '',
+        },
+        'other': {
+            'justification': '',
+            'timestamp': '',
+        }
+    }
+
+
+class ClusterAccountDeactivationRequestReasonChoice(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=100)
+    # NO_VALID_USER_ACCOUNT_FEE_BILLING_ID, NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID
+
+
+class ClusterAccountDeactivationRequestStatusChoice(models.Model):
+    name = models.CharField(max_length=100)
+    # Queued, Ready, Processing, Complete, Cancelled
+
+
+class ClusterAccountDeactivationRequest(TimeStampedModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.ForeignKey(ClusterAccountDeactivationRequestStatusChoice,
+                               on_delete=models.CASCADE)
+    reason = models.ForeignKey(ClusterAccountDeactivationRequestReasonChoice,
+                               on_delete=models.CASCADE)
+    expiration = models.DateTimeField(blank=True, null=True)
+    history = HistoricalRecords()
+    state = models.JSONField(default=cluster_account_deactivation_state_default)
