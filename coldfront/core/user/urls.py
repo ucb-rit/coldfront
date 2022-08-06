@@ -5,9 +5,11 @@ from django.contrib.auth.views import PasswordResetConfirmView
 from django.contrib.auth.views import PasswordResetDoneView
 from django.contrib.auth.views import PasswordResetView
 from django.urls import path, reverse_lazy
+from flags.urls import flagged_paths
 
 import coldfront.core.user.views as user_views
 import coldfront.core.user.views_.request_hub_views as request_hub_views
+import coldfront.core.user.views_.account_deactivation_views as deactivation_views
 from coldfront.core.user.forms import VerifiedEmailAddressPasswordResetForm
 from coldfront.core.user.forms import UserLoginForm
 
@@ -127,3 +129,18 @@ urlpatterns = [
          request_hub_views.RequestHubView.as_view(show_all_requests=True),
          name='request-hub-admin'),
 ]
+
+
+# Cluster Accounnt Deactivation Requests
+with flagged_paths('CLUSTER_ACCOUNTS_DEACTIVATABLE') as path:
+    flagged_url_patterns = [
+        path('account-deactivation-requests',
+             deactivation_views.AccountDeactivationRequestListView.as_view(),
+             name='account-deactivation-request-list'),
+        path('account-deactivation-request-cancel/<int:pk>',
+             deactivation_views.AccountDeactivationRequestCancelView.as_view(),
+             name='account-deactivation-request-cancel'),
+    ]
+
+    urlpatterns += flagged_url_patterns
+
