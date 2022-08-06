@@ -42,7 +42,7 @@
         <div id="collapseOne" class="collapse {{expand_accordion}}" data-parent="#accordion">
           <div class="card-body">
             <form id="filter_form" method="GET" action="{% url 'account-deactivation-request-list' %}" autocomplete="off">
-              {{ request_search_form|crispy }}
+              {{ search_form|crispy }}
               <input type="submit" class="btn btn-primary" value="Search">
               <button id="form_reset_button" type="button" class="btn btn-secondary">Reset</button>
             </form>
