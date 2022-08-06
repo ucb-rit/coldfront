@@ -5,7 +5,9 @@ from coldfront.core.allocation.models import (AttributeType,
                                               AllocationAttributeType,
                                               AllocationRenewalRequestStatusChoice,
                                               AllocationStatusChoice,
-                                              AllocationUserStatusChoice)
+                                              AllocationUserStatusChoice,
+                                              ClusterAccountDeactivationRequestReasonChoice,
+                                              ClusterAccountDeactivationRequestStatusChoice)
 
 from flags.state import flag_enabled
 
@@ -89,3 +91,25 @@ class Command(BaseCommand):
         for choice in choices:
             AllocationAdditionRequestStatusChoice.objects.get_or_create(
                 name=choice)
+
+        choices = [
+            'Queued',
+            'Ready',
+            'Processing',
+            'Complete',
+            'Cancelled'
+        ]
+        for choice in choices:
+            ClusterAccountDeactivationRequestStatusChoice.objects.create(name=choice)
+
+        choices = [
+            ('NO_VALID_USER_ACCOUNT_FEE_BILLING_ID',
+             'User does not have a valid PID for the user account fee.'),
+            ('NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID',
+             'User is on a Recharge project does not have a valid PID for '
+             'the recharge usage fee.')
+        ]
+
+        for choice in choices:
+            ClusterAccountDeactivationRequestReasonChoice.objects.create(name=choice[0],
+                                                                         description=choice[1])
