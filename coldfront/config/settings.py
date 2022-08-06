@@ -251,3 +251,7 @@ try:
     SETTINGS_EXPORT = SETTINGS_EXPORT + LOCAL_SETTINGS_EXPORT
 except NameError:
     SETTINGS_EXPORT = SETTINGS_EXPORT
+
+# The default number of days a manually-queued cluster account
+# deletion request should stay queued.
+ACCOUNT_DEACTIVATION_QUEUE_DAYS = 1
