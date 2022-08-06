@@ -25,7 +25,8 @@ class Command(BaseCommand):
             'view_job',
             'view_securediradduserrequest',
             'view_securedirremoveuserrequest',
-            'view_securedirrequest'
+            'view_securedirrequest',
+            'view_clusteraccountdeactivationrequest'
         ]
 
         for perm_codename in perm_codename_lst:
@@ -33,8 +34,9 @@ class Command(BaseCommand):
                 permission = Permission.objects.get(codename=perm_codename)
                 new_group.permissions.add(permission)
             except Permission.DoesNotExist:
-                raise LookupError('Queried permission does not exist. Examine '
-                                  'core/utils/management/commands/create_staff_group.py')
+                raise LookupError(f'Queried permission \"{perm_codename}\" does'
+                                  f' not exist. Examine core/utils/management/'
+                                  f'commands/create_staff_group.py')
 
         # Send a joined list of permissions to a command-line output.
         self.stdout.write('Created staff group and permissions.')
