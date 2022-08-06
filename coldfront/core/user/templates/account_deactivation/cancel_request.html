@@ -1,0 +1,73 @@
+{% extends "common/base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Account Deactivation Cancellation
+{% endblock %}
+
+
+{% block content %}
+<h1>Account Deactivation Cancellation</h1>
+<hr>
+
+{% with requester=request_obj.requester %}
+  <p>
+    You may cancel the Account Deletion Request here. Provide a justification below and submit the form.
+  </p>
+{% endwith %}
+
+<div class="card mb-3">
+  <div class="card-header">
+    <h2>
+      <i class="fas fa-info-circle" aria-hidden="true"></i>
+      Request Information
+    </h2>
+  </div>
+  <div class="card-body">
+    <p class="card-text text-justify">
+      <strong>Request ID: </strong>
+      {{ request_obj.pk }}
+    </p>
+    <p class="card-text text-justify">
+      <strong>User: </strong>
+      {{ request_obj.user.first_name }} {{ request_obj.user.last_name }} ({{ request_obj.user.username }})
+    </p>
+    <p class="card-text text-justify">
+      <strong>Date Requested: </strong>
+      {{ request_obj.request_time|date:"M. d, Y" }}
+    </p>
+    <p class="card-text text-justify">
+      <strong>Reason: </strong>
+      {{ request_obj.reason.description }}
+    </p>
+    <p class="card-text text-justify">
+      <strong>Status: </strong>
+      {{ request_obj.status.name }}
+    </p>
+  </div>
+</div>
+
+  
+  
+<div class="card mb-3">
+  <div class="card-header">
+    <h4>
+      <i class="fas fa-check-circle" aria-hidden="true"></i>
+      Cancellation
+    </h4>
+  </div>
+  <div class="card-body">
+    <form action="" method="post">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <a href="{% url 'account-deactivation-request-list' %}" class="btn btn-secondary" style="float: right;margin:1px;">
+        Back
+      </a>
+      <input class="btn btn-danger" style="float: right;margin:1px;" type="submit" value="Submit" />
+    </form>
+  </div>
+</div>
+
+{% endblock %}
