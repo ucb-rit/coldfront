@@ -10,7 +10,8 @@ from django.views.decorators.cache import cache_page
 
 from coldfront.core.allocation.models import (Allocation,
                                               AllocationUser,
-                                              AllocationUserAttribute)
+                                              AllocationUserAttribute,
+                                              ClusterAccountDeactivationRequest)
 from coldfront.core.allocation.utils import get_project_compute_resource_name
 # from coldfront.core.grant.models import Grant
 from coldfront.core.portal.utils import (generate_allocations_chart_data,
@@ -80,6 +81,11 @@ def home(request):
              ProjectUserRemovalRequest.objects.filter(
                  Q(project_user__user__username=request.user.username) &
                  Q(status__name='Pending'))]
+
+        context['pending_deactivation_request'] = \
+            ClusterAccountDeactivationRequest.objects.filter(
+                user=request.user,
+                status__name__in=['Queued', 'Ready']).first()
 
     else:
         template_name = 'portal/nonauthorized_home.html'

@@ -7,6 +7,10 @@
 
     {% include 'portal/feedback_alert.html' %}
 
+    {% if pending_deactivation_request %}
+      {% include 'portal/account-deactivation-alert.html' %}
+    {% endif %}
+
     <p>If you would like to set up or update your access to a cluster, please complete the following steps.</p>
     <p>First review and sign the cluster user agreement. Only then you can join a cluster project and gain access to the cluster.</p>
     <table class="table">
