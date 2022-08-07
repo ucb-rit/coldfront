@@ -1,9 +1,20 @@
+import logging
+
+from django.db import transaction
+from django.http import Http404
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework.exceptions import APIException
+
 from coldfront.api.permissions import IsAdminUserOrReadOnly
 from coldfront.api.permissions import IsSuperuserOrStaff
 from coldfront.api.user.authentication import is_token_expired
-from coldfront.api.user.filters import IdentityLinkingRequestFilter
-from coldfront.api.user.serializers import IdentityLinkingRequestSerializer
+from coldfront.api.user.filters import IdentityLinkingRequestFilter, \
+    ClusterAccountDeactivationRequestFilter
+from coldfront.api.user.serializers import IdentityLinkingRequestSerializer, \
+    ClusterAccountDeactivationRequestSerializer
 from coldfront.api.user.serializers import UserSerializer
+from coldfront.core.allocation.models import ClusterAccountDeactivationRequest
 from coldfront.core.user.models import ExpiringToken
 from coldfront.core.user.models import IdentityLinkingRequest
 from datetime import datetime
@@ -15,6 +26,18 @@ from rest_framework import mixins
 from rest_framework import viewsets
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
+
+from coldfront.core.utils.common import utc_now_offset_aware
+
+logger = logging.getLogger(__name__)
+
+authorization_parameter = openapi.Parameter(
+    'Authorization',
+    openapi.IN_HEADER,
+    description=(
+        'The authorization token for the requester. The token should be '
+        'preceded by "Token " (no quotes).'),
+    type=openapi.TYPE_STRING)
 
 
 class IdentityLinkingRequestViewSet(mixins.ListModelMixin,
@@ -64,7 +87,8 @@ class ObtainActiveUserExpiringAuthToken(ObtainAuthToken):
         return Response({'token': token.key})
 
 
-class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
+class UserViewSet(mixins.ListModelMixin,
+                  mixins.RetrieveModelMixin,
                   viewsets.GenericViewSet):
     """A ViewSet for the User model."""
 
@@ -73,3 +97,59 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
 
     def get_queryset(self):
         return User.objects.order_by('id')
+
+
+class AccountDeactivationViewSet(mixins.ListModelMixin,
+                                 mixins.RetrieveModelMixin,
+                                 mixins.UpdateModelMixin,
+                                 mixins.CreateModelMixin,
+                                 viewsets.GenericViewSet):
+    """A ViewSet for the ClusterAccountDeactivationRequest model."""
+
+    filterset_class = ClusterAccountDeactivationRequestFilter
+    http_method_names = ['get', 'patch', 'post']
+    permission_classes = [IsSuperuserOrStaff]
+    serializer_class = ClusterAccountDeactivationRequestSerializer
+
+    def get_queryset(self):
+        return ClusterAccountDeactivationRequest.objects.order_by('id')
+
+    def perform_update(self, serializer):
+        try:
+            with transaction.atomic():
+                justification = serializer.validated_data.pop('justification', None)
+
+                instance = serializer.save()
+                instance.state['other']['justification'] = justification
+                instance.state['other']['timestamp'] = utc_now_offset_aware().isoformat()
+                instance.save()
+
+        except Exception as e:
+            message = f'Rolling back failed transaction. Details:\n{e}'
+            logger.exception(message)
+            raise APIException('Internal server error.')
+
+    @swagger_auto_schema(
+        manual_parameters=[authorization_parameter],
+        operation_description=(
+                'Updates one or more fields of the '
+                'ClusterAccountDeactivationRequest identified '
+                'by the given ID.'))
+    def partial_update(self, request, *args, **kwargs):
+        """The method for PATCH (partial update) requests."""
+        return super().partial_update(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        manual_parameters=[authorization_parameter],
+        operation_description=(
+                'Creates a new ClusterAccountDeactivationRequest with the '
+                'given fields.'))
+    def create(self, request, *args, **kwargs):
+        """The method for PATCH (partial update) requests."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        serializer.validated_data.pop('justification', None)
+
+        instance = serializer.save()
+
