@@ -26,3 +26,21 @@ def assert_user_serialization(user, result, fields):
         expected = str(field_value)
         actual = str(result[field])
         assert expected == actual
+
+
+def assert_account_deactivation_request_serialization(
+        request, result, fields):
+    """Assert that IdentityLinkingRequest serialization gives the
+    expected result."""
+    for field in fields:
+        field_value = getattr(request, field)
+        if field == 'user':
+            assert_user_serialization(field_value, result['user'], ('id', 'username', 'first_name', 'last_name', 'email'))
+            continue
+        elif field in ['status', 'reason']:
+            expected = field_value.name
+        else:
+            expected = str(field_value)
+        actual = str(result[field])
+
+        assert expected == actual
