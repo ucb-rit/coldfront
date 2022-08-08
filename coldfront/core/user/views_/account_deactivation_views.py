@@ -114,10 +114,8 @@ class AccountDeactivationRequestCancelView(LoginRequiredMixin,
         self.request_obj.status = \
             ClusterAccountDeactivationRequestStatusChoice.objects.get(
                 name='Cancelled')
-        self.request_obj.state['other']['justification'] = \
+        self.request_obj.state['justification'] = \
             justification
-        self.request_obj.state['other']['timestamp'] = \
-            utc_now_offset_aware().isoformat()
         self.request_obj.save()
 
         message = (
@@ -134,7 +132,7 @@ class AccountDeactivationRequestCancelView(LoginRequiredMixin,
 
     def get_initial(self):
         initial = super().get_initial()
-        initial['justification'] = self.request_obj.state['other']['justification']
+        initial['justification'] = self.request_obj.state['justification']
 
         return initial
 
