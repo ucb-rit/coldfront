@@ -36,7 +36,9 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ClusterAccountDeactivationRequestSerializer(serializers.ModelSerializer):
     """A serializer for the ClusterAccountDeactivationRequest model."""
-    user = UserSerializer(read_only=True, required=False)
+    user = serializers.SlugRelatedField(
+        slug_field='username',
+        queryset=User.objects.all())
 
     status = serializers.SlugRelatedField(
         slug_field='name',
@@ -44,10 +46,8 @@ class ClusterAccountDeactivationRequestSerializer(serializers.ModelSerializer):
 
     reason = serializers.SlugRelatedField(
         slug_field='name',
-        allow_null=True,
-        required=False,
-        read_only=True
-    )
+        queryset=ClusterAccountDeactivationRequestReasonChoice.objects.all(),
+        required=False)
 
     justification = serializers.CharField(allow_null=True,
                                           required=False)
