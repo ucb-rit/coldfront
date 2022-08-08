@@ -1,21 +1,13 @@
-from unittest.mock import patch
-
 from django.contrib.auth.models import User
-from django.core import mail
 
-# from coldfront.api.allocation.tests.utils import \
-#     assert_account_deactivation_request_serialization
 from coldfront.api.user.tests.test_user_base import TestUserBase
 from coldfront.api.user.tests.utils import \
     assert_account_deactivation_request_serialization
-from coldfront.config import settings
 from coldfront.core.allocation.models import \
     ClusterAccountDeactivationRequestStatusChoice, \
-    AllocationUser, ClusterAccountDeactivationRequest, AllocationUserAttribute, \
-    AllocationAttributeType, AllocationAttribute, \
+    ClusterAccountDeactivationRequest, \
     ClusterAccountDeactivationRequestReasonChoice
-from coldfront.core.user.models import ExpiringToken
-from coldfront.core.utils.common import utc_now_offset_aware
+
 from http import HTTPStatus
 
 """A test suite for the /account_deactivation_requests/ endpoints, divided
@@ -24,11 +16,6 @@ by method."""
 SERIALIZER_FIELDS = ('id', 'user', 'status', 'reason', 'justification')
 
 BASE_URL = '/api/account_deactivation_requests/'
-
-
-def raise_exception(*args, **kwargs):
-    """Raise an exception."""
-    raise Exception('Test exception.')
 
 
 class TestClusterAccountDeactivationRequestsBase(TestUserBase):
@@ -42,14 +29,18 @@ class TestClusterAccountDeactivationRequestsBase(TestUserBase):
         # Create 4 ClusterAccountDeactivationRequests with statuses Ready
         # and Processing and reasons NO_VALID_USER_ACCOUNT_FEE_BILLING_ID and
         # NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID
-        ready_status = ClusterAccountDeactivationRequestStatusChoice.objects.get(
-            name='Ready')
-        processing_status = ClusterAccountDeactivationRequestStatusChoice.objects.get(
-            name='Processing')
-        no_valid_account = ClusterAccountDeactivationRequestReasonChoice.objects.get(
-            name='NO_VALID_USER_ACCOUNT_FEE_BILLING_ID')
-        no_valid_recharge = ClusterAccountDeactivationRequestReasonChoice.objects.get(
-            name='NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID')
+        ready_status = \
+            ClusterAccountDeactivationRequestStatusChoice.objects.get(
+                name='Ready')
+        processing_status = \
+            ClusterAccountDeactivationRequestStatusChoice.objects.get(
+                name='Processing')
+        no_valid_account = \
+            ClusterAccountDeactivationRequestReasonChoice.objects.get(
+                name='NO_VALID_USER_ACCOUNT_FEE_BILLING_ID')
+        no_valid_recharge = \
+            ClusterAccountDeactivationRequestReasonChoice.objects.get(
+                name='NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID')
 
         self.request_dict = {
             'request0': {'user': self.user0,
@@ -115,8 +106,9 @@ class TestListClusterAccountDeactivationRequests(
             account_deactivation_request = \
                 ClusterAccountDeactivationRequest.objects.get(pk=result['id'])
             assert_account_deactivation_request_serialization(
-                account_deactivation_request, result,
-                SERIALIZER_FIELDS)  # TODO: write this
+                account_deactivation_request,
+                result,
+                SERIALIZER_FIELDS)
 
     def test_status_filter(self):
         """Test that querying by status filters results properly."""
