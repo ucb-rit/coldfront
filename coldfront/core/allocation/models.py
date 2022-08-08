@@ -786,13 +786,8 @@ def cluster_account_deactivation_state_default():
     """Return the schema for the
     ClusterAccountDeactivationRequestReasonChoice.no_recharge_state field."""
     return {
-        'recharge': {
-            'project': '',
-        },
-        'other': {
-            'justification': '',
-            'timestamp': '',
-        }
+        'bad_recharge_project': '',
+        'justification': '',
     }
 
 
