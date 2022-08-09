@@ -87,9 +87,30 @@ class AccountDeletionRequestSearchForm(forms.Form):
     status = forms.ChoiceField(label='Status',
                                choices=STATUS_CHOICES,
                                widget=forms.Select(),
-                               required=False)
+                               required=True)
 
     requester = forms.ChoiceField(label='Requester',
                                   choices=REQUESTER_CHOICES,
                                   widget=forms.Select(),
                                   required=False)
+
+
+class AccountDeletionProjectRemovalForm(forms.Form):
+    project_name = forms.CharField(max_length=150, required=False, disabled=True)
+    pis = forms.CharField(max_length=200, required=False, disabled=True)
+    role = forms.CharField(max_length=150, required=False, disabled=True)
+    status = forms.CharField(max_length=30, required=False, disabled=True)
+    selected = forms.BooleanField(initial=False, required=False)
+
+
+class UpdateStatusForm(forms.Form):
+
+    status = forms.ChoiceField(
+        choices=(
+            ('', 'Select one.'),
+            ('Pending', 'Pending'),
+            ('Complete', 'Complete')
+        ),
+        help_text='If you are unsure, leave the status as "Pending".',
+        label='Status',
+        required=True)
