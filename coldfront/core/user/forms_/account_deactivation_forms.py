@@ -1,8 +1,6 @@
 from django import forms
 from django.core.validators import MinLengthValidator
 
-from coldfront.core.allocation.models import ClusterAccountDeactivationRequest
-
 
 class AccountDeactivationRequestSearchForm(forms.Form):
     STATUS_CHOICES = (
@@ -33,7 +31,7 @@ class AccountDeactivationRequestSearchForm(forms.Form):
     status = forms.ChoiceField(label='Status',
                                choices=STATUS_CHOICES,
                                widget=forms.Select(),
-                               required=False)
+                               required=True)
 
     reason = forms.ChoiceField(label='Reason',
                                choices=REASON_CHOICES,

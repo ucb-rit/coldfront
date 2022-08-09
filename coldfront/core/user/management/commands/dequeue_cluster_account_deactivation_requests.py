@@ -1,26 +1,24 @@
 import logging
 import sys
 
-from tqdm import tqdm
+from django.core.management import BaseCommand
 
-from django.contrib.auth.models import User
-from django.core.management import BaseCommand, CommandError
-from django.conf import settings
-
-from coldfront.core.allocation.models import ClusterAccountDeactivationRequest, \
+from coldfront.core.allocation.models import \
+    ClusterAccountDeactivationRequest, \
     ClusterAccountDeactivationRequestStatusChoice
 from coldfront.core.utils.common import utc_now_offset_aware
 
 
 class Command(BaseCommand):
-    help = 'Command to dequeue NO_VALID_USER_ACCOUNT_FEE_BILLING_ID ' \
-           'ClusterAccountDeactivationRequests after ' \
+    help = 'Command to dequeue ClusterAccountDeactivationRequests after ' \
            'their waiting period is complete.'
     logger = logging.getLogger(__name__)
 
     def add_arguments(self, parser):
         parser.add_argument('--reason',
-                            help='ClusterAccountDeactivationRequestReasonChoice name to dequeue.',
+                            help='ClusterAccountDeactivationRequestReasonChoice'
+                                 ' name to dequeue. Will dequeue ALL reasons '
+                                 'without this flag.',
                             type=str,
                             required=False)
 

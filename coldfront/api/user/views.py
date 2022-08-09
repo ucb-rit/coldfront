@@ -22,12 +22,13 @@ from datetime import timedelta
 from datetime import timezone
 from django.conf import settings
 from django.contrib.auth.models import User
-from rest_framework import mixins
+from rest_framework import mixins, status
 from rest_framework import viewsets
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
 
-from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.common import utc_now_offset_aware, \
+    import_from_settings
 
 logger = logging.getLogger(__name__)
 
@@ -118,10 +119,11 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
         try:
             with transaction.atomic():
                 justification = serializer.validated_data.pop('justification', None)
+                serializer.validated_data.pop('reason', None)
+                serializer.validated_data.pop('user', None)
 
                 instance = serializer.save()
-                instance.state['other']['justification'] = justification
-                instance.state['other']['timestamp'] = utc_now_offset_aware().isoformat()
+                instance.state['justification'] = justification
                 instance.save()
 
         except Exception as e:
@@ -145,11 +147,41 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
                 'Creates a new ClusterAccountDeactivationRequest with the '
                 'given fields.'))
     def create(self, request, *args, **kwargs):
-        """The method for PATCH (partial update) requests."""
+        """The method for POST (create) requests."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         serializer.validated_data.pop('justification', None)
 
-        instance = serializer.save()
+        # Only queued requests can be created.
+        if serializer.validated_data['status'].name != 'Queued':
+            message = {'error': f'POST requests only allow requests to be '
+                                f'created with a \"Queued\" status.'}
+            return Response(message,
+                            status=status.HTTP_400_BAD_REQUEST)
 
+        expiration_days = \
+            import_from_settings('ACCOUNT_DEACTIVATION_QUEUE_DAYS')
+
+        expiration = utc_now_offset_aware() + timedelta(days=expiration_days)
+
+        instance, created = \
+            ClusterAccountDeactivationRequest.objects.get_or_create(
+                **serializer.validated_data)
+
+        if created:
+            instance.expiration = expiration
+            instance.save()
+
+        # Check if the request already exists.
+        if not created:
+            message = {'error': f'ClusterAccountDeactivationRequest with '
+                                f'given args already exists.'}
+            return Response(message,
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        headers = self.get_success_headers(serializer.data)
+
+        data = serializer.data.copy()
+        data.update({'id': instance.id})
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
