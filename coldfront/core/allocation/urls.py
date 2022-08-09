@@ -112,6 +112,15 @@ with flagged_paths('CLUSTER_ACCOUNTS_DELETABLE') as path:
         # path('cluster-account-deletion-request-cancel',
         #      account_deletion_views.AccountDeletionRequestCancelView.as_view(),
         #      name='cluster-account-deletion-request-cancel'),
+        path('cluster-account-deletion-request/<int:pk>/project-removal',
+             account_deletion_views.AccountDeletionRequestRemoveProjectsView.as_view(),
+             name='cluster-account-deletion-request-project-removal'),
+        path('cluster-account-deletion-request/<int:pk>/project-removal-confirm',
+             account_deletion_views.AccountDeletionRequestRemoveProjectsConfirmView.as_view(),
+             name='cluster-account-deletion-request-project-removal-confirm'),
+        path('cluster-account-deletion-request/<int:pk>/data-deletion',
+             account_deletion_views.AccountDeletionRequestDataDeletionView.as_view(),
+             name='cluster-account-deletion-request-data-deletion')
     ]
 
 urlpatterns = urlpatterns + flagged_url_patterns
