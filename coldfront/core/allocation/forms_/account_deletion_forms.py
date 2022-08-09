@@ -1,11 +1,11 @@
 from django import forms
 
 from coldfront.core.allocation.models import \
-    ClusterAcctDeletionRequestStatusChoice, \
-    ClusterAcctDeletionRequestRequesterChoice
+    AccountDeletionRequestStatusChoice, \
+    AccountDeletionRequestRequesterChoice
 
 
-class ClusterAcctDeletionRequestForm(forms.Form):
+class AccountDeletionRequestForm(forms.Form):
     confirm_checkbox = \
         forms.BooleanField(required=True)
     understand_checkbox = \
@@ -49,7 +49,7 @@ class ClusterAcctDeletionRequestForm(forms.Form):
                 'Entered password is incorrect.')
 
 
-class ClusterAcctDeletionEligibleUsersSearchForm(forms.Form):
+class AccountDeletionEligibleUsersSearchForm(forms.Form):
     project = forms.CharField(label='Project Name',
                               max_length=100, required=False)
     username = forms.CharField(
@@ -60,7 +60,7 @@ class ClusterAcctDeletionEligibleUsersSearchForm(forms.Form):
         label='Last Name', max_length=100, required=False)
 
 
-class ClusterAcctDeletionRequestSearchForm(forms.Form):
+class AccountDeletionRequestSearchForm(forms.Form):
     STATUS_CHOICES = (
         ('', '-----'),
         ('Queued', 'Queued'),

@@ -72,9 +72,9 @@
                                 {% endfor %}
                                 </tbody>
                             </table>
-                          {% with eligible_users_to_delete as page_obj %}
+                          {% if is_paginated %}
                             {% include 'common/pagination.html' %}
-                          {% endwith %}
+                          {% endif %}
                         </div>
             {% else %}
                 <div class="alert alert-info">

@@ -671,18 +671,18 @@ class SecureDirRemoveUserRequest(TimeStampedModel):
         SecureDirRemoveUserRequestStatusChoice, on_delete=models.CASCADE)
 
 
-class ClusterAcctDeletionRequestStatusChoice(TimeStampedModel):
+class AccountDeletionRequestStatusChoice(TimeStampedModel):
     name = models.CharField(max_length=64)
     # Queued, Ready, Processing, Complete, Canceled
 
 
-class ClusterAcctDeletionRequestRequesterChoice(TimeStampedModel):
+class AccountDeletionRequestRequesterChoice(TimeStampedModel):
     name = models.CharField(max_length=64)
     # User, System, PI
 
 
 def cluster_acct_deletion_request_state_schema():
-    """Return the schema for the ClusterAcctDeletionRequest.state
+    """Return the schema for the AccountDeletionRequest.state
     field."""
     return {
         'placeholder': {
@@ -697,12 +697,12 @@ def cluster_acct_deletion_request_state_schema():
     }
 
 
-class ClusterAcctDeletionRequest(TimeStampedModel):
+class AccountDeletionRequest(TimeStampedModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     status = models.ForeignKey(
-        ClusterAcctDeletionRequestStatusChoice, on_delete=models.CASCADE)
+        AccountDeletionRequestStatusChoice, on_delete=models.CASCADE)
     requester = models.ForeignKey(
-        ClusterAcctDeletionRequestRequesterChoice, on_delete=models.CASCADE)
+        AccountDeletionRequestRequesterChoice, on_delete=models.CASCADE)
     expiration = models.DateTimeField()
     state = models.JSONField(default=cluster_acct_deletion_request_state_schema)  # TODO: This needs a schema.
     history = HistoricalRecords()

@@ -55,7 +55,7 @@
   {% if cluster_acct_deletion_requests %}
     <div class="table-responsive">
       {% with queryset=cluster_acct_deletion_requests actions_visible=actions_visible %}
-        {% include 'cluster_acct_deletion/cluster_acct_deletion_request_list_table.html' %}
+        {% include 'account_deletion/request_list_table.html' %}
       {% endwith %}
       {% if is_paginated %}
         {% include 'common/pagination.html' %}

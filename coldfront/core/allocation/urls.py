@@ -3,8 +3,8 @@ from flags.urls import flagged_paths
 
 import coldfront.core.allocation.views as allocation_views
 import coldfront.core.allocation.views_.secure_dir_views as secure_dir_views
-import coldfront.core.allocation.views_.cluster_acct_deletion_views as \
-    cluster_acct_deletion_views
+import coldfront.core.allocation.views_.account_deletion_views as \
+    account_deletion_views
 
 
 urlpatterns = [
@@ -98,19 +98,19 @@ urlpatterns = [
 with flagged_paths('CLUSTER_ACCOUNTS_DELETABLE') as path:
     flagged_url_patterns = [
         path('cluster-account-deletion-make-request/<int:pk>/',
-             cluster_acct_deletion_views.ClusterAcctDeletionRequestFormView.as_view(),
+             account_deletion_views.AccountDeletionRequestFormView.as_view(),
              name='cluster-account-deletion-request'),
         path('cluster-account-deletion-eligible-users',
-             cluster_acct_deletion_views.ClusterAcctDeletionRequestEligibleUsersView.as_view(),
+             account_deletion_views.AccountDeletionRequestEligibleUsersView.as_view(),
              name='cluster-account-deletion-eligible-users'),
         path('cluster-account-deletion-request-list',
-             cluster_acct_deletion_views.ClusterAcctDeletionRequestListView.as_view(),
+             account_deletion_views.AccountDeletionRequestListView.as_view(),
              name='cluster-account-deletion-request-list'),
         path('cluster-account-deletion-request/<int:pk>/',
-             cluster_acct_deletion_views.ClusterAcctDeletionRequestDetailView.as_view(),
+             account_deletion_views.AccountDeletionRequestDetailView.as_view(),
              name='cluster-account-deletion-request-detail'),
         # path('cluster-account-deletion-request-cancel',
-        #      cluster_acct_deletion_views.ClusterAcctDeletionRequestCancelView.as_view(),
+        #      account_deletion_views.AccountDeletionRequestCancelView.as_view(),
         #      name='cluster-account-deletion-request-cancel'),
     ]
 

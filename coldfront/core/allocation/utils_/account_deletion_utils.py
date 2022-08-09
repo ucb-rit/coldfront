@@ -1,14 +1,14 @@
 import datetime
 
-from coldfront.core.allocation.models import ClusterAcctDeletionRequest, \
-    ClusterAcctDeletionRequestStatusChoice, AllocationUserAttribute, \
-    ClusterAcctDeletionRequestRequesterChoice
+from coldfront.core.allocation.models import AccountDeletionRequest, \
+    AccountDeletionRequestStatusChoice, AllocationUserAttribute, \
+    AccountDeletionRequestRequesterChoice
 from coldfront.core.allocation.utils import has_cluster_access
 from coldfront.core.utils.common import import_from_settings, \
     utc_now_offset_aware
 
 
-class ClusterAcctDeletionRequestRunner(object):
+class AccountDeletionRequestRunner(object):
     """An object that performs necessary database changes when a new
     cluster account deletion request is submitted."""
 
@@ -21,14 +21,14 @@ class ClusterAcctDeletionRequestRunner(object):
 
     def run(self):
         queued_status = \
-            ClusterAcctDeletionRequestStatusChoice.objects.get(name='Queued')
+            AccountDeletionRequestStatusChoice.objects.get(name='Queued')
         ready_status = \
-            ClusterAcctDeletionRequestStatusChoice.objects.get(name='Ready')
+            AccountDeletionRequestStatusChoice.objects.get(name='Ready')
         processing_status = \
-            ClusterAcctDeletionRequestStatusChoice.objects.get(name='Processing')
+            AccountDeletionRequestStatusChoice.objects.get(name='Processing')
 
         requester_obj = \
-            ClusterAcctDeletionRequestRequesterChoice.objects.get(name=self.requester_str)
+            AccountDeletionRequestRequesterChoice.objects.get(name=self.requester_str)
 
         if self.requester_str in ['User', 'PI']:
             expiration_days = import_from_settings('ACCOUNT_DELETION_MANUAL_QUEUE_DAYS')
@@ -45,8 +45,8 @@ class ClusterAcctDeletionRequestRunner(object):
         proceed_flag = True
         deletion_request = None
 
-        # Check for active ClusterAcctDeletionRequest for user.
-        if ClusterAcctDeletionRequest.objects.filter(
+        # Check for active AccountDeletionRequest for user.
+        if AccountDeletionRequest.objects.filter(
                 user=self.user_obj,
                 status__in=[queued_status, ready_status, processing_status]).exists():
             message = f'Error requesting cluster account deletion of user ' \
@@ -66,7 +66,7 @@ class ClusterAcctDeletionRequestRunner(object):
             proceed_flag = False
 
         if proceed_flag:
-            deletion_request = ClusterAcctDeletionRequest.objects.create(
+            deletion_request = AccountDeletionRequest.objects.create(
                 user=self.user_obj,
                 requester=requester_obj,
                 status=queued_status,
