@@ -2,18 +2,17 @@ from django.db.models import QuerySet
 from django.views.generic import ListView
 
 
-class RequestListView(ListView):
+class ListViewClass(ListView):
 
     def get_context_data(self, **kwargs):
-
         context = super().get_context_data(**kwargs)
 
         search_form = kwargs.get('search_form', None)
 
         filter_parameters = ''
-        context['search_form'] = search_form()
 
         if search_form:
+            context['search_form'] = search_form()
             search_form = search_form(self.request.GET)
 
             if search_form.is_valid():

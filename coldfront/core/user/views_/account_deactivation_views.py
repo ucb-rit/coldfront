@@ -10,12 +10,12 @@ from coldfront.core.user.forms_.account_deactivation_forms import \
     AccountDeactivationRequestSearchForm, \
     AccountDeactivationCancelForm
 from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.utils.views import RequestListView
+from coldfront.core.utils.views import ListViewClass
 
 
 class AccountDeactivationRequestListView(LoginRequiredMixin,
                                          UserPassesTestMixin,
-                                         RequestListView):
+                                         ListViewClass):
     model = ClusterAccountDeactivationRequest
     template_name = 'account_deactivation/request_list.html'
     context_object_name = 'account_deactivation_requests'
