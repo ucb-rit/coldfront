@@ -4,7 +4,6 @@ from itertools import chain
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
-from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Q, QuerySet
 from django.forms import formset_factory
 from django.http import HttpResponseRedirect
@@ -19,28 +18,16 @@ from coldfront.core.allocation.forms_.account_deletion_forms import \
     AccountDeletionRequestForm, AccountDeletionRequestSearchForm, \
     AccountDeletionEligibleUsersSearchForm, AccountDeletionProjectRemovalForm, \
     UpdateStatusForm
-from coldfront.core.allocation.models import (Allocation,
-                                              AllocationAttributeType,
-                                              AllocationUserStatusChoice,
-                                              AccountDeletionRequest,
+from coldfront.core.allocation.models import (AccountDeletionRequest,
                                               AccountDeletionRequestStatusChoice)
 from coldfront.core.allocation.utils_.account_deletion_utils import \
     AccountDeletionRequestRunner
 
-from coldfront.core.project.forms_.removal_forms import \
-    (ProjectRemovalRequestSearchForm,
-     ProjectRemovalRequestUpdateStatusForm,
-     ProjectRemovalRequestCompletionForm)
-from coldfront.core.project.models import (Project,
-                                           ProjectUserStatusChoice,
-                                           ProjectUserRemovalRequest,
-                                           ProjectUserRemovalRequestStatusChoice,
-                                           ProjectUser)
+from coldfront.core.project.models import (ProjectUser)
 from coldfront.core.project.utils_.removal_utils import \
     ProjectRemovalRequestRunner
 from coldfront.core.utils.common import (import_from_settings,
                                          utc_now_offset_aware)
-from coldfront.core.utils.mail import send_email_template
 
 import logging
 
@@ -49,6 +36,56 @@ from coldfront.core.utils.views import ListViewClass
 EMAIL_ENABLED = import_from_settings('EMAIL_ENABLED', False)
 
 logger = logging.getLogger(__name__)
+
+
+class AccountDeletionRequestMixin(object):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.request_obj = None
+
+    # def redirect_if_disallowed_status(self, http_request,
+    #                                   disallowed_status_names=(
+    #                                           'Approved - Complete',
+    #                                           'Cancelled')):
+    #     """Return a redirect response to the detail view for this
+    #     project request if its status has one of the given disallowed
+    #     names, after sending a message to the user. Otherwise, return
+    #     None."""
+    #     if not isinstance(self.request_obj, SecureDirRequest):
+    #         raise TypeError(
+    #             f'Request object has unexpected type '
+    #             f'{type(self.request_obj)}.')
+    #     status_name = self.request_obj.status.name
+    #     if status_name in disallowed_status_names:
+    #         message = (
+    #             f'You cannot perform this action on a request with status '
+    #             f'{status_name}.')
+    #         messages.error(http_request, message)
+    #         return HttpResponseRedirect(
+    #             self.request_detail_url(self.request_obj.pk))
+    #     return None
+
+    @staticmethod
+    def request_detail_url(pk):
+        """Return the URL to the detail view for the request with the
+        given primary key."""
+        return reverse('cluster-account-deletion-request-detail',
+                       kwargs={'pk': pk})
+
+    def get_user_projects(self, user):
+        user_projects = \
+            ProjectUser.objects.filter(
+                user=user).exclude(status__name='Denied').values_list(
+                'project__name', flat=True)
+
+        return ', '.join(user_projects)
+
+    def set_request_obj(self, pk):
+        """Set this instance's request_obj to be the
+        AccountDeletionRequest with the given primary key."""
+        self.request_obj = get_object_or_404(AccountDeletionRequest,
+                                             pk=pk)
 
 
 class AccountDeletionRequestFormView(LoginRequiredMixin,
@@ -134,7 +171,7 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
         return kwargs
 
     def get_success_url(self):
-        return reverse('home')
+        return reverse('cluster-account-deletion-eligible-users')
 
 
 class AccountDeletionRequestEligibleUsersView(LoginRequiredMixin,
@@ -325,56 +362,6 @@ class AccountDeletionRequestListView(LoginRequiredMixin,
         return context
 
 
-class AccountDeletionRequestMixin(object):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.request_obj = None
-
-    # def redirect_if_disallowed_status(self, http_request,
-    #                                   disallowed_status_names=(
-    #                                           'Approved - Complete',
-    #                                           'Cancelled')):
-    #     """Return a redirect response to the detail view for this
-    #     project request if its status has one of the given disallowed
-    #     names, after sending a message to the user. Otherwise, return
-    #     None."""
-    #     if not isinstance(self.request_obj, SecureDirRequest):
-    #         raise TypeError(
-    #             f'Request object has unexpected type '
-    #             f'{type(self.request_obj)}.')
-    #     status_name = self.request_obj.status.name
-    #     if status_name in disallowed_status_names:
-    #         message = (
-    #             f'You cannot perform this action on a request with status '
-    #             f'{status_name}.')
-    #         messages.error(http_request, message)
-    #         return HttpResponseRedirect(
-    #             self.request_detail_url(self.request_obj.pk))
-    #     return None
-
-    @staticmethod
-    def request_detail_url(pk):
-        """Return the URL to the detail view for the request with the
-        given primary key."""
-        return reverse('cluster-account-deletion-request-detail',
-                       kwargs={'pk': pk})
-
-    def get_user_projects(self, user):
-        user_projects = \
-            ProjectUser.objects.filter(
-                user=user).exclude(status__name='Denied').values_list(
-                'project__name', flat=True)
-
-        return ', '.join(user_projects)
-
-    def set_request_obj(self, pk):
-        """Set this instance's request_obj to be the
-        AccountDeletionRequest with the given primary key."""
-        self.request_obj = get_object_or_404(AccountDeletionRequest,
-                                             pk=pk)
-
-
 class AccountDeletionRequestDetailView(LoginRequiredMixin,
                                        UserPassesTestMixin,
                                        AccountDeletionRequestMixin,
@@ -434,7 +421,7 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
         context['latest_update_timestamp'] = latest_update_timestamp
 
         context['checklist'] = self.get_checklist()
-        context['setup_status'] = self.get_delete_account_status()
+        context['setup_status'] = self.get_account_deletion_status()
         context['is_checklist_complete'] = self.is_checklist_complete()
 
         context['is_allowed_to_manage_request'] = \
@@ -458,34 +445,34 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
 
         # TODO: change the urls
 
-        remove_projects = state['remove_projects']
+        project_removal = state['project_removal']
         checklist.append([
             'Confirm that the user has been removed from all projects.',
-            remove_projects['status'],
-            remove_projects['timestamp'],
+            project_removal['status'],
+            project_removal['timestamp'],
             True,
             reverse(
                 'cluster-account-deletion-request-project-removal',
                 kwargs={'pk': pk})
         ])
-        projects_removed = remove_projects['status'] == 'Complete'
+        projects_removed = project_removal['status'] == 'Complete'
 
-        delete_data = state['delete_data']
+        data_deletion = state['data_deletion']
         checklist.append([
             'Confirm that the user\'s data has been deleted from the cluster.',
-            delete_data['status'],
-            delete_data['timestamp'],
+            data_deletion['status'],
+            data_deletion['timestamp'],
             True,
             reverse(
                 'cluster-account-deletion-request-data-deletion', kwargs={'pk': pk})
         ])
-        data_deleted = delete_data['status'] == 'Complete'
+        data_deleted = data_deletion['status'] == 'Complete'
 
-        delete_account = state['delete_account']
+        account_deletion = state['account_deletion']
         checklist.append([
             'Confirm that the user\'s cluster account has been deleted.',
-            self.get_delete_account_status(),
-            delete_account['timestamp'],
+            self.get_account_deletion_status(),
+            account_deletion['timestamp'],
             projects_removed and data_deleted,
             reverse(
                 'cluster-account-deletion-request-detail', kwargs={'pk': pk})
@@ -522,19 +509,19 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
         return HttpResponseRedirect('home')
         return HttpResponseRedirect(self.redirect)
 
-    def get_delete_account_status(self):
-        """Return one of the following statuses for the 'delete_account' step of
+    def get_account_deletion_status(self):
+        """Return one of the following statuses for the 'account_deletion' step of
         the request: 'N/A', 'Pending', 'Complete'."""
         state = self.request_obj.state
-        if (state['remove_projects']['status'] == 'Cancelled' or
-                state['delete_data']['status'] == 'Cancelled'):
+        if (state['project_removal']['status'] == 'Cancelled' or
+                state['data_deletion']['status'] == 'Cancelled'):
             return 'N/A'
-        return state['delete_account']['status']
+        return state['account_deletion']['status']
 
     def is_checklist_complete(self):
         status_choice = self.request_obj.status.name
         return (status_choice == 'Processing' and
-                self.request_obj.state['delete_account'][
+                self.request_obj.state['account_deletion'][
                     'status'] == 'Complete')
 
 
@@ -615,7 +602,7 @@ class AccountDeletionRequestRemoveProjectsView(LoginRequiredMixin,
                                                              'Pending - Remove']).exists()
 
         context['project_removal_status'] = \
-            self.request_obj.state['remove_projects']['status']
+            self.request_obj.state['project_removal']['status']
 
         return render(request, self.template_name, context)
 
@@ -705,7 +692,7 @@ class AccountDeletionRequestRemoveProjectsConfirmView(LoginRequiredMixin,
                 reverse('cluster-account-deletion-request-project-removal',
                         kwargs={'pk': pk}))
 
-        self.request_obj.state['remove_projects'] = {
+        self.request_obj.state['project_removal'] = {
             'status': 'Complete',
             'timestamp': utc_now_offset_aware().isoformat(),
         }
@@ -748,7 +735,7 @@ class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
     def form_valid(self, form):
         form_data = form.cleaned_data
         status = form_data['status']
-        self.request_obj.state['delete_data'] = {
+        self.request_obj.state['data_deletion'] = {
             'status': status,
             'timestamp': utc_now_offset_aware().isoformat(),
         }
@@ -773,7 +760,7 @@ class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
 
     def get_initial(self):
         initial = super().get_initial()
-        initial['status'] = self.request_obj.state['delete_data']['status']
+        initial['status'] = self.request_obj.state['data_deletion']['status']
         return initial
 
     def get_success_url(self):
