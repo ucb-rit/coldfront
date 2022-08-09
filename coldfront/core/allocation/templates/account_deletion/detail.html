@@ -52,7 +52,10 @@
                   This request has waited the standard waiting period of {{ waiting_period }} and is
                   ready to be scheduled for processing. The request should be scheduled for processing
                   shortly. If it has been several days and the request status has not been updated,
-                  please contact us at {{ support_email }}.
+                  please contact us at
+                  <a href = "mailto: {% settings_value 'CENTER_HELP_EMAIL' %}">
+                    {% settings_value 'CENTER_HELP_EMAIL' %}.
+                  </a>
                 </p>
               {% elif status == 'Processing' %}
                 <p>
@@ -83,9 +86,12 @@
                 </p>
               {% endif %}
 
-              <p>If you have any questions or concerns, please contact us at {{ support_email }}.</p>
+              <p>If you have any questions or concerns, please contact us at
+                <a href = "mailto: {% settings_value 'CENTER_HELP_EMAIL' %}">
+                  {% settings_value 'CENTER_HELP_EMAIL' %}.
+                </a>
+              </p>
             {% endwith %}
-            </td>
           </tr>
           <tr>
             <strong>Latest Update Timestamp:</strong>

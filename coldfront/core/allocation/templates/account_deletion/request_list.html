@@ -42,7 +42,7 @@
         <div id="collapseOne" class="collapse {{expand_accordion}}" data-parent="#accordion">
           <div class="card-body">
             <form id="filter_form" method="GET" action="{% url 'cluster-account-deletion-request-list' %}" autocomplete="off">
-              {{ request_search_form|crispy }}
+              {{ search_form|crispy }}
               <input type="submit" class="btn btn-primary" value="Search">
               <button id="form_reset_button" type="button" class="btn btn-secondary">Reset</button>
             </form>
@@ -52,9 +52,9 @@
     </div>
   {% endif %}
 
-  {% if cluster_acct_deletion_requests %}
+  {% if account_deletion_requests %}
     <div class="table-responsive">
-      {% with queryset=cluster_acct_deletion_requests actions_visible=actions_visible %}
+      {% with queryset=account_deletion_requests %}
         {% include 'account_deletion/request_list_table.html' %}
       {% endwith %}
       {% if is_paginated %}

@@ -20,6 +20,11 @@
     <th scope="col">
       Status
     </th>
+    {% if status == 'Queued' %}
+      <th scope="col">
+        Expiration
+      </th>
+    {% endif %}
     {% if user.is_superuser and actions_visible %}
       <th scope="col">
         Actions
@@ -44,15 +49,19 @@
             <span class="badge badge-danger">{{ status }}</span>
           {% endif %}
         </td>
-        {% if user.is_superuser and actions_visible %}
-          <td class="text-nowrap">
-            <a href="{% url 'cluster-account-deletion-request-detail' request.pk %}" class="btn btn-success mr-1">
-              Manage
-            </a>
-          </td>
-        {% endif %}
       {% endwith %}
-
+      {% if status == 'Queued' %}
+        <td>
+          {{ request.expiration|date:"M. d, Y" }}
+        </td>
+      {% endif %}
+      {% if user.is_superuser and actions_visible %}
+        <td class="text-nowrap">
+          <a href="{% url 'cluster-account-deletion-request-detail' request.pk %}" class="btn btn-success mr-1">
+            Manage
+          </a>
+        </td>
+      {% endif %}
     </tr>
   {% endfor %}
   </tbody>

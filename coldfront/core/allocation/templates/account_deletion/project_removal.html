@@ -1,0 +1,151 @@
+{% extends "common/base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %} Project Removal: {{ user_str }} ({{ request_obj.user.username }}) {% endblock %}
+
+{% block content %}
+  <h1>Project Removal: {{ user_str }} ({{ request_obj.user.username }})</h1>
+  <hr>
+  <p>
+    Please ensure {{ user_str }} is no longer a part of any projects.
+    You may request project removals in the table below. Note that the requests
+    must be processed before this step can be completed. Once the user has
+    been removed from all projects, the <i>Submit</i> button will activate.
+  </p>
+
+  {% include 'account_deletion/detail_card.html' %}
+
+  {% if formset %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <h4>
+          <i class="fas fa-user" aria-hidden="true"></i>
+          User Projects
+        </h4>
+      </div>
+      <div class="card-body">
+        <strong>Number of Active Projects: {{ active_projects }}</strong>
+        <form action="{% url 'cluster-account-deletion-request-project-removal' request_obj.pk %}" method="post">
+          {% csrf_token %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover">
+              <thead>
+              <tr>
+                <th>
+                  <input type="checkbox" class="check" id="selectAll">
+                </th>
+                <th scope="col">#</th>
+                <th scope="col">Project</th>
+                <th scope="col">PIs</th>
+                <th scope="col">Role</th>
+                <th scope="col">Status</th>
+              </tr>
+              </thead>
+              <tbody>
+              {% for form in formset %}
+                <tr>
+                  <td>{{ form.selected }}</td>
+                  {% if form.status.value == 'Active' %}
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ form.project_name.value }}</td>
+                    <td>{{ form.pis.value }}</td>
+                    <td>{{ form.role.value }}</td>
+
+                    {% if form.status.value in 'Active,Pending-Add' %}
+                      <td><span class="badge badge-success">{{ form.status.value }}</span></td>
+                    {% elif status == 'Pending - Remove' %}
+                      <td><span class="badge badge-warning">{{ form.status.value }}</span></td>
+                    {% else %}
+                      <td><span class="badge badge-danger">{{ form.status.value }}</span></td>
+                    {% endif %}
+                  {% else %}
+                    <td><div class="text-muted">{{ forloop.counter }}</div></td>
+                    <td><div class="text-muted">{{ form.project_name.value }}</div></td>
+                    <td><div class="text-muted">{{ form.pis.value }}</div></td>
+                    <td><div class="text-muted">{{ form.role.value }}</div></td>
+
+                    {% if form.status.value in 'Active,Pending-Add' %}
+                      <td><div class="text-muted"><span class="badge badge-success">{{ form.status.value }}</span></div></td>
+                    {% elif status == 'Pending - Remove' %}
+                      <td><div class="text-muted"><span class="badge badge-warning">{{ form.status.value }}</span></div></td>
+                    {% else %}
+                      <td><div class="text-muted"><span class="badge badge-danger">{{ form.status.value }}</span></div></td>
+                    {% endif %}
+                  {% endif %}
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {{ formset.management_form }}
+          <div style="float: right;">
+            {% if active_projects != 0 %}
+              <button type="submit" class="btn btn-danger">
+                <i class="fas fa-user-times" aria-hidden="true"></i>
+                Request Project Removal
+              </button>
+{#            {% else %}#}
+{#              <button type="submit" class="btn btn-danger disabled">#}
+{#                <i class="fas fa-user-times" aria-hidden="true"></i>#}
+{#                Request Project Removal#}
+{#              </button>#}
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      No projects to remove!
+    </div>
+  {% endif %}
+
+  <p></p>
+
+  <div class="card mb-3">
+    <div class="card-header">
+      <h4>
+        <i class="fas fa-check-circle" aria-hidden="true"></i>
+        Confirm Project Removals
+      </h4>
+    </div>
+    <div class="card-body">
+      <p style="float:left">
+        Confirm that {{ user_str }} is no
+        longer part of any projects — i.e., all statuses in the above
+        table are
+        <span class="badge badge-danger">Removed</span>.
+      </p>
+      <p style="float:right; margin: 1px">
+        <a class="btn btn-secondary float-right" href="{% url 'cluster-account-deletion-request-detail' request_obj.pk %}" role="button">
+          Back
+        </a>
+        {% if project_removal_complete and project_removal_status != 'Complete' %}
+          <form action="{% url 'cluster-account-deletion-request-project-removal-confirm' request_obj.pk %}" method="post">
+            {% csrf_token %}
+            <input class="btn btn-primary float-right" type="submit" value="Submit">
+          </form>
+{#          TODO: add the updatestatus form here #}
+        {% else %}
+          <button class="btn btn-primary float-left" style="margin-right: 1px" disabled="true">
+            Submit
+          </button>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <script>
+      $("#selectAll").click(function() {
+          $("input[name^='projectform-']").prop('checked', $(this).prop('checked'));
+      });
+
+      $("input[name^='projectform-']").click(function(ele) {
+          var id = $(this).attr('id');
+          if (id != "selectAll") {
+              $("#selectAll").prop('checked', false);
+          }
+      });
+  </script>
+{% endblock %}
