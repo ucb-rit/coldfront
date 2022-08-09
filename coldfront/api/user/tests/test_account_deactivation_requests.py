@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import User
 
 from coldfront.api.user.tests.test_user_base import TestUserBase
@@ -9,6 +11,9 @@ from coldfront.core.allocation.models import \
     ClusterAccountDeactivationRequestReasonChoice
 
 from http import HTTPStatus
+
+from coldfront.core.utils.common import utc_now_offset_aware, \
+    import_from_settings
 
 """A test suite for the /account_deactivation_requests/ endpoints, divided
 by method."""
@@ -64,6 +69,9 @@ class TestClusterAccountDeactivationRequestsBase(TestUserBase):
         # Run the client as the superuser.
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Token {self.superuser_token.key}')
+
+        self.expiration_offset = \
+            import_from_settings('ACCOUNT_DEACTIVATION_QUEUE_DAYS')
 
 
 class TestListClusterAccountDeactivationRequests(
@@ -197,9 +205,7 @@ class TestUpdatePatchClusterAccountDeactivationRequests(
             request.refresh_from_db()
 
     def _assert_pre_state(self):
-        """Assert that the relevant objects have the expected state,
-        assuming that the runner has either not run or not run
-        successfully."""
+        """Assert that the relevant objects have the expected state."""
         self._refresh_objects()
         for name, kwargs in self.request_dict.items():
             request = getattr(self, name)
@@ -208,8 +214,7 @@ class TestUpdatePatchClusterAccountDeactivationRequests(
             self.assertEqual(request.reason, kwargs['reason'])
 
     def _assert_post_state(self, request_name, status, justification=None):
-        """Assert that the relevant objects have the expected state,
-        assuming that the runner has run successfully."""
+        """Assert that the relevant objects have the expected state."""
         self._refresh_objects()
         for name, kwargs in self.request_dict.items():
             request = getattr(self, name)
@@ -397,13 +402,14 @@ class TestCreateClusterAccountDeactivations(
         )
         self.assertFalse(query.exists())
 
-    def _assert_post_state(self, user, status, reason):
+    def _assert_post_state(self, user, status, reason, pre_time, post_time):
         query = ClusterAccountDeactivationRequest.objects.filter(
             user__username=user,
             status__name=status,
             reason__name=reason
         )
         self.assertEqual(query.count(), 1)
+        self.assertTrue(pre_time <= query.first().expiration <= post_time)
 
     def _get_request(self, user, status, reason):
         query = ClusterAccountDeactivationRequest.objects.filter(
@@ -415,6 +421,9 @@ class TestCreateClusterAccountDeactivations(
         self.assertEqual(query.count(), 1)
 
         return query.first()
+
+    def _get_offset_time(self):
+        return utc_now_offset_aware() + timedelta(days=self.expiration_offset)
 
     def setUp(self):
         super().setUp()
@@ -441,6 +450,7 @@ class TestCreateClusterAccountDeactivations(
     def test_valid_data_queued(self):
         """Test that creating an object with valid POST data
         succeeds when the new status is Queued."""
+        pre_time = self._get_offset_time()
         url = BASE_URL
         data = {
             'user': 'user5',
@@ -453,7 +463,8 @@ class TestCreateClusterAccountDeactivations(
         self.assertEqual(response.status_code, HTTPStatus.CREATED)
         json = response.json()
 
-        self._assert_post_state(**data)
+        post_time = self._get_offset_time()
+        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
         assert_account_deactivation_request_serialization(
             self._get_request(**data), json, SERIALIZER_FIELDS)
 
@@ -501,6 +512,7 @@ class TestCreateClusterAccountDeactivations(
     def test_request_exists(self):
         """Test that creating an object with valid POST data
         does not succeed if the object already exists."""
+        pre_time = self._get_offset_time()
         url = BASE_URL
         data = {
             'user': 'user5',
@@ -511,7 +523,9 @@ class TestCreateClusterAccountDeactivations(
         response = self.client.post(url, data, format='json')
 
         self.assertEqual(response.status_code, HTTPStatus.CREATED)
-        self._assert_post_state(**data)
+
+        post_time = self._get_offset_time()
+        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
 
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
@@ -520,4 +534,4 @@ class TestCreateClusterAccountDeactivations(
         self.assertEqual(json['error'],
                          'ClusterAccountDeactivationRequest with '
                          'given args already exists.')
-        self._assert_post_state(**data)
+        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)

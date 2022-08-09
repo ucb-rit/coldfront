@@ -27,7 +27,8 @@ from rest_framework import viewsets
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
 
-from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.common import utc_now_offset_aware, \
+    import_from_settings
 
 logger = logging.getLogger(__name__)
 
@@ -159,9 +160,18 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
             return Response(message,
                             status=status.HTTP_400_BAD_REQUEST)
 
+        expiration_days = \
+            import_from_settings('ACCOUNT_DEACTIVATION_QUEUE_DAYS')
+
+        expiration = utc_now_offset_aware() + timedelta(days=expiration_days)
+
         instance, created = \
             ClusterAccountDeactivationRequest.objects.get_or_create(
                 **serializer.validated_data)
+
+        if created:
+            instance.expiration = expiration
+            instance.save()
 
         # Check if the request already exists.
         if not created:
