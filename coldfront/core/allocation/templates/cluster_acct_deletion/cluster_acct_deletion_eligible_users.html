@@ -43,7 +43,7 @@
           </td>
         {% endif %}
         <td>
-            {% if users_to_delete %}
+            {% if eligible_users_to_delete %}
                       <p><strong>Select Users to Delete:  </strong></p>
                         <div class="table-responsive">
                             <table class="table table-hover" style="width: 100%; height: 100%">
@@ -56,7 +56,7 @@
                                 <th scope="col" class="text-nowrap">Delete</th>
                                 </thead>
                                 <tbody>
-                                {% for user_dict in users_to_delete %}
+                                {% for user_dict in eligible_users_to_delete %}
                                     <tr>
                                         <td>{{ forloop.counter }}</td>
                                         <td>{{ user_dict.user.first_name }}</td>
@@ -72,7 +72,7 @@
                                 {% endfor %}
                                 </tbody>
                             </table>
-                          {% with users_to_delete as page_obj %}
+                          {% with eligible_users_to_delete as page_obj %}
                             {% include 'common/pagination.html' %}
                           {% endwith %}
                         </div>
