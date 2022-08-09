@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db.models import BooleanField
 from django.db.models import Case
@@ -23,10 +24,14 @@ from coldfront.core.allocation.models import (AllocationAttributeType,
                                               SecureDirAddUserRequest,
                                               SecureDirAddUserRequestStatusChoice,
                                               SecureDirRemoveUserRequest,
-                                              SecureDirRemoveUserRequestStatusChoice)
+                                              SecureDirRemoveUserRequestStatusChoice,
+                                              SecureDirRequest,
+                                              SecureDirRequestStatusChoice)
 from coldfront.core.allocation.signals import allocation_activate_user
 from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource
+from coldfront.core.resource.utils import get_primary_compute_resource_name
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import utc_now_offset_aware
 
@@ -158,11 +163,15 @@ def get_project_compute_resource_name(project_obj):
         elif project_obj.name.startswith('vector_'):
             resource_name = 'Vector Compute'
         else:
-            resource_name = 'Savio Compute'
+            resource_name = get_primary_compute_resource_name()
         return resource_name
     if flag_enabled('LRC_ONLY'):
-        if project_obj.name.startswith(('ac_', 'lr_', 'pc_')):
-            resource_name = 'LAWRENCIUM Compute'
+        computing_allowance_interface = ComputingAllowanceInterface()
+        project_name_prefixes = tuple([
+            computing_allowance_interface.code_from_name(allowance.name)
+            for allowance in computing_allowance_interface.allowances()])
+        if project_obj.name.startswith(project_name_prefixes):
+            resource_name = get_primary_compute_resource_name()
         else:
             # TODO: Verify this behavior.
             resource_name = f'{project_obj.name.upper()} Compute'
@@ -185,8 +194,7 @@ def prorated_allocation_amount(amount, dt, allocation_period):
     return zero.
 
     Parameters:
-        - amount (Decimal): a number of service units (e.g.,
-                            settings.FCA_DEFAULT_ALLOCATION).
+        - amount (Decimal): a base number of service units.
         - dt (datetime): a datetime object whose month is used in the
                          calculation, based on its position relative to
                          the start month of the given AllocationPeriod.
@@ -238,17 +246,13 @@ def create_secure_dirs(project, subdirectory_name, scratch_or_groups):
     scratch directory, depending on scratch_or_groups. Additionally creates
     an AllocationAttribute for the new allocation that corresponds to the
     directory path on the cluster.
-
     Parameters:
         - project (Project): a Project object to create a secure directory
                             allocation for
         - subdirectory_name (str): the name of the subdirectory on the cluster
         - scratch_or_groups (str): one of either 'scratch' or 'groups'
-
-
     Returns:
         - allocation
-
     Raises:
         - TypeError, if subdirectory_name has an invalid type
         - ValueError, if scratch_or_groups does not have a valid value
@@ -298,11 +302,9 @@ def get_secure_dir_manage_user_request_objects(self, action):
     """
     Sets attributes pertaining to a secure directory based on the
     action being performed.
-
     Parameters:
         - self (object): object to set attributes for
         - action (str): the action being performed, either 'add' or 'remove'
-
     Raises:
         - TypeError, if the 'self' object is not an object
         - ValueError, if action is not one of 'add' or 'remove'
@@ -332,3 +334,22 @@ def get_secure_dir_manage_user_request_objects(self, action):
     setattr(self, 'request_obj', request_obj)
     setattr(self, 'request_status_obj', request_status_obj)
     setattr(self, 'language_dict', language_dict)
+
+
+def has_cluster_access(user):
+    """
+    Returns True if the user has cluster access, False otherwise
+    Parameters:
+    - user (User): the user to check
+    Raises:
+    - TypeError, if user is not a User object
+    Returns:
+    - Bool: True if the user has cluster access and False otherwise
+    """
+    if not isinstance(user, User):
+        raise TypeError(f'Invalid User {user}.')
+
+    return AllocationUserAttribute.objects.filter(
+        allocation_user__user=user,
+        allocation_attribute_type__name='Cluster Account Status',
+        value='Active').exists()

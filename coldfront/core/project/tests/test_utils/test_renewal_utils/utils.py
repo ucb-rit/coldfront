@@ -26,9 +26,12 @@ from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice
 from coldfront.core.project.models import SavioProjectAllocationRequest
-from coldfront.core.project.utils import ProjectClusterAccessRequestRunner
+from coldfront.core.project.utils_.project_cluster_access_request_runner import ProjectClusterAccessRequestRunner
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.resource.models import Resource
+from coldfront.core.resource.utils import get_primary_compute_resource
+from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.common import utc_now_offset_aware
 
@@ -52,6 +55,7 @@ class TestRunnerMixinBase(object):
             'add_resource_defaults',
             'add_allocation_defaults',
             'add_accounting_defaults',
+            'add_allowance_defaults',
             'create_allocation_periods',
             # This command calls 'print', whose output must be suppressed.
             'import_field_of_science_data',
@@ -59,7 +63,7 @@ class TestRunnerMixinBase(object):
             'create_staff_group',
         ]
         sys.stdout = open(os.devnull, 'w')
-        with override_settings(FLAGS=FLAGS_COPY):
+        with override_settings(FLAGS=FLAGS_COPY, PRIMARY_CLUSTER_NAME='Savio'):
             for command in commands:
                 call_command(command, stdout=out, stderr=err)
         sys.stdout = sys.__stdout__
@@ -152,14 +156,16 @@ class TestRunnerMixinBase(object):
                 project=project, user=self.requester)
             request_runner = ProjectClusterAccessRequestRunner(
                 project_user_obj)
-            runner_result = request_runner.run()
+            request_runner.run()
 
-            self.assertTrue(runner_result.success)
         # Clear the mail outbox.
         mail.outbox = []
 
         # This should be set by the subclasses.
         self.request_obj = None
+
+        # TODO: Set this dynamically when supporting other types.
+        self.computing_allowance = Resource.objects.get(name=BRCAllowances.FCA)
 
     def assert_allocation_service_units_value(self, allocation, expected):
         """Assert that the given Allocation has an AllocationAttribute
@@ -179,14 +185,16 @@ class TestRunnerMixinBase(object):
         actual = self.request_obj.get_pooling_preference_case()
         self.assertEqual(expected, actual)
 
-    def create_request(self, status, pi=None, pre_project=None,
-                       post_project=None, new_project_request=None):
+    def create_request(self, status, pi=None, computing_allowance=None,
+                       pre_project=None, post_project=None,
+                       new_project_request=None):
         """Create and return an AllocationRenewalRequest with the given
         parameters."""
-        assert pi and pre_project and post_project
+        assert pi and computing_allowance and pre_project and post_project
         kwargs = {
             'requester': self.requester,
             'pi': pi,
+            'computing_allowance': computing_allowance,
             'allocation_period': self.allocation_period,
             'status': status,
             'pre_project': pre_project,
@@ -212,18 +220,22 @@ class TestRunnerMixinBase(object):
         new_allocation_status = AllocationStatusChoice.objects.get(name='New')
         allocation = Allocation.objects.create(
             project=new_project, status=new_allocation_status)
-        resource = Resource.objects.get(name='Savio Compute')
+        resource = get_primary_compute_resource()
         allocation.resources.add(resource)
         allocation.save()
 
         # Create an 'Under Review' SavioProjectAllocationRequest for the new
         # Project.
+        computing_allowance = Resource.objects.get(name=BRCAllowances.FCA)
+        allocation_type = ComputingAllowanceInterface().name_short_from_name(
+            computing_allowance.name)
         under_review_request_status = \
             ProjectAllocationRequestStatusChoice.objects.get(
                 name='Under Review')
         new_project_request = SavioProjectAllocationRequest.objects.create(
             requester=self.requester,
-            allocation_type=SavioProjectAllocationRequest.FCA,
+            allocation_type=allocation_type,
+            computing_allowance=computing_allowance,
             pi=self.pi0,
             project=new_project,
             survey_answers={},
