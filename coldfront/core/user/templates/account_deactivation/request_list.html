@@ -54,7 +54,9 @@
 
   {% if account_deactivation_requests %}
     <div class="table-responsive">
-      {% with queryset=account_deactivation_requests actions_visible=actions_visible %}
+      {% include 'account_deactivation/reason_card.html' %}
+      <p></p>
+      {% with queryset=account_deactivation_requests %}
         {% include 'account_deactivation/request_list_table.html' %}
       {% endwith %}
       {% if is_paginated %}
@@ -81,8 +83,10 @@
       });
 
       function resetForm($form) {
-          $form.find('input:text, textarea').val('');
-          $("select").val('');
+          $form.find('input:text, input:password, input:file, select, textarea').val('');
+          $form.find("input[type='number']").val('');
+
+          for (let i = 0; i < 6; i++) {$('select')[i].selectize.clear();}
       }
 
       $("#expand_button").click(function() {
