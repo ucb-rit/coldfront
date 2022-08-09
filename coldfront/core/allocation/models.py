@@ -673,7 +673,7 @@ class SecureDirRemoveUserRequest(TimeStampedModel):
 
 class AccountDeletionRequestStatusChoice(TimeStampedModel):
     name = models.CharField(max_length=64)
-    # Queued, Ready, Processing, Complete, Canceled
+    # Queued, Ready, Processing, Complete, Cancelled
 
 
 class AccountDeletionRequestRequesterChoice(TimeStampedModel):
@@ -681,11 +681,21 @@ class AccountDeletionRequestRequesterChoice(TimeStampedModel):
     # User, System, PI
 
 
-def cluster_acct_deletion_request_state_schema():
+def account_deletion_request_state_schema():
     """Return the schema for the AccountDeletionRequest.state
     field."""
     return {
-        'placeholder': {
+        'remove_projects': { # TODO: change this to project removal
+            'status': 'Pending',
+            'justification': '',
+            'timestamp': ''
+        },
+        'delete_data': { # TODO: change this to data deletion
+            'status': 'Pending',
+            'justification': '',
+            'timestamp': ''
+        },
+        'delete_account': { # TODO: change this to account deletion
             'status': 'Pending',
             'justification': '',
             'timestamp': ''
@@ -704,6 +714,58 @@ class AccountDeletionRequest(TimeStampedModel):
     requester = models.ForeignKey(
         AccountDeletionRequestRequesterChoice, on_delete=models.CASCADE)
     expiration = models.DateTimeField()
-    state = models.JSONField(default=cluster_acct_deletion_request_state_schema)  # TODO: This needs a schema.
+    state = models.JSONField(default=account_deletion_request_state_schema)
     history = HistoricalRecords()
 
+    def cancel_reason(self):
+        """Return the reason why the request was cancelled, based on its
+        'state' field."""
+        if self.status.name != 'Cancelled':
+            raise ValueError(
+                f'Provided request has unexpected status '
+                f'{self.status.name}.')
+
+        state = self.state
+        remove_projects = state['remove_projects']
+        delete_data = state['delete_data']
+        delete_account = state['delete_account']
+        other = state['other']
+
+        CancellationReason = namedtuple(
+            'CancellationReason', 'category justification timestamp')
+
+        if other['timestamp']:
+            category = 'Other'
+            justification = other['justification']
+            timestamp = other['timestamp']
+        elif remove_projects['status'] == 'Cancelled':
+            category = 'User was not removed from remaining projects.'
+            justification = remove_projects['justification']
+            timestamp = remove_projects['timestamp']
+        elif delete_data['status'] == 'Cancelled':
+            category = 'User data was not deleted from the cluster.'
+            justification = delete_data['justification']
+            timestamp = delete_data['timestamp']
+        elif delete_account['status'] == 'Cancelled':
+            category = 'User account was not deleted from the cluster.'
+            justification = delete_account['justification']
+            timestamp = delete_account['timestamp']
+        else:
+            raise ValueError('Provided request has an unexpected state.')
+
+        return CancellationReason(
+            category=category, justification=justification,
+            timestamp=timestamp)
+
+    def latest_update_timestamp(self):
+        """Return the latest timestamp stored in the request's 'state'
+        field, or the empty string.
+
+        The expected values are ISO 8601 strings, or the empty string,
+        so taking the maximum should provide the correct output."""
+        state = self.state
+        max_timestamp = ''
+        for field in state:
+            max_timestamp = max(
+                max_timestamp, state[field].get('timestamp', ''))
+        return max_timestamp
