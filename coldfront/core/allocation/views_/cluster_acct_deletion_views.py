@@ -41,12 +41,14 @@ from coldfront.core.utils.mail import send_email_template
 
 import logging
 
+from coldfront.core.utils.views import ListViewClass
+
 EMAIL_ENABLED = import_from_settings('EMAIL_ENABLED', False)
 
 
 class ClusterAcctDeletionRequestFormView(LoginRequiredMixin,
-                                            UserPassesTestMixin,
-                                            FormView):
+                                         UserPassesTestMixin,
+                                         FormView):
     logger = logging.getLogger(__name__)
     form_class = ClusterAcctDeletionRequestForm
     template_name = \
@@ -88,7 +90,7 @@ class ClusterAcctDeletionRequestFormView(LoginRequiredMixin,
                 requester_str = 'System'
 
             request_runner = ClusterAcctDeletionRequestRunner(self.user_obj,
-                                                             requester_str)
+                                                              requester_str)
             runner_result = request_runner.run()
             success_messages, error_messages = request_runner.get_messages()
 
@@ -132,12 +134,13 @@ class ClusterAcctDeletionRequestFormView(LoginRequiredMixin,
 
 
 class ClusterAcctDeletionRequestEligibleUsersView(LoginRequiredMixin,
-                                                     UserPassesTestMixin,
-                                                     ListView):
+                                                  UserPassesTestMixin,
+                                                  ListViewClass):
     template_name = \
         'cluster_acct_deletion/cluster_acct_deletion_eligible_users.html'
     paginate_by = 25
-
+    context_object_name = 'eligible_users'
+    
     def test_func(self):
         """ UserPassesTestMixin Tests"""
         if self.request.user.is_superuser:
@@ -152,7 +155,7 @@ class ClusterAcctDeletionRequestEligibleUsersView(LoginRequiredMixin,
     def get_queryset(self):
         # TODO: can managers' accounts be deleted?
         if self.request.user.is_superuser:
-            proj_users_to_delete = ProjectUser.objects.filter(
+            proj_eligible_users_to_delete = ProjectUser.objects.filter(
                 role__name='User').order_by('user__username')
         else:
             pi_projects = ProjectUser.objects.filter(
@@ -160,7 +163,7 @@ class ClusterAcctDeletionRequestEligibleUsersView(LoginRequiredMixin,
                 role__name__in=['Principal Investigator'],
                 status__name='Active').values_list('project', flat=True)
 
-            proj_users_to_delete = ProjectUser.objects.filter(
+            proj_eligible_users_to_delete = ProjectUser.objects.filter(
                 project__in=pi_projects,
                 role__name='User').order_by('user__username')
 
@@ -168,7 +171,7 @@ class ClusterAcctDeletionRequestEligibleUsersView(LoginRequiredMixin,
             ClusterAcctDeletionRequest.objects.filter(
                 status__name__in=['Queued', 'Ready', 'Processing'])
 
-        proj_users_to_delete = proj_users_to_delete.exclude(
+        proj_eligible_users_to_delete = proj_eligible_users_to_delete.exclude(
             user__in=pending_deletion_requests.values_list('user',
                                                            flat=True)).exclude(
             user=self.request.user).order_by('user__username')
@@ -179,24 +182,24 @@ class ClusterAcctDeletionRequestEligibleUsersView(LoginRequiredMixin,
             data = search_form.cleaned_data
 
             if data.get('username'):
-                proj_users_to_delete = proj_users_to_delete.filter(
+                proj_eligible_users_to_delete = proj_eligible_users_to_delete.filter(
                     user__username__icontains=data.get('username'))
 
             if data.get('first_name'):
-                proj_users_to_delete = proj_users_to_delete.filter(
+                proj_eligible_users_to_delete = proj_eligible_users_to_delete.filter(
                     user__first_name__icontains=data.get('first_name'))
 
             if data.get('last_name'):
-                proj_users_to_delete = proj_users_to_delete.filter(
+                proj_eligible_users_to_delete = proj_eligible_users_to_delete.filter(
                     user__last_name__icontains=data.get('last_name'))
 
-        users_to_delete = defaultdict()
-        for proj_user in proj_users_to_delete:
-            if proj_user.user in users_to_delete:
-                users_to_delete[proj_user.user]['projects'].append(
+        eligible_users_to_delete = defaultdict()
+        for proj_user in proj_eligible_users_to_delete:
+            if proj_user.user in eligible_users_to_delete:
+                eligible_users_to_delete[proj_user.user]['projects'].append(
                     proj_user.project.name)
             else:
-                users_to_delete[proj_user.user] = {
+                eligible_users_to_delete[proj_user.user] = {
                     'user': proj_user.user,
                     'projects': [proj_user.project.name]
                 }
@@ -207,84 +210,33 @@ class ClusterAcctDeletionRequestEligibleUsersView(LoginRequiredMixin,
             project_filter = search_form.cleaned_data.get('project')
 
         # Making a user friendly string of the user's projects.
-        for user, data in users_to_delete.copy().items():
+        for user, data in eligible_users_to_delete.copy().items():
             flag = False
             if project_filter:
                 for project in data['projects']:
                     if project_filter not in project:
-                        users_to_delete.pop(user)
+                        eligible_users_to_delete.pop(user)
                         flag = True
                         break
             if flag:
                 continue
             data['projects'] = ', '.join(data['projects'])
-            users_to_delete[user] = data
+            eligible_users_to_delete[user] = data
 
         # Need to create a tuple for the paginator.
-        users_to_delete = tuple(users_to_delete.values())
+        eligible_users_to_delete = tuple(eligible_users_to_delete.values())
 
-        return users_to_delete
+        return eligible_users_to_delete
 
     def get_context_data(self, **kwargs):
+        kwargs.update({'search_form': ClusterAcctDeletionEligibleUsersSearchForm})
         context = super().get_context_data(**kwargs)
-
-        search_form = ClusterAcctDeletionEligibleUsersSearchForm(
-            self.request.GET)
-        if search_form.is_valid():
-            data = search_form.cleaned_data
-            filter_parameters = ''
-            for key, value in data.items():
-                if value:
-                    if isinstance(value, list):
-                        for ele in value:
-                            filter_parameters += '{}={}&'.format(key, ele)
-                    else:
-                        filter_parameters += '{}={}&'.format(key, value)
-            context['search_form'] = search_form
-        else:
-            filter_parameters = None
-            context[
-                'search_form'] = ClusterAcctDeletionEligibleUsersSearchForm()
-
-        order_by = self.request.GET.get('order_by')
-        if order_by:
-            direction = self.request.GET.get('direction')
-            filter_parameters_with_order_by = filter_parameters + \
-                                              'order_by=%s&direction=%s&' % (
-                                                  order_by, direction)
-        else:
-            filter_parameters_with_order_by = filter_parameters
-
-        context['filter_parameters'] = filter_parameters
-        context['filter_parameters_with_order_by'] = \
-            filter_parameters_with_order_by
-
-        if filter_parameters:
-            context['expand_accordion'] = 'show'
-        else:
-            context['expand_accordion'] = 'toggle'
-
-        users_to_delete = self.get_queryset()
-
-        paginator = Paginator(users_to_delete, self.paginate_by)
-
-        page = self.request.GET.get('page')
-
-        try:
-            users_to_delete = paginator.page(page)
-        except PageNotAnInteger:
-            users_to_delete = paginator.page(1)
-        except EmptyPage:
-            users_to_delete = paginator.page(paginator.num_pages)
-
-        context['users_to_delete'] = users_to_delete
-
         return context
 
 
 class ClusterAcctDeletionRequestListView(LoginRequiredMixin,
-                                            UserPassesTestMixin,
-                                            ListView):
+                                         UserPassesTestMixin,
+                                         ListView):
     model = ClusterAcctDeletionRequest
     template_name = \
         'cluster_acct_deletion/cluster_acct_deletion_request_list.html'
@@ -295,7 +247,8 @@ class ClusterAcctDeletionRequestListView(LoginRequiredMixin,
         if self.request.user.is_superuser:
             return True
 
-        if self.request.user.has_perm('allocation.view_ClusterAcctDeletionrequest'):
+        if self.request.user.has_perm(
+                'allocation.view_ClusterAcctDeletionrequest'):
             return True
 
     def get_queryset(self):
@@ -367,7 +320,7 @@ class ClusterAcctDeletionRequestListView(LoginRequiredMixin,
             direction = self.request.GET.get('direction')
             filter_parameters_with_order_by = filter_parameters + \
                                               'order_by=%s&direction=%s&' % (
-                                              order_by, direction)
+                                                  order_by, direction)
         else:
             filter_parameters_with_order_by = filter_parameters
 
@@ -444,9 +397,9 @@ class ClusterAcctDeletionRequestMixin(object):
 
 
 class ClusterAcctDeletionRequestDetailView(LoginRequiredMixin,
-                                              UserPassesTestMixin,
-                                              ClusterAcctDeletionRequestMixin,
-                                              DetailView):
+                                           UserPassesTestMixin,
+                                           ClusterAcctDeletionRequestMixin,
+                                           DetailView):
     model = ClusterAcctDeletionRequest
     template_name = 'cluster_acct_deletion/cluster_acct_deletion_detail.html'
     login_url = '/'
@@ -461,7 +414,8 @@ class ClusterAcctDeletionRequestDetailView(LoginRequiredMixin,
         if self.request.user.is_superuser:
             return True
 
-        if self.request.user.has_perm('allocation.view_ClusterAcctDeletionrequest'):
+        if self.request.user.has_perm(
+                'allocation.view_ClusterAcctDeletionrequest'):
             return True
 
         if self.request.user == self.request_obj.user:
@@ -469,7 +423,8 @@ class ClusterAcctDeletionRequestDetailView(LoginRequiredMixin,
 
         # if the user is a pi of a project the user belongs to. if we
         # delete/disable project users, we need a way to keep track of this.
-        projects = ProjectUser.objects.filter(user=self.request.user).values_list('project', flat=True)
+        projects = ProjectUser.objects.filter(
+            user=self.request.user).values_list('project', flat=True)
         for project in projects:
             if self.request.user in project.pis():
                 return True
@@ -511,7 +466,8 @@ class ClusterAcctDeletionRequestDetailView(LoginRequiredMixin,
 
         context['request_obj'] = self.request_obj
 
-        projects = ProjectUser.objects.filter(user=self.request_obj.user).values_list('project__name', flat=True)
+        projects = ProjectUser.objects.filter(
+            user=self.request_obj.user).values_list('project__name', flat=True)
         context['user_projects'] = ', '.join(projects)
 
         return context
@@ -565,8 +521,9 @@ class ClusterAcctDeletionRequestDetailView(LoginRequiredMixin,
             'Pending',
             utc_now_offset_aware().isoformat(),
             True,
-            reverse('cluster-account-deletion-request-detail', kwargs={'pk': pk})
-            ])
+            reverse('cluster-account-deletion-request-detail',
+                    kwargs={'pk': pk})
+        ])
 
         return checklist
 
