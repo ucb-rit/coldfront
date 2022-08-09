@@ -31,7 +31,7 @@ class AccountDeactivationRequestSearchForm(forms.Form):
     status = forms.ChoiceField(label='Status',
                                choices=STATUS_CHOICES,
                                widget=forms.Select(),
-                               required=False)
+                               required=True)
 
     reason = forms.ChoiceField(label='Reason',
                                choices=REASON_CHOICES,
