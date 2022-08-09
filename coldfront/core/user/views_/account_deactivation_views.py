@@ -52,8 +52,6 @@ class AccountDeactivationRequestListView(LoginRequiredMixin,
             if data.get('status'):
                 self.status = data.get('status')
                 queryset = queryset.filter(status__name=self.status)
-            else:
-                queryset = queryset.filter(status__name='Ready')
 
             if data.get('reason'):
                 queryset = queryset.filter(
@@ -137,5 +135,4 @@ class AccountDeactivationRequestCancelView(LoginRequiredMixin,
         return initial
 
     def get_success_url(self):
-        return reverse(
-            'account-deactivation-request-list')
+        return reverse('account-deactivation-request-list')
