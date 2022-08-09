@@ -685,19 +685,16 @@ def account_deletion_request_state_schema():
     """Return the schema for the AccountDeletionRequest.state
     field."""
     return {
-        'remove_projects': { # TODO: change this to project removal
+        'project_removal': {
             'status': 'Pending',
-            'justification': '',
             'timestamp': ''
         },
-        'delete_data': { # TODO: change this to data deletion
+        'data_deletion': {
             'status': 'Pending',
-            'justification': '',
             'timestamp': ''
         },
-        'delete_account': { # TODO: change this to account deletion
+        'account_deletion': {
             'status': 'Pending',
-            'justification': '',
             'timestamp': ''
         },
         'other': {
@@ -726,9 +723,6 @@ class AccountDeletionRequest(TimeStampedModel):
                 f'{self.status.name}.')
 
         state = self.state
-        remove_projects = state['remove_projects']
-        delete_data = state['delete_data']
-        delete_account = state['delete_account']
         other = state['other']
 
         CancellationReason = namedtuple(
@@ -738,18 +732,6 @@ class AccountDeletionRequest(TimeStampedModel):
             category = 'Other'
             justification = other['justification']
             timestamp = other['timestamp']
-        elif remove_projects['status'] == 'Cancelled':
-            category = 'User was not removed from remaining projects.'
-            justification = remove_projects['justification']
-            timestamp = remove_projects['timestamp']
-        elif delete_data['status'] == 'Cancelled':
-            category = 'User data was not deleted from the cluster.'
-            justification = delete_data['justification']
-            timestamp = delete_data['timestamp']
-        elif delete_account['status'] == 'Cancelled':
-            category = 'User account was not deleted from the cluster.'
-            justification = delete_account['justification']
-            timestamp = delete_account['timestamp']
         else:
             raise ValueError('Provided request has an unexpected state.')
 
