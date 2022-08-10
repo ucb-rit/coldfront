@@ -82,10 +82,12 @@ def home(request):
                  Q(project_user__user__username=request.user.username) &
                  Q(status__name='Pending'))]
 
-        context['pending_deactivation_request'] = \
-            ClusterAccountDeactivationRequest.objects.filter(
+        for request_obj in ClusterAccountDeactivationRequest.objects.filter(
                 user=request.user,
-                status__name__in=['Queued', 'Ready']).first()
+                status__name__in=['Queued', 'Ready']):
+            reasons = [reason.description for reason in request_obj.reason.all()]
+            descriptions = ', '.join(reasons).replace('.', '').replace('User', 'user')
+        context['pending_deactivation_request_descriptions'] = descriptions
 
     else:
         template_name = 'portal/nonauthorized_home.html'

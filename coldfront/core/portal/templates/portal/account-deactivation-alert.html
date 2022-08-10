@@ -2,9 +2,11 @@
 
 <div class="alert alert-danger" role="alert">
   <p>
-    Your cluster account is pending deactivation for the following reason: "{{ pending_deactivation_request.reason.description }}"
+    Your cluster account is pending deactivation for the following reason(s): "{{ pending_deactivation_request_descriptions }}."
   </p>
     Please contact us at
     <a href = "mailto: {% settings_value 'CENTER_HELP_EMAIL' %}">{% settings_value 'CENTER_HELP_EMAIL' %}</a>
     if this is a mistake.
 </div>
+
+{# TODO: add a link to reactivation form. #}
