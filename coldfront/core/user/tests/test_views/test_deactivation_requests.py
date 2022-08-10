@@ -56,36 +56,40 @@ class TestAccountDeactivationRequestBase(TestBase):
                          'status':
                              ClusterAccountDeactivationRequestStatusChoice.objects.get(
                                  name='Queued'),
-                         'reason': no_valid_account,
+                         'reason': [no_valid_account, no_valid_recharge],
                          'expiration': self._get_offset_time()},
             'request1': {'user': self.user1,
                          'status':
                              ClusterAccountDeactivationRequestStatusChoice.objects.get(
                                  name='Ready'),
-                         'reason': no_valid_recharge,
+                         'reason': [no_valid_recharge],
                          'expiration': self._get_offset_time()},
             'request2': {'user': self.user2,
                          'status':
                              ClusterAccountDeactivationRequestStatusChoice.objects.get(
                                  name='Processing'),
-                         'reason': no_valid_recharge,
+                         'reason': [no_valid_recharge],
                          'expiration': self._get_offset_time()},
             'request3': {'user': self.user3,
                          'status':
                              ClusterAccountDeactivationRequestStatusChoice.objects.get(
                                  name='Complete'),
-                         'reason': no_valid_account,
+                         'reason': [no_valid_account],
                          'expiration': self._get_offset_time()},
             'request4': {'user': self.user4,
                          'status':
                              ClusterAccountDeactivationRequestStatusChoice.objects.get(
                                  name='Cancelled'),
-                         'reason': no_valid_account,
+                         'reason': [no_valid_account, no_valid_recharge],
                          'expiration': self._get_offset_time()},
         }
 
         for name, kwargs in self.request_dict.items():
+            reasons = kwargs.pop('reason')
             request = ClusterAccountDeactivationRequest.objects.create(**kwargs)
+            request.reason.add(*reasons)
+            request.save()
+            kwargs['reason'] = reasons
             setattr(self, name, request)
 
         self.staff = User.objects.create(username='staff', is_staff=True)
@@ -134,15 +138,26 @@ class TestAccountDeactivationRequestListView(TestAccountDeactivationRequestBase)
         self.assertIn(link, html)
 
     def _assert_expiration(self, kwargs, html):
-        if kwargs['status'].name == 'Queued':
+        kwargs_copy = kwargs.copy()
+        kwargs_copy.pop('reason')
+        if kwargs_copy['status'].name == 'Queued':
             self.assertIn('Expiration', html)
             request = \
-                ClusterAccountDeactivationRequest.objects.get(**kwargs)
+                ClusterAccountDeactivationRequest.objects.get(**kwargs_copy)
             expected = \
                 utc_datetime_to_display_time_zone_date(request.expiration)
             self.assertIn(expected.strftime('%b. %d, %Y'), html)
         else:
             self.assertNotIn('Expiration', html)
+
+    def _assert_correct_reason(self, reasons, html):
+        for reason in reasons:
+            if reason.name == 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID':
+                badge = '<span class="badge badge-primary">1</span>\n'
+                self.assertIn(badge, html)
+            if reason.name == 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID':
+                badge = '<span class="badge badge-info">2</span>\n'
+                self.assertIn(badge, html)
 
     def _assert_content_shown(self, user, request_kwargs):
         url = f'{reverse(self.url)}?status={request_kwargs["status"].name}'
@@ -152,8 +167,8 @@ class TestAccountDeactivationRequestListView(TestAccountDeactivationRequestBase)
         html = response.content.decode('utf-8')
 
         self.assertEqual(response.status_code, HTTPStatus.OK)
-        self.assertIn(request_kwargs['reason'].name, html)
 
+        self._assert_correct_reason(request_kwargs['reason'], html)
         self._assert_correct_user(request_kwargs['user'].username, html)
         self._assert_correct_status_badge(request_kwargs['status'].name, html)
         self._assert_actions_visible(user.is_superuser, request_kwargs['status'].name, html)
@@ -218,4 +233,3 @@ class TestAccountDeactivationRequestCancelView(TestAccountDeactivationRequestBas
         self.request0.refresh_from_db()
         self.assertEqual(self.request0.status.name, 'Cancelled')
         self.assertEqual(self.request0.state['justification'], data.get('justification'))
-

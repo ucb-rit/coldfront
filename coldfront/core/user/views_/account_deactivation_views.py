@@ -55,7 +55,7 @@ class AccountDeactivationRequestListView(LoginRequiredMixin,
 
             if data.get('reason'):
                 queryset = queryset.filter(
-                    reason__name=data.get('reason'))
+                    reason__name__in=[data.get('reason')])
 
         else:
             queryset = ClusterAccountDeactivationRequest.objects.filter(
@@ -73,6 +73,11 @@ class AccountDeactivationRequestListView(LoginRequiredMixin,
         context['actions_visible'] = self.request.user.is_superuser and \
                                      context['status'] in ['Queued',
                                                            'Ready']
+
+        account_deactivation_requests = context['account_deactivation_requests']
+        context['account_deactivation_requests'] = \
+            [(request, request.get_reasons_str())
+             for request in account_deactivation_requests]
 
         return context
 

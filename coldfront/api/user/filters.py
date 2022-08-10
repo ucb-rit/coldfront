@@ -26,10 +26,14 @@ class ClusterAccountDeactivationRequestFilter(django_filters.FilterSet):
         field_name='status__name', to_field_name='name',
         queryset=ClusterAccountDeactivationRequestStatusChoice.objects.all())
 
-    reason = django_filters.filters.ModelMultipleChoiceFilter(
-        field_name='reason__name', to_field_name='name',
-        queryset=ClusterAccountDeactivationRequestReasonChoice.objects.all())
+    reason = django_filters.Filter(field_name='reason__name', method='filter_reason')
+
+    def filter_reason(self, queryset, name, value):
+        reasons = value.split(',')
+        return queryset.filter(reason__name__in=reasons)
 
     class Meta:
         model = ClusterAccountDeactivationRequest
         fields = ('status', 'reason')
+
+

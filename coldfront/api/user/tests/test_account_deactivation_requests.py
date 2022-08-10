@@ -50,20 +50,24 @@ class TestClusterAccountDeactivationRequestsBase(TestUserBase):
         self.request_dict = {
             'request0': {'user': self.user0,
                          'status': ready_status,
-                         'reason': no_valid_account},
+                         'reason': [no_valid_account]},
             'request1': {'user': self.user1,
                          'status': processing_status,
-                         'reason': no_valid_recharge},
+                         'reason': [no_valid_recharge]},
             'request2': {'user': self.user2,
                          'status': ready_status,
-                         'reason': no_valid_recharge},
+                         'reason': [no_valid_recharge, no_valid_account]},
             'request3': {'user': self.user3,
                          'status': processing_status,
-                         'reason': no_valid_account},
+                         'reason': [no_valid_account, no_valid_recharge]},
         }
 
         for name, kwargs in self.request_dict.items():
+            reasons = kwargs.pop('reason')
             request = ClusterAccountDeactivationRequest.objects.create(**kwargs)
+            request.reason.add(*reasons)
+            request.save()
+            kwargs['reason'] = reasons
             setattr(self, name, request)
 
         # Run the client as the superuser.
@@ -143,9 +147,10 @@ class TestListClusterAccountDeactivationRequests(
             }
             response = self.client.get(url, query_parameters)
             json = response.json()
-            self.assertEqual(json['count'], 2)
+            self.assertEqual(json['count'], 3)
             for result in json['results']:
-                self.assertEqual(result['reason'], reason)
+                reasons = result['reason'].split(',')
+                self.assertIn(reason, reasons)
 
 
 class TestRetrieveClusterAccountDeactivationRequests(
@@ -204,6 +209,11 @@ class TestUpdatePatchClusterAccountDeactivationRequests(
             request = getattr(self, request_name)
             request.refresh_from_db()
 
+    def _assert_reason_equal(self, request, actual):
+        reasons = request.reason.all().values_list('name', flat=True)
+        for reason in actual:
+            self.assertIn(reason.name, reasons)
+
     def _assert_pre_state(self):
         """Assert that the relevant objects have the expected state."""
         self._refresh_objects()
@@ -211,7 +221,7 @@ class TestUpdatePatchClusterAccountDeactivationRequests(
             request = getattr(self, name)
             self.assertEqual(request.status, kwargs['status'])
             self.assertEqual(request.user, kwargs['user'])
-            self.assertEqual(request.reason, kwargs['reason'])
+            self._assert_reason_equal(request, kwargs['reason'])
 
     def _assert_post_state(self, request_name, status, justification=None):
         """Assert that the relevant objects have the expected state."""
@@ -221,7 +231,7 @@ class TestUpdatePatchClusterAccountDeactivationRequests(
 
             # User and Reason should not change.
             self.assertEqual(request.user, kwargs['user'])
-            self.assertEqual(request.reason, kwargs['reason'])
+            self._assert_reason_equal(request, kwargs['reason'])
 
             # Status and justification should only change for the
             # specified request.
@@ -395,10 +405,11 @@ class TestCreateClusterAccountDeactivations(
     """A class for testing POST /account_deactivation_requests/."""
 
     def _assert_pre_state(self, user, status, reason):
+        reasons = reason.split(',')
         query = ClusterAccountDeactivationRequest.objects.filter(
             user__username=user,
             status__name=status,
-            reason__name=reason
+            reason__name__in=reasons
         )
         self.assertFalse(query.exists())
 
@@ -406,16 +417,20 @@ class TestCreateClusterAccountDeactivations(
         query = ClusterAccountDeactivationRequest.objects.filter(
             user__username=user,
             status__name=status,
-            reason__name=reason
         )
         self.assertEqual(query.count(), 1)
         self.assertTrue(pre_time <= query.first().expiration <= post_time)
 
+        reasons = reason.split(',')
+        for reason in query.first().reason.all():
+            self.assertIn(reason.name, reasons)
+
     def _get_request(self, user, status, reason):
+        reasons = reason.split(',')
         query = ClusterAccountDeactivationRequest.objects.filter(
             user__username=user,
             status__name=status,
-            reason__name=reason
+            reason__name__in=reasons
         )
 
         self.assertEqual(query.count(), 1)
@@ -468,14 +483,14 @@ class TestCreateClusterAccountDeactivations(
         assert_account_deactivation_request_serialization(
             self._get_request(**data), json, SERIALIZER_FIELDS)
 
-    def test_invalid_data(self):
+    def test_invalid__user_data(self):
         """Test that creating an object with invalid POST data
         does not succeed."""
         url = BASE_URL
         data = {
             'user': 'Invalid',
             'status': 'Queued',
-            'reason': 'Invalid'
+            'reason': 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID'
         }
         self._assert_pre_state(**data)
         response = self.client.post(url, data, format='json')
@@ -485,8 +500,25 @@ class TestCreateClusterAccountDeactivations(
 
         self.assertEqual(json['user'],
                          ['Object with username=Invalid does not exist.'])
-        self.assertEqual(json['reason'],
-                         ['Object with name=Invalid does not exist.'])
+        self._assert_pre_state(**data)
+
+    def test_invalid_data_reason(self):
+        """Test that creating an object with invalid POST data
+        does not succeed."""
+        url = BASE_URL
+        data = {
+            'user': 'user5',
+            'status': 'Queued',
+            'reason': 'Invalid'
+        }
+        self._assert_pre_state(**data)
+        response = self.client.post(url, data, format='json')
+
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+        json = response.json()
+
+        self.assertEqual(json['non_field_errors'],
+                         ['Invalid reason "Invalid" given.'])
         self._assert_pre_state(**data)
 
     def test_invalid_data_status(self):

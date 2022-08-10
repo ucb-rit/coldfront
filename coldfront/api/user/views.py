@@ -14,7 +14,8 @@ from coldfront.api.user.filters import IdentityLinkingRequestFilter, \
 from coldfront.api.user.serializers import IdentityLinkingRequestSerializer, \
     ClusterAccountDeactivationRequestSerializer
 from coldfront.api.user.serializers import UserSerializer
-from coldfront.core.allocation.models import ClusterAccountDeactivationRequest
+from coldfront.core.allocation.models import ClusterAccountDeactivationRequest, \
+    ClusterAccountDeactivationRequestReasonChoice
 from coldfront.core.user.models import ExpiringToken
 from coldfront.core.user.models import IdentityLinkingRequest
 from datetime import datetime
@@ -112,8 +113,50 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
     permission_classes = [IsSuperuserOrStaff]
     serializer_class = ClusterAccountDeactivationRequestSerializer
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data_copy = serializer.data.copy()
+        data_copy['reason'] = \
+            ClusterAccountDeactivationRequest.objects.get(id=data_copy['id']).get_reasons_str()
+
+        return Response(data_copy)
+
     def get_queryset(self):
         return ClusterAccountDeactivationRequest.objects.order_by('id')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        serializer = ClusterAccountDeactivationRequestSerializer(queryset, many=True)
+        data_copy = {'results': serializer.data.copy(),
+                     'next': None,
+                     'previous': None}
+        for item in data_copy['results']:
+            item['reason'] = ClusterAccountDeactivationRequest.objects.get(id=item['id']).get_reasons_str()
+
+        data_copy.update({'count': len(data_copy['results'])})
+        # TODO: return compute resources list
+        return Response(data_copy)
+
+    @swagger_auto_schema(
+        manual_parameters=[authorization_parameter],
+        operation_description=(
+                'Updates one or more fields of the '
+                'ClusterAccountDeactivationRequest identified '
+                'by the given ID.'))
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        data_copy = serializer.data.copy()
+        data_copy['reason'] = \
+            ClusterAccountDeactivationRequest.objects.get(id=data_copy['id']).get_reasons_str()
+
+        return Response(data_copy)
 
     def perform_update(self, serializer):
         try:
@@ -134,16 +177,6 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
     @swagger_auto_schema(
         manual_parameters=[authorization_parameter],
         operation_description=(
-                'Updates one or more fields of the '
-                'ClusterAccountDeactivationRequest identified '
-                'by the given ID.'))
-    def partial_update(self, request, *args, **kwargs):
-        """The method for PATCH (partial update) requests."""
-        return super().partial_update(request, *args, **kwargs)
-
-    @swagger_auto_schema(
-        manual_parameters=[authorization_parameter],
-        operation_description=(
                 'Creates a new ClusterAccountDeactivationRequest with the '
                 'given fields.'))
     def create(self, request, *args, **kwargs):
@@ -151,10 +184,18 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        serializer.validated_data.pop('justification', None)
+        validated_data_copy = serializer.validated_data.copy()
+
+        validated_data_copy.pop('justification', None)
+
+        reasons = validated_data_copy.pop('reason').split(',')
+        reason_objects = [
+            ClusterAccountDeactivationRequestReasonChoice.objects.get(
+                name=reason)
+            for reason in reasons]
 
         # Only queued requests can be created.
-        if serializer.validated_data['status'].name != 'Queued':
+        if validated_data_copy['status'].name != 'Queued':
             message = {'error': f'POST requests only allow requests to be '
                                 f'created with a \"Queued\" status.'}
             return Response(message,
@@ -167,10 +208,11 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
 
         instance, created = \
             ClusterAccountDeactivationRequest.objects.get_or_create(
-                **serializer.validated_data)
+                **validated_data_copy)
 
         if created:
             instance.expiration = expiration
+            instance.reason.add(*reason_objects)
             instance.save()
 
         # Check if the request already exists.
@@ -184,4 +226,7 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
 
         data = serializer.data.copy()
         data.update({'id': instance.id})
-        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
+
+        return Response(data,
+                        status=status.HTTP_201_CREATED,
+                        headers=headers)

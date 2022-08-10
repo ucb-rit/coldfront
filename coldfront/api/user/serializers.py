@@ -44,10 +44,7 @@ class ClusterAccountDeactivationRequestSerializer(serializers.ModelSerializer):
         slug_field='name',
         queryset=ClusterAccountDeactivationRequestStatusChoice.objects.all())
 
-    reason = serializers.SlugRelatedField(
-        slug_field='name',
-        queryset=ClusterAccountDeactivationRequestReasonChoice.objects.all(),
-        required=False)
+    reason = serializers.CharField(max_length=200)
 
     justification = serializers.CharField(allow_null=True,
                                           required=False)
@@ -67,5 +64,15 @@ class ClusterAccountDeactivationRequestSerializer(serializers.ModelSerializer):
             if not isinstance(data.get('justification', None), str):
                 message = 'No justification is given.'
                 raise serializers.ValidationError(message)
+
+        if 'reason' in data:
+            reasons = data.get('reason').split(',')
+            for name in reasons:
+                query = \
+                    ClusterAccountDeactivationRequestReasonChoice.objects.filter(
+                        name=name)
+                if not query.exists():
+                    message = f'Invalid reason \"{name}\" given.'
+                    raise serializers.ValidationError(message)
 
         return data

@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import ManyToManyField
 from django.utils import timezone
 from django.utils.html import mark_safe
 from django.utils.module_loading import import_string
@@ -806,8 +807,12 @@ class ClusterAccountDeactivationRequest(TimeStampedModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     status = models.ForeignKey(ClusterAccountDeactivationRequestStatusChoice,
                                on_delete=models.CASCADE)
-    reason = models.ForeignKey(ClusterAccountDeactivationRequestReasonChoice,
-                               on_delete=models.CASCADE)
+    reason = ManyToManyField(ClusterAccountDeactivationRequestReasonChoice)
     expiration = models.DateTimeField(blank=True, null=True)
     history = HistoricalRecords()
     state = models.JSONField(default=cluster_account_deactivation_state_default)
+
+    def get_reasons_str(self):
+        reasons = self.reason.all().values_list('name', flat=True)
+
+        return ','.join(reasons)

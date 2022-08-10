@@ -20,7 +20,7 @@
       Status
     </th>
     <th scope="col">
-      Reason
+      Reason(s)
     </th>
     {% if status == 'Queued' %}
       <th scope="col">
@@ -35,12 +35,12 @@
   </tr>
   </thead>
   <tbody>
-  {% for request in queryset %}
+  {% for request_tuple in queryset %}
     <tr>
-      <td>{{ request.pk }}</td>
-      <td><a href="{% url 'user-profile' request.user.username %}">{{ request.user.username }}</a></td>
-      <td>{{ request.created|date:"M. d, Y" }}</td>
-      {% with status=request.status.name %}
+      <td>{{ request_tuple.0.pk }}</td>
+      <td><a href="{% url 'user-profile' request_tuple.0.user.username %}">{{ request_tuple.0.user.username }}</a></td>
+      <td>{{ request_tuple.0.created|date:"M. d, Y" }}</td>
+      {% with status=request_tuple.0.status.name %}
         <td>
           {% if status in "Queued,Ready,Processing" %}
             <span class="badge badge-warning">{{ status }}</span>
@@ -50,23 +50,20 @@
             <span class="badge badge-danger">{{ status }}</span>
           {% endif %}
         </td>
-        {% if request.reason.name == 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID' %}
-          <td>
-            {{ request.reason.name }}
-            <span class="badge badge-primary">1</span>
-          </td>
-        {% else %}
-          <td>
-            {{ request.reason.name }}
-            <span class="badge badge-info">2</span>
-          </td>
-        {% endif %}
+        <td>
+          {% if 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID' in request_tuple.1 %}
+              <span class="badge badge-primary">1</span>
+          {% endif %}
+          {% if 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID' in request_tuple.1 %}
+              <span class="badge badge-info">2</span>
+          {% endif %}
+        </td>
         {% if status == 'Queued' %}
-          <td>{{ request.expiration|date:"M. d, Y" }}</td>
+          <td>{{ request_tuple.0.expiration|date:"M. d, Y" }}</td>
         {% endif %}
         {% if user.is_superuser and actions_visible %}
           <td class="text-nowrap">
-            <a href="{% url 'account-deactivation-request-cancel' request.pk %}" class="btn btn-danger mr-1">
+            <a href="{% url 'account-deactivation-request-cancel' request_tuple.0.pk %}" class="btn btn-danger mr-1">
               Cancel
             </a>
           </td>

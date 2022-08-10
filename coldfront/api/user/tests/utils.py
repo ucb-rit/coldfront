@@ -39,8 +39,11 @@ def assert_account_deactivation_request_serialization(
         field_value = getattr(request, field)
         if field == 'user':
             expected = field_value.username
-        elif field in ['status', 'reason']:
+        elif field == 'status':
             expected = field_value.name
+        elif field == 'reason':
+            reasons = request.reason.all()
+            expected = ','.join([reason.name for reason in reasons])
         else:
             expected = str(field_value)
 
