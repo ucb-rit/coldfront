@@ -46,13 +46,14 @@ class ClusterAccountDeactivationRequestSerializer(serializers.ModelSerializer):
 
     reason = serializers.CharField(max_length=200)
 
-    justification = serializers.CharField(allow_null=True,
-                                          required=False)
+    justification = serializers.CharField(allow_null=True, required=False)
+
+    compute_resources = serializers.CharField(allow_null=True, required=False)
 
     class Meta:
         model = ClusterAccountDeactivationRequest
         fields = (
-            'id', 'user', 'status', 'reason', 'justification')
+            'id', 'user', 'status', 'reason', 'justification', 'compute_resources')
         extra_kwargs = {
             'id': {'read_only': True}
         }

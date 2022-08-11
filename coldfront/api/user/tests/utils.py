@@ -1,3 +1,6 @@
+from coldfront.core.user.utils import get_compute_resources_for_user
+
+
 def assert_identity_linking_request_serialization(identity_linking_request,
                                                   result, fields):
     """Assert that IdentityLinkingRequest serialization gives the
@@ -36,15 +39,20 @@ def assert_account_deactivation_request_serialization(
         if field == 'justification':
             continue
 
-        field_value = getattr(request, field)
         if field == 'user':
+            field_value = getattr(request, field)
             expected = field_value.username
         elif field == 'status':
+            field_value = getattr(request, field)
             expected = field_value.name
         elif field == 'reason':
             reasons = request.reason.all()
             expected = ','.join([reason.name for reason in reasons])
+        elif field == 'compute_resources':
+            resources = get_compute_resources_for_user(request.user)
+            expected = ','.join([resource.name for resource in resources])
         else:
+            field_value = getattr(request, field)
             expected = str(field_value)
 
         actual = str(result[field])

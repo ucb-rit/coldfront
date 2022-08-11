@@ -28,6 +28,7 @@ from rest_framework import viewsets
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
 
+from coldfront.core.user.utils import get_compute_resources_for_user
 from coldfront.core.utils.common import utc_now_offset_aware, \
     import_from_settings
 
@@ -113,12 +114,20 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
     permission_classes = [IsSuperuserOrStaff]
     serializer_class = ClusterAccountDeactivationRequestSerializer
 
+    def update_data_dict(self, data):
+        """Updates the returned data to include the correct reason
+        and compute resource strings."""
+        request_obj = ClusterAccountDeactivationRequest.objects.get(id=data['id'])
+        data['reason'] = request_obj.get_reasons_str()
+        compute_resources = get_compute_resources_for_user(request_obj.user)
+        data['compute_resources'] = \
+            ','.join([resource.name for resource in compute_resources])
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         data_copy = serializer.data.copy()
-        data_copy['reason'] = \
-            ClusterAccountDeactivationRequest.objects.get(id=data_copy['id']).get_reasons_str()
+        self.update_data_dict(data_copy)
 
         return Response(data_copy)
 
@@ -133,10 +142,10 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
                      'next': None,
                      'previous': None}
         for item in data_copy['results']:
-            item['reason'] = ClusterAccountDeactivationRequest.objects.get(id=item['id']).get_reasons_str()
+            self.update_data_dict(item)
 
         data_copy.update({'count': len(data_copy['results'])})
-        # TODO: return compute resources list
+
         return Response(data_copy)
 
     @swagger_auto_schema(
@@ -153,8 +162,7 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
         self.perform_update(serializer)
 
         data_copy = serializer.data.copy()
-        data_copy['reason'] = \
-            ClusterAccountDeactivationRequest.objects.get(id=data_copy['id']).get_reasons_str()
+        self.update_data_dict(data_copy)
 
         return Response(data_copy)
 
@@ -188,18 +196,21 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
 
         validated_data_copy.pop('justification', None)
 
-        reasons = validated_data_copy.pop('reason').split(',')
+        # Must provide a reason to create a new request.
+        reasons = validated_data_copy.pop('reason', None)
+        if not reasons:
+            message = {'error': 'You must provide a valid reason.'}
+            return Response(message, status=status.HTTP_400_BAD_REQUEST)
         reason_objects = [
             ClusterAccountDeactivationRequestReasonChoice.objects.get(
                 name=reason)
-            for reason in reasons]
+            for reason in reasons.split(',')]
 
         # Only queued requests can be created.
         if validated_data_copy['status'].name != 'Queued':
             message = {'error': f'POST requests only allow requests to be '
                                 f'created with a \"Queued\" status.'}
-            return Response(message,
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
         expiration_days = \
             import_from_settings('ACCOUNT_DEACTIVATION_QUEUE_DAYS')
@@ -224,9 +235,10 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
 
         headers = self.get_success_headers(serializer.data)
 
-        data = serializer.data.copy()
-        data.update({'id': instance.id})
+        data_copy = serializer.data.copy()
+        data_copy.update({'id': instance.id})
+        self.update_data_dict(data_copy)
 
-        return Response(data,
+        return Response(data_copy,
                         status=status.HTTP_201_CREATED,
                         headers=headers)

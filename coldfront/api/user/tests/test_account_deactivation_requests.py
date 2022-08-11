@@ -1,7 +1,9 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django.contrib.auth.models import User
 
+from coldfront.api.statistics.utils import create_project_allocation
 from coldfront.api.user.tests.test_user_base import TestUserBase
 from coldfront.api.user.tests.utils import \
     assert_account_deactivation_request_serialization
@@ -12,13 +14,17 @@ from coldfront.core.allocation.models import \
 
 from http import HTTPStatus
 
+from coldfront.core.project.models import Project, ProjectStatusChoice, \
+    ProjectUserStatusChoice, ProjectUser, ProjectUserRoleChoice
+from coldfront.core.resource.models import Resource, ResourceType
 from coldfront.core.utils.common import utc_now_offset_aware, \
     import_from_settings
 
 """A test suite for the /account_deactivation_requests/ endpoints, divided
 by method."""
 
-SERIALIZER_FIELDS = ('id', 'user', 'status', 'reason', 'justification')
+SERIALIZER_FIELDS = ('id', 'user', 'status', 'reason',
+                     'justification', 'compute_resources')
 
 BASE_URL = '/api/account_deactivation_requests/'
 
@@ -69,6 +75,35 @@ class TestClusterAccountDeactivationRequestsBase(TestUserBase):
             request.save()
             kwargs['reason'] = reasons
             setattr(self, name, request)
+
+        # Create two projects with two different compute allocations.
+        active_project_status = \
+            ProjectStatusChoice.objects.get(name='Active')
+        active_project_user_status = \
+            ProjectUserStatusChoice.objects.get(name='Active')
+        user_role = ProjectUserRoleChoice.objects.get(name='User')
+        allocation_amount = Decimal('1000.0')
+
+        cluster_type = ResourceType.objects.get(name='Cluster')
+        self.compute1 = Resource.objects.create(name='TEST1 Compute',
+                                                resource_type=cluster_type)
+        self.compute2 = Resource.objects.create(name='TEST2 Compute',
+                                                resource_type=cluster_type)
+
+        for i in range(2):
+            project = Project.objects.create(
+                name=f'project{i}', status=active_project_status)
+            allocation_objects = create_project_allocation(
+                project, allocation_amount)
+            allocation_objects.allocation.resources.add(self.compute1, self.compute2)
+            allocation_objects.allocation.save()
+
+            # Create project users.
+            for kwargs in self.request_dict.values():
+                ProjectUser.objects.create(user=kwargs['user'],
+                                           project=project,
+                                           status=active_project_user_status,
+                                           role=user_role)
 
         # Run the client as the superuser.
         self.client.credentials(
