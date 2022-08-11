@@ -22,6 +22,9 @@
     <th scope="col">
       Reason(s)
     </th>
+    <th scope="col">
+      Clusters
+    </th>
     {% if status == 'Queued' %}
       <th scope="col">
         Expiration
@@ -57,6 +60,9 @@
           {% if 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID' in request_tuple.1 %}
               <span class="badge badge-info">2</span>
           {% endif %}
+        </td>
+        <td>
+          {{ request_tuple.2 }}
         </td>
         {% if status == 'Queued' %}
           <td>{{ request_tuple.0.expiration|date:"M. d, Y" }}</td>

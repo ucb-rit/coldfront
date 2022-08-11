@@ -9,6 +9,7 @@ from coldfront.core.allocation.models import ClusterAccountDeactivationRequest, 
 from coldfront.core.user.forms_.account_deactivation_forms import \
     AccountDeactivationRequestSearchForm, \
     AccountDeactivationCancelForm
+from coldfront.core.user.utils import get_compute_resources_for_user
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.views import ListViewClass
 
@@ -76,7 +77,10 @@ class AccountDeactivationRequestListView(LoginRequiredMixin,
 
         account_deactivation_requests = context['account_deactivation_requests']
         context['account_deactivation_requests'] = \
-            [(request, request.get_reasons_str())
+            [(request,
+              request.get_reasons_str(),
+              ', '.join([resource.name.replace('Compute', '').strip()
+                         for resource in get_compute_resources_for_user(request.user)]))
              for request in account_deactivation_requests]
 
         return context
