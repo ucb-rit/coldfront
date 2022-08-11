@@ -16,6 +16,8 @@ from django.utils.http import base36_to_int
 from django.utils.http import urlsafe_base64_encode
 from django.utils.module_loading import import_string
 
+from coldfront.core.allocation.models import Allocation
+from coldfront.core.project.models import ProjectUser
 from coldfront.core.user.models import EmailAddress
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.mail import send_email_template
@@ -389,3 +391,22 @@ def needs_host(user):
     else:
         # Check if the user has a host user already.
         return user.userprofile.host_user is None
+
+
+def get_compute_resources_for_user(user):
+    """Returns a set of the compute resources for all projects a user
+    belongs to."""
+    proj_users = ProjectUser.objects.filter(user=user, status__name='Active')
+
+    compute_resources = set()
+    for proj_user in proj_users:
+        allocations = Allocation.objects.filter(
+            project=proj_user.project,
+            status__name='Active',
+            resources__name__icontains='Compute')
+
+        for allocation in allocations:
+            for resource in allocation.resources.all():
+                compute_resources.add(resource)
+
+    return compute_resources
