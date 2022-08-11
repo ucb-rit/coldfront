@@ -14,7 +14,8 @@ from coldfront.api.user.filters import IdentityLinkingRequestFilter, \
 from coldfront.api.user.serializers import IdentityLinkingRequestSerializer, \
     ClusterAccountDeactivationRequestSerializer
 from coldfront.api.user.serializers import UserSerializer
-from coldfront.core.allocation.models import ClusterAccountDeactivationRequest, \
+from coldfront.core.allocation.models import \
+    ClusterAccountDeactivationRequest, \
     ClusterAccountDeactivationRequestReasonChoice
 from coldfront.core.user.models import ExpiringToken
 from coldfront.core.user.models import IdentityLinkingRequest
@@ -137,7 +138,8 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
-        serializer = ClusterAccountDeactivationRequestSerializer(queryset, many=True)
+        serializer = ClusterAccountDeactivationRequestSerializer(queryset,
+                                                                 many=True)
         data_copy = {'results': serializer.data.copy(),
                      'next': None,
                      'previous': None}
@@ -157,7 +159,9 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance,
+                                         data=request.data,
+                                         partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
@@ -169,7 +173,8 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
     def perform_update(self, serializer):
         try:
             with transaction.atomic():
-                justification = serializer.validated_data.pop('justification', None)
+                justification = serializer.validated_data.pop('justification',
+                                                              None)
                 serializer.validated_data.pop('reason', None)
                 serializer.validated_data.pop('user', None)
 

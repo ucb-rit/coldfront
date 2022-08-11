@@ -106,7 +106,8 @@ class AccountDeactivationRequestCancelView(LoginRequiredMixin,
                 f'You cannot perform this action on a request with status '
                 f'{self.request_obj.status.name}.')
             messages.error(self.request, message)
-            return HttpResponseRedirect(reverse('account-deactivation-request-list'))
+            return HttpResponseRedirect(
+                reverse('account-deactivation-request-list'))
 
         return super().dispatch(request, *args, **kwargs)
 

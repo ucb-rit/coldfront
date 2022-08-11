@@ -95,7 +95,8 @@ class TestClusterAccountDeactivationRequestsBase(TestUserBase):
                 name=f'project{i}', status=active_project_status)
             allocation_objects = create_project_allocation(
                 project, allocation_amount)
-            allocation_objects.allocation.resources.add(self.compute1, self.compute2)
+            allocation_objects.allocation.resources.add(self.compute1,
+                                                        self.compute2)
             allocation_objects.allocation.save()
 
             # Create project users.

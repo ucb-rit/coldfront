@@ -107,7 +107,8 @@ class TestAccountDeactivationRequestBase(TestBase):
         return utc_now_offset_aware() + timedelta(days=self.expiration_offset)
 
 
-class TestAccountDeactivationRequestListView(TestAccountDeactivationRequestBase):
+class TestAccountDeactivationRequestListView(
+    TestAccountDeactivationRequestBase):
     """A testing class for AccountDeactivationRequestListView."""
 
     def setUp(self):
@@ -171,7 +172,8 @@ class TestAccountDeactivationRequestListView(TestAccountDeactivationRequestBase)
         self._assert_correct_reason(request_kwargs['reason'], html)
         self._assert_correct_user(request_kwargs['user'].username, html)
         self._assert_correct_status_badge(request_kwargs['status'].name, html)
-        self._assert_actions_visible(user.is_superuser, request_kwargs['status'].name, html)
+        self._assert_actions_visible(user.is_superuser,
+                                     request_kwargs['status'].name, html)
         self._assert_expiration(request_kwargs, html)
 
     def test_access(self):
@@ -186,7 +188,8 @@ class TestAccountDeactivationRequestListView(TestAccountDeactivationRequestBase)
             self._assert_content_shown(self.staff, kwargs)
 
 
-class TestAccountDeactivationRequestCancelView(TestAccountDeactivationRequestBase):
+class TestAccountDeactivationRequestCancelView(
+    TestAccountDeactivationRequestBase):
     """A testing class for AccountDeactivationRequestCancelView."""
 
     def setUp(self):
@@ -232,4 +235,5 @@ class TestAccountDeactivationRequestCancelView(TestAccountDeactivationRequestBas
 
         self.request0.refresh_from_db()
         self.assertEqual(self.request0.status.name, 'Cancelled')
-        self.assertEqual(self.request0.state['justification'], data.get('justification'))
+        self.assertEqual(self.request0.state['justification'],
+                         data.get('justification'))
