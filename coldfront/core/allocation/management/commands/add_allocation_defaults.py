@@ -100,7 +100,7 @@ class Command(BaseCommand):
             'Cancelled'
         ]
         for choice in choices:
-            ClusterAccountDeactivationRequestStatusChoice.objects.create(name=choice)
+            ClusterAccountDeactivationRequestStatusChoice.objects.get_or_create(name=choice)
 
         choices = [
             ('NO_VALID_USER_ACCOUNT_FEE_BILLING_ID',
@@ -111,5 +111,5 @@ class Command(BaseCommand):
         ]
 
         for choice in choices:
-            ClusterAccountDeactivationRequestReasonChoice.objects.create(name=choice[0],
-                                                                         description=choice[1])
+            ClusterAccountDeactivationRequestReasonChoice.objects.get_or_create(name=choice[0],
+                                                                                description=choice[1])
