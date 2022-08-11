@@ -3,10 +3,16 @@
 <div class="alert alert-danger" role="alert">
   <p>
     Your cluster account is pending deactivation for the following reason(s):
-    "{{ pending_deactivation_request_descriptions }}." If you are a user on a departmental cluster,
-    you will be blocked from submitting jobs on the clusters. If you are not a user on a
-    departmental cluster, you will be blocked from logging into the clusters until you
-    submit a valid PID <a href="{% url 'home' %}">here</a>.
+    "{{ pending_deactivation_request_descriptions }}."
+  </p>
+  <p>
+    If you are a user on a departmental cluster, you will be blocked from
+    submitting jobs on the clusters. If you are not a user on a departmental
+    cluster, you will be blocked from logging into the clusters.
+  </p>
+  <p>
+    To reactivate your account, please submit a valid PID
+    <a href="{% url 'home' %}">here</a>.
   </p>
     Please contact us at
     <a href = "mailto: {% settings_value 'CENTER_HELP_EMAIL' %}">{% settings_value 'CENTER_HELP_EMAIL' %}</a>
