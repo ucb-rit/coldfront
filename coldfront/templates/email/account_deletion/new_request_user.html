@@ -1,0 +1,27 @@
+Dear {{ user_str }},
+
+There is a new request to delete your cluster account. {{ reason }}
+
+The request will wait in a queue for {{ waiting_period }} days before
+system administrators process the request.
+
+After the request is complete, you will be removed from any remaining
+projects. You will lose access to the clusters. Your data will be
+deleted off of the cluster.
+
+Please note that while you are able to regain access to the cluster in the
+future and may rejoin projects, your data will not be recoverable after this
+request is completed. It is therefore important to move all data that your PI
+or group wishes to keep out of your personal cluster directories. These
+include your 'home' and 'scratch' directories.
+
+While your request is queued for the next {{ waiting_period }} days, please confirm
+that your data is safe to delete <a href="{% url confirm_url %}">here</a>. If you
+do not confirm, system administrators may delete your data before you have the
+chance to move it.
+
+If this is a mistake, or you have any questions, please contact us at
+<a href = "mailto: {% center_help_email %}">{{ center_help_email }}</a>.
+
+Thank you,
+{{ signature }}

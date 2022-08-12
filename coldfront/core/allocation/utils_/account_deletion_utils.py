@@ -1,7 +1,11 @@
 import datetime
+import logging
+from urllib.parse import urljoin
 
 from django.db import transaction
+from django.urls import reverse
 
+from coldfront.config import settings
 from coldfront.core.allocation.models import AccountDeletionRequest, \
     AccountDeletionRequestStatusChoice, AllocationUserAttribute, \
     AccountDeletionRequestRequesterChoice
@@ -11,6 +15,10 @@ from coldfront.core.project.utils_.removal_utils import \
     ProjectRemovalRequestRunner
 from coldfront.core.utils.common import import_from_settings, \
     utc_now_offset_aware
+from coldfront.core.utils.email.email_strategy import SendEmailStrategy
+from coldfront.core.utils.mail import send_email_template
+
+logger = logging.getLogger(__name__)
 
 
 class AccountDeletionRequestRunner(object):
@@ -26,43 +34,43 @@ class AccountDeletionRequestRunner(object):
             AccountDeletionRequestRequesterChoice.objects.get(
                 name=self.requester_str)
 
+        self._email_strategy = SendEmailStrategy()
+
         self.success_messages = []
         self.error_messages = []
 
     def run(self):
         expiration = self._get_expiration()
-        deletion_request = None
 
         no_deletion_requests = self._check_active_account_deletion_requests()
         has_cluster_access = self._check_cluster_access()
 
         if no_deletion_requests: # and has_cluster_access:
             with transaction.atomic():
-                deletion_request = self._create_request(expiration)
-                if self.requester_str == 'Admin':
-                    self._create_project_removal_requests()
-
-        return deletion_request
+                self.deletion_request = self._create_request(expiration)
+                self._create_project_removal_requests()
+            self._send_emails_safe()
 
     def _create_project_removal_requests(self):
-        proj_users = ProjectUser.objects.filter(user=self.user_obj,
-                                                status__name='Active')
+        if self.requester_str == 'Admin':
+            proj_users = ProjectUser.objects.filter(user=self.user_obj,
+                                                    status__name='Active')
 
-        for proj_user in proj_users:
-            # Note that the request is technically requested by the
-            # system but we have to set the admin that made the initial
-            # deletion request as the requester.
-            request_runner = ProjectRemovalRequestRunner(
-                self.requester_obj,
-                self.user_obj,
-                proj_user.project)
-            runner_result = request_runner.run()
-            success_messages, error_messages = request_runner.get_messages()
+            for proj_user in proj_users:
+                # Note that the request is technically requested by the
+                # system but we have to set the admin that made the initial
+                # deletion request as the requester.
+                request_runner = ProjectRemovalRequestRunner(
+                    self.requester_obj,
+                    self.user_obj,
+                    proj_user.project)
+                runner_result = request_runner.run()
+                success_messages, error_messages = request_runner.get_messages()
 
-            for m in success_messages:
-                self.success_messages.append(m)
-            for m in error_messages:
-                self.error_messages.append(m)
+                for m in success_messages:
+                    self.success_messages.append(m)
+                for m in error_messages:
+                    self.error_messages.append(m)
 
     def _create_request(self, expiration):
         request = AccountDeletionRequest.objects.create(
@@ -139,60 +147,121 @@ class AccountDeletionRequestRunner(object):
         """A getter for this instance's user_messages."""
         return self.success_messages.copy(), self.error_messages.copy()
 
-    def send_emails(self):
-        # TODO: send emails about cluster account deletion
-        # TODO: send to user, PIs, and admins
-        email_enabled = import_from_settings('EMAIL_ENABLED', False)
+    def _send_notification_emails(self):
+        """Sends emails to the user whose account is being deleted."""
+        email_args = (self.user_obj, self.deletion_request, self.requester_str)
+        if self.requester_str == 'Admin':
+            self._email_strategy.process_email(
+                send_account_deletion_user_notification_emails,
+                *email_args)
+        elif self.requester_str == 'User':
+            self._email_strategy.process_email(
+                send_account_deletion_admin_notification_emails,
+                *email_args)
+        else:
+            self._email_strategy.process_email(
+                send_account_deletion_user_notification_emails,
+                *email_args)
+            self._email_strategy.process_email(
+                send_account_deletion_user_notification_emails,
+                *email_args)
 
-        # Email PI, managers, user and admins
+    def _send_emails_safe(self):
+        """Send emails.
 
-        # if email_enabled:
-        #     email_sender = import_from_settings('EMAIL_SENDER')
-        #     email_signature = import_from_settings('EMAIL_SIGNATURE')
-        #     support_email = import_from_settings('CENTER_HELP_EMAIL')
-        #     email_admin_list = import_from_settings('EMAIL_ADMIN_LIST')
-        #
-        #     # Send emails to the removed user, the project's PIs (who have
-        #     # notifications enabled), and the project's managers. Exclude the
-        #     # user who made the request.
-        #     pi_condition = Q(
-        #         role__name='Principal Investigator', status__name='Active',
-        #         enable_notifications=True)
-        #     manager_condition = Q(role__name='Manager', status__name='Active')
-        #     manager_pi_queryset = self.proj_obj.projectuser_set.filter(
-        #         pi_condition | manager_condition).exclude(
-        #         user=self.requester_obj)
-        #     users_to_notify = [x.user for x in manager_pi_queryset]
-        #     if self.user_obj != self.requester_obj:
-        #         users_to_notify.append(self.user_obj)
-        #     for user in users_to_notify:
-        #         template_context = {
-        #             'user_first_name': user.first_name,
-        #             'user_last_name': user.last_name,
-        #             'requester_first_name': self.requester_obj.first_name,
-        #             'requester_last_name': self.requester_obj.last_name,
-        #             'remove_user_first_name': self.user_obj.first_name,
-        #             'remove_user_last_name': self.user_obj.last_name,
-        #             'project_name': self.proj_obj.name,
-        #             'signature': email_signature,
-        #             'support_email': support_email,
-        #         }
-        #         send_email_template(
-        #             'Project Removal Request',
-        #             'email/project_removal/project_removal.txt',
-        #             template_context,
-        #             email_sender,
-        #             [user.email])
-        #
-        #     # Email cluster administrators.
-        #     template_context = {
-        #         'user_first_name': self.user_obj.first_name,
-        #         'user_last_name': self.user_obj.last_name,
-        #         'project_name': self.proj_obj.name,
-        #     }
-        #     send_email_template(
-        #         'Project Removal Request',
-        #         'email/project_removal/project_removal_admin.txt',
-        #         template_context,
-        #         email_sender,
-        #         email_admin_list)
+        Catch all exceptions to prevent rolling back any
+        enclosing transaction.
+
+        If send failures occur, store a warning message.
+        """
+        try:
+            self._send_notification_emails()
+        except Exception as e:
+            message = (
+                f'Encountered unexpected exception when sending notification '
+                f'emails. Details: \n{e}')
+            logger.exception(message)
+
+
+def send_account_deletion_user_notification_emails(user_obj, request_obj, requester_str):
+    if requester_str not in ['Admin', 'System']:
+        raise ValueError(f'Invalid requester_str {requester_str} passed. '
+                         f'Must be either \"Admin\" or \"System\"')
+
+    if settings.EMAIL_ENABLED:
+        subject = 'Cluster Account Deletion Request'
+        template = 'email/account_deletion/new_request_user.txt'
+        html_template = 'email/account_deletion/new_request_user.html'
+
+        if requester_str == 'Admin':
+            reason = 'The request to delete your account was initiated by a ' \
+                     'system administrator.'
+            waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
+        else:
+            reason = 'The request to delete your account was automatically ' \
+                     'initiated when you left your last project.'
+            waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
+
+        confirm_url = urljoin(settings.CENTER_BASE_URL,
+                              reverse('cluster-account-deletion-request-user-data-deletion',
+                                      kwargs={'pk': request_obj.pk}))
+
+        template_context = {
+            'user_str': f'{user_obj.first_name} {user_obj.last_name}',
+            'reason': reason,
+            'confirm_url': confirm_url,
+            'waiting_period': waiting_period,
+            'center_help_email': settings.CENTER_HELP_EMAIL,
+            'signature': settings.EMAIL_SIGNATURE,
+        }
+
+        send_email_template(
+            subject,
+            template,
+            template_context,
+            settings.EMAIL_SENDER,
+            [user_obj.email],
+            cc=[user_obj.userprofile.host_user.email],
+            html_template=html_template)
+
+
+def send_account_deletion_admin_notification_emails(user_obj, request_obj, requester_str):
+    if requester_str not in ['User', 'System']:
+        raise ValueError(f'Invalid requester_str {requester_str} passed. '
+                         f'Must be either \"Admin\" or \"System\"')
+
+    if settings.EMAIL_ENABLED:
+        subject = 'New Cluster Account Deletion Request'
+        template = 'email/account_deletion/new_request_admin.txt'
+        html_template = 'email/account_deletion/new_request_admin.html'
+
+        user_str = f'{user_obj.first_name} {user_obj.last_name}'
+        if requester_str == 'User':
+            reason = f'The request to delete the cluster account was ' \
+                     f'initiated by {user_str}.'
+            waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
+        else:
+            reason = f'The request to delete the cluster account was ' \
+                     f'automatically initiated when {user_str} left their ' \
+                     f'last project.'
+            waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
+
+        review_url = urljoin(settings.CENTER_BASE_URL,
+                              reverse('cluster-account-deletion-request-detail',
+                                      kwargs={'pk': request_obj.pk}))
+
+        template_context = {
+            'user_str': f'{user_obj.first_name} {user_obj.last_name}',
+            'reason': reason,
+            'review_url': review_url,
+            'waiting_period': waiting_period
+        }
+
+        send_email_template(
+            subject,
+            template,
+            template_context,
+            settings.EMAIL_SENDER,
+            [user_obj.email],
+            cc=[user_obj.userprofile.host_user.email],
+            html_template=html_template)

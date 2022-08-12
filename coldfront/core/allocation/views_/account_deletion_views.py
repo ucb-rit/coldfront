@@ -116,16 +116,13 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
             request_runner = AccountDeletionRequestRunner(self.user_obj,
                                                           self.request.user,
                                                           requester_str)
-            runner_result = request_runner.run()
+            request_runner.run()
             success_messages, error_messages = request_runner.get_messages()
 
-            if runner_result:
-                request_runner.send_emails()
-                for message in success_messages:
-                    messages.success(self.request, message)
-            else:
-                for message in error_messages:
-                    messages.error(self.request, message)
+            for message in success_messages:
+                messages.success(self.request, message)
+            for message in error_messages:
+                messages.error(self.request, message)
         except Exception as e:
             logger.exception(e)
             error_message = \
