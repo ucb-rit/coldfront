@@ -1,0 +1,48 @@
+{% extends "common/base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Confirm Data Deletion: {{ user_str }} ({{ request_obj.user.username }})
+{% endblock %}
+
+
+{% block content %}
+<h1>Confirm Data Deletion: {{ user_str }} ({{ request_obj.user.username }}) </h1>
+<hr>
+
+<p>
+  Please confirm that your ({{ user_str }}) data is safe to be deleted.
+</p>
+<p>
+  After your cluster account is deleted, your data will be permanently deleted. Neither you nor
+  any project members or PIs will be able to access your data. If you have data that other project
+  members need, please move the data to another location so a system administrator can continue
+  the deletion process.
+</p>
+
+{% include 'account_deletion/detail_card.html' %}
+
+<div class="card mb-3">
+  <div class="card-header">
+    <h4>
+      <i class="fas fa-check-circle" aria-hidden="true"></i>
+      Review
+    </h4>
+  </div>
+  <div class="card-body">
+    <form action="" method="post">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <input class="btn btn-primary" type="submit" value="Submit" />
+      <a
+          href="{% url 'cluster-account-deletion-request-detail' request_obj.pk %}"
+          class="btn btn-secondary">
+        Cancel
+      </a>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
