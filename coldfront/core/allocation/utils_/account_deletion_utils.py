@@ -1,5 +1,7 @@
 import datetime
 
+from django.db import transaction
+
 from coldfront.core.allocation.models import AccountDeletionRequest, \
     AccountDeletionRequestStatusChoice, AllocationUserAttribute, \
     AccountDeletionRequestRequesterChoice
@@ -34,16 +36,17 @@ class AccountDeletionRequestRunner(object):
         no_deletion_requests = self._check_active_account_deletion_requests()
         has_cluster_access = self._check_cluster_access()
 
-        if no_deletion_requests and has_cluster_access:
-            deletion_request = self._create_request(expiration)
-            if self.requester_str == 'Admin':
-                self._create_project_removal_requests()
+        if no_deletion_requests: # and has_cluster_access:
+            with transaction.atomic():
+                deletion_request = self._create_request(expiration)
+                if self.requester_str == 'Admin':
+                    self._create_project_removal_requests()
 
         return deletion_request
 
     def _create_project_removal_requests(self):
         proj_users = ProjectUser.objects.filter(user=self.user_obj,
-                                                status='Active')
+                                                status__name='Active')
 
         for proj_user in proj_users:
             # Note that the request is technically requested by the
