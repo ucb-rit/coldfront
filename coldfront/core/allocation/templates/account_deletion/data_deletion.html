@@ -26,22 +26,57 @@ Data Deletion: {{ user_str }} ({{ request_obj.user.username }})
     </h4>
   </div>
   <div class="card-body">
-    <form action="" method="post">
-      {% csrf_token %}
-      {{ form|crispy }}
-      <input class="btn btn-primary" type="submit" value="Submit" />
-      <a
-          href="{% url 'cluster-account-deletion-request-detail' request_obj.pk %}"
-          class="btn btn-secondary">
-        Cancel
-      </a>
-    </form>
+    {{ form|crispy }}
+    {% if user_data_deletion %}
+      <form action="" method="post">
+        {% csrf_token %}
+        <input class="btn btn-primary" type="submit" value="Submit" />
+      </form>
+    {% else %}
+      <div class="modal fade" id="submitModal" tabindex="-1" role="dialog" aria-labelledby="submit}ModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <form action="{% url 'cluster-account-deletion-request-data-deletion' request_obj.pk %}" method="post" id="submitForm">
+            {% csrf_token %}
+            <div class="modal-content">
+              <div class="modal-header">
+                <p class="modal-title">Override User Data Deletion</p>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+
+              <div class="modal-body">
+                <label>
+                  Users are supposed to confirm that they are ready to have their
+                  data deleted from the cluster. You may override this behavior and
+                  confirm that the user's data has been deleted.
+                </label>
+
+                <br><b>User:</b> {{ user_str }}
+
+                <input type="hidden" value="Complete" name="status">
+              </div>
+
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button class="btn btn-primary" type="submit">
+                  <i class="fas fa-user-plus" aria-hidden="true"></i>
+                  Override
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" data-toggle="modal" data-target="#submitModal">
+        Submit
+      </button>
+    {% endif %}
+    <a href="{% url 'cluster-account-deletion-request-detail' request_obj.pk %}" class="btn btn-secondary">
+      Cancel
+    </a>
   </div>
 </div>
-
-{% comment %}
-{% include 'project/project_request/savio/project_request_extra_fields_modal.html' with extra_fields_form=extra_fields_form %}
-{% include 'project/project_request/savio/project_request_survey_modal.html' with survey_form=survey_form %}
-{% endcomment %}
 
 {% endblock %}
