@@ -114,3 +114,19 @@ class UpdateStatusForm(forms.Form):
         help_text='If you are unsure, leave the status as "Pending".',
         label='Status',
         required=True)
+
+
+class AccountDeletionUserDataDeletionConfirmation(forms.Form):
+    confirm = forms.CharField(max_length=100,
+                              required=True,
+                              help_text='Type \"Confirm\" to confirm that you '
+                                        'deleted/moved your data from the '
+                                        'cluster.')
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        if cleaned_data.get('confirm') != 'CONFIRM':
+            raise forms.ValidationError('You must type \"Confirm\" to confirm '
+                                        'that you deleted/moved your data from '
+                                        'the cluster.')
