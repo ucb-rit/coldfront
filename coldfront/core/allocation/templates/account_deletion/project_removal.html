@@ -19,10 +19,15 @@
   {% if formset %}
     <div class="card mb-3">
       <div class="card-header">
-        <h4>
+        <h4 class="d-inline">
           <i class="fas fa-user" aria-hidden="true"></i>
           User Projects
         </h4>
+        <div class="float-right">
+          {% if user.is_superuser %}
+            <a class="btn btn-primary" href="{% url 'project-removal-request-list' %}" role="button">Go to Project Removal Requests</a>
+          {% endif %}
+        </div>
       </div>
       <div class="card-body">
         <strong>Number of Active Projects: {{ active_projects }}</strong>
