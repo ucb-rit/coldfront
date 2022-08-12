@@ -102,33 +102,16 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
         if self.request.user == self.user_obj:
             return True
 
-        # TODO: who can request account deletion? Should we block PIs from deleting accounts?
-        # PIs that are PIs for projects that the user belongs to.
-        if self.is_pi:
-            return True
-
     def dispatch(self, request, *args, **kwargs):
         self.user_obj = get_object_or_404(User, pk=self.kwargs.get('pk'))
-        user_projects = \
-            ProjectUser.objects.filter(
-                user=self.user_obj,
-                status__name='Active').values_list('project', flat=True)
-        self.is_pi = ProjectUser.objects.filter(
-            user=self.request.user,
-            role__name__in=['Principal Investigator'],
-            status__name='Active',
-            project__in=user_projects).exists()
-
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         try:
-            if self.is_pi:
-                requester_str = 'PI'
-            elif self.request.user == self.user_obj:
+            if self.request.user == self.user_obj:
                 requester_str = 'User'
             else:
-                requester_str = 'System'
+                requester_str = 'Admin'
 
             request_runner = AccountDeletionRequestRunner(self.user_obj,
                                                           requester_str)
@@ -187,42 +170,12 @@ class AccountDeletionRequestEligibleUsersView(LoginRequiredMixin,
         if self.request.user.is_superuser:
             return True
 
-        if ProjectUser.objects.filter(
-                user=self.request.user,
-                role__name__in=['Principal Investigator'],
-                status__name='Active').exists():
-            return True
+        # PIs are not allowed to request deletions.
 
     def get_queryset(self):
-        # TODO: can managers' accounts be deleted?
         # TODO: ordery by
-        if self.request.user.is_superuser:
-            proj_eligible_users_to_delete = ProjectUser.objects.filter(
-                role__name='User').order_by('user__username')
-        else:
-            # TODO: can prefetch related be used here?
-            pi_projects = ProjectUser.objects.filter(
-                user=self.request.user,
-                role__name__in=['Principal Investigator'],
-                status__name='Active').values_list('project', flat=True)
-
-            proj_eligible_users_to_delete = ProjectUser.objects.filter(
-                project__in=pi_projects,
-                role__name='User',
-                status__name='Active').order_by('user__username')
-
-            # Users that are part of multiple projects cannot be deleted
-            # by a PI.
-            users_with_multiple_projects = set()
-            for proj_user in proj_eligible_users_to_delete:
-                query = ProjectUser.objects.filter(user=proj_user.user,
-                                                   status__name='Active')
-                if query.count() > 1:
-                    users_with_multiple_projects.add(proj_user.user)
-
-            proj_eligible_users_to_delete = \
-                proj_eligible_users_to_delete.exclude(
-                    user__in=users_with_multiple_projects)
+        proj_eligible_users_to_delete = ProjectUser.objects.filter(
+            role__name='User').order_by('user__username')
 
         # Users with pending deletion requests cannot have a new request made.
         users_with_pending_deletion_requests = \
