@@ -184,7 +184,7 @@
         {% endif %}
       </div>
     </div>
-  {% elif user == request_obj.user and request_obj.status.name not in 'Queued,Complete,Cancelled' %}
+  {% elif user == request_obj.user and request_obj.status.name not in 'Complete,Cancelled' %}
     <div class="card mb-3">
       <div class="card-header">
         <h2>
