@@ -689,6 +689,10 @@ def account_deletion_request_state_schema():
             'status': 'Pending',
             'timestamp': ''
         },
+        'user_data_deletion': {
+            'status': 'Pending',
+            'timestamp': ''
+        },
         'data_deletion': {
             'status': 'Pending',
             'timestamp': ''
