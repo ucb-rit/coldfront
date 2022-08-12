@@ -124,6 +124,11 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
         data['compute_resources'] = \
             ','.join([resource.name for resource in compute_resources])
 
+    @swagger_auto_schema(
+        manual_parameters=[authorization_parameter],
+        operation_description=(
+                'Retrieves the ClusterAccountDeactivationRequest identified '
+                'by the given ID.'))
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
@@ -135,6 +140,11 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
     def get_queryset(self):
         return ClusterAccountDeactivationRequest.objects.order_by('id')
 
+    @swagger_auto_schema(
+        manual_parameters=[authorization_parameter],
+        operation_description=(
+                'Lists all ClusterAccountDeactivationRequests identified '
+                'by the given reason or status.'))
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
