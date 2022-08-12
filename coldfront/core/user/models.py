@@ -39,6 +39,8 @@ class UserProfile(models.Model):
     host_user = models.ForeignKey(
         User, related_name='host_user', blank=True, null=True, on_delete=models.SET_NULL)
 
+    is_deactivated = models.BooleanField(default=False)
+
 
 class EmailAddress(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
