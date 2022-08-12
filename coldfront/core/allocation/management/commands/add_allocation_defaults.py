@@ -97,7 +97,7 @@ class Command(BaseCommand):
             AccountDeletionRequestStatusChoice.objects.get_or_create(
                 name=choice)
 
-        choices = ['User', 'System', 'PI']
+        choices = ['User', 'System', 'Admin']
         for choice in choices:
             AccountDeletionRequestRequesterChoice.objects.get_or_create(
                 name=choice)

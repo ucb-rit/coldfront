@@ -30,7 +30,7 @@ class AccountDeletionRequestRunner(object):
         requester_obj = \
             AccountDeletionRequestRequesterChoice.objects.get(name=self.requester_str)
 
-        if self.requester_str in ['User', 'PI']:
+        if self.requester_str in ['User', 'Admin']:
             expiration_days = import_from_settings('ACCOUNT_DELETION_MANUAL_QUEUE_DAYS')
         elif self.requester_str == 'System':
             expiration_days = import_from_settings('ACCOUNT_DELETION_AUTO_QUEUE_DAYS')
