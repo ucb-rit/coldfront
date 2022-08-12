@@ -111,7 +111,7 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
     """A ViewSet for the ClusterAccountDeactivationRequest model."""
 
     filterset_class = ClusterAccountDeactivationRequestFilter
-    http_method_names = ['get', 'patch', 'post']
+    http_method_names = ['get', 'patch']
     permission_classes = [IsSuperuserOrStaff]
     serializer_class = ClusterAccountDeactivationRequestSerializer
 
