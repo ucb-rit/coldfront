@@ -182,6 +182,10 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
                 instance.state['justification'] = justification
                 instance.save()
 
+                if serializer.validated_data.get('status').name == 'Complete':
+                    instance.user.userprofile.is_deactivated = True
+                    instance.user.userprofile.save()
+
         except Exception as e:
             message = f'Rolling back failed transaction. Details:\n{e}'
             logger.exception(message)

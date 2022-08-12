@@ -336,6 +336,27 @@ class TestUpdatePatchClusterAccountDeactivationRequests(
         assert_account_deactivation_request_serialization(
             self.request0, json, SERIALIZER_FIELDS)
 
+    def test_valid_data_complete(self):
+        """Test that updating an object with valid PATCH data
+        succeeds when the new status is Processing."""
+        self._assert_pre_state()
+        self.assertFalse(self.request0.user.userprofile.is_deactivated)
+
+        url = self.pk_url(BASE_URL, self.request0.pk)
+        data = {
+            'status': 'Complete',
+        }
+        response = self.client.patch(url, data, format='json')
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        json = response.json()
+
+        self._assert_post_state('request0', data.get('status'))
+        self.request0.user.userprofile.refresh_from_db()
+        self.assertTrue(self.request0.user.userprofile.is_deactivated)
+        assert_account_deactivation_request_serialization(
+            self.request0, json, SERIALIZER_FIELDS)
+
     def test_valid_data_cancelled(self):
         """Test that updating an object with valid PATCH data
         succeeds when the new status is Processing."""
