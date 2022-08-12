@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('allocation', '0008_secure_dir_manage_user_request'),
+        ('allocation', '0011_clusteraccessrequest'),
     ]
 
     operations = [
