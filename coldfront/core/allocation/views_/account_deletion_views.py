@@ -17,7 +17,7 @@ from iso8601 import iso8601
 from coldfront.core.allocation.forms_.account_deletion_forms import \
     AccountDeletionRequestForm, AccountDeletionRequestSearchForm, \
     AccountDeletionEligibleUsersSearchForm, AccountDeletionProjectRemovalForm, \
-    UpdateStatusForm
+    UpdateStatusForm, AccountDeletionUserDataDeletionConfirmation
 from coldfront.core.allocation.models import (AccountDeletionRequest,
                                               AccountDeletionRequestStatusChoice)
 from coldfront.core.allocation.utils_.account_deletion_utils import \
@@ -140,7 +140,7 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
         context['user_str'] = f'{self.user_obj.first_name} ' \
                               f'{self.user_obj.last_name}'
 
-        if self.is_pi or self.request.user.is_superuser:
+        if self.request.user.is_superuser:
             context['back_url'] = 'cluster-account-deletion-eligible-users'
         else:
             context['back_url'] = 'home'
@@ -397,40 +397,54 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
         state = self.request_obj.state
         checklist = []
 
-        # TODO: change the urls
+        if self.request.user.is_superuser:
+            project_removal = state['project_removal']
+            checklist.append([
+                'Confirm that the user has been removed from all projects.',
+                project_removal['status'],
+                project_removal['timestamp'],
+                True,
+                reverse(
+                    'cluster-account-deletion-request-project-removal',
+                    kwargs={'pk': pk})
+            ])
+            projects_removed = project_removal['status'] == 'Complete'
 
-        project_removal = state['project_removal']
-        checklist.append([
-            'Confirm that the user has been removed from all projects.',
-            project_removal['status'],
-            project_removal['timestamp'],
-            True,
-            reverse(
-                'cluster-account-deletion-request-project-removal',
-                kwargs={'pk': pk})
-        ])
-        projects_removed = project_removal['status'] == 'Complete'
+            data_deletion = state['data_deletion']
+            checklist.append([
+                'Confirm that the user\'s data has been deleted from the cluster.',
+                data_deletion['status'],
+                data_deletion['timestamp'],
+                True,
+                reverse(
+                    'cluster-account-deletion-request-data-deletion',
+                    kwargs={'pk': pk})
+            ])
+            data_deleted = data_deletion['status'] == 'Complete'
 
-        data_deletion = state['data_deletion']
-        checklist.append([
-            'Confirm that the user\'s data has been deleted from the cluster.',
-            data_deletion['status'],
-            data_deletion['timestamp'],
-            True,
-            reverse(
-                'cluster-account-deletion-request-data-deletion', kwargs={'pk': pk})
-        ])
-        data_deleted = data_deletion['status'] == 'Complete'
+            # TODO: change below url
+            account_deletion = state['account_deletion']
+            checklist.append([
+                'Confirm that the user\'s cluster account has been deleted.',
+                self.get_account_deletion_status(),
+                account_deletion['timestamp'],
+                projects_removed and data_deleted,
+                reverse(
+                    'cluster-account-deletion-request-detail',
+                    kwargs={'pk': pk})
+            ])
 
-        account_deletion = state['account_deletion']
-        checklist.append([
-            'Confirm that the user\'s cluster account has been deleted.',
-            self.get_account_deletion_status(),
-            account_deletion['timestamp'],
-            projects_removed and data_deleted,
-            reverse(
-                'cluster-account-deletion-request-detail', kwargs={'pk': pk})
-        ])
+        if self.request.user == self.request_obj.user:
+            user_data_deletion = state['user_data_deletion']
+            checklist.append([
+                'Confirm that it is safe to delete your data.',
+                user_data_deletion['status'],
+                user_data_deletion['timestamp'],
+                True,
+                reverse(
+                    'cluster-account-deletion-request-user-data-deletion',
+                    kwargs={'pk': pk})
+            ])
 
         return checklist
 
@@ -689,13 +703,14 @@ class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
     def form_valid(self, form):
         form_data = form.cleaned_data
         status = form_data['status']
-        self.request_obj.state['data_deletion'] = {
-            'status': status,
-            'timestamp': utc_now_offset_aware().isoformat(),
-        }
-        self.request_obj.status = \
-            AccountDeletionRequestStatusChoice.objects.get(name='Processing')
-        self.request_obj.save()
+        if status == 'Complete':
+            self.request_obj.state['data_deletion'] = {
+                'status': status,
+                'timestamp': utc_now_offset_aware().isoformat(),
+            }
+            self.request_obj.status = \
+                AccountDeletionRequestStatusChoice.objects.get(name='Processing')
+            self.request_obj.save()
 
         message = (
             f'Data deletion status for request {self.request_obj.pk} has been '
@@ -710,12 +725,64 @@ class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
         context['user_str'] = f'{self.request_obj.user.first_name} ' \
                               f'{self.request_obj.user.last_name}'
         context['user_projects'] = self.get_user_projects(self.request_obj.user)
+        context['user_data_deletion'] = \
+            self.request_obj.state['user_data_deletion']['status'] == 'Complete'
         return context
 
     def get_initial(self):
         initial = super().get_initial()
         initial['status'] = self.request_obj.state['data_deletion']['status']
         return initial
+
+    def get_success_url(self):
+        return self.request_detail_url(self.kwargs.get('pk'))
+
+
+class AccountDeletionUserDataDeletionFormView(LoginRequiredMixin,
+                                              UserPassesTestMixin,
+                                              AccountDeletionRequestMixin,
+                                              FormView):
+    form_class = AccountDeletionUserDataDeletionConfirmation
+    template_name = 'account_deletion/user_data_deletion.html'
+    login_url = '/'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user == self.request_obj.user or \
+                self.request.user.is_superuser:
+            return True
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        pk = self.kwargs.get('pk')
+        self.set_request_obj(pk)
+
+        # TODO: check for statuses?
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        self.request_obj.state['user_data_deletion'] = {
+            'status': 'Complete',
+            'timestamp': utc_now_offset_aware().isoformat(),
+        }
+        self.request_obj.save()
+
+        message = (
+            f'You confirmed that you have moved/deleted '
+            f'your data from the cluster.')
+        messages.success(self.request, message)
+
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['request_obj'] = self.request_obj
+        context['user_str'] = f'{self.request_obj.user.first_name} ' \
+                              f'{self.request_obj.user.last_name}'
+        return context
 
     def get_success_url(self):
         return self.request_detail_url(self.kwargs.get('pk'))
