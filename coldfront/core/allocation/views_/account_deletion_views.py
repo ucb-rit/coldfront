@@ -114,6 +114,7 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
                 requester_str = 'Admin'
 
             request_runner = AccountDeletionRequestRunner(self.user_obj,
+                                                          self.request.user,
                                                           requester_str)
             runner_result = request_runner.run()
             success_messages, error_messages = request_runner.get_messages()
