@@ -484,11 +484,8 @@ class TestCreatePostClusterAccountDeactivations(
         ]
         self.assert_permissions_by_user(url, method, users)
 
-#
-# class TestCreateClusterAccountDeactivations(
-#     TestClusterAccountDeactivationRequestsBase):
-#     """A class for testing POST /account_deactivation_requests/."""
-#
+
+# RE-ENABLE THESE TESTS IF POST REQUESTS ALLOWED IN AccountDeactivationViewSet
 #     def _assert_pre_state(self, user, status, reason):
 #         reasons = reason.split(',')
 #         query = ClusterAccountDeactivationRequest.objects.filter(
