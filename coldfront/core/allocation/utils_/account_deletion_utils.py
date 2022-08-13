@@ -15,7 +15,7 @@ from coldfront.core.project.utils_.removal_utils import \
     ProjectRemovalRequestRunner
 from coldfront.core.utils.common import import_from_settings, \
     utc_now_offset_aware
-from coldfront.core.utils.email.email_strategy import SendEmailStrategy
+from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
 from coldfront.core.utils.mail import send_email_template
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class AccountDeletionRequestRunner(object):
             AccountDeletionRequestRequesterChoice.objects.get(
                 name=self.requester_str)
 
-        self._email_strategy = SendEmailStrategy()
+        self._email_strategy = EnqueueEmailStrategy()
 
         self.success_messages = []
         self.error_messages = []
@@ -43,7 +43,7 @@ class AccountDeletionRequestRunner(object):
         expiration = self._get_expiration()
 
         no_deletion_requests = self._check_active_account_deletion_requests()
-        has_cluster_access = self._check_cluster_access()
+        # has_cluster_access = self._check_cluster_access()
 
         if no_deletion_requests: # and has_cluster_access:
             with transaction.atomic():
@@ -166,6 +166,8 @@ class AccountDeletionRequestRunner(object):
                 send_account_deletion_user_notification_emails,
                 *email_args)
 
+        self._email_strategy.send_queued_emails()
+
     def _send_emails_safe(self):
         """Send emails.
 
@@ -265,3 +267,7 @@ def send_account_deletion_admin_notification_emails(user_obj, request_obj, reque
             [user_obj.email],
             cc=[user_obj.userprofile.host_user.email],
             html_template=html_template)
+
+
+class AccountDeletionRequestCompleteRunner(object):
+    pass
