@@ -1,13 +1,15 @@
 <div class="card">
   <div class="card-header"><strong>Reason Legend</strong></div>
   <div class="card-body">
-    <p class="card-text text-justify">
-      <span class="badge badge-primary">1</span>:
-      User does not have a valid PID for the user account fee.
-    </p>
-    <p class="card-text text-justify">
-      <span class="badge badge-info">2</span>:
-      User is on a Recharge project does not have a valid PID for the recharge usage fee.
-    </p>
+    {% for reason, id in reason_legend_dict.items %}
+      <p class="card-text text-justify">
+        {% if id == 1 %}
+          <span class="badge badge-primary">{{ id }}</span>
+        {% else %}
+          <span class="badge badge-info">{{ id }}</span>
+        {% endif %}
+         : {{ reason.description }}
+      </p>
+    {% endfor %}
   </div>
 </div>

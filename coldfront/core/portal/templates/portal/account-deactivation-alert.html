@@ -3,8 +3,12 @@
 <div class="alert alert-danger" role="alert">
   <p>
     Your cluster account is pending deactivation for the following reason(s):
-    "{{ pending_deactivation_request_descriptions }}."
   </p>
+  <ul>
+    {% for description in pending_deactivation_request_descriptions %}
+      <li>{{ description }}</li>
+    {% endfor %}
+  </ul>
   <p>
     If you are a user on a departmental cluster, you will be blocked from
     submitting jobs on the clusters. If you are not a user on a departmental
@@ -12,11 +16,10 @@
   </p>
   <p>
     To reactivate your account, please submit a valid PID
+    {# TODO: add a link to reactivation form. #}
     <a href="{% url 'home' %}">here</a>.
   </p>
     Please contact us at
     <a href = "mailto: {% settings_value 'CENTER_HELP_EMAIL' %}">{% settings_value 'CENTER_HELP_EMAIL' %}</a>
     if this is a mistake.
 </div>
-
-{# TODO: add a link to reactivation form. #}

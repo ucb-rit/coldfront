@@ -20,7 +20,10 @@
       Status
     </th>
     <th scope="col">
-      Reason(s)
+      Reason
+    </th>
+    <th scope="col">
+      Recharge Project
     </th>
     <th scope="col">
       Clusters
@@ -54,12 +57,14 @@
           {% endif %}
         </td>
         <td>
-          {% if 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID' in request_tuple.1 %}
-              <span class="badge badge-primary">1</span>
+          {% if request_tuple.1 == 1 %}
+            <span class="badge badge-primary">{{ request_tuple.1 }}</span>
+          {% else %}
+            <span class="badge badge-info">{{ request_tuple.1 }}</span>
           {% endif %}
-          {% if 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID' in request_tuple.1 %}
-              <span class="badge badge-info">2</span>
-          {% endif %}
+        </td>
+        <td>
+          {{ request_tuple.3 }}
         </td>
         <td>
           {{ request_tuple.2 }}

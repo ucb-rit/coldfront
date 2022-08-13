@@ -42,15 +42,14 @@ def assert_account_deactivation_request_serialization(
         if field == 'user':
             field_value = getattr(request, field)
             expected = field_value.username
-        elif field == 'status':
+        elif field in ['status', 'reason']:
             field_value = getattr(request, field)
             expected = field_value.name
-        elif field == 'reason':
-            reasons = request.reason.all()
-            expected = ','.join([reason.name for reason in reasons])
         elif field == 'compute_resources':
             resources = get_compute_resources_for_user(request.user)
             expected = ','.join([resource.name for resource in resources])
+        elif field == 'recharge_project':
+            expected = str(request.state['recharge_project_pk'])
         else:
             field_value = getattr(request, field)
             expected = str(field_value)

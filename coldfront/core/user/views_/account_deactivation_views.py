@@ -1,11 +1,14 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import FormView
 
 from coldfront.core.allocation.models import ClusterAccountDeactivationRequest, \
     ClusterAccountDeactivationRequestStatusChoice
+from coldfront.core.allocation.utils import get_reason_legend_dict
+from coldfront.core.project.models import Project
 from coldfront.core.user.forms_.account_deactivation_forms import \
     AccountDeactivationRequestSearchForm, \
     AccountDeactivationCancelForm
@@ -56,7 +59,7 @@ class AccountDeactivationRequestListView(LoginRequiredMixin,
 
             if data.get('reason'):
                 queryset = queryset.filter(
-                    reason__name__in=[data.get('reason')])
+                    reason__name=data.get('reason'))
 
         else:
             queryset = ClusterAccountDeactivationRequest.objects.filter(
@@ -75,12 +78,16 @@ class AccountDeactivationRequestListView(LoginRequiredMixin,
                                      context['status'] in ['Queued',
                                                            'Ready']
 
+        # TODO: change this to match one to many reason
+        context['reason_legend_dict'] = get_reason_legend_dict()
+
         account_deactivation_requests = context['account_deactivation_requests']
         context['account_deactivation_requests'] = \
             [(request,
-              request.get_reasons_str(),
+              context['reason_legend_dict'][request.reason],
               ', '.join([resource.name.replace('Compute', '').strip()
-                         for resource in get_compute_resources_for_user(request.user)]))
+                         for resource in get_compute_resources_for_user(request.user)]),
+              Project.objects.get(pk=request.state['recharge_project_pk']).name if request.state['recharge_project_pk'] else 'N/A')
              for request in account_deactivation_requests]
 
         return context
@@ -102,8 +109,8 @@ class AccountDeactivationRequestCancelView(LoginRequiredMixin,
         return False
 
     def dispatch(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
-        self.request_obj = ClusterAccountDeactivationRequest.objects.get(pk=pk)
+        self.request_obj = get_object_or_404(ClusterAccountDeactivationRequest,
+                                             pk=self.kwargs.get('pk'))
 
         if self.request_obj.status.name not in ['Queued', 'Ready']:
             message = (
@@ -122,7 +129,7 @@ class AccountDeactivationRequestCancelView(LoginRequiredMixin,
         self.request_obj.status = \
             ClusterAccountDeactivationRequestStatusChoice.objects.get(
                 name='Cancelled')
-        self.request_obj.state['justification'] = \
+        self.request_obj.state['cancellation_justification'] = \
             justification
         self.request_obj.save()
 
@@ -140,7 +147,8 @@ class AccountDeactivationRequestCancelView(LoginRequiredMixin,
 
     def get_initial(self):
         initial = super().get_initial()
-        initial['justification'] = self.request_obj.state['justification']
+        initial['justification'] = \
+            self.request_obj.state['cancellation_justification']
 
         return initial
 

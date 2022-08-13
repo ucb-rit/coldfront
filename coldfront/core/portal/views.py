@@ -82,12 +82,18 @@ def home(request):
                  Q(project_user__user__username=request.user.username) &
                  Q(status__name='Pending'))]
 
+        descriptions = set()
         for request_obj in ClusterAccountDeactivationRequest.objects.filter(
                 user=request.user,
-                status__name__in=['Queued', 'Ready']):
-            reasons = [reason.description for reason in request_obj.reason.all()]
-            descriptions = ', '.join(reasons).replace('.', '').replace('User', 'user')
-        context['pending_deactivation_request_descriptions'] = descriptions
+                status__name__in=['Queued', 'Ready']).order_by('reason'):
+            if request_obj.reason.name == 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID':
+                recharge_proj_name = Project.objects.get(pk=request_obj.state['recharge_project_pk'])
+                recharge_str = f'Recharge project ({recharge_proj_name})'
+                description = f'{request_obj.reason.description.replace("Recharge project", recharge_str)}'
+            else:
+                description = request_obj.reason.description
+            descriptions.add(description)
+        context['pending_deactivation_request_descriptions'] = list(descriptions)
 
     else:
         template_name = 'portal/nonauthorized_home.html'

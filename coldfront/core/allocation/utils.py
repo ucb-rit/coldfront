@@ -26,7 +26,8 @@ from coldfront.core.allocation.models import (AllocationAttributeType,
                                               SecureDirRemoveUserRequest,
                                               SecureDirRemoveUserRequestStatusChoice,
                                               SecureDirRequest,
-                                              SecureDirRequestStatusChoice)
+                                              SecureDirRequestStatusChoice,
+                                              ClusterAccountDeactivationRequestReasonChoice)
 from coldfront.core.allocation.signals import allocation_activate_user
 from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource
@@ -353,3 +354,14 @@ def has_cluster_access(user):
         allocation_user__user=user,
         allocation_attribute_type__name='Cluster Account Status',
         value='Active').exists()
+
+
+def get_reason_legend_dict():
+    """Returns a list of tuples in the form of (legend_id, reason description)
+    for ClusterAccountDeactivationRequestReasonChoices"""
+    legend = {}
+    for i, reason in \
+            enumerate(ClusterAccountDeactivationRequestReasonChoice.objects.all().order_by('pk')):
+        legend[reason] = i + 1
+
+    return legend

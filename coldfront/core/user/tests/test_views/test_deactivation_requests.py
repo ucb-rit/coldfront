@@ -2,29 +2,18 @@ from datetime import timedelta
 from decimal import Decimal
 from http import HTTPStatus
 
-from django.conf import settings
 from django.contrib.auth.models import User
-from django.core import mail
 from django.urls import reverse
-from flags.state import enable_flag
-from iso8601 import iso8601
 
-from coldfront.api.statistics.utils import create_project_allocation, \
-    create_user_project_allocation
-from coldfront.core.allocation.models import (Allocation,
-                                              SecureDirRequest,
-                                              SecureDirRequestStatusChoice,
-                                              AllocationAttribute,
-                                              AllocationAttributeType,
-                                              ClusterAccountDeactivationRequestStatusChoice,
+from coldfront.api.statistics.utils import create_project_allocation
+from coldfront.core.allocation.models import (ClusterAccountDeactivationRequestStatusChoice,
                                               ClusterAccountDeactivationRequestReasonChoice,
                                               ClusterAccountDeactivationRequest)
-from coldfront.core.project.models import (ProjectUser,
-                                           ProjectUserStatusChoice,
-                                           ProjectUserRoleChoice, Project,
-                                           ProjectStatusChoice)
-from coldfront.core.resource.models import Resource
-from coldfront.core.user.models import UserProfile
+from coldfront.core.allocation.utils import get_reason_legend_dict
+from coldfront.core.project.models import Project, ProjectStatusChoice, \
+    ProjectUserRoleChoice, ProjectUserStatusChoice, ProjectUser
+from coldfront.core.resource.models import ResourceType, Resource
+from coldfront.core.user.utils import get_compute_resources_for_user
 from coldfront.core.utils.common import utc_now_offset_aware, \
     import_from_settings, utc_datetime_to_display_time_zone_date
 from coldfront.core.utils.tests.test_base import TestBase
@@ -41,6 +30,37 @@ class TestAccountDeactivationRequestBase(TestBase):
             user = User.objects.create(username=f'user{i}')
             setattr(self, f'user{i}', user)
 
+        active_project_status = \
+            ProjectStatusChoice.objects.get(name='Active')
+        active_project_user_status = \
+            ProjectUserStatusChoice.objects.get(name='Active')
+        user_role = ProjectUserRoleChoice.objects.get(name='User')
+        allocation_amount = Decimal('1000.0')
+
+        cluster_type = ResourceType.objects.get(name='Cluster')
+        self.compute1 = Resource.objects.create(name='TEST1 Compute',
+                                                resource_type=cluster_type)
+        self.compute2 = Resource.objects.create(name='TEST2 Compute',
+                                                resource_type=cluster_type)
+
+        for i in range(2):
+            project = Project.objects.create(
+                name=f'project{i}', status=active_project_status)
+            setattr(self, project.name, project)
+            allocation_objects = create_project_allocation(
+                project, allocation_amount)
+            allocation_objects.allocation.resources.add(self.compute1,
+                                                        self.compute2)
+            allocation_objects.allocation.save()
+
+            for j in range(5):
+                user = getattr(self, f'user{j}')
+                ProjectUser.objects.create(
+                    project=project,
+                    user=user,
+                    role=user_role,
+                    status=active_project_user_status)
+
         no_valid_account = \
             ClusterAccountDeactivationRequestReasonChoice.objects.get(
                 name='NO_VALID_USER_ACCOUNT_FEE_BILLING_ID')
@@ -49,47 +69,52 @@ class TestAccountDeactivationRequestBase(TestBase):
                 name='NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID')
 
         self.expiration_offset = \
-            import_from_settings('ACCOUNT_DEACTIVATION_QUEUE_DAYS')
+            import_from_settings('ACCOUNT_DEACTIVATION_AUTO_QUEUE_DAYS')
 
         self.request_dict = {
             'request0': {'user': self.user0,
                          'status':
                              ClusterAccountDeactivationRequestStatusChoice.objects.get(
                                  name='Queued'),
-                         'reason': [no_valid_account, no_valid_recharge],
-                         'expiration': self._get_offset_time()},
+                         'reason': no_valid_account,
+                         'expiration': self._get_offset_time(),
+                         'recharge_project_pk': ''},
             'request1': {'user': self.user1,
                          'status':
                              ClusterAccountDeactivationRequestStatusChoice.objects.get(
                                  name='Ready'),
-                         'reason': [no_valid_recharge],
-                         'expiration': self._get_offset_time()},
+                         'reason': no_valid_recharge,
+                         'expiration': self._get_offset_time(),
+                         'recharge_project_pk': self.project1.pk},
             'request2': {'user': self.user2,
                          'status':
                              ClusterAccountDeactivationRequestStatusChoice.objects.get(
                                  name='Processing'),
-                         'reason': [no_valid_recharge],
-                         'expiration': self._get_offset_time()},
+                         'reason': no_valid_recharge,
+                         'expiration': self._get_offset_time(),
+                         'recharge_project_pk': self.project0.pk},
             'request3': {'user': self.user3,
                          'status':
                              ClusterAccountDeactivationRequestStatusChoice.objects.get(
                                  name='Complete'),
-                         'reason': [no_valid_account],
-                         'expiration': self._get_offset_time()},
+                         'reason': no_valid_account,
+                         'expiration': self._get_offset_time(),
+                         'recharge_project_pk': ''},
             'request4': {'user': self.user4,
                          'status':
                              ClusterAccountDeactivationRequestStatusChoice.objects.get(
                                  name='Cancelled'),
-                         'reason': [no_valid_account, no_valid_recharge],
-                         'expiration': self._get_offset_time()},
+                         'reason': no_valid_account,
+                         'expiration': self._get_offset_time(),
+                         'recharge_project_pk': ''},
         }
 
         for name, kwargs in self.request_dict.items():
-            reasons = kwargs.pop('reason')
+            recharge_project_pk = kwargs.pop('recharge_project_pk')
             request = ClusterAccountDeactivationRequest.objects.create(**kwargs)
-            request.reason.add(*reasons)
+            request.state['recharge_project_pk'] = recharge_project_pk
             request.save()
-            kwargs['reason'] = reasons
+            kwargs['recharge_project_pk'] = recharge_project_pk
             setattr(self, name, request)
 
         self.staff = User.objects.create(username='staff', is_staff=True)
@@ -114,6 +139,19 @@ class TestAccountDeactivationRequestListView(
     def setUp(self):
         super().setUp()
         self.url = 'account-deactivation-request-list'
+
+    def _assert_recharge_visible(self, recharge_pk, html):
+        if recharge_pk:
+            recharge_name = Project.objects.get(pk=recharge_pk).name
+        else:
+            recharge_name = 'N/A'
+        self.assertIn(recharge_name, html)
+
+    def _assert_compute_visible(self, user, html):
+        compute_resources = get_compute_resources_for_user(user)
+        compute_resources = ', '.join([resource.name.replace('Compute', '').strip()
+                                       for resource in compute_resources])
+        self.assertIn(compute_resources, html)
 
     def _assert_actions_visible(self, superuser, status, html):
         visible = status in ['Queued', 'Ready'] and superuser
@@ -140,7 +178,7 @@ class TestAccountDeactivationRequestListView(
 
     def _assert_expiration(self, kwargs, html):
         kwargs_copy = kwargs.copy()
-        kwargs_copy.pop('reason')
+        kwargs_copy.pop('recharge_project_pk')
         if kwargs_copy['status'].name == 'Queued':
             self.assertIn('Expiration', html)
             request = \
@@ -151,14 +189,16 @@ class TestAccountDeactivationRequestListView(
         else:
             self.assertNotIn('Expiration', html)
 
-    def _assert_correct_reason(self, reasons, html):
-        for reason in reasons:
-            if reason.name == 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID':
-                badge = '<span class="badge badge-primary">1</span>\n'
-                self.assertIn(badge, html)
-            if reason.name == 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID':
-                badge = '<span class="badge badge-info">2</span>\n'
-                self.assertIn(badge, html)
+    def _assert_correct_reason(self, reason, html):
+        legend_dict = get_reason_legend_dict()
+        if reason.name == 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID':
+            badge = f'<span class="badge badge-primary">' \
+                    f'{legend_dict[reason]}</span>\n'
+            self.assertIn(badge, html)
+        if reason.name == 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID':
+            badge = f'<span class="badge badge-info">' \
+                    f'{legend_dict[reason]}</span>\n'
+            self.assertIn(badge, html)
 
     def _assert_content_shown(self, user, request_kwargs):
         url = f'{reverse(self.url)}?status={request_kwargs["status"].name}'
@@ -175,6 +215,9 @@ class TestAccountDeactivationRequestListView(
         self._assert_actions_visible(user.is_superuser,
                                      request_kwargs['status'].name, html)
         self._assert_expiration(request_kwargs, html)
+        self._assert_compute_visible(request_kwargs['user'], html)
+        self._assert_recharge_visible(request_kwargs['recharge_project_pk'],
+                                      html)
 
     def test_access(self):
         url = reverse(self.url)
@@ -223,7 +266,7 @@ class TestAccountDeactivationRequestCancelView(
         self.client.login(username=self.superuser, password=self.password)
 
         self.assertEqual(self.request0.status.name, 'Queued')
-        self.assertEqual(self.request0.state['justification'], '')
+        self.assertEqual(self.request0.state['cancellation_justification'], '')
 
         url = reverse(self.url, kwargs={'pk': self.request0.pk})
         data = {'justification': 'This is a test cancellation justification.'}
@@ -235,5 +278,5 @@ class TestAccountDeactivationRequestCancelView(
 
         self.request0.refresh_from_db()
         self.assertEqual(self.request0.status.name, 'Cancelled')
-        self.assertEqual(self.request0.state['justification'],
+        self.assertEqual(self.request0.state['cancellation_justification'],
                          data.get('justification'))

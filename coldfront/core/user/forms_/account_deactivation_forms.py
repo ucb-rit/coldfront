@@ -1,26 +1,12 @@
 from django import forms
 from django.core.validators import MinLengthValidator
 
+from coldfront.core.allocation.models import \
+    ClusterAccountDeactivationRequestReasonChoice, \
+    ClusterAccountDeactivationRequestStatusChoice
+
 
 class AccountDeactivationRequestSearchForm(forms.Form):
-    STATUS_CHOICES = (
-        ('', '-----'),
-        ('Queued', 'Queued'),
-        ('Ready', 'Ready'),
-        ('Processing', 'Processing'),
-        ('Complete', 'Complete'),
-        ('Cancelled', 'Cancelled')
-    )
-
-    REASON_CHOICES = (
-        ('', '-----',),
-        ('NO_VALID_USER_ACCOUNT_FEE_BILLING_ID',
-         'User does not have a valid PID for the user account fee.'),
-        ('NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID',
-         'User on a Recharge project does not have '
-         'a valid PID for the recharge usage fee.'),
-    )
-
     username = forms.CharField(
         label='Username', max_length=100, required=False)
     first_name = forms.CharField(
@@ -29,14 +15,29 @@ class AccountDeactivationRequestSearchForm(forms.Form):
         label='Last Name', max_length=100, required=False)
 
     status = forms.ChoiceField(label='Status',
-                               choices=STATUS_CHOICES,
+                               choices=(),
                                widget=forms.Select(),
                                required=True)
 
     reason = forms.ChoiceField(label='Reason',
-                               choices=REASON_CHOICES,
+                               choices=(),
                                widget=forms.Select(),
                                required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        reason_choices = [('', '-----',)] + \
+                         [(reason.name, reason.description)
+                          for reason in
+                          ClusterAccountDeactivationRequestReasonChoice.objects.all()]
+
+        status_choices = [('', '-----')] + \
+                         [(status.name, status.name) for status in
+                          ClusterAccountDeactivationRequestStatusChoice.objects.all()]
+
+        self.fields['reason'].choices = reason_choices
+        self.fields['status'].choices = status_choices
 
 
 class AccountDeactivationCancelForm(forms.Form):

@@ -5,6 +5,7 @@ from django.http import Http404
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.exceptions import APIException
+from rest_framework.generics import get_object_or_404
 
 from coldfront.api.permissions import IsAdminUserOrReadOnly
 from coldfront.api.permissions import IsSuperuserOrStaff
@@ -17,6 +18,7 @@ from coldfront.api.user.serializers import UserSerializer
 from coldfront.core.allocation.models import \
     ClusterAccountDeactivationRequest, \
     ClusterAccountDeactivationRequestReasonChoice
+from coldfront.core.project.models import Project
 from coldfront.core.user.models import ExpiringToken
 from coldfront.core.user.models import IdentityLinkingRequest
 from datetime import datetime
@@ -111,7 +113,7 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
     """A ViewSet for the ClusterAccountDeactivationRequest model."""
 
     filterset_class = ClusterAccountDeactivationRequestFilter
-    http_method_names = ['get', 'patch']
+    http_method_names = ['get', 'patch', 'post']
     permission_classes = [IsSuperuserOrStaff]
     serializer_class = ClusterAccountDeactivationRequestSerializer
 
@@ -119,10 +121,10 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
         """Updates the returned data to include the correct reason
         and compute resource strings."""
         request_obj = ClusterAccountDeactivationRequest.objects.get(id=data['id'])
-        data['reason'] = request_obj.get_reasons_str()
         compute_resources = get_compute_resources_for_user(request_obj.user)
         data['compute_resources'] = \
             ','.join([resource.name for resource in compute_resources])
+        data['recharge_project'] = request_obj.state['recharge_project_pk']
 
     @swagger_auto_schema(
         manual_parameters=[authorization_parameter],
@@ -147,9 +149,8 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
                 'by the given reason or status.'))
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
 
-        serializer = ClusterAccountDeactivationRequestSerializer(queryset,
-                                                                 many=True)
         data_copy = {'results': serializer.data.copy(),
                      'next': None,
                      'previous': None}
@@ -183,13 +184,16 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
     def perform_update(self, serializer):
         try:
             with transaction.atomic():
-                justification = serializer.validated_data.pop('justification',
-                                                              None)
+                justification = \
+                    serializer.validated_data.pop('justification', '')
+
+                # Popping read only fields.
                 serializer.validated_data.pop('reason', None)
                 serializer.validated_data.pop('user', None)
+                serializer.validated_data.pop('recharge_project', None)
 
                 instance = serializer.save()
-                instance.state['justification'] = justification
+                instance.state['cancellation_justification'] = justification
                 instance.save()
 
                 if serializer.validated_data.get('status').name == 'Complete':
@@ -214,16 +218,20 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
         validated_data_copy = serializer.validated_data.copy()
 
         validated_data_copy.pop('justification', None)
-
         # Must provide a reason to create a new request.
-        reasons = validated_data_copy.pop('reason', None)
-        if not reasons:
+        reason = validated_data_copy.get('reason', None)
+        if not reason:
             message = {'error': 'You must provide a valid reason.'}
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
-        reason_objects = [
-            ClusterAccountDeactivationRequestReasonChoice.objects.get(
-                name=reason)
-            for reason in reasons.split(',')]
+
+        # Throw an exception if the provided recharge project name is invalid.
+        recharge_project = validated_data_copy.pop('recharge_project', None)
+        if reason.name == 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID':
+            if not recharge_project:
+                message = {'error': f'If the reason is \"NO_VALID_RECHARGE_'
+                                    f'USAGE_FEE_BILLING_ID\", you must provide '
+                                    f'a recharge project.'}
+                return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
         # Only queued requests can be created.
         if validated_data_copy['status'].name != 'Queued':
@@ -232,21 +240,31 @@ class AccountDeactivationViewSet(mixins.ListModelMixin,
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
         expiration_days = \
-            import_from_settings('ACCOUNT_DEACTIVATION_QUEUE_DAYS')
-
+            import_from_settings('ACCOUNT_DEACTIVATION_AUTO_QUEUE_DAYS')
         expiration = utc_now_offset_aware() + timedelta(days=expiration_days)
 
-        instance, created = \
-            ClusterAccountDeactivationRequest.objects.get_or_create(
+        exists = False
+        query = \
+            ClusterAccountDeactivationRequest.objects.filter(**validated_data_copy)
+        if query.exists():
+            if recharge_project:
+                for request in query:
+                    if request.state['recharge_project_pk'] == recharge_project.pk:
+                        exists = True
+                        break
+            else:
+                exists = True
+
+        if not exists:
+            instance = ClusterAccountDeactivationRequest.objects.create(
                 **validated_data_copy)
 
-        if created:
             instance.expiration = expiration
-            instance.reason.add(*reason_objects)
+            if reason.name == 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID':
+                instance.state['recharge_project_pk'] = recharge_project.pk
             instance.save()
-
-        # Check if the request already exists.
-        if not created:
+        else:
+            # Request already exists.
             message = {'error': f'ClusterAccountDeactivationRequest with '
                                 f'given args already exists.'}
             return Response(message,

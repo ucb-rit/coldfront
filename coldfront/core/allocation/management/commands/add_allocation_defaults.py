@@ -107,7 +107,7 @@ class Command(BaseCommand):
             ('NO_VALID_USER_ACCOUNT_FEE_BILLING_ID',
              'User does not have a valid PID for the user account fee.'),
             ('NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID',
-             'User is on a Recharge project does not have a valid PID for '
+             'User is on a Recharge project but does not have a valid PID for '
              'the recharge usage fee.')
         ]
 

@@ -417,7 +417,7 @@ def get_compute_resources_for_user(user):
             resources__name__icontains='Compute')
 
         for allocation in allocations:
-            for resource in allocation.resources.all():
+            for resource in allocation.resources.filter(name__icontains='Compute'):
                 compute_resources.add(resource)
 
     return compute_resources

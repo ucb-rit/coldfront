@@ -2,6 +2,7 @@ from coldfront.core.allocation.models import \
     ClusterAccountDeactivationRequestReasonChoice, \
     ClusterAccountDeactivationRequestStatusChoice, \
     ClusterAccountDeactivationRequest
+from coldfront.core.project.models import Project
 from coldfront.core.user.models import IdentityLinkingRequest
 from coldfront.core.user.models import IdentityLinkingRequestStatusChoice
 from django.contrib.auth.models import User
@@ -44,16 +45,25 @@ class ClusterAccountDeactivationRequestSerializer(serializers.ModelSerializer):
         slug_field='name',
         queryset=ClusterAccountDeactivationRequestStatusChoice.objects.all())
 
-    reason = serializers.CharField(max_length=200)
+    reason = serializers.SlugRelatedField(
+        slug_field='name',
+        queryset=ClusterAccountDeactivationRequestReasonChoice.objects.all())
 
     justification = serializers.CharField(allow_null=True, required=False)
 
     compute_resources = serializers.CharField(allow_null=True, required=False)
 
+    recharge_project = serializers.SlugRelatedField(
+        slug_field='pk',
+        queryset=Project.objects.all(),
+        allow_null=True,
+        required=False)
+
     class Meta:
         model = ClusterAccountDeactivationRequest
         fields = (
-            'id', 'user', 'status', 'reason', 'justification', 'compute_resources')
+            'id', 'user', 'status', 'reason', 'justification',
+            'compute_resources', 'recharge_project')
         extra_kwargs = {
             'id': {'read_only': True}
         }
@@ -65,15 +75,5 @@ class ClusterAccountDeactivationRequestSerializer(serializers.ModelSerializer):
             if not isinstance(data.get('justification', None), str):
                 message = 'No justification is given.'
                 raise serializers.ValidationError(message)
-
-        if 'reason' in data:
-            reasons = data.get('reason').split(',')
-            for name in reasons:
-                query = \
-                    ClusterAccountDeactivationRequestReasonChoice.objects.filter(
-                        name=name)
-                if not query.exists():
-                    message = f'Invalid reason \"{name}\" given.'
-                    raise serializers.ValidationError(message)
 
         return data

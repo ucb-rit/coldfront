@@ -16,11 +16,14 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--reason',
+                            choices=['ALL',
+                                     'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID',
+                                     'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID'],
                             help='ClusterAccountDeactivationRequestReasonChoice'
-                                 ' name to dequeue. Will dequeue ALL reasons '
-                                 'without this flag.',
+                                 ' name to dequeue. \"All\" will dequeue '
+                                 'all requests.',
                             type=str,
-                            required=False)
+                            required=True)
 
     def handle(self, *args, **options):
         """ Dequeues ClusterAccountDeactivationRequests after their waiting
@@ -29,17 +32,22 @@ class Command(BaseCommand):
         queued_requests = ClusterAccountDeactivationRequest.objects.filter(
             status__name='Queued',
             expiration__lte=utc_now_offset_aware()
-        )
+        ).order_by('pk')
 
-        if options.get('reason', None):
-            queued_requests.filter(reason__name=options.get('reason'))
+        reason = options.get('reason')
+        if reason != 'ALL':
+            queued_requests.filter(reason__name=reason)
 
+        dequeued_requests = []
         ready_status = \
-            ClusterAccountDeactivationRequestStatusChoice.objects.get(name='Ready')
+            ClusterAccountDeactivationRequestStatusChoice.objects.get(
+                name='Ready')
         for request in queued_requests:
             request.status = ready_status
             request.save()
+            dequeued_requests.append(request.pk)
 
-        message = f'{queued_requests.count()} ' \
-                  f'ClusterAccountDeactivationRequests dequeued.'
+        message = f'Marked {queued_requests.count()} ' \
+                  f'ClusterAccountDeactivationRequests as ' \
+                  f'\"Ready\": {", ".join(dequeued_requests)}.'
         sys.stdout.write(self.stdout.SUCCESS(message))
