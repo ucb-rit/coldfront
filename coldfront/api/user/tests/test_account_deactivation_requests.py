@@ -476,11 +476,11 @@ class TestCreatePostClusterAccountDeactivations(
         method = 'POST'
         self.assert_authorization_token_required(url, method)
 
-    # def test_method_not_allowed(self):
-    #     """Test that this method is not allowed."""
-    #     url = BASE_URL
-    #     response = self.client.post(url)
-    #     self.assertEqual(response.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
+    def test_method_not_allowed(self):
+        """Test that this method is not allowed."""
+        url = BASE_URL
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
 
     def test_permissions_by_role(self):
         """Test permissions for regular users, staff, and superusers."""
@@ -495,235 +495,232 @@ class TestCreatePostClusterAccountDeactivations(
 
 
 # RE-ENABLE THESE TESTS IF POST REQUESTS ALLOWED IN AccountDeactivationViewSet
-    def _assert_pre_state(self, user, status, reason):
-        query = ClusterAccountDeactivationRequest.objects.filter(
-            user__username=user,
-            status__name=status,
-            reason__name=reason)
-        self.assertFalse(query.exists())
-
-    def _assert_post_state(self, user, status, reason, pre_time, post_time, recharge_project=''):
-        query = ClusterAccountDeactivationRequest.objects.filter(
-            user__username=user,
-            status__name=status,
-            reason__name=reason,
-            state__recharge_project_pk=recharge_project)
-        self.assertEqual(query.count(), 1)
-        self.assertTrue(pre_time <= query.first().expiration <= post_time)
-        self.assertEqual(query.first().state['recharge_project_pk'], recharge_project)
-
-    def _get_request(self, user, status, reason):
-        query = ClusterAccountDeactivationRequest.objects.filter(
-            user__username=user,
-            status__name=status,
-            reason__name=reason
-        )
-
-        self.assertEqual(query.count(), 1)
-
-        return query.first()
-
-    def _get_offset_time(self):
-        return utc_now_offset_aware() + timedelta(days=self.expiration_offset)
-
-    def setUp(self):
-        super().setUp()
-        # Create a new user.
-        self.user5 = User.objects.create(username='user5')
-
-    def test_authorization_token_required(self):
-        """Test that an authorization token is required."""
-        url = BASE_URL
-        method = 'POST'
-        self.assert_authorization_token_required(url, method)
-
-    def test_permissions_by_role(self):
-        """Test permissions for regular users, staff, and superusers."""
-        url = BASE_URL
-        method = 'POST'
-        users = [
-            (self.user0, False),
-            (self.staff_user, False),
-            (self.superuser, True)
-        ]
-        self.assert_permissions_by_user(url, method, users)
-
-    def test_valid_data_queued(self):
-        """Test that creating an object with valid POST data
-        succeeds when the new status is Queued."""
-        pre_time = self._get_offset_time()
-        url = BASE_URL
-        data = {
-            'user': 'user5',
-            'status': 'Queued',
-            'reason': 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID'
-        }
-        self._assert_pre_state(**data)
-        response = self.client.post(url, data, format='json')
-
-        self.assertEqual(response.status_code, HTTPStatus.CREATED)
-        json = response.json()
-
-        post_time = self._get_offset_time()
-        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
-        assert_account_deactivation_request_serialization(
-            self._get_request(**data), json, SERIALIZER_FIELDS)
-
-    def test_valid_data_queued_recharge(self):
-        """Test that creating an object with valid POST data
-        succeeds when the new status is Queued."""
-        pre_time = self._get_offset_time()
-        url = BASE_URL
-        data = {
-            'user': 'user5',
-            'status': 'Queued',
-            'reason': 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID',
-            'recharge_project': self.project0.pk
-        }
-        data_copy = data.copy()
-        data_copy.pop('recharge_project')
-        self._assert_pre_state(**data_copy)
-        response = self.client.post(url, data, format='json')
-
-        self.assertEqual(response.status_code, HTTPStatus.CREATED)
-        json = response.json()
-
-        post_time = self._get_offset_time()
-        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
-        assert_account_deactivation_request_serialization(
-            self._get_request(**data_copy), json, SERIALIZER_FIELDS)
-
-    def test_invalid_data(self):
-        """Test that creating an object with invalid POST data
-        does not succeed."""
-        url = BASE_URL
-        data = {
-            'user': 'InvalidUsername',
-            'status': 'InvalidStatus',
-            'reason': 'InvalidReason'
-        }
-        self._assert_pre_state(**data)
-        response = self.client.post(url, data, format='json')
-
-        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
-        json = response.json()
-        self.assertEqual(json['user'],
-                         ['Object with username=InvalidUsername does not exist.'])
-        self.assertEqual(json['status'],
-                         ['Object with name=InvalidStatus does not exist.'])
-        self.assertEqual(json['reason'],
-                         ['Object with name=InvalidReason does not exist.'])
-        self._assert_pre_state(**data)
-
-    def test_invalid_data_status(self):
-        """Test that creating an object with invalid POST data
-        does not succeed."""
-        url = BASE_URL
-        data = {
-            'user': 'user5',
-            'status': 'Processing',
-            'reason': 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID'
-        }
-        self._assert_pre_state(**data)
-        response = self.client.post(url, data, format='json')
-
-        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
-        json = response.json()
-
-        self.assertEqual(json['error'],
-                         'POST requests only allow requests to be '
-                         'created with a "Queued" status.')
-        self._assert_pre_state(**data)
-
-    def test_request_exists(self):
-        """Test that creating an object with valid POST data
-        does not succeed if the object already exists."""
-        pre_time = self._get_offset_time()
-        url = BASE_URL
-        data = {
-            'user': 'user5',
-            'status': 'Queued',
-            'reason': 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID'
-        }
-        self._assert_pre_state(**data)
-        response = self.client.post(url, data, format='json')
-
-        self.assertEqual(response.status_code, HTTPStatus.CREATED)
-
-        post_time = self._get_offset_time()
-        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
-
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
-        json = response.json()
-
-        self.assertEqual(json['error'],
-                         'ClusterAccountDeactivationRequest with '
-                         'given args already exists.')
-        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
-
-    def test_request_exists_recharge(self):
-        """Test that creating an object with valid POST data
-        does not succeed if the object already exists."""
-        pre_time = self._get_offset_time()
-        url = BASE_URL
-        data = {
-            'user': 'user5',
-            'status': 'Queued',
-            'reason': 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID',
-            'recharge_project': self.project0.pk
-        }
-
-        data_copy = data.copy()
-        data_copy.pop('recharge_project')
-
-        self._assert_pre_state(**data_copy)
-        response = self.client.post(url, data, format='json')
-
-        self.assertEqual(response.status_code, HTTPStatus.CREATED)
-
-        post_time = self._get_offset_time()
-        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
-
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
-        json = response.json()
-
-        self.assertEqual(json['error'],
-                         'ClusterAccountDeactivationRequest with '
-                         'given args already exists.')
-        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
-
-    def test_recharge_diff(self):
-        """Test that a new request is made when the recharge project is
-        different but the rest of the fields are the same."""
-        pre_time = self._get_offset_time()
-        url = BASE_URL
-        data = {
-            'user': 'user5',
-            'status': 'Queued',
-            'reason': 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID',
-            'recharge_project': self.project0.pk
-        }
-
-        data_copy = data.copy()
-        data_copy.pop('recharge_project')
-
-        self._assert_pre_state(**data_copy)
-        response = self.client.post(url, data, format='json')
-
-        self.assertEqual(response.status_code, HTTPStatus.CREATED)
-
-        post_time = self._get_offset_time()
-        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
-
-        pre_time = self._get_offset_time()
-        data['recharge_project'] = self.project1.pk
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, HTTPStatus.CREATED)
-        json = response.json()
-        post_time = self._get_offset_time()
-        self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
-
-
-
+#     def _assert_pre_state(self, user, status, reason):
+#         query = ClusterAccountDeactivationRequest.objects.filter(
+#             user__username=user,
+#             status__name=status,
+#             reason__name=reason)
+#         self.assertFalse(query.exists())
+#
+#     def _assert_post_state(self, user, status, reason, pre_time, post_time, recharge_project=''):
+#         query = ClusterAccountDeactivationRequest.objects.filter(
+#             user__username=user,
+#             status__name=status,
+#             reason__name=reason,
+#             state__recharge_project_pk=recharge_project)
+#         self.assertEqual(query.count(), 1)
+#         self.assertTrue(pre_time <= query.first().expiration <= post_time)
+#         self.assertEqual(query.first().state['recharge_project_pk'], recharge_project)
+#
+#     def _get_request(self, user, status, reason):
+#         query = ClusterAccountDeactivationRequest.objects.filter(
+#             user__username=user,
+#             status__name=status,
+#             reason__name=reason
+#         )
+#
+#         self.assertEqual(query.count(), 1)
+#
+#         return query.first()
+#
+#     def _get_offset_time(self):
+#         return utc_now_offset_aware() + timedelta(days=self.expiration_offset)
+#
+#     def setUp(self):
+#         super().setUp()
+#         # Create a new user.
+#         self.user5 = User.objects.create(username='user5')
+#
+#     def test_authorization_token_required(self):
+#         """Test that an authorization token is required."""
+#         url = BASE_URL
+#         method = 'POST'
+#         self.assert_authorization_token_required(url, method)
+#
+#     def test_permissions_by_role(self):
+#         """Test permissions for regular users, staff, and superusers."""
+#         url = BASE_URL
+#         method = 'POST'
+#         users = [
+#             (self.user0, False),
+#             (self.staff_user, False),
+#             (self.superuser, True)
+#         ]
+#         self.assert_permissions_by_user(url, method, users)
+#
+#     def test_valid_data_queued(self):
+#         """Test that creating an object with valid POST data
+#         succeeds when the new status is Queued."""
+#         pre_time = self._get_offset_time()
+#         url = BASE_URL
+#         data = {
+#             'user': 'user5',
+#             'status': 'Queued',
+#             'reason': 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID'
+#         }
+#         self._assert_pre_state(**data)
+#         response = self.client.post(url, data, format='json')
+#
+#         self.assertEqual(response.status_code, HTTPStatus.CREATED)
+#         json = response.json()
+#
+#         post_time = self._get_offset_time()
+#         self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
+#         assert_account_deactivation_request_serialization(
+#             self._get_request(**data), json, SERIALIZER_FIELDS)
+#
+#     def test_valid_data_queued_recharge(self):
+#         """Test that creating an object with valid POST data
+#         succeeds when the new status is Queued."""
+#         pre_time = self._get_offset_time()
+#         url = BASE_URL
+#         data = {
+#             'user': 'user5',
+#             'status': 'Queued',
+#             'reason': 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID',
+#             'recharge_project': self.project0.pk
+#         }
+#         data_copy = data.copy()
+#         data_copy.pop('recharge_project')
+#         self._assert_pre_state(**data_copy)
+#         response = self.client.post(url, data, format='json')
+#
+#         self.assertEqual(response.status_code, HTTPStatus.CREATED)
+#         json = response.json()
+#
+#         post_time = self._get_offset_time()
+#         self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
+#         assert_account_deactivation_request_serialization(
+#             self._get_request(**data_copy), json, SERIALIZER_FIELDS)
+#
+#     def test_invalid_data(self):
+#         """Test that creating an object with invalid POST data
+#         does not succeed."""
+#         url = BASE_URL
+#         data = {
+#             'user': 'InvalidUsername',
+#             'status': 'InvalidStatus',
+#             'reason': 'InvalidReason'
+#         }
+#         self._assert_pre_state(**data)
+#         response = self.client.post(url, data, format='json')
+#
+#         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+#         json = response.json()
+#         self.assertEqual(json['user'],
+#                          ['Object with username=InvalidUsername does not exist.'])
+#         self.assertEqual(json['status'],
+#                          ['Object with name=InvalidStatus does not exist.'])
+#         self.assertEqual(json['reason'],
+#                          ['Object with name=InvalidReason does not exist.'])
+#         self._assert_pre_state(**data)
+#
+#     def test_invalid_data_status(self):
+#         """Test that creating an object with invalid POST data
+#         does not succeed."""
+#         url = BASE_URL
+#         data = {
+#             'user': 'user5',
+#             'status': 'Processing',
+#             'reason': 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID'
+#         }
+#         self._assert_pre_state(**data)
+#         response = self.client.post(url, data, format='json')
+#
+#         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+#         json = response.json()
+#
+#         self.assertEqual(json['error'],
+#                          'POST requests only allow requests to be '
+#                          'created with a "Queued" status.')
+#         self._assert_pre_state(**data)
+#
+#     def test_request_exists(self):
+#         """Test that creating an object with valid POST data
+#         does not succeed if the object already exists."""
+#         pre_time = self._get_offset_time()
+#         url = BASE_URL
+#         data = {
+#             'user': 'user5',
+#             'status': 'Queued',
+#             'reason': 'NO_VALID_USER_ACCOUNT_FEE_BILLING_ID'
+#         }
+#         self._assert_pre_state(**data)
+#         response = self.client.post(url, data, format='json')
+#
+#         self.assertEqual(response.status_code, HTTPStatus.CREATED)
+#
+#         post_time = self._get_offset_time()
+#         self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
+#
+#         response = self.client.post(url, data, format='json')
+#         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+#         json = response.json()
+#
+#         self.assertEqual(json['error'],
+#                          'ClusterAccountDeactivationRequest with '
+#                          'given args already exists.')
+#         self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
+#
+#     def test_request_exists_recharge(self):
+#         """Test that creating an object with valid POST data
+#         does not succeed if the object already exists."""
+#         pre_time = self._get_offset_time()
+#         url = BASE_URL
+#         data = {
+#             'user': 'user5',
+#             'status': 'Queued',
+#             'reason': 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID',
+#             'recharge_project': self.project0.pk
+#         }
+#
+#         data_copy = data.copy()
+#         data_copy.pop('recharge_project')
+#
+#         self._assert_pre_state(**data_copy)
+#         response = self.client.post(url, data, format='json')
+#
+#         self.assertEqual(response.status_code, HTTPStatus.CREATED)
+#
+#         post_time = self._get_offset_time()
+#         self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
+#
+#         response = self.client.post(url, data, format='json')
+#         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+#         json = response.json()
+#
+#         self.assertEqual(json['error'],
+#                          'ClusterAccountDeactivationRequest with '
+#                          'given args already exists.')
+#         self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
+#
+#     def test_recharge_diff(self):
+#         """Test that a new request is made when the recharge project is
+#         different but the rest of the fields are the same."""
+#         pre_time = self._get_offset_time()
+#         url = BASE_URL
+#         data = {
+#             'user': 'user5',
+#             'status': 'Queued',
+#             'reason': 'NO_VALID_RECHARGE_USAGE_FEE_BILLING_ID',
+#             'recharge_project': self.project0.pk
+#         }
+#
+#         data_copy = data.copy()
+#         data_copy.pop('recharge_project')
+#
+#         self._assert_pre_state(**data_copy)
+#         response = self.client.post(url, data, format='json')
+#
+#         self.assertEqual(response.status_code, HTTPStatus.CREATED)
+#
+#         post_time = self._get_offset_time()
+#         self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
+#
+#         pre_time = self._get_offset_time()
+#         data['recharge_project'] = self.project1.pk
+#         response = self.client.post(url, data, format='json')
+#         self.assertEqual(response.status_code, HTTPStatus.CREATED)
+#         json = response.json()
+#         post_time = self._get_offset_time()
+#         self._assert_post_state(**data, pre_time=pre_time, post_time=post_time)
