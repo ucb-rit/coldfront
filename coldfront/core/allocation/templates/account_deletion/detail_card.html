@@ -6,6 +6,25 @@
     </h4>
   </div>
   <div class="card-body">
+    {% if not user.is_superuser %}
+      <p>
+        The request will wait in a queue for {{ remaining_days }} days before
+        system administrators process the request.
+      </p>
+      <p>
+        After the request is complete, you will be removed from any remaining
+        projects. You will lose access to the clusters. Your data will be
+        deleted off of the cluster.
+      </p>
+      <p>
+        Please note that while you are able to regain access to the cluster in the
+        future and may rejoin projects, your data will not be recoverable after this
+        request is completed. It is therefore important to move all data that your PI
+        or group wishes to keep out of your personal cluster directories. These
+        include your 'home' and 'scratch' directories.
+      </p>
+      <hr>
+    {% endif %}
     <p class="card-text text-justify">
       <strong>Request ID: </strong>
       {{ request_obj.pk }}
