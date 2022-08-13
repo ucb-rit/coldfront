@@ -12,7 +12,7 @@
 
 {% block content %}
   <h1>
-    Cluster Account Deletion: {{ request_obj.user.username }}
+    Cluster Account Deletion: {{ user_str }} ({{ request_obj.user.username }})
     {% with status=request_obj.status.name %}
       {% if status in 'Queued,Ready,Processing' %}
         <span class="badge badge-warning" style="float: right;">{{ status }}</span>
@@ -29,10 +29,10 @@
 
   <div class="card mb-3">
     <div class="card-header">
-      <h2>
+      <h4>
         <i class="fas fa-question-circle" aria-hidden="true"></i>
         Request Status
-      </h2>
+      </h4>
     </div>
     <div class="card-body">
       <div class="table-responsive">
@@ -103,13 +103,13 @@
     </div>
   </div>
 
-  {% if is_allowed_to_manage_request and request_obj.status.name not in 'Queued,Complete,Cancelled' %}
+  {% if is_allowed_to_manage_request and request_obj.status.name not in 'Queued,Complete,Cancel Requestled' %}
     <div class="card mb-3">
       <div class="card-header">
-        <h2>
+        <h4>
           <i class="fas fa-check-circle" aria-hidden="true"></i>
           System Administrator Checklist
-        </h2>
+        </h4>
       </div>
       <div class="card-body">
         <p>
@@ -169,28 +169,35 @@
             {% csrf_token %}
             <button type="submit" class="btn btn-primary">Submit</button>
             <a href="{% url 'cluster-account-deletion-request-list' %}" class="btn btn-secondary">Back</a>
-{#            <a href="{% url 'cluster-account-deletion-request-cancel' request_obj.pk %}" class="btn btn-danger" style="float: right;">#}
-{#              Cancel Request#}
-{#            </a>#}
-            <button type="button" class="btn btn-danger" disabled>Cancel Request</button>
+            {% include 'account_deletion/cancellation_popover.html' %}
           </form>
         {% else %}
           <button type="button" class="btn btn-primary" disabled>Submit</button>
           <a href="{% url 'cluster-account-deletion-request-list' %}" class="btn btn-secondary">Back</a>
-{#          <a href="{% url 'cluster-account-deletion-request-cancel' request_obj.pk %}" class="btn btn-danger" style="float: right;">#}
-{#            Cancel Request#}
-{#          </a>#}
-          <button type="button" class="btn btn-danger" disabled>Cancel Request</button>
+          {% include 'account_deletion/cancellation_popover.html' %}
         {% endif %}
+      </div>
+    </div>
+  {% elif is_allowed_to_manage_request and request_obj.status.name in 'Queued,Ready' %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <h4>
+          <i class="fas fa-check-circle" aria-hidden="true"></i>
+          Manage Request
+        </h4>
+      </div>
+      <div class="card-body">
+        <a href="{% url 'cluster-account-deletion-request-cancel' request_obj.pk %}" class="btn btn-danger">Cancel Request</a>
+        <a href="{% url 'cluster-account-deletion-request-list' %}" class="btn btn-secondary">Back</a>
       </div>
     </div>
   {% elif user == request_obj.user and request_obj.status.name not in 'Complete,Cancelled' %}
     <div class="card mb-3">
       <div class="card-header">
-        <h2>
+        <h4>
           <i class="fas fa-check-circle" aria-hidden="true"></i>
           User Checklist
-        </h2>
+        </h4>
       </div>
       <div class="card-body">
         <p>
@@ -241,8 +248,19 @@
             </tbody>
           </table>
         </div>
+        <hr>
+        {% if request_obj.status.name in 'Queued,Ready' %}
+          <a href="{% url 'cluster-account-deletion-request-cancel' request_obj.pk %}" class="btn btn-danger">Cancel Request</a>
+          <a href="{% url 'cluster-account-deletion-request-list' %}" class="btn btn-secondary">Back</a>
+        {% endif %}
       </div>
     </div>
   {% endif %}
 
 {% endblock %}
+
+<script>
+    $(document).ready(function() {
+        $('[data-toggle="popover"]').popover({html:true});
+    });
+</script>
