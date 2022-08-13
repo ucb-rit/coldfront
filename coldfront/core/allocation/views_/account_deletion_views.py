@@ -1,5 +1,6 @@
 from collections import defaultdict
 from itertools import chain
+from urllib.parse import urljoin
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -9,19 +10,22 @@ from django.forms import formset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
+from django.utils.safestring import mark_safe
 from django.views.generic import ListView, DetailView
 from django.views.generic.base import TemplateView, View
 from django.views.generic.edit import FormView
 from iso8601 import iso8601
 
+from coldfront.config import settings
 from coldfront.core.allocation.forms_.account_deletion_forms import \
     AccountDeletionRequestForm, AccountDeletionRequestSearchForm, \
     AccountDeletionEligibleUsersSearchForm, AccountDeletionProjectRemovalForm, \
-    UpdateStatusForm, AccountDeletionUserDataDeletionConfirmation
+    UpdateStatusForm, AccountDeletionUserDataDeletionConfirmation, \
+    AccountDeletionCancelRequestForm
 from coldfront.core.allocation.models import (AccountDeletionRequest,
                                               AccountDeletionRequestStatusChoice)
 from coldfront.core.allocation.utils_.account_deletion_utils import \
-    AccountDeletionRequestRunner
+    AccountDeletionRequestRunner, AccountDeletionRequestCompleteRunner
 
 from coldfront.core.project.models import (ProjectUser)
 from coldfront.core.project.utils_.removal_utils import \
@@ -87,9 +91,16 @@ class AccountDeletionRequestMixin(object):
         self.request_obj = get_object_or_404(AccountDeletionRequest,
                                              pk=pk)
 
+    def set_context_data(self, context):
+        context['request_obj'] = self.request_obj
+        context['user_str'] = f'{self.request_obj.user.first_name} ' \
+                              f'{self.request_obj.user.last_name}'
+        context['user_projects'] = self.get_user_projects(self.request_obj.user)
+
 
 class AccountDeletionRequestFormView(LoginRequiredMixin,
                                      UserPassesTestMixin,
+                                     AccountDeletionRequestMixin,
                                      FormView):
     form_class = AccountDeletionRequestForm
     template_name = \
@@ -117,12 +128,27 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
                                                           self.request.user,
                                                           requester_str)
             request_runner.run()
-            success_messages, error_messages = request_runner.get_messages()
+            # success_messages, error_messages = request_runner.get_messages()
+            #
+            # for message in success_messages:
+            #     messages.success(self.request, message)
+            # for message in error_messages:
+            #     messages.error(self.request, message)
 
-            for message in success_messages:
-                messages.success(self.request, message)
-            for message in error_messages:
-                messages.error(self.request, message)
+            self.request_obj = \
+                AccountDeletionRequest.objects.get(user=self.user_obj)
+            confirm_url = urljoin(settings.CENTER_BASE_URL,
+                                  self.request_detail_url(self.request_obj.pk))
+            if requester_str == 'User':
+                message = f'You successfully requested to delete your ' \
+                          f'cluster account. Please complete the checklist ' \
+                          f'<a href="{confirm_url}">here</a>.'
+            else:
+                message = f'You successfully requested to delete ' \
+                          f'{self.user_obj.username}\'s cluster account. ' \
+                          f'Please complete the checklist ' \
+                          f'<a href="{confirm_url}">here</a>.'
+            messages.success(self.request, mark_safe(message))
         except Exception as e:
             logger.exception(e)
             error_message = \
@@ -152,7 +178,7 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
         return kwargs
 
     def get_success_url(self):
-        return reverse('cluster-account-deletion-eligible-users')
+        return self.request_detail_url(self.request_obj.pk)
 
 
 class AccountDeletionRequestEligibleUsersView(LoginRequiredMixin,
@@ -350,12 +376,12 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
         messages.error(self.request, message)
 
     def dispatch(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
-        self.set_request_obj(pk)
+        self.set_request_obj(self.kwargs.get('pk'))
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        self.set_context_data(context)
 
         try:
             latest_update_timestamp = \
@@ -372,15 +398,10 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
         context['latest_update_timestamp'] = latest_update_timestamp
 
         context['checklist'] = self.get_checklist()
-        context['setup_status'] = self.get_account_deletion_status()
         context['is_checklist_complete'] = self.is_checklist_complete()
 
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
-
-        context['request_obj'] = self.request_obj
-
-        context['user_projects'] = self.get_user_projects(self.request_obj.user)
 
         return context
 
@@ -419,15 +440,14 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
             ])
             data_deleted = data_deletion['status'] == 'Complete'
 
-            # TODO: change below url
             account_deletion = state['account_deletion']
             checklist.append([
                 'Confirm that the user\'s cluster account has been deleted.',
-                self.get_account_deletion_status(),
+                state['account_deletion']['status'],
                 account_deletion['timestamp'],
                 projects_removed and data_deleted,
                 reverse(
-                    'cluster-account-deletion-request-detail',
+                    'cluster-account-deletion-request-account-deletion',
                     kwargs={'pk': pk})
             ])
 
@@ -461,10 +481,10 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
 
             return HttpResponseRedirect(self.request_detail_url(pk))
 
-        # # Approve the request and send emails to the PI and requester.
-        # runner = SecureDirRequestApprovalRunner(self.request_obj)
-        # runner.run()
-        #
+        # Complete the request and send the necessary emails.
+        runner = AccountDeletionRequestCompleteRunner(self.request_obj)
+        runner.run()
+
         # success_messages, error_messages = runner.get_messages()
         #
         # for message in success_messages:
@@ -473,15 +493,6 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
         #     messages.error(self.request, message)
         return HttpResponseRedirect('home')
         return HttpResponseRedirect(self.redirect)
-
-    def get_account_deletion_status(self):
-        """Return one of the following statuses for the 'account_deletion' step of
-        the request: 'N/A', 'Pending', 'Complete'."""
-        state = self.request_obj.state
-        if (state['project_removal']['status'] == 'Cancelled' or
-                state['data_deletion']['status'] == 'Cancelled'):
-            return 'N/A'
-        return state['account_deletion']['status']
 
     def is_checklist_complete(self):
         status_choice = self.request_obj.status.name
@@ -507,8 +518,7 @@ class AccountDeletionRequestRemoveProjectsView(LoginRequiredMixin,
         return False
 
     def dispatch(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
-        self.request_obj = get_object_or_404(AccountDeletionRequest, pk=pk)
+        self.set_request_obj(self.kwargs.get('pk'))
         return super().dispatch(request, *args, **kwargs)
 
     def get_projects(self, user_obj):
@@ -549,12 +559,7 @@ class AccountDeletionRequestRemoveProjectsView(LoginRequiredMixin,
 
             context['formset'] = formset
 
-        context['request_obj'] = self.request_obj
-
-        context['user_str'] = f'{self.request_obj.user.first_name} ' \
-                              f'{self.request_obj.user.last_name}'
-
-        context['user_projects'] = self.get_user_projects(self.request_obj.user)
+        self.set_context_data(context)
 
         context['active_projects'] = active_projects
 
@@ -601,20 +606,23 @@ class AccountDeletionRequestRemoveProjectsView(LoginRequiredMixin,
                         runner_result = request_runner.run()
                         success_messages, error_messages = request_runner.get_messages()
 
-                        # TODO: do we send the normal removal request emails?
-                        if runner_result:
-                            #     request_runner.send_emails()
-                            for m in success_messages:
-                                messages.success(self.request, m)
-                        else:
-                            for m in error_messages:
-                                messages.error(self.request, m)
+                        # TODO: do we send the normal removal request emails and messages?
+                        # if runner_result:
+                        #     #     request_runner.send_emails()
+                        #     for m in success_messages:
+                        #         messages.success(self.request, m)
+                        # else:
+                        #     for m in error_messages:
+                        #         messages.error(self.request, m)
 
                     except Exception as e:
                         logger.exception(e)
                         error_message = \
                             'Unexpected error. Please contact an administrator.'
                         messages.error(self.request, error_message)
+
+        message = f'Requested {reviewed_projects_count} project removals.'
+        messages.success(self.request, message)
 
         return HttpResponseRedirect(
             reverse(
@@ -638,9 +646,21 @@ class AccountDeletionRequestRemoveProjectsConfirmView(LoginRequiredMixin,
         messages.error(self.request, message)
         return False
 
+    def dispatch(self, request, *args, **kwargs):
+        self.set_request_obj(self.kwargs.get('pk'))
+
+        proj_users_exist = ProjectUser.objects.filter(user=self.request_obj.user)\
+            .exclude(status__name__in=['Denied', 'Removed']).exists()
+
+        if proj_users_exist:
+            message = 'User has not been removed from all projects.'
+            messages.error(self.request, message)
+            return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
+
+        return super().dispatch(request, *args, **kwargs)
+
     def post(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
-        self.set_request_obj(pk)
+
 
         project_removal_complete = \
             not ProjectUser.objects.filter(
@@ -655,7 +675,7 @@ class AccountDeletionRequestRemoveProjectsConfirmView(LoginRequiredMixin,
             messages.error(self.request, message)
             HttpResponseRedirect(
                 reverse('cluster-account-deletion-request-project-removal',
-                        kwargs={'pk': pk}))
+                        kwargs={'pk': self.request_obj.pk}))
 
         self.request_obj.state['project_removal'] = {
             'status': 'Complete',
@@ -670,7 +690,7 @@ class AccountDeletionRequestRemoveProjectsConfirmView(LoginRequiredMixin,
             f'been set to Complete.')
         messages.success(self.request, message)
 
-        return HttpResponseRedirect(self.request_detail_url(pk))
+        return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
 
 
 class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
@@ -690,10 +710,12 @@ class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
         return False
 
     def dispatch(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
-        self.set_request_obj(pk)
+        self.set_request_obj(self.kwargs.get('pk'))
 
-        # TODO: check for statuses?
+        if self.request_obj.status.name not in ['Ready', 'Processing']:
+            message = 'Request must be \"Ready\" or \"Processing\".'
+            messages.error(self.request, message)
+            return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -706,7 +728,8 @@ class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
                 'timestamp': utc_now_offset_aware().isoformat(),
             }
             self.request_obj.status = \
-                AccountDeletionRequestStatusChoice.objects.get(name='Processing')
+                AccountDeletionRequestStatusChoice.objects.get(
+                    name='Processing')
             self.request_obj.save()
 
         message = (
@@ -718,10 +741,7 @@ class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['request_obj'] = self.request_obj
-        context['user_str'] = f'{self.request_obj.user.first_name} ' \
-                              f'{self.request_obj.user.last_name}'
-        context['user_projects'] = self.get_user_projects(self.request_obj.user)
+        self.set_context_data(context)
         context['user_data_deletion'] = \
             self.request_obj.state['user_data_deletion']['status'] == 'Complete'
         return context
@@ -753,10 +773,12 @@ class AccountDeletionUserDataDeletionFormView(LoginRequiredMixin,
         return False
 
     def dispatch(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
-        self.set_request_obj(pk)
+        self.set_request_obj(self.kwargs.get('pk'))
 
-        # TODO: check for statuses?
+        if self.request_obj.status.name not in ['Ready', 'Processing']:
+            message = 'Request must be \"Ready\" or \"Processing\".'
+            messages.error(self.request, message)
+            return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -776,10 +798,135 @@ class AccountDeletionUserDataDeletionFormView(LoginRequiredMixin,
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['request_obj'] = self.request_obj
-        context['user_str'] = f'{self.request_obj.user.first_name} ' \
-                              f'{self.request_obj.user.last_name}'
+        self.set_context_data(context)
         return context
+
+    def get_success_url(self):
+        return self.request_detail_url(self.kwargs.get('pk'))
+
+
+class AccountDeletionRequestAccountDeletionView(LoginRequiredMixin,
+                                                UserPassesTestMixin,
+                                                AccountDeletionRequestMixin,
+                                                FormView):
+    form_class = UpdateStatusForm
+    template_name = 'account_deletion/account_deletion.html'
+    login_url = '/'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user.is_superuser:
+            return True
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        self.set_request_obj(self.kwargs.get('pk'))
+
+        if self.request_obj.status.name != 'Processing':
+            message = 'Request must be \"Processing\" to be ' \
+                      'eligible for submission.'
+            messages.error(self.request, message)
+            return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form_data = form.cleaned_data
+        status = form_data['status']
+        if status == 'Complete':
+            self.request_obj.state['account_deletion'] = {
+                'status': status,
+                'timestamp': utc_now_offset_aware().isoformat(),
+            }
+            self.request_obj.status = \
+                AccountDeletionRequestStatusChoice.objects.get(
+                    name='Processing')
+            self.request_obj.save()
+
+        message = (
+            f'Account deletion status for request {self.request_obj.pk} has '
+            f'been set to {status}.')
+        messages.success(self.request, message)
+
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        self.set_context_data(context)
+
+        return context
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['status'] = self.request_obj.state['account_deletion']['status']
+        return initial
+
+    def get_success_url(self):
+        return self.request_detail_url(self.kwargs.get('pk'))
+
+
+class AccountDeletionRequestCancellationView(LoginRequiredMixin,
+                                             UserPassesTestMixin,
+                                             AccountDeletionRequestMixin,
+                                             FormView):
+    form_class = AccountDeletionCancelRequestForm
+    template_name = 'account_deletion/request_cancellation.html'
+    login_url = '/'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user.is_superuser:
+            return True
+
+        if self.request.user == self.request_obj.user:
+            return True
+
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        self.set_request_obj(self.kwargs.get('pk'))
+
+        if self.request_obj.status.name not in ['Queued', 'Ready']:
+            message = 'Request must be \"Queued\" or \"Ready\" to be ' \
+                      'eligible for cancellation.'
+            messages.error(self.request, message)
+            return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form_data = form.cleaned_data
+        justification = form_data['justification']
+        self.request_obj.state['other'] = {
+            'justification': justification,
+            'timestamp': utc_now_offset_aware().isoformat(),
+        }
+        self.request_obj.status = \
+            AccountDeletionRequestStatusChoice.objects.get(
+                name='Cancelled')
+        self.request_obj.save()
+
+        message = (
+            f'Account deletion request {self.request_obj.pk} has '
+            f'been cancelled for the following reason: \"{justification}\".')
+        messages.success(self.request, message)
+
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        self.set_context_data(context)
+
+        return context
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['justification'] = self.request_obj.state['other']['justification']
+        return initial
 
     def get_success_url(self):
         return self.request_detail_url(self.kwargs.get('pk'))
