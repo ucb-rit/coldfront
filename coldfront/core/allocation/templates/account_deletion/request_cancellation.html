@@ -1,0 +1,42 @@
+{% extends "common/base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Cancel Account Deletion Request: {{ user_str }} ({{ request_obj.user.username }})
+{% endblock %}
+
+
+{% block content %}
+<h1>Cancel Account Deletion Request: {{ user_str }} ({{ request_obj.user.username }}) </h1>
+<hr>
+
+<p>
+  Please provide a justification for cancelling this account deletion request below.
+</p>
+
+{% include 'account_deletion/detail_card.html' %}
+
+<div class="card mb-3">
+  <div class="card-header">
+    <h4>
+      <i class="fas fa-check-circle" aria-hidden="true"></i>
+      Cancellation
+    </h4>
+  </div>
+  <div class="card-body">
+    <form action="" method="post">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <input class="btn btn-danger" type="submit" value="Submit" />
+      <a
+          href="{% url 'cluster-account-deletion-request-detail' request_obj.pk %}"
+          class="btn btn-secondary">
+        Cancel
+      </a>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

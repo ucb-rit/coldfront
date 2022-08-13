@@ -1,0 +1,14 @@
+<a href="#" data-toggle="popover" title="Request Cancellation"
+   data-trigger="hover" data-content=
+           "Cluster account deletion requests may only be cancelled
+           while the request is <strong>Queued</strong> or <strong>Ready</strong>."
+  class="btn btn-danger disabled" style="pointer-events: all">
+  <span class="accessibility-link-text">Request Cancellation</span>
+  Cancel Request
+</a>
+
+<script>
+  $(document).ready(function() {
+      $('[data-toggle="popover"]').popover({html:true});
+  });
+</script>
