@@ -1,0 +1,25 @@
+{% load common_tags %}
+
+<div class="alert alert-danger" role="alert">
+  <div class="card" style="background-color: rgba(245, 245, 245, 0); ">
+    <div class="card-header">
+      <h4>
+        Pending Account Deletion
+      </h4>
+    </div>
+    <div class="card-body">
+      <p>
+        Your account is pending deletion. {{ account_deletion_reason }}
+        You must confirm that your data is safe to delete. To manage
+        and view the request, click the button below.
+      </p>
+      <p style="display: inline-block">
+        Please contact us at
+        <a href = "mailto: {% settings_value 'CENTER_HELP_EMAIL' %}">{% settings_value 'CENTER_HELP_EMAIL' %}</a>
+        if this is a mistake.
+      </p>
+      <br>
+      <span style="display: inline-block" class="float-right"><a class="btn btn-primary float-right" href="{% url 'cluster-account-deletion-request-detail' account_deletion_request.pk %}">Manage Request</a></span>
+    </div>
+  </div>
+</div>

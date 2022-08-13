@@ -10,7 +10,8 @@ from django.views.decorators.cache import cache_page
 
 from coldfront.core.allocation.models import (Allocation,
                                               AllocationUser,
-                                              AllocationUserAttribute)
+                                              AllocationUserAttribute,
+                                              AccountDeletionRequest)
 from coldfront.core.allocation.utils import get_project_compute_resource_name
 # from coldfront.core.grant.models import Grant
 from coldfront.core.portal.utils import (generate_allocations_chart_data,
@@ -89,6 +90,24 @@ def home(request):
     if 'coldfront.plugins.system_monitor' in settings.EXTRA_APPS:
         from coldfront.plugins.system_monitor.utils import get_system_monitor_context
         context.update(get_system_monitor_context())
+
+    account_deletion_query = \
+        AccountDeletionRequest.objects.filter(user=request.user).exclude(status__name='Cancelled')
+    if account_deletion_query.exists():
+        account_deletion_query = account_deletion_query.first()
+        request_date = account_deletion_query.created.strftime('%b. %d, %Y')
+        if account_deletion_query.requester.name == 'Admin':
+            reason = f'The request to delete your account was initiated by a ' \
+                     f'system administrator on {request_date}.'
+        elif account_deletion_query.requester.name == 'User':
+            reason = f'The request to delete your account was self initiated ' \
+                     f'on {request_date}.'
+        else:
+            reason = f'The request to delete your account was automatically ' \
+                     f'initiated when you left your last project on ' \
+                     f'{request_date}.'
+        context['account_deletion_request'] = account_deletion_query
+        context['account_deletion_reason'] = reason
 
     return render(request, template_name, context)
 
