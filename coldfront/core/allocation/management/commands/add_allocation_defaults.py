@@ -93,7 +93,7 @@ class Command(BaseCommand):
             AllocationAdditionRequestStatusChoice.objects.get_or_create(
                 name=choice)
 
-        choices = ['Queued', 'Ready', 'Processing', 'Complete', 'Canceled']
+        choices = ['Queued', 'Ready', 'Processing', 'Complete', 'Cancelled']
         for choice in choices:
             AccountDeletionRequestStatusChoice.objects.get_or_create(
                 name=choice)
