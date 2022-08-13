@@ -1,4 +1,5 @@
 from django import forms
+from django.core.validators import MinLengthValidator
 
 from coldfront.core.allocation.models import \
     AccountDeletionRequestStatusChoice, \
@@ -96,7 +97,8 @@ class AccountDeletionRequestSearchForm(forms.Form):
 
 
 class AccountDeletionProjectRemovalForm(forms.Form):
-    project_name = forms.CharField(max_length=150, required=False, disabled=True)
+    project_name = forms.CharField(max_length=150, required=False,
+                                   disabled=True)
     pis = forms.CharField(max_length=200, required=False, disabled=True)
     role = forms.CharField(max_length=150, required=False, disabled=True)
     status = forms.CharField(max_length=30, required=False, disabled=True)
@@ -104,7 +106,6 @@ class AccountDeletionProjectRemovalForm(forms.Form):
 
 
 class UpdateStatusForm(forms.Form):
-
     status = forms.ChoiceField(
         choices=(
             ('', 'Select one.'),
@@ -119,7 +120,7 @@ class UpdateStatusForm(forms.Form):
 class AccountDeletionUserDataDeletionConfirmation(forms.Form):
     confirm = forms.CharField(max_length=100,
                               required=True,
-                              help_text='Type \"Confirm\" to confirm that you '
+                              help_text='Type \"CONFIRM\" to confirm that you '
                                         'deleted/moved your data from the '
                                         'cluster.')
 
@@ -127,6 +128,15 @@ class AccountDeletionUserDataDeletionConfirmation(forms.Form):
         cleaned_data = super().clean()
 
         if cleaned_data.get('confirm') != 'CONFIRM':
-            raise forms.ValidationError('You must type \"Confirm\" to confirm '
-                                        'that you deleted/moved your data from '
-                                        'the cluster.')
+            raise forms.ValidationError('You must type \"CONFIRM\" to confirm '
+                                        'that it is safe to delete your data '
+                                        'from the cluster.')
+
+
+class AccountDeletionCancelRequestForm(forms.Form):
+    justification = forms.CharField(
+        help_text='Provide reasoning for your decision.',
+        label='Justification',
+        validators=[MinLengthValidator(10)],
+        required=True,
+        widget=forms.Textarea(attrs={'rows': 3}))
