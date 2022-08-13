@@ -145,9 +145,9 @@ with flagged_paths('CLUSTER_ACCOUNTS_DELETABLE') as path:
         path('cluster-account-deletion-request/<int:pk>/',
              account_deletion_views.AccountDeletionRequestDetailView.as_view(),
              name='cluster-account-deletion-request-detail'),
-        # path('cluster-account-deletion-request-cancel',
-        #      account_deletion_views.AccountDeletionRequestCancelView.as_view(),
-        #      name='cluster-account-deletion-request-cancel'),
+        path('cluster-account-deletion-request/<int:pk>/cancel',
+             account_deletion_views.AccountDeletionRequestCancellationView.as_view(),
+             name='cluster-account-deletion-request-cancel'),
         path('cluster-account-deletion-request/<int:pk>/project-removal',
              account_deletion_views.AccountDeletionRequestRemoveProjectsView.as_view(),
              name='cluster-account-deletion-request-project-removal'),
@@ -159,6 +159,9 @@ with flagged_paths('CLUSTER_ACCOUNTS_DELETABLE') as path:
              name='cluster-account-deletion-request-data-deletion'),
         path('cluster-account-deletion-request/<int:pk>/user-data-deletion',
              account_deletion_views.AccountDeletionUserDataDeletionFormView.as_view(),
-             name='cluster-account-deletion-request-user-data-deletion')
+             name='cluster-account-deletion-request-user-data-deletion'),
+        path('cluster-account-deletion-request/<int:pk>/account-deletion',
+             account_deletion_views.AccountDeletionRequestAccountDeletionView.as_view(),
+             name='cluster-account-deletion-request-account-deletion')
     ]
 urlpatterns = urlpatterns + flagged_url_patterns
