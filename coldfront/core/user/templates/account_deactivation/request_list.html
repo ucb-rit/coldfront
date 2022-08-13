@@ -85,8 +85,8 @@
       function resetForm($form) {
           $form.find('input:text, input:password, input:file, select, textarea').val('');
           $form.find("input[type='number']").val('');
-
-          for (let i = 0; i < 6; i++) {$('select')[i].selectize.clear();}
+          var count_elements = $('select').length;
+          for (let i = 0; i < count_elements; i++) {$('select')[i].selectize.clear();}
       }
 
       $("#expand_button").click(function() {
