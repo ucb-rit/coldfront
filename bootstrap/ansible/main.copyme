@@ -61,6 +61,7 @@ program_name_long: "Berkeley Research Computing"
 program_name_short: "BRC"
 primary_cluster_name: "Savio"
 
+# Account Deactivation Settings
 account_deactivation_auto_queue_days: 1
 
 # The URL of the Sentry instance to send errors to.
