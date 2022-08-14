@@ -125,8 +125,8 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
                 requester_str = 'Admin'
 
             runner = AccountDeletionRequestRunner(self.user_obj,
-                                                          self.request.user,
-                                                          requester_str)
+                                                  self.request.user,
+                                                  requester_str)
             runner.run()
             for message in runner.get_warning_messages():
                 messages.warning(self.request, message)
@@ -647,18 +647,19 @@ class AccountDeletionRequestRemoveProjectsConfirmView(LoginRequiredMixin,
     def dispatch(self, request, *args, **kwargs):
         self.set_request_obj(self.kwargs.get('pk'))
 
-        proj_users_exist = ProjectUser.objects.filter(user=self.request_obj.user)\
+        proj_users_exist = ProjectUser.objects.filter(
+            user=self.request_obj.user) \
             .exclude(status__name__in=['Denied', 'Removed']).exists()
 
         if proj_users_exist:
             message = 'User has not been removed from all projects.'
             messages.error(self.request, message)
-            return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
+            return HttpResponseRedirect(
+                self.request_detail_url(self.request_obj.pk))
 
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-
 
         project_removal_complete = \
             not ProjectUser.objects.filter(
@@ -688,7 +689,8 @@ class AccountDeletionRequestRemoveProjectsConfirmView(LoginRequiredMixin,
             f'been set to Complete.')
         messages.success(self.request, message)
 
-        return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
+        return HttpResponseRedirect(
+            self.request_detail_url(self.request_obj.pk))
 
 
 class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
@@ -713,7 +715,8 @@ class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
         if self.request_obj.status.name not in ['Ready', 'Processing']:
             message = 'Request must be \"Ready\" or \"Processing\".'
             messages.error(self.request, message)
-            return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
+            return HttpResponseRedirect(
+                self.request_detail_url(self.request_obj.pk))
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -776,7 +779,8 @@ class AccountDeletionUserDataDeletionFormView(LoginRequiredMixin,
         if self.request_obj.status.name not in ['Ready', 'Processing']:
             message = 'Request must be \"Ready\" or \"Processing\".'
             messages.error(self.request, message)
-            return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
+            return HttpResponseRedirect(
+                self.request_detail_url(self.request_obj.pk))
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -826,7 +830,8 @@ class AccountDeletionRequestAccountDeletionView(LoginRequiredMixin,
             message = 'Request must be \"Processing\" to be ' \
                       'eligible for submission.'
             messages.error(self.request, message)
-            return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
+            return HttpResponseRedirect(
+                self.request_detail_url(self.request_obj.pk))
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -892,7 +897,8 @@ class AccountDeletionRequestCancellationView(LoginRequiredMixin,
             message = 'Request must be \"Queued\" or \"Ready\" to be ' \
                       'eligible for cancellation.'
             messages.error(self.request, message)
-            return HttpResponseRedirect(self.request_detail_url(self.request_obj.pk))
+            return HttpResponseRedirect(
+                self.request_detail_url(self.request_obj.pk))
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -923,7 +929,8 @@ class AccountDeletionRequestCancellationView(LoginRequiredMixin,
 
     def get_initial(self):
         initial = super().get_initial()
-        initial['justification'] = self.request_obj.state['other']['justification']
+        initial['justification'] = self.request_obj.state['other'][
+            'justification']
         return initial
 
     def get_success_url(self):
