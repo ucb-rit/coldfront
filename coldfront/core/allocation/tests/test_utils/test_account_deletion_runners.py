@@ -1,81 +1,24 @@
 import datetime
-from decimal import Decimal
 
-from django.contrib.auth.models import User
 from django.core import mail
-from flags.state import enable_flag, flag_enabled
+from flags.state import enable_flag
 
-from coldfront.api.statistics.utils import create_project_allocation, \
-    create_user_project_allocation
 from coldfront.config import settings
-from coldfront.core.allocation.models import AccountDeletionRequestReasonChoice, \
+from coldfront.core.allocation.models import \
+    AccountDeletionRequestReasonChoice, \
     AccountDeletionRequestStatusChoice, AccountDeletionRequest, \
-    AllocationAttributeType, AllocationUserAttribute, AllocationUser, \
-    AllocationUserStatusChoice
+    AllocationUserAttribute, AllocationUser, AllocationUserStatusChoice
+from coldfront.core.allocation.tests.test_account_deletion_base import \
+    TestAccountDeletionBase
 from coldfront.core.allocation.utils_.account_deletion_utils import \
     AccountDeletionRequestRunner, AccountDeletionRequestCompleteRunner
 from coldfront.core.allocation.utils_.secure_dir_utils import create_secure_dirs
-from coldfront.core.billing.models import BillingActivity, BillingProject
-from coldfront.core.project.models import ProjectStatusChoice, Project, \
-    ProjectUser, ProjectUserStatusChoice, ProjectUserRoleChoice, \
-    ProjectUserRemovalRequest
+from coldfront.core.project.models import ProjectUser, ProjectUserRemovalRequest
 from coldfront.core.utils.common import utc_now_offset_aware, \
     import_from_settings
-from coldfront.core.utils.tests.test_base import TestBase
 
 
-class TestAccountDeletionRunnersBase(TestBase):
-    """Base testing class for AccountDeletionRequest runners."""
-
-    def setUp(self):
-        super().setUp()
-
-        self.superuser = User.objects.create(username='superuser',
-                                             email='superuser@example.com',
-                                             is_superuser=True)
-
-        self.create_test_user()
-        self.user.userprofile.cluster_uid = '11223344'
-        billing_project = BillingProject.objects.create(
-            identifier='123456',
-            description='Test description.')
-        self.user.userprofile.billing_activity = \
-            BillingActivity.objects.create(identifier='123',
-                                           billing_project=billing_project)
-        self.user.userprofile.host_user = self.superuser
-        self.user.userprofile.save()
-
-        for i in range(3):
-            project = Project.objects.create(
-                name=f'project{i}',
-                status=ProjectStatusChoice.objects.get(name='Active'))
-            setattr(self, f'project{i}', project)
-
-            project_user = ProjectUser.objects.create(
-                project=project,
-                user=self.user,
-                status=ProjectUserStatusChoice.objects.get(name='Active'),
-                role=ProjectUserRoleChoice.objects.get(name='User'))
-            setattr(self, f'project_user{i}', project_user)
-
-            # Create a compute allocation for the Project.
-            amount = Decimal(f'{i + 1}000.00')
-            allocation_objs = create_project_allocation(project, amount)
-            setattr(self, f'allocation{i}', allocation_objs.allocation)
-
-            # Create a compute allocation the user.
-            allocation_user_objs = \
-                create_user_project_allocation(self.user, project, amount)
-            setattr(self, f'allocation_user{i}', allocation_user_objs.allocation_user)
-
-            AllocationUserAttribute.objects.create(
-                allocation=allocation_objs.allocation,
-                allocation_user=allocation_user_objs.allocation_user,
-                allocation_attribute_type=AllocationAttributeType.objects.get(name='Cluster Account Status'),
-                value='Active')
-
-
-class TestAccountDeletionRequestRunner(TestAccountDeletionRunnersBase):
+class TestAccountDeletionRequestRunner(TestAccountDeletionBase):
     """Testing class for TestAccountDeletionRunnersBase."""
 
     def setUp(self):
@@ -257,7 +200,7 @@ class TestAccountDeletionRequestRunner(TestAccountDeletionRunnersBase):
         self._assert_admin_email(request, email)
 
 
-class TestAccountDeletionRequestCompleteRunner(TestAccountDeletionRunnersBase):
+class TestAccountDeletionRequestCompleteRunner(TestAccountDeletionBase):
     """Testing class for AccountDeletionRequestCompleteRunner."""
 
     def setUp(self):
@@ -266,19 +209,21 @@ class TestAccountDeletionRequestCompleteRunner(TestAccountDeletionRunnersBase):
 
         self.request = AccountDeletionRequest.objects.create(
             user=self.user,
-            status=AccountDeletionRequestStatusChoice.objects.get(name='Complete'),
+            status=AccountDeletionRequestStatusChoice.objects.get(name='Processing'),
             reason=AccountDeletionRequestReasonChoice.objects.get(name='Admin'),
             expiration=utc_now_offset_aware())
 
-        completed_state = {'status': 'Complete',
-                           'timestamp': utc_now_offset_aware().isoformat()}
-        self.request.state['project_removal'] = completed_state
-        self.request.state['user_data_deletion'] = completed_state
-        self.request.state['data_deletion'] = completed_state
-        self.request.state['account_deletion'] = completed_state
-        self.request.save()
+        self.complete_request_checklist(self.request)
 
         ProjectUser.objects.all().delete()
+
+    def test_status_set(self):
+        """Tests that the request status is updated."""
+        self.assertEqual(self.request.status.name, 'Processing')
+        runner = self.runner_class(self.request)
+        runner.run()
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.status.name, 'Complete')
 
     def test_set_userprofile_values(self):
         """Tests that the runner sets the correct userprofile values."""
