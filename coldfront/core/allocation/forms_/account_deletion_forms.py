@@ -3,7 +3,7 @@ from django.core.validators import MinLengthValidator
 
 from coldfront.core.allocation.models import \
     AccountDeletionRequestStatusChoice, \
-    AccountDeletionRequestRequesterChoice
+    AccountDeletionRequestReasonChoice
 
 
 class AccountDeletionRequestForm(forms.Form):
@@ -62,22 +62,6 @@ class AccountDeletionEligibleUsersSearchForm(forms.Form):
 
 
 class AccountDeletionRequestSearchForm(forms.Form):
-    STATUS_CHOICES = (
-        ('', '-----'),
-        ('Queued', 'Queued'),
-        ('Ready', 'Ready'),
-        ('Processing', 'Processing'),
-        ('Complete', 'Complete'),
-        ('Canceled', 'Canceled')
-    )
-
-    REQUESTER_CHOICES = (
-        ('', '-----',),
-        ('User', 'User'),
-        ('PI', 'PI'),
-        ('System', 'System')
-    )
-
     username = forms.CharField(
         label='Username', max_length=100, required=False)
     first_name = forms.CharField(
@@ -86,14 +70,29 @@ class AccountDeletionRequestSearchForm(forms.Form):
         label='Last Name', max_length=100, required=False)
 
     status = forms.ChoiceField(label='Status',
-                               choices=STATUS_CHOICES,
+                               choices=(),
                                widget=forms.Select(),
                                required=True)
 
-    requester = forms.ChoiceField(label='Requester',
-                                  choices=REQUESTER_CHOICES,
-                                  widget=forms.Select(),
-                                  required=False)
+    reason = forms.ChoiceField(label='Reason',
+                               choices=(),
+                               widget=forms.Select(),
+                               required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        reason_choices = [('', '-----',)] + \
+                         [(reason.name, reason.description)
+                          for reason in
+                          AccountDeletionRequestReasonChoice.objects.all()]
+
+        status_choices = [('', '-----')] + \
+                         [(status.name, status.name) for status in
+                          AccountDeletionRequestStatusChoice.objects.all()]
+
+        self.fields['reason'].choices = reason_choices
+        self.fields['status'].choices = status_choices
 
 
 class AccountDeletionProjectRemovalForm(forms.Form):
