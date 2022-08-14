@@ -9,7 +9,7 @@ from flags.state import flag_enabled
 from coldfront.config import settings
 from coldfront.core.allocation.models import AccountDeletionRequest, \
     AccountDeletionRequestStatusChoice, AllocationUserAttribute, \
-    AccountDeletionRequestRequesterChoice, AllocationUser, \
+    AccountDeletionRequestReasonChoice, AllocationUser, \
     AllocationUserStatusChoice
 from coldfront.core.allocation.utils import has_cluster_access
 from coldfront.core.project.models import ProjectUser
@@ -29,14 +29,10 @@ class AccountDeletionRequestRunner(object):
     """An object that performs necessary database changes when a new
     cluster account deletion request is submitted."""
 
-    def __init__(self, user_obj, requester, requester_str):
+    def __init__(self, user_obj, requester, reason_obj):
         self.user_obj = user_obj
         self.requester = requester
-        self.requester_str = requester_str
-
-        self.requester_choice = \
-            AccountDeletionRequestRequesterChoice.objects.get(
-                name=self.requester_str)
+        self.reason_obj = reason_obj
 
         self._email_strategy = EnqueueEmailStrategy()
 
@@ -61,7 +57,7 @@ class AccountDeletionRequestRunner(object):
             self._log_success_messages()
 
     def _create_project_removal_requests(self):
-        if self.requester_str == 'Admin':
+        if self.reason_obj.name == 'Admin':
             proj_users = ProjectUser.objects.filter(user=self.user_obj,
                                                     status__name='Active')
 
@@ -82,7 +78,7 @@ class AccountDeletionRequestRunner(object):
     def _create_request(self, expiration):
         request = AccountDeletionRequest.objects.create(
             user=self.user_obj,
-            requester=self.requester_choice,
+            reason=self.reason_obj,
             status=AccountDeletionRequestStatusChoice.objects.get(name='Queued'),
             expiration=expiration
         )
@@ -105,16 +101,12 @@ class AccountDeletionRequestRunner(object):
     def _get_expiration(self):
         """Returns the expiration date based on who created the
         deletion request."""
-        if self.requester_str in ['User', 'Admin']:
+        if self.reason_obj.name in ['User', 'Admin']:
             expiration_days = \
                 import_from_settings('ACCOUNT_DELETION_MANUAL_QUEUE_DAYS')
-        elif self.requester_str == 'System':
+        elif self.reason_obj.name == 'System':
             expiration_days = \
                 import_from_settings('ACCOUNT_DELETION_AUTO_QUEUE_DAYS')
-        else:
-            message = f'Invalid requester_str {self.requester_str} passed.'
-            self._warning_messages.append(message)
-            return None
 
         return utc_now_offset_aware() + datetime.timedelta(days=expiration_days)
 
@@ -182,12 +174,12 @@ class AccountDeletionRequestRunner(object):
 
     def _send_notification_emails(self):
         """Sends emails to the user whose account is being deleted."""
-        email_args = (self.user_obj, self.request_obj, self.requester_str)
-        if self.requester_str == 'Admin':
+        email_args = (self.user_obj, self.request_obj, self.reason_obj)
+        if self.reason_obj.name == 'Admin':
             self._email_strategy.process_email(
                 send_account_deletion_user_notification_emails,
                 *email_args)
-        elif self.requester_str == 'User':
+        elif self.reason_obj.name == 'User':
             self._email_strategy.process_email(
                 send_account_deletion_admin_notification_emails,
                 *email_args)
@@ -204,17 +196,17 @@ class AccountDeletionRequestRunner(object):
 
 def send_account_deletion_user_notification_emails(user_obj,
                                                    request_obj,
-                                                   requester_str):
-    if requester_str not in ['Admin', 'System']:
-        raise ValueError(f'Invalid requester_str {requester_str} passed. '
-                         f'Must be either \"Admin\" or \"System\"')
+                                                   reason_obj):
+    if reason_obj.name not in ['Admin', 'LastProject']:
+        raise ValueError(f'Invalid reason {reason_obj.name} passed. '
+                         f'Must be either \"Admin\" or \"LastProject\"')
 
     if settings.EMAIL_ENABLED:
         subject = 'Cluster Account Deletion Request'
         template = 'email/account_deletion/new_request_user.txt'
         html_template = 'email/account_deletion/new_request_user.html'
 
-        if requester_str == 'Admin':
+        if reason_obj.name == 'Admin':
             reason = 'The request to delete your account was initiated by a ' \
                      'system administrator.'
             waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
@@ -248,10 +240,10 @@ def send_account_deletion_user_notification_emails(user_obj,
 
 def send_account_deletion_admin_notification_emails(user_obj,
                                                     request_obj,
-                                                    requester_str):
-    if requester_str not in ['User', 'System']:
-        raise ValueError(f'Invalid requester_str {requester_str} passed. '
-                         f'Must be either \"Admin\" or \"System\"')
+                                                    reason_obj):
+    if reason_obj.name not in ['User', 'System']:
+        raise ValueError(f'Invalid reason_obj {reason_obj} passed. '
+                         f'Must be either \"User\" or \"LastProject\"')
 
     if settings.EMAIL_ENABLED:
         subject = 'New Cluster Account Deletion Request'
@@ -259,7 +251,7 @@ def send_account_deletion_admin_notification_emails(user_obj,
         html_template = 'email/account_deletion/new_request_admin.html'
 
         user_str = f'{user_obj.first_name} {user_obj.last_name}'
-        if requester_str == 'User':
+        if reason_obj.name == 'User':
             reason = f'The request to delete the cluster account was ' \
                      f'initiated by {user_str}.'
             waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS

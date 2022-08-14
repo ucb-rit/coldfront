@@ -7,8 +7,8 @@ from coldfront.core.allocation.models import (AttributeType,
                                               AllocationStatusChoice,
                                               AllocationUserStatusChoice,
                                               AccountDeletionRequestStatusChoice,
-                                              AccountDeletionRequestRequesterChoice,
-                                              ClusterAccessRequestStatusChoice)
+                                              ClusterAccessRequestStatusChoice,
+                                              AccountDeletionRequestReasonChoice)
 
 from flags.state import flag_enabled
 
@@ -98,9 +98,20 @@ class Command(BaseCommand):
             AccountDeletionRequestStatusChoice.objects.get_or_create(
                 name=choice)
 
-        choices = ['User', 'System', 'Admin']
-        for choice in choices:
-            AccountDeletionRequestRequesterChoice.objects.get_or_create(name=choice)
+        choices = [('User',
+                    'User self initiated deletion request.'),
+                   ('Admin',
+                    'Administrator initiated deletion request.'),
+                   ('LastProject',
+                    'System initiated deletion request when user left '
+                    'their last project.'),
+                   ('BadPID',
+                    'System initiated deletion request because user had '
+                    'an invalid PID.')]
+        for (name, description) in choices:
+            AccountDeletionRequestReasonChoice.objects.get_or_create(
+                name=name,
+                description=description)
 
         choices = [
             'Denied',

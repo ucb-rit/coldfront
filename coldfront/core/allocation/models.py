@@ -788,9 +788,10 @@ class AccountDeletionRequestStatusChoice(TimeStampedModel):
     # Queued, Ready, Processing, Complete, Cancelled
 
 
-class AccountDeletionRequestRequesterChoice(TimeStampedModel):
+class AccountDeletionRequestReasonChoice(TimeStampedModel):
     name = models.CharField(max_length=64)
-    # User, System, PI
+    description = models.CharField(max_length=100)
+    # User, Admin, LastProject, BadPID
 
 
 def account_deletion_request_state_schema():
@@ -824,8 +825,8 @@ class AccountDeletionRequest(TimeStampedModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     status = models.ForeignKey(
         AccountDeletionRequestStatusChoice, on_delete=models.CASCADE)
-    requester = models.ForeignKey(
-        AccountDeletionRequestRequesterChoice, on_delete=models.CASCADE)
+    reason = models.ForeignKey(
+        AccountDeletionRequestReasonChoice, on_delete=models.CASCADE)
     expiration = models.DateTimeField()
     state = models.JSONField(default=account_deletion_request_state_schema)
     history = HistoricalRecords()

@@ -23,7 +23,8 @@ from coldfront.core.allocation.forms_.account_deletion_forms import \
     UpdateStatusForm, AccountDeletionUserDataDeletionConfirmation, \
     AccountDeletionCancelRequestForm
 from coldfront.core.allocation.models import (AccountDeletionRequest,
-                                              AccountDeletionRequestStatusChoice)
+                                              AccountDeletionRequestStatusChoice,
+                                              AccountDeletionRequestReasonChoice)
 from coldfront.core.allocation.utils_.account_deletion_utils import \
     AccountDeletionRequestRunner, AccountDeletionRequestCompleteRunner
 
@@ -120,13 +121,15 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
     def form_valid(self, form):
         try:
             if self.request.user == self.user_obj:
-                requester_str = 'User'
+                reason = \
+                    AccountDeletionRequestReasonChoice.objects.get(name='User')
             else:
-                requester_str = 'Admin'
+                reason = \
+                    AccountDeletionRequestReasonChoice.objects.get(name='Admin')
 
             runner = AccountDeletionRequestRunner(self.user_obj,
                                                   self.request.user,
-                                                  requester_str)
+                                                  reason)
             runner.run()
             for message in runner.get_warning_messages():
                 messages.warning(self.request, message)
@@ -135,7 +138,7 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
                 AccountDeletionRequest.objects.get(user=self.user_obj)
             confirm_url = urljoin(settings.CENTER_BASE_URL,
                                   self.request_detail_url(self.request_obj.pk))
-            if requester_str == 'User':
+            if reason.name == 'User':
                 message = f'You successfully requested to delete your ' \
                           f'cluster account. Please complete the checklist ' \
                           f'<a href="{confirm_url}">here</a>.'
@@ -311,9 +314,9 @@ class AccountDeletionRequestListView(LoginRequiredMixin,
                 self.status = data.get('status')
                 queryset = queryset.filter(status__name=data.get('status'))
 
-            if data.get('requester'):
+            if data.get('reason'):
                 queryset = queryset.filter(
-                    requester__name=data.get('requester'))
+                    reason__name=data.get('reason'))
 
         else:
             queryset = AccountDeletionRequest.objects.filter(

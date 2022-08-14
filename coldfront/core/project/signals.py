@@ -1,7 +1,8 @@
 from django.db.models.signals import post_save
 
 from coldfront.core.allocation.models import AllocationRenewalRequest, \
-    AccountDeletionRequest, AccountDeletionRequestStatusChoice
+    AccountDeletionRequest, AccountDeletionRequestStatusChoice, \
+    AccountDeletionRequestReasonChoice
 from coldfront.core.allocation.utils_.account_deletion_utils import \
     AccountDeletionRequestRunner
 from coldfront.core.project.models import SavioProjectAllocationRequest, \
@@ -93,9 +94,11 @@ def project_removal_request_account_deletion(sender, instance, created, *args, *
 
     # The request was set to complete and the user has no other projects.
     if instance.status.name == 'Complete' and not active_projects:
+        reason = \
+            AccountDeletionRequestReasonChoice.objects.get(name='LastProject')
         runner = AccountDeletionRequestRunner(instance.user,
                                               instance.user, # TODO: who do we pass here?
-                                              'System')
+                                              reason)
         runner.run()
         for message in runner.get_warning_messages():
             logger.warning(message)
