@@ -288,6 +288,11 @@ class AccountDeletionRequestCompleteRunner(object):
                 f'AccountDeletionRequest {request_obj} has unexpected '
                 f'type {type(request_obj)}.')
 
+        if request_obj.status.name != 'Complete':
+            raise ValueError(
+                f'AccountDeletionRequest {request_obj} has unexpected'
+                f'status {request_obj.status.name}')
+
         self.request_obj = request_obj
         self.user_obj = request_obj.user
 
@@ -299,6 +304,7 @@ class AccountDeletionRequestCompleteRunner(object):
     def run(self):
         with transaction.atomic():
             self._set_userprofile_values()
+            self._set_cluster_access_attributes()
             self._remove_allocation_users()
 
         self._send_emails_safe()
@@ -331,27 +337,25 @@ class AccountDeletionRequestCompleteRunner(object):
 
     def _remove_allocation_users(self):
         """Removes any remaining allocation users."""
-        self._remove_secure_directories()
+        self._remove_directories()
         self._remove_remaining_allocations()
 
-    def _remove_secure_directories(self):
+    def _remove_directories(self):
         """Removes the user from any secure directories."""
-        if flag_enabled('SECURE_DIRS_REQUESTABLE'):
-            scratch_dir = Resource.objects.get(name='Scratch P2/P3 Directory')
-            groups_dir = Resource.objects.get(name='Groups P2/P3 Directory')
-            alloc_users = AllocationUser.objects.filter(
-                user=self.user_obj,
-                status__name='Active',
-                allocation__resources__in=[scratch_dir, groups_dir])
+        # Note this will remove users from any remaining secure directories.
+        alloc_users = AllocationUser.objects.filter(
+            user=self.user_obj,
+            status__name='Active',
+            allocation__resources__name__icontains='Directory')
 
-            for alloc_user in alloc_users:
-                alloc_user.status = \
-                    AllocationUserStatusChoice.objects.get(name='Removed')
-                alloc_user.save()
+        for alloc_user in alloc_users:
+            alloc_user.status = \
+                AllocationUserStatusChoice.objects.get(name='Removed')
+            alloc_user.save()
 
-            message = f'Removed {self.user_obj.username} from ' \
-                      f'{alloc_users.count()} secure directories.'
-            self._success_messages.append(message)
+        message = f'Removed {self.user_obj.username} from ' \
+                  f'{alloc_users.count()} directory allocations.'
+        self._success_messages.append(message)
 
     def _remove_remaining_allocations(self):
         """Removes the user from any remaining allocations."""
@@ -411,21 +415,12 @@ def send_account_deletion_complete_user_notification_emails(user_obj,
     if settings.EMAIL_ENABLED:
         subject = 'Cluster Account Deletion Request Complete'
         template = 'email/account_deletion/request_complete_user.txt'
-
-        if request_obj.requester.name == 'Admin':
-            reason = 'The request to delete your account was initiated by a ' \
-                     'system administrator.'
-        elif request_obj.requester.name == 'System':
-            reason = 'The request to delete your account was automatically ' \
-                     'initiated when you left your last project.'
-        else:
-            reason = 'The request to delete your account was self initiated.'
         
         # TODO: can users create new cluster accounts? If they can, 
         #  that text should be included in the email template.
         template_context = {
             'user_str': f'{user_obj.first_name} {user_obj.last_name}',
-            'reason': reason,
+            'reason': request_obj.reason.description,
             'center_help_email': settings.CENTER_HELP_EMAIL,
             'signature': settings.EMAIL_SIGNATURE,
         }
