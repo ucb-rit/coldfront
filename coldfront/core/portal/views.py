@@ -87,16 +87,10 @@ def home(request):
         if account_deletion_query.exists():
             account_deletion_query = account_deletion_query.first()
             request_date = account_deletion_query.created.strftime('%b. %d, %Y')
-            if account_deletion_query.requester.name == 'Admin':
-                reason = f'The request to delete your account was initiated by a ' \
-                         f'system administrator on {request_date}.'
-            elif account_deletion_query.requester.name == 'User':
-                reason = f'The request to delete your account was self initiated ' \
-                         f'on {request_date}.'
-            else:
-                reason = f'The request to delete your account was automatically ' \
-                         f'initiated when you left your last project on ' \
-                         f'{request_date}.'
+
+            reason = f'{account_deletion_query.reason.description.replace(".", "")} ' \
+                     f'on {request_date}.'
+
             context['account_deletion_request'] = account_deletion_query
             context['account_deletion_reason'] = reason
 
