@@ -124,16 +124,12 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
             else:
                 requester_str = 'Admin'
 
-            request_runner = AccountDeletionRequestRunner(self.user_obj,
+            runner = AccountDeletionRequestRunner(self.user_obj,
                                                           self.request.user,
                                                           requester_str)
-            request_runner.run()
-            # success_messages, error_messages = request_runner.get_messages()
-            #
-            # for message in success_messages:
-            #     messages.success(self.request, message)
-            # for message in error_messages:
-            #     messages.error(self.request, message)
+            runner.run()
+            for message in runner.get_warning_messages():
+                messages.warning(self.request, message)
 
             self.request_obj = \
                 AccountDeletionRequest.objects.get(user=self.user_obj)
@@ -485,14 +481,16 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
         runner = AccountDeletionRequestCompleteRunner(self.request_obj)
         runner.run()
 
-        # success_messages, error_messages = runner.get_messages()
-        #
-        # for message in success_messages:
-        #     messages.success(self.request, message)
-        # for message in error_messages:
-        #     messages.error(self.request, message)
-        return HttpResponseRedirect('home')
-        return HttpResponseRedirect(self.redirect)
+        for message in runner.get_warning_messages():
+            messages.warning(self.request, message)
+
+        message = f'Successfully completed account deletion request ' \
+                  f'{self.request_obj} for user ' \
+                  f'{self.request_obj.user.username}.'
+        messages.success(self.request, message)
+
+        return HttpResponseRedirect(
+            reverse('cluster-account-deletion-request-list'))
 
     def is_checklist_complete(self):
         status_choice = self.request_obj.status.name
