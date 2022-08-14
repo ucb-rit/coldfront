@@ -3,15 +3,18 @@ from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core import mail
+from flags.state import enable_flag, flag_enabled
 
 from coldfront.api.statistics.utils import create_project_allocation, \
     create_user_project_allocation
 from coldfront.config import settings
 from coldfront.core.allocation.models import AccountDeletionRequestReasonChoice, \
     AccountDeletionRequestStatusChoice, AccountDeletionRequest, \
-    AllocationAttributeType, AllocationUserAttribute
+    AllocationAttributeType, AllocationUserAttribute, AllocationUser, \
+    AllocationUserStatusChoice
 from coldfront.core.allocation.utils_.account_deletion_utils import \
-    AccountDeletionRequestRunner
+    AccountDeletionRequestRunner, AccountDeletionRequestCompleteRunner
+from coldfront.core.allocation.utils_.secure_dir_utils import create_secure_dirs
 from coldfront.core.billing.models import BillingActivity, BillingProject
 from coldfront.core.project.models import ProjectStatusChoice, Project, \
     ProjectUser, ProjectUserStatusChoice, ProjectUserRoleChoice, \
@@ -252,3 +255,141 @@ class TestAccountDeletionRequestRunner(TestAccountDeletionRunnersBase):
         email = mail.outbox[0]
         self.assertIn('New Cluster Account Deletion Request', email.subject)
         self._assert_admin_email(request, email)
+
+
+class TestAccountDeletionRequestCompleteRunner(TestAccountDeletionRunnersBase):
+    """Testing class for AccountDeletionRequestCompleteRunner."""
+
+    def setUp(self):
+        super().setUp()
+        self.runner_class = AccountDeletionRequestCompleteRunner
+
+        self.request = AccountDeletionRequest.objects.create(
+            user=self.user,
+            status=AccountDeletionRequestStatusChoice.objects.get(name='Complete'),
+            reason=AccountDeletionRequestReasonChoice.objects.get(name='Admin'),
+            expiration=utc_now_offset_aware())
+
+        completed_state = {'status': 'Complete',
+                           'timestamp': utc_now_offset_aware().isoformat()}
+        self.request.state['project_removal'] = completed_state
+        self.request.state['user_data_deletion'] = completed_state
+        self.request.state['data_deletion'] = completed_state
+        self.request.state['account_deletion'] = completed_state
+        self.request.save()
+
+        ProjectUser.objects.all().delete()
+
+    def test_set_userprofile_values(self):
+        """Tests that the runner sets the correct userprofile values."""
+        user_profile = self.user.userprofile
+        self.assertFalse(user_profile.is_deleted)
+        self.assertIsNotNone(user_profile.billing_activity)
+        self.assertIsNotNone(user_profile.cluster_uid)
+
+        runner = self.runner_class(self.request)
+        runner.run()
+
+        user_profile.refresh_from_db()
+        self.assertTrue(user_profile.is_deleted)
+        self.assertIsNone(user_profile.billing_activity)
+        self.assertIsNone(user_profile.cluster_uid)
+
+    def test_set_cluster_access_attributes(self):
+        """Tests that cluster access attributes are set correctly."""
+        attributes = AllocationUserAttribute.objects.filter(
+            allocation_user__user=self.user,
+            allocation_attribute_type__name='Cluster Account Status')
+        for attr in attributes:
+            self.assertEqual(attr.value, 'Active')
+
+        runner = self.runner_class(self.request)
+        runner.run()
+
+        for attr in attributes:
+            attr.refresh_from_db()
+            self.assertEqual(attr.value, 'Removed')
+
+    def test_remove_remaining_allocations(self):
+        """Tests that the user is removed from allocations."""
+        alloc_users = AllocationUser.objects.filter(user=self.user)
+        for alloc_user in alloc_users:
+            self.assertEqual(alloc_user.status.name, 'Active')
+
+        runner = self.runner_class(self.request)
+        runner.run()
+
+        alloc_users = AllocationUser.objects.filter(user=self.user)
+        for alloc_user in alloc_users:
+            self.assertEqual(alloc_user.status.name, 'Removed')
+
+    def test_remove_secure_directories(self):
+        """Tests that the user is removed from any secure directories."""
+        enable_flag('SECURE_DIRS_REQUESTABLE')
+
+        # Create secure directories.
+        groups_allocation = \
+            create_secure_dirs(self.project0, 'test', 'groups')
+        scratch_allocation = \
+            create_secure_dirs(self.project0, 'test', 'scratch')
+
+        # Add user to the secure directories.
+        active_status = AllocationUserStatusChoice.objects.get(name='Active')
+        groups_alloc_user = AllocationUser.objects.create(
+            user=self.user,
+            allocation=groups_allocation,
+            status=active_status)
+        scratch_alloc_user = AllocationUser.objects.create(
+            user=self.user,
+            allocation=scratch_allocation,
+            status=active_status)
+
+        alloc_users = AllocationUser.objects.filter(
+            user=self.user,
+            status__name='Active',
+            allocation__resources__name__icontains='Directory')
+        self.assertEqual(alloc_users.count(), 2)
+
+        runner = self.runner_class(self.request)
+        runner.run()
+
+        groups_alloc_user.refresh_from_db()
+        scratch_alloc_user.refresh_from_db()
+        self.assertEqual(groups_alloc_user.status.name, 'Removed')
+        self.assertEqual(scratch_alloc_user.status.name, 'Removed')
+
+        alloc_users = AllocationUser.objects.filter(
+            user=self.user,
+            status__name='Active',
+            allocation__resources__name__icontains='Directory')
+        self.assertFalse(alloc_users.exists())
+
+    def test_emails_sent(self):
+        self.assertEqual(len(mail.outbox), 0)
+
+        runner = self.runner_class(self.request)
+        runner.run()
+
+        request = AccountDeletionRequest.objects.get(user=self.user)
+
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+
+        email_body = ['The request to delete your cluster account '
+                      'was completed successfully.',
+                      'You were removed from any remaining projects. '
+                      'Your cluster access was revoked, meaning you will '
+                      'no longer be able to login to the clusters. '
+                      'Additionally, all of your data in your \'home\' '
+                      'and \'scratch\' directories was deleted.',
+                      'If this is a mistake, or you have any '
+                      'questions, please contact us at',
+                      request.reason.description]
+
+        for section in email_body:
+            self.assertIn(section, email.body)
+        self.assertIn('Cluster Account Deletion Request Complete',
+                      email.subject)
+        self.assertEqual(email.to, [self.user.email])
+        self.assertEqual(email.cc, [self.superuser.email])
+        self.assertEqual(settings.EMAIL_SENDER, email.from_email)
