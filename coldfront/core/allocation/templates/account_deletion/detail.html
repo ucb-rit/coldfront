@@ -103,7 +103,7 @@
     </div>
   </div>
 
-  {% if is_allowed_to_manage_request and request_obj.status.name not in 'Queued,Complete,Cancel Requestled' %}
+  {% if is_allowed_to_manage_request and request_obj.status.name not in 'Queued,Complete,Cancelled' %}
     <div class="card mb-3">
       <div class="card-header">
         <h4>
@@ -135,7 +135,7 @@
                   {% with status=item.1 latest_update_timestamp=item.2 %}
                     {% if status == 'Pending' %}
                       <span class="badge badge-warning">
-                    {% elif status in 'Approved,Completed' %}
+                    {% elif status == 'Complete' %}
                       <span class="badge badge-success">
                     {% else %}
                       <span class="badge badge-danger">
@@ -220,7 +220,7 @@
                   {% with status=item.1 latest_update_timestamp=item.2 %}
                     {% if status == 'Pending' %}
                       <span class="badge badge-warning">
-                    {% elif status in 'Approved,Completed' %}
+                    {% elif status == 'Complete' %}
                       <span class="badge badge-success">
                     {% else %}
                       <span class="badge badge-danger">
