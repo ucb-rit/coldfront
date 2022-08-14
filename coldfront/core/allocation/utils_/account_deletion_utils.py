@@ -52,9 +52,24 @@ class AccountDeletionRequestRunner(object):
                 expiration = self._get_expiration()
                 self.request_obj = self._create_request(expiration)
                 self._create_project_removal_requests()
+                self._set_cluster_access_attributes()
 
             self._send_emails_safe()
             self._log_success_messages()
+
+    def _set_cluster_access_attributes(self):
+        cluster_access_attributes = AllocationUserAttribute.objects.filter(
+            allocation_user__user=self.user_obj,
+            allocation_attribute_type__name='Cluster Account Status',
+            value__in=['Active', 'Pending - Add'])
+
+        for attr in cluster_access_attributes:
+            attr.value = 'Pending - Delete'
+            attr.save()
+
+        message = f'Set {cluster_access_attributes.count()} cluster access ' \
+                  f'attributes to Pending - Delete'
+        self._success_messages.append(message)
 
     def _create_project_removal_requests(self):
         if self.reason_obj.name == 'Admin':
@@ -82,15 +97,6 @@ class AccountDeletionRequestRunner(object):
             status=AccountDeletionRequestStatusChoice.objects.get(name='Queued'),
             expiration=expiration
         )
-
-        cluster_access_attributes = AllocationUserAttribute.objects.filter(
-            allocation_user__user=self.user_obj,
-            allocation_attribute_type__name='Cluster Account Status',
-            value='Active')
-
-        for attr in cluster_access_attributes:
-            attr.value = 'Pending - Delete'
-            attr.save()
 
         message = f'Successfully created cluster account deletion ' \
                   f'request for user {self.user_obj.username}.'
@@ -188,7 +194,7 @@ class AccountDeletionRequestRunner(object):
                 send_account_deletion_user_notification_emails,
                 *email_args)
             self._email_strategy.process_email(
-                send_account_deletion_user_notification_emails,
+                send_account_deletion_admin_notification_emails,
                 *email_args)
 
         self._email_strategy.send_queued_emails()
@@ -197,7 +203,7 @@ class AccountDeletionRequestRunner(object):
 def send_account_deletion_user_notification_emails(user_obj,
                                                    request_obj,
                                                    reason_obj):
-    if reason_obj.name not in ['Admin', 'LastProject']:
+    if reason_obj.name not in ['Admin', 'LastProject', 'BadPID']:
         raise ValueError(f'Invalid reason {reason_obj.name} passed. '
                          f'Must be either \"Admin\" or \"LastProject\"')
 
@@ -207,12 +213,8 @@ def send_account_deletion_user_notification_emails(user_obj,
         html_template = 'email/account_deletion/new_request_user.html'
 
         if reason_obj.name == 'Admin':
-            reason = 'The request to delete your account was initiated by a ' \
-                     'system administrator.'
             waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
         else:
-            reason = 'The request to delete your account was automatically ' \
-                     'initiated when you left your last project.'
             waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
 
         confirm_url = urljoin(settings.CENTER_BASE_URL,
@@ -221,7 +223,7 @@ def send_account_deletion_user_notification_emails(user_obj,
 
         template_context = {
             'user_str': f'{user_obj.first_name} {user_obj.last_name}',
-            'reason': reason,
+            'reason': request_obj.reason.description,
             'confirm_url': confirm_url,
             'waiting_period': waiting_period,
             'center_help_email': settings.CENTER_HELP_EMAIL,
@@ -241,7 +243,7 @@ def send_account_deletion_user_notification_emails(user_obj,
 def send_account_deletion_admin_notification_emails(user_obj,
                                                     request_obj,
                                                     reason_obj):
-    if reason_obj.name not in ['User', 'System']:
+    if reason_obj.name not in ['User', 'LastProject', 'BadPID']:
         raise ValueError(f'Invalid reason_obj {reason_obj} passed. '
                          f'Must be either \"User\" or \"LastProject\"')
 
@@ -250,15 +252,9 @@ def send_account_deletion_admin_notification_emails(user_obj,
         template = 'email/account_deletion/new_request_admin.txt'
         html_template = 'email/account_deletion/new_request_admin.html'
 
-        user_str = f'{user_obj.first_name} {user_obj.last_name}'
         if reason_obj.name == 'User':
-            reason = f'The request to delete the cluster account was ' \
-                     f'initiated by {user_str}.'
             waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
         else:
-            reason = f'The request to delete the cluster account was ' \
-                     f'automatically initiated when {user_str} left their ' \
-                     f'last project.'
             waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
 
         review_url = urljoin(settings.CENTER_BASE_URL,
@@ -267,7 +263,7 @@ def send_account_deletion_admin_notification_emails(user_obj,
 
         template_context = {
             'user_str': f'{user_obj.first_name} {user_obj.last_name}',
-            'reason': reason,
+            'reason': request_obj.reason.description,
             'review_url': review_url,
             'waiting_period': waiting_period
         }
@@ -277,7 +273,7 @@ def send_account_deletion_admin_notification_emails(user_obj,
             template,
             template_context,
             settings.EMAIL_SENDER,
-            [user_obj.email],
+            settings.EMAIL_ADMIN_LIST,
             cc=[user_obj.userprofile.host_user.email],
             html_template=html_template)
 
@@ -318,6 +314,20 @@ class AccountDeletionRequestCompleteRunner(object):
         self.request_obj.user.userprofile.billing_activity = None
         self.request_obj.user.userprofile.cluster_uid = None
         self.request_obj.user.userprofile.save()
+
+    def _set_cluster_access_attributes(self):
+        cluster_access_attributes = AllocationUserAttribute.objects.filter(
+            allocation_user__user=self.user_obj,
+            allocation_attribute_type__name='Cluster Account Status').\
+            exclude(value='Denied')
+
+        for attr in cluster_access_attributes:
+            attr.value = 'Removed' # TODO: what do we set this to?
+            attr.save()
+
+        message = f'Set {cluster_access_attributes.count()} cluster access ' \
+                  f'attributes to Pending - Delete'
+        self._success_messages.append(message)
 
     def _remove_allocation_users(self):
         """Removes any remaining allocation users."""
