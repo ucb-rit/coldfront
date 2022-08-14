@@ -22,9 +22,12 @@
                 <li><a id="navbar-allocation-cluster-account-requests" class="dropdown-item" href="{% url 'allocation-cluster-account-request-list' %}?show_all_requests=on">
                   Cluster Access Requests
                 </a></li>
-                <li><a id="navbar-allocation-cluster-account-deletion-requests" class="dropdown-item" href="{% url 'cluster-account-deletion-request-list' %}?status=Ready">
-                  Cluster Account Deletion Requests
-                </a></li>
+                {% flag_enabled 'CLUSTER_ACCOUNTS_DELETABLE' as cluster_accounts_deletable %}
+                {% if cluster_accounts_deletable %}
+                  <li><a id="navbar-allocation-cluster-account-deletion-requests" class="dropdown-item" href="{% url 'cluster-account-deletion-request-list' %}?status=Ready">
+                    Cluster Account Deletion Requests
+                  </a></li>
+                {% endif %}
                 <li><a id="navbar-project-new-project-requests" class="dropdown-item" href="{% url 'new-project-pending-request-list' %}">
                   New Project Requests
                 </a></li>
@@ -43,6 +46,7 @@
                 <li><a id="navbar-pi-allocation-renewal-requests" class="dropdown-item" href="{% url 'pi-allocation-renewal-pending-request-list' %}">
                   Project Renewal Requests
                 </a></li>
+                {% flag_enabled 'SECURE_DIRS_REQUESTABLE' as secure_dirs_requestable %}
                 {% if secure_dirs_requestable %}
                   <li><a id="navbar-secure-directory-requests" class="dropdown-item" href="{% url 'secure-dir-pending-request-list' %}">
                     Secure Directory Requests
