@@ -288,7 +288,7 @@ class AccountDeletionRequestCompleteRunner(object):
                 f'AccountDeletionRequest {request_obj} has unexpected '
                 f'type {type(request_obj)}.')
 
-        if request_obj.status.name != 'Complete':
+        if request_obj.status.name != 'Processing':
             raise ValueError(
                 f'AccountDeletionRequest {request_obj} has unexpected'
                 f'status {request_obj.status.name}')
@@ -303,6 +303,7 @@ class AccountDeletionRequestCompleteRunner(object):
 
     def run(self):
         with transaction.atomic():
+            self._set_request_status()
             self._set_userprofile_values()
             self._set_cluster_access_attributes()
             self._remove_allocation_users()
@@ -313,6 +314,12 @@ class AccountDeletionRequestCompleteRunner(object):
     def get_warning_messages(self):
         """Return warning messages raised during the run."""
         return self._warning_messages.copy()
+
+    def _set_request_status(self):
+        """Sets the request status to 'Complete'"""
+        self.request_obj.status = \
+            AccountDeletionRequestStatusChoice.objects.get(name='Complete')
+        self.request_obj.save()
 
     def _set_userprofile_values(self):
         """Sets the appropriate userprofile values."""
