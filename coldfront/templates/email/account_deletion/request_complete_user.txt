@@ -2,10 +2,7 @@ Dear {{ user_str }},
 
 The request to delete your cluster account was completed successfully. {{ reason }}
 
-You were removed from any remaining projects. Your cluster access was revoked,
-meaning you will no longer be able to login to the clusters.
-Additionally, all of your data in your 'home' and 'scratch' directories
-was deleted.
+You were removed from any remaining projects. Your cluster access was revoked, meaning you will no longer be able to login to the clusters. Additionally, all of your data in your 'home' and 'scratch' directories was deleted.
 
 If this is a mistake, or you have any questions, please contact us at {{ center_help_email }}.
 

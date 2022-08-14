@@ -1,5 +1,3 @@
-There is a new cluster account deletion request from User
-{{ user_str }}. {{ reason }}. This process can be processed after
-the standard waiting period of {{ waiting_period }} days.
+There is a new cluster account deletion request from User {{ user_str }}. {{ reason }} This process can be processed after the standard waiting period of {{ waiting_period }} days.
 
 Please review the request here: {{ review_url }}.
