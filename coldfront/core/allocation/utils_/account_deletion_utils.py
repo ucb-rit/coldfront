@@ -4,18 +4,15 @@ from urllib.parse import urljoin
 
 from django.db import transaction
 from django.urls import reverse
-from flags.state import flag_enabled
 
 from coldfront.config import settings
 from coldfront.core.allocation.models import AccountDeletionRequest, \
     AccountDeletionRequestStatusChoice, AllocationUserAttribute, \
-    AccountDeletionRequestReasonChoice, AllocationUser, \
-    AllocationUserStatusChoice
+    AllocationUser, AllocationUserStatusChoice
 from coldfront.core.allocation.utils import has_cluster_access
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.utils_.removal_utils import \
     ProjectRemovalRequestRunner
-from coldfront.core.resource.models import Resource
 from coldfront.core.utils.common import import_from_settings, \
     utc_now_offset_aware
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy, \
@@ -84,7 +81,7 @@ class AccountDeletionRequestRunner(object):
                     self.requester,
                     self.user_obj,
                     proj_user.project)
-                runner_result = request_runner.run()
+                request_runner.run()
 
             message = f'Created {proj_users.count()} project removal ' \
                       f'requests for {self.user_obj}.'
@@ -94,7 +91,8 @@ class AccountDeletionRequestRunner(object):
         request = AccountDeletionRequest.objects.create(
             user=self.user_obj,
             reason=self.reason_obj,
-            status=AccountDeletionRequestStatusChoice.objects.get(name='Queued'),
+            status=AccountDeletionRequestStatusChoice.objects.get(
+                name='Queued'),
             expiration=expiration
         )
 
@@ -139,7 +137,8 @@ class AccountDeletionRequestRunner(object):
 
         if AccountDeletionRequest.objects.filter(
                 user=self.user_obj,
-                status__in=[queued_status, ready_status, processing_status]).exists():
+                status__in=[queued_status, ready_status,
+                            processing_status]).exists():
             message = f'Error requesting cluster account deletion of user ' \
                       f'{self.user_obj.username}. An active cluster account ' \
                       f'deletion request for user ' \
@@ -218,8 +217,9 @@ def send_account_deletion_user_notification_emails(user_obj,
             waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
 
         confirm_url = urljoin(settings.CENTER_BASE_URL,
-                              reverse('cluster-account-deletion-request-user-data-deletion',
-                                      kwargs={'pk': request_obj.pk}))
+                              reverse(
+                                  'cluster-account-deletion-request-user-data-deletion',
+                                  kwargs={'pk': request_obj.pk}))
 
         template_context = {
             'user_str': f'{user_obj.first_name} {user_obj.last_name}',
@@ -258,8 +258,8 @@ def send_account_deletion_admin_notification_emails(user_obj,
             waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
 
         review_url = urljoin(settings.CENTER_BASE_URL,
-                              reverse('cluster-account-deletion-request-detail',
-                                      kwargs={'pk': request_obj.pk}))
+                             reverse('cluster-account-deletion-request-detail',
+                                     kwargs={'pk': request_obj.pk}))
 
         template_context = {
             'user_str': f'{user_obj.first_name} {user_obj.last_name}',
@@ -324,11 +324,11 @@ class AccountDeletionRequestCompleteRunner(object):
     def _set_cluster_access_attributes(self):
         cluster_access_attributes = AllocationUserAttribute.objects.filter(
             allocation_user__user=self.user_obj,
-            allocation_attribute_type__name='Cluster Account Status').\
+            allocation_attribute_type__name='Cluster Account Status'). \
             exclude(value='Denied')
 
         for attr in cluster_access_attributes:
-            attr.value = 'Removed' # TODO: what do we set this to?
+            attr.value = 'Removed'  # TODO: what do we set this to?
             attr.save()
 
         message = f'Set {cluster_access_attributes.count()} cluster access ' \
@@ -415,7 +415,7 @@ def send_account_deletion_complete_user_notification_emails(user_obj,
     if settings.EMAIL_ENABLED:
         subject = 'Cluster Account Deletion Request Complete'
         template = 'email/account_deletion/request_complete_user.txt'
-        
+
         # TODO: can users create new cluster accounts? If they can, 
         #  that text should be included in the email template.
         template_context = {
@@ -432,4 +432,3 @@ def send_account_deletion_complete_user_notification_emails(user_obj,
             settings.EMAIL_SENDER,
             [user_obj.email],
             cc=[user_obj.userprofile.host_user.email])
-    
