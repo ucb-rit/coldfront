@@ -13,7 +13,19 @@ Data Deletion: {{ user_str }} ({{ request_obj.user.username }})
 <hr>
 
 <p>
-  Please confirm that {{ user_str }}'s data has been deleted from the cluster.
+  Please confirm that {{ user_str }}'s data has been deleted from the
+  cluster. Users are asked to confirm whether it is safe to delete their data.
+  If the user has not yet confirmed that it is safe to delete their data ,
+  you may override this behavior by clicking the submit button below
+  and confirming your intent in the popup.
+</p>
+<p>
+  <strong>User Confirmation</strong>:
+  {% if user_data_deletion_status == 'Pending' %}
+    <span class="badge badge-warning">Pending Confirmation</span>
+  {% else %}
+    <span class="badge badge-success">Confirmed: {{ user_data_deletion_timestamp|date:"M. d, Y" }}</span>
+  {% endif %}
 </p>
 
 {% include 'account_deletion/detail_card.html' %}
@@ -27,7 +39,7 @@ Data Deletion: {{ user_str }} ({{ request_obj.user.username }})
   </div>
   <div class="card-body">
     {{ form|crispy }}
-    {% if user_data_deletion %}
+    {% if user_data_deletion_status == 'Complete' %}
       <form action="" method="post">
         {% csrf_token %}
         <input class="btn btn-primary" type="submit" value="Submit" />
