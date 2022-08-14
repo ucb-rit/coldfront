@@ -719,8 +719,10 @@ class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         self.set_context_data(context)
-        context['user_data_deletion'] = \
-            self.request_obj.state['user_data_deletion']['status'] == 'Complete'
+        context['user_data_deletion_status'] = \
+            self.request_obj.state['user_data_deletion']['status']
+        context['user_data_deletion_timestamp'] = \
+            self.request_obj.state['user_data_deletion']['timestamp']
         return context
 
     def get_initial(self):
