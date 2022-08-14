@@ -1,17 +1,15 @@
 from collections import defaultdict
-from itertools import chain
 from urllib.parse import urljoin
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
-from django.db.models import Q, QuerySet
 from django.forms import formset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django.views.generic import ListView, DetailView
+from django.views.generic import DetailView
 from django.views.generic.base import TemplateView, View
 from django.views.generic.edit import FormView
 from iso8601 import iso8601
@@ -22,9 +20,10 @@ from coldfront.core.allocation.forms_.account_deletion_forms import \
     AccountDeletionEligibleUsersSearchForm, AccountDeletionProjectRemovalForm, \
     UpdateStatusForm, AccountDeletionUserDataDeletionConfirmation, \
     AccountDeletionCancelRequestForm
-from coldfront.core.allocation.models import (AccountDeletionRequest,
-                                              AccountDeletionRequestStatusChoice,
-                                              AccountDeletionRequestReasonChoice)
+from coldfront.core.allocation.models import \
+    (AccountDeletionRequest,
+     AccountDeletionRequestStatusChoice,
+     AccountDeletionRequestReasonChoice)
 from coldfront.core.allocation.utils_.account_deletion_utils import \
     AccountDeletionRequestRunner, AccountDeletionRequestCompleteRunner
 
@@ -48,28 +47,6 @@ class AccountDeletionRequestMixin(object):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.request_obj = None
-
-    # def redirect_if_disallowed_status(self, http_request,
-    #                                   disallowed_status_names=(
-    #                                           'Approved - Complete',
-    #                                           'Cancelled')):
-    #     """Return a redirect response to the detail view for this
-    #     project request if its status has one of the given disallowed
-    #     names, after sending a message to the user. Otherwise, return
-    #     None."""
-    #     if not isinstance(self.request_obj, SecureDirRequest):
-    #         raise TypeError(
-    #             f'Request object has unexpected type '
-    #             f'{type(self.request_obj)}.')
-    #     status_name = self.request_obj.status.name
-    #     if status_name in disallowed_status_names:
-    #         message = (
-    #             f'You cannot perform this action on a request with status '
-    #             f'{status_name}.')
-    #         messages.error(http_request, message)
-    #         return HttpResponseRedirect(
-    #             self.request_detail_url(self.request_obj.pk))
-    #     return None
 
     @staticmethod
     def request_detail_url(pk):
@@ -113,6 +90,10 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
 
         if self.request.user == self.user_obj:
             return True
+
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
 
     def dispatch(self, request, *args, **kwargs):
         self.user_obj = get_object_or_404(User, pk=self.kwargs.get('pk'))
@@ -193,7 +174,9 @@ class AccountDeletionRequestEligibleUsersView(LoginRequiredMixin,
         if self.request.user.is_superuser:
             return True
 
-        # PIs are not allowed to request deletions.
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
 
     def get_queryset(self):
         # TODO: ordery by
@@ -253,6 +236,7 @@ class AccountDeletionRequestEligibleUsersView(LoginRequiredMixin,
             flag = False
             if project_filter:
                 for project in data['projects']:
+                    # Filter on user projects if a project filter was passed.
                     if project_filter not in project:
                         eligible_users_to_delete.pop(user)
                         flag = True
@@ -287,8 +271,12 @@ class AccountDeletionRequestListView(LoginRequiredMixin,
             return True
 
         if self.request.user.has_perm(
-                'allocation.view_AccountDeletionrequest'):
+                'allocation.view_accountdeletionrequest'):
             return True
+
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
 
     def get_queryset(self):
         request_search_form = AccountDeletionRequestSearchForm(
@@ -363,14 +351,6 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
         if self.request.user == self.request_obj.user:
             return True
 
-        # if the user is a pi of a project the user belongs to. if we
-        # delete/disable project users, we need a way to keep track of this.
-        projects = ProjectUser.objects.filter(
-            user=self.request.user).values_list('project', flat=True)
-        for project in projects:
-            if self.request.user in project.pis():
-                return True
-
         message = 'You do not have permission to view the previous page.'
         messages.error(self.request, message)
 
@@ -429,7 +409,8 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
 
             data_deletion = state['data_deletion']
             checklist.append([
-                'Confirm that the user\'s data has been deleted from the cluster.',
+                'Confirm that the user\'s data has been deleted from '
+                'the cluster.',
                 data_deletion['status'],
                 data_deletion['timestamp'],
                 True,
@@ -567,10 +548,11 @@ class AccountDeletionRequestRemoveProjectsView(LoginRequiredMixin,
         # Show a button to complete this section after there are no more
         # projects to remove the user from.
         context['project_removal_complete'] = \
-            not ProjectUser.objects.filter(user=self.request_obj.user,
-                                           status__name__in=['Active',
-                                                             'Pending - Add',
-                                                             'Pending - Remove']).exists()
+            not ProjectUser.objects.filter(
+                user=self.request_obj.user,
+                status__name__in=['Active',
+                                  'Pending - Add',
+                                  'Pending - Remove']).exists()
 
         context['project_removal_status'] = \
             self.request_obj.state['project_removal']['status']
@@ -604,17 +586,8 @@ class AccountDeletionRequestRemoveProjectsView(LoginRequiredMixin,
                             self.request.user,
                             self.request_obj.user,
                             project_user.project)
-                        runner_result = request_runner.run()
-                        success_messages, error_messages = request_runner.get_messages()
-
-                        # TODO: do we send the normal removal request emails and messages?
-                        # if runner_result:
-                        #     #     request_runner.send_emails()
-                        #     for m in success_messages:
-                        #         messages.success(self.request, m)
-                        # else:
-                        #     for m in error_messages:
-                        #         messages.error(self.request, m)
+                        request_runner.run()
+                        # Not sending project removal notification emails.
 
                     except Exception as e:
                         logger.exception(e)
