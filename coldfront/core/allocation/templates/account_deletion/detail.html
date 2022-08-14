@@ -164,18 +164,22 @@
           </table>
         </div>
         <hr>
-        {% if is_checklist_complete %}
-          <form action="{% url 'cluster-account-deletion-request-detail' request_obj.pk %}" method="post">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-primary">Submit</button>
-            <a href="{% url 'cluster-account-deletion-request-list' %}" class="btn btn-secondary">Back</a>
+        <div class="float-right">
+          {% if is_checklist_complete %}
+            <form action="{% url 'cluster-account-deletion-request-detail' request_obj.pk %}" method="post">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+          {% else %}
+            <button type="button" class="btn btn-primary" disabled>Submit</button>
+          {% endif %}
+          {% if request_obj.status.name == 'Ready' %}
+            <a href="{% url 'cluster-account-deletion-request-cancel' request_obj.pk %}" class="btn btn-danger">Cancel Request</a>
+          {% else %}
             {% include 'account_deletion/cancellation_popover.html' %}
-          </form>
-        {% else %}
-          <button type="button" class="btn btn-primary" disabled>Submit</button>
+          {% endif %}
           <a href="{% url 'cluster-account-deletion-request-list' %}" class="btn btn-secondary">Back</a>
-          {% include 'account_deletion/cancellation_popover.html' %}
-        {% endif %}
+        </div>
       </div>
     </div>
   {% elif is_allowed_to_manage_request and request_obj.status.name in 'Queued,Ready' %}
@@ -249,10 +253,14 @@
           </table>
         </div>
         <hr>
-        {% if request_obj.status.name in 'Queued,Ready' %}
+      <div class="float-right">
+        {% if request_obj.status.name in 'Queued,Ready' and request_obj.reason.name == 'User' %}
           <a href="{% url 'cluster-account-deletion-request-cancel' request_obj.pk %}" class="btn btn-danger">Cancel Request</a>
-          <a href="{% url 'cluster-account-deletion-request-list' %}" class="btn btn-secondary">Back</a>
+        {% else %}
+          {% include 'account_deletion/cancellation_popover.html' %}
         {% endif %}
+        <a href="{% url 'cluster-account-deletion-request-list' %}" class="btn btn-secondary">Back</a>
+      </div>
       </div>
     </div>
   {% endif %}
