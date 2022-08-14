@@ -83,38 +83,23 @@ def deny_associated_allocation_renewal_request(sender, **kwargs):
     logger.info(message)
 
 
-@receiver(post_save, sender=ProjectUserRemovalRequest)
-def project_removal_request_account_deletion(sender, instance, created, *args, **kwargs):
-    """Create an AccountDeletionRequest for the user if the 
-    ProjectUserRemovalRequest was completed and the user has 
-    no more active projects."""
-    active_projects = ProjectUser.objects.filter(
-        user=instance.user,
-        status='Active').exists()
-
-    # The request was set to complete and the user has no other projects.
-    if instance.status.name == 'Complete' and not active_projects:
-        reason = \
-            AccountDeletionRequestReasonChoice.objects.get(name='LastProject')
-        runner = AccountDeletionRequestRunner(instance.user,
-                                              instance.user, # TODO: who do we pass here?
-                                              reason)
-        runner.run()
-        for message in runner.get_warning_messages():
-            logger.warning(message)
-
-
 @receiver(post_save, sender=ProjectUser)
-def project_user_account_deletion_cancel(sender, instance, created, *args, **kwargs):
-    """Cancel a user's AccountDeletionRequest if a new ProjectUser is created 
-    while the request is either Queued or Ready. Is only done if the request 
-    was initiated when the user left their last project."""
-    
+def account_deletion_project_user(sender, instance, created, *args, **kwargs):
+    """
+    Create an AccountDeletionRequest for the user if the
+    ProjectUser was removed and the user has
+    no more active projects.
+
+    Cancel a user's AccountDeletionRequest if a new ProjectUser is created
+    while the request is either Queued or Ready. Is only done if the request
+    was initiated when the user left their last project.
+    """
     if created:
+        # Check to see if any AccountDeletionRequests should be cancelled.
         account_deletion = AccountDeletionRequest.objects.filter(
             user=instance.user,
             status__name__in=['Queued', 'Ready'],
-            requester__name='System'
+            reason__name='LastProject'
         )
 
         if account_deletion.exists():
@@ -131,18 +116,37 @@ def project_user_account_deletion_cancel(sender, instance, created, *args, **kwa
                       f'{instance.project.name}'
             logger.info(message)
 
+    if not created:
+        # Check to see if any AccountDeletionRequests should be created.
+        active_projects = ProjectUser.objects.filter(
+            user=instance.user,
+            status__name__in=['Active',
+                              'Pending - Add',
+                              'Pending - Remove']).exists()
+
+        # The request was set to complete and the user has no other projects.
+        if not active_projects:
+            reason = \
+                AccountDeletionRequestReasonChoice.objects.get(name='LastProject')
+            runner = AccountDeletionRequestRunner(instance.user,
+                                                  None,
+                                                  reason)
+            runner.run()
+            for message in runner.get_warning_messages():
+                logger.warning(message)
+
 
 @receiver(post_save, sender=ProjectUserJoinRequest)
-def project_user_account_deletion_cancel(sender, instance, created, *args, **kwargs):
-    """Cancel a user's AccountDeletionRequest if a new ProjectUserJoinRequest 
-    is created  while the request is either Queued or Ready. Is only done 
+def cancel_account_deletion_project_user_join_request(sender, instance, created, *args, **kwargs):
+    """Cancel a user's AccountDeletionRequest if a new ProjectUserJoinRequest
+    is created  while the request is either Queued or Ready. Is only done
     if the request was initiated when the user left their last project."""
-    
+
     if created:
         account_deletion = AccountDeletionRequest.objects.filter(
             user=instance.project_user.user,
             status__name__in=['Queued', 'Ready'],
-            requester__name='System'
+            reason__name='LastProject'
         )
 
         if account_deletion.exists():
@@ -163,17 +167,17 @@ def project_user_account_deletion_cancel(sender, instance, created, *args, **kwa
 
 
 @receiver(post_save, sender=SavioProjectAllocationRequest)
-def savio_project_request_account_deletion_cancel(sender, instance, created, *args, **kwargs):
-    """Cancel a user's AccountDeletionRequest if a new 
-    SavioProjectAllocationRequest is created  while the request is either 
-    Queued or Ready. Is only done if the request was initiated when the 
+def cancel_account_deletion_savio_project_request(sender, instance, created, *args, **kwargs):
+    """Cancel a user's AccountDeletionRequest if a new
+    SavioProjectAllocationRequest is created  while the request is either
+    Queued or Ready. Is only done if the request was initiated when the
     user left their last project."""
-    
+
     if created:
         account_deletion = AccountDeletionRequest.objects.filter(
             user=instance.requester,
             status__name__in=['Queued', 'Ready'],
-            requester__name='System'
+            reason__name='LastProject'
         )
 
         if account_deletion.exists():
@@ -193,17 +197,17 @@ def savio_project_request_account_deletion_cancel(sender, instance, created, *ar
 
 
 @receiver(post_save, sender=VectorProjectAllocationRequest)
-def vector_project_request_account_deletion_cancel(sender, instance, created, *args, **kwargs):
-    """Cancel a user's AccountDeletionRequest if a new 
-    VectorProjectAllocationRequest is created  while the request is either 
-    Queued or Ready. Is only done if the request was initiated when the 
+def cancel_account_deletion_vector_project_request(sender, instance, created, *args, **kwargs):
+    """Cancel a user's AccountDeletionRequest if a new
+    VectorProjectAllocationRequest is created  while the request is either
+    Queued or Ready. Is only done if the request was initiated when the
     user left their last project."""
-    
+
     if created:
         account_deletion = AccountDeletionRequest.objects.filter(
             user=instance.requester,
             status__name__in=['Queued', 'Ready'],
-            requester__name='System'
+            reason__name='LastProject'
         )
 
         if account_deletion.exists():
@@ -211,7 +215,7 @@ def vector_project_request_account_deletion_cancel(sender, instance, created, *a
             account_deletion.status = \
                 AccountDeletionRequestStatusChoice.objects.get(name='Cancelled')
             account_deletion.state['other'] = {
-                'justification': f'User requested to create project '
+                'justification': f'User requested to create vector project '
                                  f'{instance.project.name}.',
                 'timestamp': utc_now_offset_aware().isoformat()}
             account_deletion.save()
