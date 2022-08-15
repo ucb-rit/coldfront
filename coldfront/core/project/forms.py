@@ -7,6 +7,7 @@ from django.db.models import Q
 
 from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectUserRoleChoice)
+from coldfront.core.user.utils import eligible_host_project_users
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.resource.utils import get_compute_resource_names
 
@@ -248,3 +249,27 @@ class JoinRequestSearchForm(forms.Form):
     username = forms.CharField(
         label='Username', max_length=100, required=False)
     email = forms.CharField(label='Email', max_length=100, required=False)
+
+
+class ProjectSelectHostUserForm(forms.Form):
+
+    host_user = forms.ChoiceField(
+        label='Host User',
+        choices=[],
+        widget=forms.Select(),
+        required=True)
+
+    def __init__(self, *args, **kwargs):
+        project_name = kwargs.pop('project', None)
+        super().__init__(*args, **kwargs)
+        if project_name:
+            project = Project.objects.get(name=project_name)
+            eligible_hosts = eligible_host_project_users(project)
+            choices = [('', 'Select a host user.')]
+            for project_user in eligible_hosts:
+                user = project_user.user
+                choices.append((
+                    user,
+                    f'{user.first_name} {user.last_name} ({user.username})'
+                ))
+            self.fields['host_user'].choices = choices

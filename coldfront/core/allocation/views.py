@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.core.validators import validate_email
 from django.core.validators import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.forms import formset_factory
@@ -47,7 +47,9 @@ from coldfront.core.allocation.models import (Allocation, AllocationAccount,
                                               AllocationUser,
                                               AllocationUserAttribute,
                                               AllocationUserNote,
-                                              AllocationUserStatusChoice)
+                                              AllocationUserStatusChoice,
+                                              ClusterAccessRequest,
+                                              ClusterAccessRequestStatusChoice)
 from coldfront.core.allocation.signals import (allocation_activate_user,
                                                allocation_remove_user)
 from coldfront.core.allocation.utils import (generate_guauge_data_from_usage,
@@ -56,9 +58,13 @@ from coldfront.core.allocation.utils import (generate_guauge_data_from_usage,
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)
-from coldfront.core.project.utils import ProjectClusterAccessRequestRunner
+from coldfront.core.project.utils_.project_cluster_access_request_runner import ProjectClusterAccessRequestRunner
+from coldfront.core.allocation.utils_.cluster_access_utils import \
+    ClusterAccessRequestCompleteRunner, \
+    ClusterAccessRequestDenialRunner
 from coldfront.core.resource.models import Resource
 from coldfront.core.statistics.models import ProjectUserTransaction
+from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import get_domain_url, import_from_settings
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.mail import send_email_template
@@ -111,6 +117,14 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
 
         pk = self.kwargs.get('pk')
         allocation_obj = get_object_or_404(Allocation, pk=pk)
+
+        is_pi = allocation_obj.project.projectuser_set.filter(
+            user=self.request.user,
+            role__name='Principal Investigator',
+            status__name='Active').exists()
+
+        if is_pi:
+            return True
 
         user_can_access_project = allocation_obj.project.projectuser_set.filter(
             user=self.request.user, status__name__in=['Active', 'New', ]).exists()
@@ -475,8 +489,7 @@ class AllocationListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
                     Q(project__status__name='Active') &
                     Q(project__projectuser__user=self.request.user) &
                     Q(project__projectuser__status__name='Active') &
-                    Q(allocationuser__user=self.request.user) &
-                    Q(allocationuser__status__name='Active')
+                    Q(project__projectuser__role__name='Principal Investigator')
                 ).distinct().order_by(order_by)
 
             # Project Title
@@ -583,6 +596,9 @@ class AllocationListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
             allocation_list = paginator.page(1)
         except EmptyPage:
             allocation_list = paginator.page(paginator.num_pages)
+
+        context['user_agreement_signed'] = \
+            access_agreement_signed(self.request.user)
 
         return context
 

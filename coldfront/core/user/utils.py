@@ -223,6 +223,7 @@ def send_account_activation_email(user):
     plain_body = 'email/account_activation_required.txt'
     html_body = 'email/account_activation_required.html'
     context = {
+        'PORTAL_NAME': settings.PORTAL_NAME,
         'center_name': import_from_settings('CENTER_NAME', ''),
         'activation_url': account_activation_url(user),
         'signature': import_from_settings('EMAIL_SIGNATURE', ''),
@@ -255,6 +256,7 @@ def send_account_already_active_email(user):
         center_base_url, reverse('password-reset'))
 
     context = {
+        'PORTAL_NAME': settings.PORTAL_NAME,
         'login_url': login_url,
         'password_reset_url': password_reset_url,
     }
@@ -276,6 +278,7 @@ def send_email_verification_email(email_address):
     plain_body = 'email/email_verification_required.txt'
     html_body = 'email/email_verification_required.html'
     context = {
+        'PORTAL_NAME': settings.PORTAL_NAME,
         'center_name': import_from_settings('CENTER_NAME', ''),
         'verification_url': __email_verification_url(email_address),
         'signature': import_from_settings('EMAIL_SIGNATURE', ''),
@@ -340,3 +343,63 @@ def update_user_primary_email_address(email_address):
 
         email_address.is_primary = True
         email_address.save()
+
+
+def eligible_host_project_users(project):
+    """Return a list of ProjectUser objects associated with the given
+    Project that are eligible to be hosts for external users.
+
+    In particular, return active PIs who are LBL employees."""
+    active_pis = project.projectuser_set.filter(
+        role__name='Principal Investigator', status__name='Active').distinct()
+    return [pi for pi in active_pis if is_lbl_employee(pi.user)]
+
+
+def is_lbl_employee(user):
+    """Returns True if the user has any @lbl.gov emails and False otherwise.
+
+    Parameters:
+        - user (User): the user to check if they are an LBL employee or not
+
+    Returns:
+        - Bool: True if the user is an LBL employee, False otherwise
+
+    Raises:
+        - TypeError, if the provided user has an invalid type
+    """
+    if not isinstance(user, User):
+        raise TypeError(f'Invalid User {user}.')
+
+    # Check the user's primary email.
+    if user.email.endswith('@lbl.gov'):
+        return True
+
+    # Check all emails associated with the user.
+    email_addresses = EmailAddress.objects.filter(user=user,
+                                                  is_verified=True,
+                                                  email__endswith='@lbl.gov')
+
+    return email_addresses.exists()
+
+
+def needs_host(user):
+    """Returns True if the user needs a host user and false otherwise.
+
+    Parameters:
+        - user (User): the user to check if they need a host user.
+
+    Returns:
+        - Bool: True if the user needs a host user, False otherwise
+
+    Raises:
+        - TypeError, if the provided user has an invalid type
+    """
+    if not isinstance(user, User):
+        raise TypeError(f'Invalid User {user}.')
+
+    # If the user has an LBL email, they do not need a host user.
+    if is_lbl_employee(user):
+        return False
+    else:
+        # Check if the user has a host user already.
+        return user.userprofile.host_user is None
