@@ -1,11 +1,10 @@
-from datetime import datetime
 from http import HTTPStatus
 
+from django.core import mail
 from django.urls import reverse
 from iso8601 import iso8601
 
-from coldfront.core.allocation.models import AccountDeletionRequestStatusChoice, \
-    AccountDeletionRequestReasonChoice
+from coldfront.config import settings
 from coldfront.core.allocation.tests.test_account_deletion_base import \
     TestAccountDeletionBase
 from coldfront.core.utils.common import utc_now_offset_aware
@@ -30,7 +29,7 @@ class TestAccountDeletionRequestCancellationView(TestAccountDeletionBase):
         self.assert_has_access(self.url, self.user2, False)
 
     def test_redirect(self):
-        """Test that the correct redirect and message are performed."""
+        """Test that the correct redirect is performed."""
         def _assert_redirect(user, redirect):
             response = self.get_response(user, self.url)
             if redirect:
@@ -71,3 +70,55 @@ class TestAccountDeletionRequestCancellationView(TestAccountDeletionBase):
                 iso8601.parse_date(self.request.state['other']['timestamp'])
             post_time = utc_now_offset_aware()
             self.assertTrue(pre_time <= timestamp <= post_time)
+
+    def test_post_sends_admin_emails(self):
+        """Test that a valid POST request sends the correct emails when
+        the user requests the cancellation."""
+
+        self.assertEqual(len(mail.outbox), 0)
+
+        data = {'justification': 'This is a test justification.'}
+        response = self.post_response(self.user, self.url, data)
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+
+        email_body = ['The cluster account deletion request for User Test '
+                      'User was cancelled by Test User with the '
+                      'following justification',
+                      data.get('justification')]
+
+        for section in email_body:
+            self.assertIn(section, email.body)
+        self.assertIn('Cluster Account Deletion Request Cancelled',
+                      email.subject)
+        self.assertEqual(email.to, settings.EMAIL_ADMIN_LIST)
+        self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+
+    def test_post_sends_user_emails(self):
+        """Test that a valid POST request sends the correct emails when
+        an admin requests the cancellation."""
+
+        self.assertEqual(len(mail.outbox), 0)
+
+        data = {'justification': 'This is a test justification.'}
+        response = self.post_response(self.superuser, self.url, data)
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+
+        email_body = ['The request to delete your cluster account was '
+                      'cancelled by a system administrator with the '
+                      'following justification',
+                      'If this is a mistake, or you have any '
+                      'questions, please contact us at',
+                      data.get('justification')]
+
+        for section in email_body:
+            self.assertIn(section, email.body)
+        self.assertIn('Cluster Account Deletion Request Cancelled',
+                      email.subject)
+        self.assertEqual(email.to, [self.request.user.email])
+        self.assertEqual(settings.EMAIL_SENDER, email.from_email)

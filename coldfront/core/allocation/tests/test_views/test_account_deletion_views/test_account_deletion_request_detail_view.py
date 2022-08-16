@@ -2,8 +2,6 @@ from http import HTTPStatus
 
 from django.urls import reverse
 
-from coldfront.core.allocation.models import AccountDeletionRequestStatusChoice, \
-    AccountDeletionRequestReasonChoice
 from coldfront.core.allocation.tests.test_account_deletion_base import \
     TestAccountDeletionBase
 
@@ -53,7 +51,7 @@ class TestAccountDeletionRequestDetailView(TestAccountDeletionBase):
             _assert_checklist(self.user, False)
 
     def test_buttons(self):
-        """Test that the Cancellation button is correctly visible."""
+        """Test that the cancellation and back button is correctly visible."""
 
         def _assert_cancel_button(user, visible):
             response = self.get_response(user, self.url)
@@ -105,6 +103,43 @@ class TestAccountDeletionRequestDetailView(TestAccountDeletionBase):
                 _assert_cancel_button(self.staff_user, False)
                 _assert_cancel_button(self.user, False)
                 _assert_back_button()
+
+    def test_submit_button(self):
+        """Test that the submit button is correctly displayed."""
+        def _assert_submit_button(user, visible, disabled):
+            response = self.get_response(user, self.url)
+            self.assertEqual(response.status_code, HTTPStatus.OK)
+            html = response.content.decode('utf-8')
+            if visible:
+                if disabled:
+                    button = '<button type="button" class="btn btn-primary" ' \
+                             'disabled>Submit</button>'
+                else:
+                    button = '<button type="submit" class="btn btn-primary">' \
+                             'Submit</button>'
+                self.assertIn(button, html)
+            else:
+                self.assertNotIn('Submit', html)
+
+        # Submit button is never visible to non admins.
+        for status in ['Queued', 'Ready', 'Processing', 'Complete', 'Cancelled']:
+            self.change_request_status(status)
+            for user in [self.staff_user, self.user]:
+                _assert_submit_button(user, False, None)
+
+        # Submit button not visible to admins with the below statuses.
+        for status in ['Queued', 'Complete', 'Cancelled']:
+            self.change_request_status(status)
+            _assert_submit_button(self.superuser, False, None)
+
+        # Submit button will be disabled until the checklist is complete.
+        for status in ['Ready', 'Processing']:
+            self.change_request_status(status)
+            _assert_submit_button(self.superuser, True, True)
+
+            if status == 'Processing':
+                self.complete_request_checklist()
+                _assert_submit_button(self.superuser, True, False)
 
     def test_post_completes_request(self):
         """Test that a POST request completes the request."""
