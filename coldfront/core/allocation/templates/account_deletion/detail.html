@@ -189,10 +189,12 @@
         </h4>
       </div>
       <div class="card-body">
-        {% if admin_is_allowed_to_cancel or user_is_allowed_to_cancel %}
-          <a href="{% url 'cluster-account-deletion-request-cancel' request_obj.pk %}" class="btn btn-danger">Cancel Request</a>
-        {% endif %}
-        <a href="{% url 'cluster-account-deletion-request-list' %}" class="btn btn-secondary">Back</a>
+        <div class="float-right">
+          {% if admin_is_allowed_to_cancel or user_is_allowed_to_cancel %}
+            <a href="{% url 'cluster-account-deletion-request-cancel' request_obj.pk %}" class="btn btn-danger">Cancel Request</a>
+          {% endif %}
+          <a href="{% url 'cluster-account-deletion-request-list' %}" class="btn btn-secondary">Back</a>
+        </div>
       </div>
     </div>
   {% endif %}

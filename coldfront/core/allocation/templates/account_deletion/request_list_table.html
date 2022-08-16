@@ -15,7 +15,7 @@
       <a href="?order_by=created&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down"></i></a>
     </th>
     <th scope="col">
-      Requester
+      Reason
     </th>
     <th scope="col">
       Status
@@ -38,7 +38,7 @@
       <td>{{ request.pk }}</td>
       <td><a href="{% url 'user-profile' request.user.username %}">{{ request.user.username }}</a></td>
       <td>{{ request.created|date:"M. d, Y" }}</td>
-      <td>{{ request.requester.name }}</td>
+      <td>{{ request.reason.name }}</td>
       {% with status=request.status.name %}
         <td>
           {% if status in "Queued,Ready,Processing" %}
