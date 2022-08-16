@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.forms import formset_factory
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -24,7 +24,8 @@ from coldfront.core.allocation.models import \
      AccountDeletionRequestStatusChoice,
      AccountDeletionRequestReasonChoice)
 from coldfront.core.allocation.utils_.account_deletion_utils import \
-    AccountDeletionRequestRunner, AccountDeletionRequestCompleteRunner
+    AccountDeletionRequestRunner, AccountDeletionRequestCompleteRunner, \
+    send_account_deletion_cancellation_notification_emails
 
 from coldfront.core.project.models import (ProjectUser)
 from coldfront.core.project.utils_.removal_utils import \
@@ -34,6 +35,7 @@ from coldfront.core.utils.common import (import_from_settings,
 
 import logging
 
+from coldfront.core.utils.email.email_strategy import SendEmailStrategy
 from coldfront.core.utils.views import ListViewClass
 
 EMAIL_ENABLED = import_from_settings('EMAIL_ENABLED', False)
@@ -96,6 +98,12 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
 
     def dispatch(self, request, *args, **kwargs):
         self.user_obj = get_object_or_404(User, pk=self.kwargs.get('pk'))
+
+        if self.request.user.is_superuser:
+            self.return_url = 'cluster-account-deletion-eligible-users'
+        else:
+            self.return_url = 'home'
+
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -114,10 +122,11 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
             for message in runner.get_warning_messages():
                 messages.warning(self.request, message)
 
-            self.request_obj = \
+            request_obj = \
                 AccountDeletionRequest.objects.get(user=self.user_obj)
             confirm_url = urljoin(settings.CENTER_BASE_URL,
-                                  self.request_detail_url(self.request_obj.pk))
+                                  self.request_detail_url(request_obj.pk))
+
             if reason.name == 'User':
                 message = f'You successfully requested to delete your ' \
                           f'cluster account. Please complete the checklist ' \
@@ -128,13 +137,16 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
                           f'Please complete the checklist ' \
                           f'<a href="{confirm_url}">here</a>.'
             messages.success(self.request, mark_safe(message))
+
+            return HttpResponseRedirect(self.request_detail_url(request_obj.pk))
+
         except Exception as e:
             logger.exception(e)
             error_message = \
                 'Unexpected error. Please contact an administrator.'
             messages.error(self.request, error_message)
 
-        return super().form_valid(form)
+        return HttpResponseRedirect(reverse(self.return_url))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -142,10 +154,7 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
         context['user_str'] = f'{self.user_obj.first_name} ' \
                               f'{self.user_obj.last_name}'
 
-        if self.request.user.is_superuser:
-            context['back_url'] = 'cluster-account-deletion-eligible-users'
-        else:
-            context['back_url'] = 'home'
+        context['back_url'] = self.return_url
 
         return context
 
@@ -155,9 +164,6 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
         kwargs['user_obj'] = self.user_obj
 
         return kwargs
-
-    def get_success_url(self):
-        return self.request_detail_url(self.request_obj.pk)
 
 
 class AccountDeletionRequestEligibleUsersView(LoginRequiredMixin,
@@ -626,28 +632,14 @@ class AccountDeletionRequestRemoveProjectsConfirmView(LoginRequiredMixin,
         if proj_users_exist:
             message = 'User has not been removed from all projects.'
             messages.error(self.request, message)
+
             return HttpResponseRedirect(
-                self.request_detail_url(self.request_obj.pk))
+                reverse('cluster-account-deletion-request-project-removal',
+                        kwargs={'pk': self.request_obj.pk}))
 
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-
-        project_removal_complete = \
-            not ProjectUser.objects.filter(
-                user=self.request_obj.user,
-                status__name__in=['Active',
-                                  'Pending - Add',
-                                  'Pending - Remove']).exists()
-
-        if not project_removal_complete:
-            message = f'User {self.request_obj.user.username} has not ' \
-                      f'been removed from all projects.'
-            messages.error(self.request, message)
-            HttpResponseRedirect(
-                reverse('cluster-account-deletion-request-project-removal',
-                        kwargs={'pk': self.request_obj.pk}))
-
         self.request_obj.state['project_removal'] = {
             'status': 'Complete',
             'timestamp': utc_now_offset_aware().isoformat(),
@@ -745,9 +737,15 @@ class AccountDeletionRequestAccountDeletionView(LoginRequiredMixin,
     def dispatch(self, request, *args, **kwargs):
         self.set_request_obj(self.kwargs.get('pk'))
 
-        if self.request_obj.status.name != 'Processing':
-            message = 'Request must be \"Processing\" to be ' \
-                      'eligible for submission.'
+        request_ready = \
+            self.request_obj.status.name == 'Processing' and \
+            self.request_obj.state['data_deletion']['status'] == 'Complete' and \
+            self.request_obj.state['project_removal']['status'] == 'Complete'
+
+        if not request_ready:
+            message = 'Request must be \"Processing\" and the Data Deletion ' \
+                      'and Project Removal steps must be complete for the ' \
+                      'Account Deletion step to be eligible for completion.'
             messages.error(self.request, message)
             return HttpResponseRedirect(
                 self.request_detail_url(self.request_obj.pk))
@@ -845,6 +843,11 @@ class AccountDeletionRequestCancellationView(LoginRequiredMixin,
             f'Account deletion request {self.request_obj.pk} has '
             f'been cancelled for the following reason: \"{justification}\".')
         messages.success(self.request, message)
+
+        email_strategy = SendEmailStrategy()
+        email_method = send_account_deletion_cancellation_notification_emails
+        email_args = (self.request.user, self.request_obj)
+        email_strategy.process_email(email_method, *email_args)
 
         return super().form_valid(form)
 
