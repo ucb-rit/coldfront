@@ -8,8 +8,19 @@
   <div class="card-body">
     {% if not user.is_superuser %}
       <p>
-        The request will wait in a queue for {{ remaining_days }} days before
-        system administrators process the request.
+        The request will wait in a queue for {{ waiting_period }} day(s) until
+        the waiting period is over on {{ request_obj.expiration|date:"M. d, Y" }}.
+      </p>
+      <p>
+        {% if request_obj.reason.name == 'LastProject' %}
+          While the request is queued, the request will be automatically cancelled
+          if you request to join a project, are added to a project, or request a
+          new project. You will not be able to make any new requests once the waiting period
+          of {{ waiting_period }} day(s) is over on {{ request_obj.expiration|date:"M. d, Y" }}.
+        {% else %}
+          While you have an active account deletion request, you cannot make any
+          requests in the portal.
+        {% endif %}
       </p>
       <p>
         After the request is complete, you will be removed from any remaining

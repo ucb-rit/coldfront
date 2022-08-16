@@ -44,12 +44,12 @@
                 <p>
                   <strong>Status:</strong>
                   This request is currently queued. Queued requests must wait a standard waiting period of
-                  {{ waiting_period }} before the request can be scheduled for processing.
+                  {{ waiting_period }} day(s) before the request can be scheduled for processing.
                 </p>
               {% elif status == 'Ready' %}
                 <p>
                   <strong>Status:</strong>
-                  This request has waited the standard waiting period of {{ waiting_period }} and is
+                  This request has waited the standard waiting period of {{ waiting_period }} day(s) and is
                   ready to be scheduled for processing. The request should be scheduled for processing
                   shortly. If it has been several days and the request status has not been updated,
                   please contact us at
@@ -198,10 +198,10 @@
       </div>
     </div>
   {% endif %}
-{% endblock %}
 
-<script>
-    $(document).ready(function() {
-        $('[data-toggle="popover"]').popover({html:true});
-    });
-</script>
+  <script>
+      $("#navbar-main > ul > li.active").removeClass("active");
+      $("#navbar-admin").addClass("active");
+      $("#navbar-allocation-cluster-account-deletion-requests").addClass("active");
+  </script>
+{% endblock %}

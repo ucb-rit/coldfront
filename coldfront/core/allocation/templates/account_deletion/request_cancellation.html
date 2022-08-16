@@ -39,4 +39,10 @@ Cancel Account Deletion Request: {{ user_str }} ({{ request_obj.user.username }}
   </div>
 </div>
 
+<script>
+    $("#navbar-main > ul > li.active").removeClass("active");
+    $("#navbar-admin").addClass("active");
+    $("#navbar-allocation-cluster-account-deletion-requests").addClass("active");
+</script>
+
 {% endblock %}

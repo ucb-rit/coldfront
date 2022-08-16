@@ -14,7 +14,7 @@
             To initiate a cluster account deletion request, click the "Delete" button and
             complete the subsequent form to confirm the request. Once a deletion 
             request is initiated, it must will be queued for a standard waiting period of
-            {{ waiting_period }}. After this period, the request will be reviewed and processed
+            {{ waiting_period }} day(s). After this period, the request will be reviewed and processed
             by system administrators.
         </td>
         <p></p>
@@ -49,9 +49,21 @@
                             <table class="table table-hover" style="width: 100%; height: 100%">
                                 <thead>
                                 <th scope="col" class="text-nowrap">#</th>
-                                <th scope="col" class="text-nowrap">First Name</th>
-                                <th scope="col" class="text-nowrap">Last Name</th>
-                                <th scope="col" class="text-nowrap">Email</th>
+                                <th scope="col" class="text-nowrap">
+                                  First Name
+                                  <a href="?order_by=user__first_name&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up"></i></a>
+                                  <a href="?order_by=user__first_name&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down"></i></a>
+                                </th>
+                                <th scope="col" class="text-nowrap">
+                                  Last Name
+                                  <a href="?order_by=user__last_name&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up"></i></a>
+                                  <a href="?order_by=user__last_name&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down"></i></a>
+                                </th>
+                                <th scope="col" class="text-nowrap">
+                                  Email
+                                  <a href="?order_by=user__email&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up"></i></a>
+                                  <a href="?order_by=user__email&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down"></i></a>
+                                </th>
                                 <th scope="col" class="text-nowrap">User Projects</th>
                                 <th scope="col" class="text-nowrap">Delete</th>
                                 </thead>
@@ -85,27 +97,33 @@
         </td>
     </tr>
 
-    <script>
-        $(document).on('click', '#form_reset_button', function() {
-            resetForm($('#filter_form'));
-        });
+  <script>
+      $(document).on('click', '#form_reset_button', function() {
+          resetForm($('#filter_form'));
+      });
 
-        function resetForm($form) {
-            $form.find('input:text, textarea').val('');
-        };
+      function resetForm($form) {
+          $form.find('input:text, textarea').val('');
+      };
 
-        $("#expand_button").click(function() {
+      $("#expand_button").click(function() {
 
-            $('#collapseOne').collapse();
-            icon = $("#plus_minus");
-            icon.toggleClass("fa-plus fa-minus");
+          $('#collapseOne').collapse();
+          icon = $("#plus_minus");
+          icon.toggleClass("fa-plus fa-minus");
 
-        });
-    </script>
+      });
+  </script>
 
-    <script>
-        $(function () {
-            $('[data-toggle="tooltip"]').tooltip()
-        })
-    </script>
+  <script>
+      $(function () {
+          $('[data-toggle="tooltip"]').tooltip()
+      })
+  </script>
+
+  <script>
+      $("#navbar-main > ul > li.active").removeClass("active");
+      $("#navbar-project").addClass("active");
+      $("#navbar-project-menu").addClass("active");
+  </script>
 {% endblock %}
