@@ -157,9 +157,6 @@ with flagged_paths('CLUSTER_ACCOUNTS_DELETABLE') as path:
         path('cluster-account-deletion-request/<int:pk>/data-deletion',
              account_deletion_views.AccountDeletionRequestDataDeletionView.as_view(),
              name='cluster-account-deletion-request-data-deletion'),
-        path('cluster-account-deletion-request/<int:pk>/user-data-deletion',
-             account_deletion_views.AccountDeletionUserDataDeletionFormView.as_view(),
-             name='cluster-account-deletion-request-user-data-deletion'),
         path('cluster-account-deletion-request/<int:pk>/account-deletion',
              account_deletion_views.AccountDeletionRequestAccountDeletionView.as_view(),
              name='cluster-account-deletion-request-account-deletion')
