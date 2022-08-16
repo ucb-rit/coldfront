@@ -13,11 +13,8 @@ Data Deletion: {{ user_str }} ({{ request_obj.user.username }})
 <hr>
 
 <p>
-  Please confirm that {{ user_str }}'s data has been deleted from the
-  cluster. Users are asked to confirm whether it is safe to delete their data.
-  If the user has not yet confirmed that it is safe to delete their data ,
-  you may override this behavior by clicking the submit button below
-  and confirming your intent in the popup.
+  Please confirm with {{ user_str }} that it is safe to delete their
+  data from the cluster and then perform that deletion.
 </p>
 <p>
   <strong>User Confirmation</strong>:
@@ -39,52 +36,10 @@ Data Deletion: {{ user_str }} ({{ request_obj.user.username }})
   </div>
   <div class="card-body">
     {{ form|crispy }}
-    {% if user_data_deletion_status == 'Complete' %}
-      <form action="" method="post">
-        {% csrf_token %}
-        <input class="btn btn-primary" type="submit" value="Submit" />
-      </form>
-    {% else %}
-      <div class="modal fade" id="submitModal" tabindex="-1" role="dialog" aria-labelledby="submit}ModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-          <form action="{% url 'cluster-account-deletion-request-data-deletion' request_obj.pk %}" method="post" id="submitForm">
-            {% csrf_token %}
-            <div class="modal-content">
-              <div class="modal-header">
-                <p class="modal-title">Override User Data Deletion</p>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-
-              <div class="modal-body">
-                <label>
-                  Users are supposed to confirm that they are ready to have their
-                  data deleted from the cluster. You may override this behavior, and
-                  confirm that the user's data has been deleted.
-                </label>
-
-                <br><b>User:</b> {{ user_str }}
-
-                <input type="hidden" value="Complete" name="status">
-              </div>
-
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button class="btn btn-primary" type="submit">
-                  <i class="fas fa-user-plus" aria-hidden="true"></i>
-                  Override
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <button class="btn btn-primary" data-toggle="modal" data-target="#submitModal">
-        Submit
-      </button>
-    {% endif %}
+    <form action="" method="post">
+      {% csrf_token %}
+      <input class="btn btn-primary" type="submit" value="Submit" />
+    </form>
     <a href="{% url 'cluster-account-deletion-request-detail' request_obj.pk %}" class="btn btn-secondary">
       Cancel
     </a>
