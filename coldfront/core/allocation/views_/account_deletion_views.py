@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.forms import formset_factory
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -75,6 +75,11 @@ class AccountDeletionRequestMixin(object):
         context['user_str'] = f'{self.request_obj.user.first_name} ' \
                               f'{self.request_obj.user.last_name}'
         context['user_projects'] = self.get_user_projects(self.request_obj.user)
+        if self.request_obj.reason.name in ['Admin', 'User']:
+            waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
+        else:
+            waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
+        context['waiting_period'] = waiting_period
 
 
 class AccountDeletionRequestFormView(LoginRequiredMixin,
@@ -155,6 +160,7 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
                               f'{self.user_obj.last_name}'
 
         context['back_url'] = self.return_url
+        context['waiting_period'] = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
 
         return context
 
@@ -184,9 +190,11 @@ class AccountDeletionRequestEligibleUsersView(LoginRequiredMixin,
         return False
 
     def get_queryset(self):
-        # TODO: ordery by
+        order_by = self.get_order_by()
+        order_by = 'user__username' if order_by == 'id' else order_by
+
         proj_eligible_users_to_delete = ProjectUser.objects.filter(
-            role__name='User').order_by('user__username')
+            role__name='User').order_by(order_by)
 
         # Users with pending deletion requests cannot have a new request made.
         users_with_pending_deletion_requests = \
@@ -197,7 +205,7 @@ class AccountDeletionRequestEligibleUsersView(LoginRequiredMixin,
         proj_eligible_users_to_delete = \
             proj_eligible_users_to_delete.exclude(
                 user__in=users_with_pending_deletion_requests).exclude(
-                user=self.request.user).order_by('user__username')
+                user=self.request.user)
 
         search_form = AccountDeletionEligibleUsersSearchForm(
             self.request.GET)
@@ -284,10 +292,11 @@ class AccountDeletionRequestListView(LoginRequiredMixin,
         return False
 
     def get_queryset(self):
+        order_by = self.get_order_by()
+
         request_search_form = AccountDeletionRequestSearchForm(
             self.request.GET)
         if request_search_form.is_valid():
-            # TODO: ordery by
             data = request_search_form.cleaned_data
             queryset = AccountDeletionRequest.objects.all()
 
@@ -316,7 +325,7 @@ class AccountDeletionRequestListView(LoginRequiredMixin,
                 status__name='Ready').order_by('created')
             self.status = 'Ready'
 
-        return queryset
+        return queryset.order_by(order_by)
 
     def get_context_data(self, **kwargs):
         kwargs.update({'search_form': AccountDeletionRequestSearchForm})
