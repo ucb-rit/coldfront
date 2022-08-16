@@ -2,7 +2,7 @@ Dear {{ user_str }},
 
 There is a new request to delete your cluster account with the following reason: {{ reason }}
 
-The request will wait in a queue for {{ waiting_period }} days before system administrators process the request.
+The request will wait in a queue for {{ waiting_period }} day(s) before system administrators process the request.
 
 After the request is complete, you will be removed from any remaining projects. You will lose access to the clusters. Your data will be deleted off of the cluster.
 
