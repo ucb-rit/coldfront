@@ -179,7 +179,7 @@ class AccountDeletionRequestRunner(object):
 
     def _send_notification_emails(self):
         """Sends emails to the user whose account is being deleted."""
-        email_args = (self.user_obj, self.request_obj, self.reason_obj)
+        email_args = (self.user_obj, self.request_obj)
         if self.reason_obj.name == 'Admin':
             self._email_strategy.process_email(
                 send_account_deletion_user_notification_emails,
@@ -197,85 +197,6 @@ class AccountDeletionRequestRunner(object):
                 *email_args)
 
         self._email_strategy.send_queued_emails()
-
-
-def send_account_deletion_user_notification_emails(user_obj,
-                                                   request_obj,
-                                                   reason_obj):
-    if reason_obj.name not in ['Admin', 'LastProject', 'BadPID']:
-        raise ValueError(f'Invalid reason {reason_obj.name} passed. '
-                         f'Must be either \"Admin\" or \"LastProject\"')
-
-    if settings.EMAIL_ENABLED:
-        subject = 'Cluster Account Deletion Request'
-        template = 'email/account_deletion/new_request_user.txt'
-        html_template = 'email/account_deletion/new_request_user.html'
-
-        if reason_obj.name == 'Admin':
-            waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
-        else:
-            waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
-
-        confirm_url = urljoin(settings.CENTER_BASE_URL,
-                              reverse(
-                                  'cluster-account-deletion-request-user-data-deletion',
-                                  kwargs={'pk': request_obj.pk}))
-
-        template_context = {
-            'user_str': f'{user_obj.first_name} {user_obj.last_name}',
-            'reason': request_obj.reason.description,
-            'confirm_url': confirm_url,
-            'waiting_period': waiting_period,
-            'center_help_email': settings.CENTER_HELP_EMAIL,
-            'signature': settings.EMAIL_SIGNATURE,
-        }
-
-        send_email_template(
-            subject,
-            template,
-            template_context,
-            settings.EMAIL_SENDER,
-            [user_obj.email],
-            cc=[user_obj.userprofile.host_user.email],
-            html_template=html_template)
-
-
-def send_account_deletion_admin_notification_emails(user_obj,
-                                                    request_obj,
-                                                    reason_obj):
-    if reason_obj.name not in ['User', 'LastProject', 'BadPID']:
-        raise ValueError(f'Invalid reason_obj {reason_obj} passed. '
-                         f'Must be either \"User\" or \"LastProject\"')
-
-    if settings.EMAIL_ENABLED:
-        subject = 'New Cluster Account Deletion Request'
-        template = 'email/account_deletion/new_request_admin.txt'
-        html_template = 'email/account_deletion/new_request_admin.html'
-
-        if reason_obj.name == 'User':
-            waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
-        else:
-            waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
-
-        review_url = urljoin(settings.CENTER_BASE_URL,
-                             reverse('cluster-account-deletion-request-detail',
-                                     kwargs={'pk': request_obj.pk}))
-
-        template_context = {
-            'user_str': f'{user_obj.first_name} {user_obj.last_name}',
-            'reason': request_obj.reason.description,
-            'review_url': review_url,
-            'waiting_period': waiting_period
-        }
-
-        send_email_template(
-            subject,
-            template,
-            template_context,
-            settings.EMAIL_SENDER,
-            settings.EMAIL_ADMIN_LIST,
-            cc=[user_obj.userprofile.host_user.email],
-            html_template=html_template)
 
 
 class AccountDeletionRequestCompleteRunner(object):
@@ -439,3 +360,112 @@ def send_account_deletion_complete_user_notification_emails(user_obj,
             settings.EMAIL_SENDER,
             [user_obj.email],
             cc=[user_obj.userprofile.host_user.email])
+
+
+def send_account_deletion_user_notification_emails(user_obj,
+                                                   request_obj):
+    if request_obj.reason.name not in ['Admin', 'LastProject', 'BadPID']:
+        raise ValueError(f'Invalid reason {request_obj.reason.name} passed. '
+                         f'Must be either \"Admin\" or \"LastProject\"')
+
+    if settings.EMAIL_ENABLED:
+        subject = 'Cluster Account Deletion Request'
+        template = 'email/account_deletion/new_request_user.txt'
+        html_template = 'email/account_deletion/new_request_user.html'
+
+        if request_obj.reason.name == 'Admin':
+            waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
+        else:
+            waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
+
+        confirm_url = urljoin(settings.CENTER_BASE_URL,
+                              reverse(
+                                  'cluster-account-deletion-request-user-data-deletion',
+                                  kwargs={'pk': request_obj.pk}))
+
+        template_context = {
+            'user_str': f'{user_obj.first_name} {user_obj.last_name}',
+            'reason': request_obj.reason.description,
+            'confirm_url': confirm_url,
+            'waiting_period': waiting_period,
+            'center_help_email': settings.CENTER_HELP_EMAIL,
+            'signature': settings.EMAIL_SIGNATURE,
+        }
+
+        send_email_template(
+            subject,
+            template,
+            template_context,
+            settings.EMAIL_SENDER,
+            [user_obj.email],
+            cc=[user_obj.userprofile.host_user.email],
+            html_template=html_template)
+
+
+def send_account_deletion_admin_notification_emails(user_obj,
+                                                    request_obj):
+    if request_obj.reason.name not in ['User', 'LastProject', 'BadPID']:
+        raise ValueError(f'Invalid reason {request_obj.reason.name} passed. '
+                         f'Must be either \"User\" or \"LastProject\"')
+
+    if settings.EMAIL_ENABLED:
+        subject = 'New Cluster Account Deletion Request'
+        template = 'email/account_deletion/new_request_admin.txt'
+        html_template = 'email/account_deletion/new_request_admin.html'
+
+        if request_obj.reason.name == 'User':
+            waiting_period = settings.ACCOUNT_DELETION_MANUAL_QUEUE_DAYS
+        else:
+            waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
+
+        review_url = urljoin(settings.CENTER_BASE_URL,
+                             reverse('cluster-account-deletion-request-detail',
+                                     kwargs={'pk': request_obj.pk}))
+
+        template_context = {
+            'user_str': f'{user_obj.first_name} {user_obj.last_name}',
+            'reason': request_obj.reason.description,
+            'review_url': review_url,
+            'waiting_period': waiting_period
+        }
+
+        send_email_template(
+            subject,
+            template,
+            template_context,
+            settings.EMAIL_SENDER,
+            settings.EMAIL_ADMIN_LIST,
+            cc=[user_obj.userprofile.host_user.email],
+            html_template=html_template)
+
+
+def send_account_deletion_cancellation_notification_emails(user_obj,
+                                                           request_obj):
+    if request_obj.status.name != 'Cancelled':
+        raise ValueError(f'Invalid status {request_obj.status.name} passed. '
+                         f'Must be \"Cancelled\"')
+
+    if settings.EMAIL_ENABLED:
+        subject = 'Cluster Account Deletion Request Cancelled'
+
+        if user_obj.is_superuser:
+            receiver = [request_obj.user.email]
+            template = 'email/account_deletion/request_cancellation_user.txt'
+        else:
+            receiver = settings.EMAIL_ADMIN_LIST
+            template = 'email/account_deletion/request_cancellation_admin.txt'
+
+        template_context = {
+            'user_str': f'{request_obj.user.first_name} '
+                        f'{request_obj.user.last_name}',
+            'center_help_email': settings.CENTER_HELP_EMAIL,
+            'signature': settings.EMAIL_SIGNATURE,
+            'justification': request_obj.state['other']['justification']
+        }
+
+        send_email_template(
+            subject,
+            template,
+            template_context,
+            settings.EMAIL_SENDER,
+            receiver)
