@@ -1,0 +1,2 @@
+The cluster account deletion request for User {{ user_str }} was cancelled by {{ user_str }} with the following justification:
+{{ justification }}

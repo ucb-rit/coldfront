@@ -1,0 +1,9 @@
+Dear {{ user_str }},
+
+The request to delete your cluster account was cancelled by a system administrator with the following justification:
+{{ justification }}
+
+If this is a mistake, or you have any questions, please contact us at {{ center_help_email }}.
+
+Thank you,
+{{ signature }}
