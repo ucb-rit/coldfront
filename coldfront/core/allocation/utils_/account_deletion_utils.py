@@ -378,15 +378,9 @@ def send_account_deletion_user_notification_emails(user_obj,
         else:
             waiting_period = settings.ACCOUNT_DELETION_AUTO_QUEUE_DAYS
 
-        confirm_url = urljoin(settings.CENTER_BASE_URL,
-                              reverse(
-                                  'cluster-account-deletion-request-user-data-deletion',
-                                  kwargs={'pk': request_obj.pk}))
-
         template_context = {
             'user_str': f'{user_obj.first_name} {user_obj.last_name}',
             'reason': request_obj.reason.description,
-            'confirm_url': confirm_url,
             'waiting_period': waiting_period,
             'center_help_email': settings.CENTER_HELP_EMAIL,
             'signature': settings.EMAIL_SIGNATURE,

@@ -130,8 +130,6 @@ class TestAccountDeletionRequestRunner(TestAccountDeletionBase):
     def _assert_user_email(self, request, email):
         email_body = ['After the request is complete, you will be removed '
                       'from any remaining projects. You will lose access',
-                      'If you do not confirm, system administrators may '
-                      'delete your data before you have ',
                       'If this is a mistake, or you have any '
                       'questions, please contact us at',
                       request.reason.description]
@@ -213,7 +211,7 @@ class TestAccountDeletionRequestCompleteRunner(TestAccountDeletionBase):
             reason=AccountDeletionRequestReasonChoice.objects.get(name='Admin'),
             expiration=utc_now_offset_aware())
 
-        self.complete_request_checklist(self.request)
+        self.complete_request_checklist()
 
         ProjectUser.objects.all().delete()
 
