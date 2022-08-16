@@ -89,11 +89,20 @@ class TestAccountDeletionBase(TestBase):
         self.client.login(username=user.username, password=self.password)
         return self.client.post(url, data)
 
-    def complete_request_checklist(self, request):
+    def change_request_status(self, status_name):
+        self.request.status = \
+            AccountDeletionRequestStatusChoice.objects.get(name=status_name)
+        self.request.save()
+
+    def change_request_reason(self, reason_name):
+        self.request.reason = \
+            AccountDeletionRequestReasonChoice.objects.get(name=reason_name)
+        self.request.save()
+
+    def complete_request_checklist(self):
         completed_state = {'status': 'Complete',
                            'timestamp': utc_now_offset_aware().isoformat()}
-        request.state['project_removal'] = completed_state
-        request.state['user_data_deletion'] = completed_state
-        request.state['data_deletion'] = completed_state
-        request.state['account_deletion'] = completed_state
-        request.save()
+        self.request.state['project_removal'] = completed_state
+        self.request.state['data_deletion'] = completed_state
+        self.request.state['account_deletion'] = completed_state
+        self.request.save()
