@@ -129,12 +129,12 @@ class AccountDeletionRequestFormView(LoginRequiredMixin,
 
             if reason.name == 'User':
                 message = f'You successfully requested to delete your ' \
-                          f'cluster account. Please complete the checklist ' \
+                          f'cluster account. You may view details here ' \
                           f'<a href="{confirm_url}">here</a>.'
             else:
                 message = f'You successfully requested to delete ' \
                           f'{self.user_obj.username}\'s cluster account. ' \
-                          f'Please complete the checklist ' \
+                          f'You may view details here ' \
                           f'<a href="{confirm_url}">here</a>.'
             messages.success(self.request, mark_safe(message))
 
