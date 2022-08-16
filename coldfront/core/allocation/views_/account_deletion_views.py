@@ -18,8 +18,7 @@ from coldfront.config import settings
 from coldfront.core.allocation.forms_.account_deletion_forms import \
     AccountDeletionRequestForm, AccountDeletionRequestSearchForm, \
     AccountDeletionEligibleUsersSearchForm, AccountDeletionProjectRemovalForm, \
-    UpdateStatusForm, AccountDeletionUserDataDeletionConfirmation, \
-    AccountDeletionCancelRequestForm
+    UpdateStatusForm, AccountDeletionCancelRequestForm
 from coldfront.core.allocation.models import \
     (AccountDeletionRequest,
      AccountDeletionRequestStatusChoice,
@@ -382,6 +381,15 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
 
+        context['user_is_allowed_to_cancel'] = \
+            self.request.user == self.request_obj.user and \
+            self.request_obj.status.name in ['Queued', 'Ready'] and \
+            self.request_obj.reason.name == 'User'
+
+        context['admin_is_allowed_to_cancel'] = \
+            self.request.user.is_superuser and \
+            self.request_obj.status.name in ['Queued', 'Ready']
+
         return context
 
     def get_checklist(self):
@@ -428,18 +436,6 @@ class AccountDeletionRequestDetailView(LoginRequiredMixin,
                 projects_removed and data_deleted,
                 reverse(
                     'cluster-account-deletion-request-account-deletion',
-                    kwargs={'pk': pk})
-            ])
-
-        if self.request.user == self.request_obj.user:
-            user_data_deletion = state['user_data_deletion']
-            checklist.append([
-                'Confirm that it is safe to delete your data.',
-                user_data_deletion['status'],
-                user_data_deletion['timestamp'],
-                True,
-                reverse(
-                    'cluster-account-deletion-request-user-data-deletion',
                     kwargs={'pk': pk})
             ])
 
@@ -719,67 +715,12 @@ class AccountDeletionRequestDataDeletionView(LoginRequiredMixin,
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         self.set_context_data(context)
-        context['user_data_deletion_status'] = \
-            self.request_obj.state['user_data_deletion']['status']
-        context['user_data_deletion_timestamp'] = \
-            self.request_obj.state['user_data_deletion']['timestamp']
         return context
 
     def get_initial(self):
         initial = super().get_initial()
         initial['status'] = self.request_obj.state['data_deletion']['status']
         return initial
-
-    def get_success_url(self):
-        return self.request_detail_url(self.kwargs.get('pk'))
-
-
-class AccountDeletionUserDataDeletionFormView(LoginRequiredMixin,
-                                              UserPassesTestMixin,
-                                              AccountDeletionRequestMixin,
-                                              FormView):
-    form_class = AccountDeletionUserDataDeletionConfirmation
-    template_name = 'account_deletion/user_data_deletion.html'
-    login_url = '/'
-
-    def test_func(self):
-        """UserPassesTestMixin tests."""
-        if self.request.user == self.request_obj.user or \
-                self.request.user.is_superuser:
-            return True
-        message = 'You do not have permission to view the previous page.'
-        messages.error(self.request, message)
-        return False
-
-    def dispatch(self, request, *args, **kwargs):
-        self.set_request_obj(self.kwargs.get('pk'))
-
-        if self.request_obj.status.name not in ['Ready', 'Processing']:
-            message = 'Request must be \"Ready\" or \"Processing\".'
-            messages.error(self.request, message)
-            return HttpResponseRedirect(
-                self.request_detail_url(self.request_obj.pk))
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        self.request_obj.state['user_data_deletion'] = {
-            'status': 'Complete',
-            'timestamp': utc_now_offset_aware().isoformat(),
-        }
-        self.request_obj.save()
-
-        message = (
-            f'You confirmed that you have moved/deleted '
-            f'your data from the cluster.')
-        messages.success(self.request, message)
-
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        self.set_context_data(context)
-        return context
 
     def get_success_url(self):
         return self.request_detail_url(self.kwargs.get('pk'))
@@ -877,6 +818,14 @@ class AccountDeletionRequestCancellationView(LoginRequiredMixin,
             messages.error(self.request, message)
             return HttpResponseRedirect(
                 self.request_detail_url(self.request_obj.pk))
+
+        if self.request_obj.user == self.request.user:
+            if self.request_obj.reason.name != 'User':
+                message = 'You can only cancel account deletion requests that ' \
+                          'you initially requested.'
+                messages.error(self.request, message)
+                return HttpResponseRedirect(
+                    self.request_detail_url(self.request_obj.pk))
 
         return super().dispatch(request, *args, **kwargs)
 
