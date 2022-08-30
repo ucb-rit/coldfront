@@ -19,9 +19,7 @@ from http import HTTPStatus
 """A test suite for the /cluster_access_requests/ endpoints, divided
 by method."""
 
-SERIALIZER_FIELDS = (
-    'id', 'status', 'completion_time',
-    'billing_activity', 'allocation_user')
+SERIALIZER_FIELDS = ('id', 'status', 'completion_time', 'allocation_user')
 
 BASE_URL = '/api/cluster_access_requests/'
 
@@ -257,7 +255,7 @@ class TestUpdatePatchClusterAccessRequests(TestClusterAccessRequestsBase):
 
         self._refresh_objects()
         self.assertEqual(self.request0.status.name, status)
-        self.assertTrue(pre_time < self.request0.completion_time < post_time)
+        self.assertTrue(pre_time <= self.request0.completion_time <= post_time)
         self.assertTrue(self._get_cluster_account_status_attr(self.allocation_user0).exists())
         self.assertEqual(self._get_cluster_account_status_attr(self.allocation_user0).first().value,
                          attr_status)
