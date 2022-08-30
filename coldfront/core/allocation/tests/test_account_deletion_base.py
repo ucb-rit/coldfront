@@ -32,8 +32,7 @@ class TestAccountDeletionBase(TestBase):
 
         self.user.userprofile.cluster_uid = '11223344'
         billing_project = BillingProject.objects.create(
-            identifier='123456',
-            description='Test description.')
+            identifier='123456')
         self.user.userprofile.billing_activity = \
             BillingActivity.objects.create(identifier='123',
                                            billing_project=billing_project)
