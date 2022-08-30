@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('allocation', '0011_clusteraccessrequest_clusteraccessrequeststatuschoice_historicalclusteraccessrequest'),
+        ('allocation', '0011_cluster_access_request'),
     ]
 
     operations = [

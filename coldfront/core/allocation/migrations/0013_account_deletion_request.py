@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('allocation', '0011_clusteraccessrequest'),
+        ('allocation', '0012_cluster_access_request_remove_host_user_and_billing_activity'),
     ]
 
     operations = [
