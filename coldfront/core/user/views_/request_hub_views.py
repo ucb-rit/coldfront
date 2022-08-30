@@ -12,7 +12,8 @@ from coldfront.core.allocation.models import (AllocationAttributeType,
                                               SecureDirAddUserRequest,
                                               SecureDirRemoveUserRequest,
                                               SecureDirRequest,
-                                              ClusterAccessRequest)
+                                              ClusterAccessRequest,
+                                              AccountDeletionRequest)
 from coldfront.core.allocation.utils import annotate_queryset_with_allocation_period_not_started_bool
 from coldfront.core.project.models import (ProjectUserRemovalRequest,
                                            SavioProjectAllocationRequest,
@@ -575,21 +576,72 @@ class RequestHubView(LoginRequiredMixin,
 
         return secure_dir_request_object
 
+    def get_account_deletion_request(self):
+        """Populates a RequestListItem with data for account deletion
+        requests."""
+        account_deletion_request_object = RequestListItem()
+        user = self.request.user
+
+        account_deletion_pending = AccountDeletionRequest.objects.filter(
+            status__name__in=['Queued', 'Ready', 'Processing']).order_by('modified')
+
+        account_deletion_complete = AccountDeletionRequest.objects.filter(
+            status__name__in=['Complete', 'Cancelled']).order_by('modified')
+
+        if not self.show_all_requests:
+            account_deletion_pending = \
+                account_deletion_pending.filter(user=user)
+
+            account_deletion_complete = \
+                account_deletion_complete.filter(user=user)
+
+        account_deletion_request_object.num = self.paginators
+        account_deletion_request_object.pending_queryset = \
+            self.create_paginator(account_deletion_pending)
+
+        account_deletion_request_object.complete_queryset = \
+            self.create_paginator(account_deletion_complete)
+
+        account_deletion_request_object.num_pending = \
+            account_deletion_pending.count()
+
+        account_deletion_request_object.title = \
+            'Account Deletion Requests'
+        account_deletion_request_object.table = \
+            'account_deletion/request_list_table.html'
+        account_deletion_request_object.button_path = \
+            'cluster-account-deletion-request-list'
+        account_deletion_request_object.button_text = \
+            'Go To Account Deletion Requests Main Page'
+        account_deletion_request_object.id = \
+            'account_deletion_request_section'
+        account_deletion_request_object.help_text = \
+            'Showing account deletion requests.'
+
+        return account_deletion_request_object
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         requests = ['cluster_account_request',
                     'project_removal_request',
                     'savio_project_request',
-                    'vector_project_request',
                     'project_join_request',
-                    'project_renewal_request',
-                    'su_purchase_request']
+                    'project_renewal_request']
+
+        if flag_enabled('BRC_ONLY'):
+            requests += ['vector_project_request']
+
+        if flag_enabled('SERVICE_UNITS_PURCHASABLE'):
+            requests += ['su_purchase_request']
 
         if flag_enabled('SECURE_DIRS_REQUESTABLE'):
             requests += ['secure_dir_request',
                          'secure_dir_join_request',
                          'secure_dir_remove_request']
+
+        if flag_enabled('CLUSTER_ACCOUNTS_DELETABLE'):
+            requests += ['account_deletion_request']
 
         context['show_all'] = ((self.request.user.is_superuser or
                                 self.request.user.is_staff) and

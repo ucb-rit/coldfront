@@ -46,6 +46,13 @@
     </div>
   </div>
 
+  {% flag_enabled 'CLUSTER_ACCOUNTS_DELETABLE' as cluster_accounts_deletable %}
+  {% if cluster_accounts_deletable %}
+    {% with request_obj=account_deletion_request_obj %}
+      {% include 'request_hub/request_section.html' %}
+    {% endwith %}
+  {% endif %}
+
   {% with request_obj=cluster_account_request_obj %}
     {% include 'request_hub/request_section.html' %}
   {% endwith %}
