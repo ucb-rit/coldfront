@@ -30,7 +30,8 @@ from coldfront.core.allocation.models import (Allocation,
                                               AllocationUserStatusChoice,
                                               AllocationUser,
                                               SecureDirRequestStatusChoice,
-                                              SecureDirRequest)
+                                              SecureDirRequest,
+                                              AccountDeletionRequest)
 from coldfront.core.allocation.utils import has_cluster_access
 from coldfront.core.allocation.utils_.secure_dir_utils import \
     get_secure_dir_manage_user_request_objects, secure_dir_request_state_status, \
@@ -124,6 +125,13 @@ class SecureDirManageUsersView(LoginRequiredMixin,
                     allocation=alloc_obj,
                     status__name__in=['Pending',
                                       'Processing']))
+
+        # Excluding users that have active account deletion requests.
+        users_to_exclude |= \
+            set(request.user for request in
+                AccountDeletionRequest.objects.filter(
+                    status__name__in=['Queued', 'Ready', 'Processing']
+                ))
 
         users_to_add -= users_to_exclude
 

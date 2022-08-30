@@ -1,6 +1,8 @@
 from coldfront.core.allocation.models import AllocationAdditionRequest
 from coldfront.core.allocation.models import AllocationAdditionRequestStatusChoice
 from coldfront.core.allocation.utils import get_project_compute_allocation
+from coldfront.core.allocation.utils_.account_deletion_utils import \
+    can_make_requests
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectRechargeExtraFieldsForm
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import savio_project_request_recharge_extra_fields_schema
@@ -118,6 +120,14 @@ class AllocationAdditionRequestLandingView(LoginRequiredMixin,
             message = 'You must sign the User Access Agreement.'
             messages.error(self.request, message)
             return False
+
+        if not can_make_requests(self.request.user):
+            message = (
+                'You may not request additional SUs if you have an active '
+                'account deletion request or your account was deleted.')
+            messages.error(self.request, message)
+            return False
+
         if is_user_manager_or_pi_of_project(user, self.project_obj):
             return True
         message = 'You must be an active PI or manager of the Project.'
@@ -266,6 +276,14 @@ class AllocationAdditionRequestView(LoginRequiredMixin, UserPassesTestMixin,
             message = 'You must sign the User Access Agreement.'
             messages.error(self.request, message)
             return False
+
+        if not can_make_requests(self.request.user):
+            message = (
+                'You may not request additional SUs if you have an active '
+                'account deletion request or your account was deleted.')
+            messages.error(self.request, message)
+            return False
+
         if is_user_manager_or_pi_of_project(user, self.project_obj):
             return True
         message = 'You must be an active PI or manager of the Project.'

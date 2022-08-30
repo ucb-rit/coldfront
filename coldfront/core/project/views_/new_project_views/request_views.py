@@ -1,5 +1,7 @@
 from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationStatusChoice
+from coldfront.core.allocation.utils_.account_deletion_utils import \
+    can_make_requests
 from coldfront.core.project.forms_.new_project_forms.request_forms import ComputingAllowanceForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectAllocationPeriodForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectDetailsForm
@@ -58,6 +60,14 @@ class ProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
             return True
         if access_agreement_signed(self.request.user):
             return True
+
+        if not can_make_requests(self.request.user):
+            message = (
+                'You may not request a new project if you have an active '
+                'account deletion request or your account was deleted.')
+            messages.error(self.request, message)
+            return False
+
         message = (
             'You must sign the User Access Agreement before you can create a '
             'new project.')
@@ -82,6 +92,14 @@ class NewProjectRequestLandingView(LoginRequiredMixin, UserPassesTestMixin,
             return True
         if access_agreement_signed(self.request.user):
             return True
+
+        if not can_make_requests(self.request.user):
+            message = (
+                'You may not request a new project if you have an active '
+                'account deletion request or your account was deleted.')
+            messages.error(self.request, message)
+            return False
+
         message = (
             'You must sign the User Access Agreement before you can create a '
             'new project.')
@@ -616,6 +634,13 @@ class VectorProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
 
         if self.request.user.has_perms('project.view_vectorprojectallocationrequest'):
             return True
+
+        if not can_make_requests(self.request.user):
+            message = (
+                'You may not request a new project if you have an active '
+                'account deletion request or your account was deleted.')
+            messages.error(self.request, message)
+            return False
 
         signed_date = (
             self.request.user.userprofile.access_agreement_signed_date)

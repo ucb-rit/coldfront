@@ -19,11 +19,14 @@ from django.views.generic.edit import FormView
 from coldfront.core.allocation.models import (Allocation,
                                               AllocationStatusChoice,
                                               AllocationUserAttribute,
-                                              AllocationUserStatusChoice)
+                                              AllocationUserStatusChoice,
+                                              AccountDeletionRequest)
 from coldfront.core.allocation.utils import get_allocation_user_cluster_access_status
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.allocation.utils import get_project_compute_resource_name
 # from coldfront.core.grant.models import Grant
+from coldfront.core.allocation.utils_.account_deletion_utils import \
+    can_make_requests
 from coldfront.core.allocation.utils_.secure_dir_utils import \
     pi_eligible_to_request_secure_dir
 from coldfront.core.project.forms import (ProjectAddUserForm,
@@ -49,6 +52,7 @@ from coldfront.core.project.utils_.renewal_utils import is_any_project_pi_renewa
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.user.forms import UserSearchForm
+from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import CombinedUserSearch, access_agreement_signed
 from coldfront.core.utils.common import (get_domain_url, import_from_settings)
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
@@ -746,8 +750,22 @@ class ProjectAddUsersSearchResultsView(LoginRequiredMixin, UserPassesTestMixin, 
 
         project_obj = get_object_or_404(Project, pk=pk)
 
-        users_to_exclude = [ele.user.username for ele in project_obj.projectuser_set.filter(
-            status__name__in=['Pending - Add', 'Active'])]
+        users_to_exclude = set([ele.user.username for ele in project_obj.projectuser_set.filter(
+            status__name__in=['Pending - Add', 'Active'])])
+
+        # Exclude users with active account deletion requests that were not
+        # created because the user left their last project.
+        active_account_deletions = AccountDeletionRequest.objects.filter(
+            status__name__in=['Queued', 'Ready', 'Processing']).exclude(
+            reason__name='LastProject')
+        users_to_exclude.add(
+            [request.user.username for request in active_account_deletions])
+
+        # Exclude users who have deleted accounts.
+        deleted_users = UserProfile.objects.filter(
+            is_deleted=True).values_list(
+            'user__username', flat=True)
+        users_to_exclude.add(list(deleted_users))
 
         cobmined_user_search_obj = CombinedUserSearch(
             user_search_string, search_by, users_to_exclude)
@@ -1041,6 +1059,16 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
             message = (
                 f'User {username} has not signed the User Access Agreement. '
                 f'Please ensure that the User has done so first.')
+            messages.error(request, message)
+            return False
+
+        # A user with active account deletion requests or a deleted
+        # account cannot be added.
+        user_obj = User.objects.get(username=username)
+        if can_make_requests(user_obj):
+            message = (
+                f'User {username} has an active account deletion request '
+                f'or their account was deleted.')
             messages.error(request, message)
             return False
 
