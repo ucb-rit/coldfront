@@ -2,6 +2,7 @@ import datetime
 import logging
 from urllib.parse import urljoin
 
+from django.contrib.auth.models import User
 from django.db import transaction
 from django.urls import reverse
 
@@ -463,3 +464,27 @@ def send_account_deletion_cancellation_notification_emails(user_obj,
             template_context,
             settings.EMAIL_SENDER,
             receiver)
+
+
+def account_deletion_can_make_requests(user_obj):
+    """Returns True if the user has an account deletion that was created
+    when the user left their last project and the request is Queued or Ready.
+
+    Returns False if the user has an active account deletion or if the
+    user's account is deleted."""
+    if not isinstance(user_obj, User):
+        raise TypeError(f'Unexpected type {type(user_obj)} for {user_obj}.')
+
+    user_requests = AccountDeletionRequest.objects.filter(user=user_obj)
+
+    last_project_request = user_requests.filter(
+        status__name__in=['Queued', 'Ready'],
+        reason__name='LastProject')
+
+    if last_project_request.exists():
+        return True
+
+    deletion_requests = user_requests.filter(
+        status__name__in=['Queued', 'Ready', 'Processing'])
+
+    return not (deletion_requests.exists() or user_obj.userprofile.is_deleted)
