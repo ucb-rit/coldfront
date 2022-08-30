@@ -13,7 +13,7 @@ from django.views.generic.base import TemplateView
 from flags.state import flag_enabled
 
 from coldfront.core.allocation.utils_.account_deletion_utils import \
-    can_make_requests
+    account_deletion_can_make_requests
 from coldfront.core.project.forms import ProjectSearchForm
 from coldfront.core.project.forms import ProjectSelectHostUserForm
 from coldfront.core.project.models import Project
@@ -46,7 +46,7 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         project_users = project_obj.projectuser_set.filter(user=user_obj)
         reason = self.request.POST.get('reason')
 
-        if not can_make_requests(self.request.user):
+        if not account_deletion_can_make_requests(self.request.user):
             message = (
                 'You may not request to join new project if you have an active '
                 'account deletion request or your account was deleted.')
@@ -193,7 +193,7 @@ class ProjectJoinListView(ProjectListView, UserPassesTestMixin):
             messages.error(self.request, message)
             return False
 
-        if not can_make_requests(self.request.user):
+        if not account_deletion_can_make_requests(self.request.user):
             message = (
                 'You may not request to join new project if you have an active '
                 'account deletion request or your account was deleted.')

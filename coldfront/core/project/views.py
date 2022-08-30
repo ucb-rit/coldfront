@@ -26,7 +26,7 @@ from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.allocation.utils import get_project_compute_resource_name
 # from coldfront.core.grant.models import Grant
 from coldfront.core.allocation.utils_.account_deletion_utils import \
-    can_make_requests
+    account_deletion_can_make_requests
 from coldfront.core.allocation.utils_.secure_dir_utils import \
     pi_eligible_to_request_secure_dir
 from coldfront.core.project.forms import (ProjectAddUserForm,
@@ -1065,7 +1065,7 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
         # A user with active account deletion requests or a deleted
         # account cannot be added.
         user_obj = User.objects.get(username=username)
-        if can_make_requests(user_obj):
+        if account_deletion_can_make_requests(user_obj):
             message = (
                 f'User {username} has an active account deletion request '
                 f'or their account was deleted.')
