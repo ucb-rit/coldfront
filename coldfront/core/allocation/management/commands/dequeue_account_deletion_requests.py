@@ -7,12 +7,12 @@ import logging
 
 from coldfront.core.utils.common import utc_now_offset_aware
 
-"""An admin command that dequeues ClusterAcctDeletionRequests whose expiration
+"""An admin command that dequeues AccountDeletionRequests whose expiration
  dates have passed."""
 
 
 class Command(BaseCommand):
-    help = 'Dequeues ClusterAcctDeletionRequests whose expiration dates have ' \
+    help = 'Dequeues AccountDeletionRequests whose expiration dates have ' \
            'passed. Sets the requests status to Ready.'
     logger = logging.getLogger(__name__)
 
