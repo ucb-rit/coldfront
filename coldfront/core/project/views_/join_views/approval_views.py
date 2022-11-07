@@ -19,6 +19,7 @@ from django.views.generic.base import TemplateView
 
 from flags.state import flag_enabled
 
+from coldfront.core.billing.utils.queries import is_project_billing_id_required_and_missing
 from coldfront.core.project.forms import JoinRequestSearchForm
 from coldfront.core.project.forms import ProjectReviewUserJoinForm
 from coldfront.core.project.models import Project
@@ -53,8 +54,15 @@ class ProjectReviewJoinRequestsView(LoginRequiredMixin, UserPassesTestMixin,
             pk=self.kwargs.get('pk'))
         self.redirect = HttpResponseRedirect(
             reverse('project-detail', kwargs={'pk': self.project_obj.pk}))
-        if self.project_obj.status.name not in ['Active', 'New', ]:
+        if self.project_obj.status.name not in ['Active', 'Inactive', 'New', ]:
             message = 'You cannot review join requests to an archived project.'
+            messages.error(request, message)
+            return self.redirect
+        if is_project_billing_id_required_and_missing(self.project_obj):
+            message = (
+                f'Project {self.project_obj.name} does not have a LBL Project '
+                f'ID for billing. You cannot review join requests until one '
+                f'is set.')
             messages.error(request, message)
             return self.redirect
         self.users_to_review = self._get_users_to_review()
@@ -115,10 +123,10 @@ class ProjectReviewJoinRequestsView(LoginRequiredMixin, UserPassesTestMixin,
         num_reviews = 0
         failed_usernames = []
         for form in formset:
-            num_reviews += 1
             user_form_data = form.cleaned_data
             if not user_form_data['selected']:
                 continue
+            num_reviews += 1
             username = user_form_data.get('username')
             user_obj = User.objects.get(username=username)
             project_user_obj = self.project_obj.projectuser_set.get(

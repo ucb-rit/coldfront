@@ -4,7 +4,6 @@ from flags.state import flag_enabled
 from coldfront.api.statistics.utils import get_accounting_allocation_objects
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.utils import get_project_compute_resource_name
-from coldfront.core.allocation.utils import review_cluster_access_requests_url
 from coldfront.core.allocation.utils_.accounting_utils import set_service_units
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
@@ -164,7 +163,6 @@ def send_project_join_request_denial_email(project, project_user):
 
     send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_body)
 
-
 def send_new_cluster_access_request_notification_email(project, project_user):
     """Send an email to admins notifying them of a new cluster access
     request from the given ProjectUser under the given Project."""
@@ -188,7 +186,6 @@ def send_new_cluster_access_request_notification_email(project, project_user):
     sender = settings.EMAIL_SENDER
     receiver_list = settings.EMAIL_ADMIN_LIST
     send_email_template(subject, plain_body, context, sender, receiver_list, html_template=html_body)
-
 
 def deactivate_project_and_allocation(project, change_reason=None):
     """For the given Project, perform the following:

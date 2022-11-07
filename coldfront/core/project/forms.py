@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectUserRoleChoice)
-from coldfront.core.user.utils import eligible_host_project_users
+from coldfront.core.user.utils_.host_user_utils import eligible_host_project_users
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.resource.utils import get_compute_resource_names
 
@@ -24,7 +24,7 @@ class ProjectSearchForm(forms.Form):
     """
     LAST_NAME = 'Last Name (PI)'
     USERNAME = 'Username (PI)'
-    FIELD_OF_SCIENCE = 'UCB Campus Division or Department'
+    FIELD_OF_SCIENCE = 'Division or Department'
     PROJECT_TITLE = 'Project Title'
     PROJECT_NAME = 'Project Name'
     CLUSTER_NAME = 'Cluster Name'
