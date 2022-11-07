@@ -20,23 +20,25 @@ from django.views.generic import ListView, TemplateView
 from django.views.generic.edit import CreateView, FormView, UpdateView
 
 from coldfront.core.allocation.forms import (AllocationAccountForm,
-                                             AllocationAddUserForm,
-                                             AllocationAttributeDeleteForm,
-                                             AllocationForm,
-                                             AllocationInvoiceNoteDeleteForm,
-                                             AllocationInvoiceUpdateForm,
-                                             AllocationRemoveUserForm,
-                                             AllocationReviewUserForm,
-                                             AllocationSearchForm,
-                                             AllocationUpdateForm)
-from coldfront.core.allocation.models import (Allocation, AllocationAccount,
-                                              AllocationAttribute,
-                                              AllocationAttributeType,
-                                              AllocationStatusChoice,
-                                              AllocationUser,
-                                              AllocationUserAttribute,
-                                              AllocationUserNote,
-                                              AllocationUserStatusChoice)
+                                AllocationAddUserForm,
+                                AllocationAttributeDeleteForm,
+                                AllocationClusterAccountRequestActivationForm,
+                                AllocationForm,
+                                AllocationInvoiceNoteDeleteForm,
+                                AllocationInvoiceUpdateForm,
+                                AllocationRemoveUserForm,
+                                AllocationReviewUserForm,
+                                AllocationSearchForm,
+                                AllocationUpdateForm)
+from coldfront.core.allocation.models import (Allocation,
+                                AllocationAccount,
+                                AllocationAttribute,
+                                AllocationAttributeType,
+                                AllocationStatusChoice,
+                                AllocationUser,
+                                AllocationUserAttribute,
+                                AllocationUserNote,
+                                AllocationUserStatusChoice)
 from coldfront.core.allocation.signals import (allocation_activate_user,
                                                allocation_remove_user)
 from coldfront.core.allocation.utils import (generate_guauge_data_from_usage,
