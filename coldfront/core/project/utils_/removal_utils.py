@@ -146,8 +146,7 @@ class ProjectRemovalRequestRunner(object):
                 template_context,
                 email_sender,
                 email_admin_list,
-                html_template='email/project_removal/project_removal_admin.html,
-                email_admin_list)
+                html_template='email/project_removal/project_removal_admin.html')
 
 
 class ProjectRemovalRequestProcessingRunner(object):
