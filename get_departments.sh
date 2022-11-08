@@ -17,17 +17,17 @@ sudo -u postgres psql -d cf_brc_db -c \
     WHERE pu.role_id=3 AND ea.email LIKE '%berkeley.edu'" | \
     grep -v 'email.*first_name.*last_name' | grep -v '^[-+]*$' | \
     while read line; do
-        email=$(echo $line | cut -d'|' -f1 | xargs echo)
-        first_name=$(echo $line | cut -d'|' -f2 | xargs echo)
-        last_name=$(echo $line | cut -d'|' -f3 | xargs echo)
+        email=$(echo $line | cut -d'|' -f1 | xargs -0 echo)
+        first_name=$(echo $line | cut -d'|' -f2 | xargs -0 echo)
+        last_name=$(echo $line | cut -d'|' -f3 | xargs -0 echo)
         dept=''
         dept_name=''
 
         while read line; do
             if [[ $(echo $line | grep berkeleyEduPrimaryDeptUnit | wc -l) -gt 0 ]]; then
-                dept=$(echo $line | cut -d' ' -f2- | xargs echo)
+                dept=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
             elif [[ $(echo $line | grep berkeleyEduUnitHRDeptName | wc -l) -gt 0 ]]; then
-                dept_name=$(echo $line | cut -d' ' -f2- | xargs echo)
+                dept_name=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
             fi
         done < <(ldapsearch -LLL -H ldaps://ldap.berkeley.edu \
                    -x -D "ou=people,dc=berkeley,dc=edu" \
@@ -38,9 +38,9 @@ sudo -u postgres psql -d cf_brc_db -c \
         if [[ "$dept" == "" || "$dept_name" == "" ]]; then
             while read line; do
                 if [[ $(echo $line | grep berkeleyEduPrimaryDeptUnit | wc -l) -gt 0 ]]; then
-                    dept=$(echo $line | cut -d' ' -f2- | xargs echo)
+                    dept=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
                 elif [[ $(echo $line | grep berkeleyEduUnitHRDeptName | wc -l) -gt 0 ]]; then
-                    dept_name=$(echo $line | cut -d' ' -f2- | xargs echo)
+                    dept_name=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
                 fi
             done < <(ldapsearch -LLL -H ldaps://ldap.berkeley.edu \
                        -x -D "ou=people,dc=berkeley,dc=edu" \
@@ -58,6 +58,6 @@ sudo -u postgres psql -d cf_brc_db -c \
         fi
         
         if [[ "$dept" != "" || "$dept_name" != "" ]]; then
-            echo -e "$email\t\t$first_name\t\t$last_name\t\t${dept:-NOT FOUND}\t\t${dept_name:-NOT FOUND}"
+            echo -e "$email\t\t$first_name\t\t$last_nAMe\t\t${dept:-NOT FOUND}\t\t${dept_name:-NOT FOUND}"
         fi
     done
