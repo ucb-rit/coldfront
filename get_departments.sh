@@ -58,6 +58,6 @@ sudo -u postgres psql -d cf_brc_db -c \
         fi
         
         if [[ "$dept" != "" || "$dept_name" != "" ]]; then
-            echo -e "$email\t\t$first_name\t\t$last_nAMe\t\t${dept:-NOT FOUND}\t\t${dept_name:-NOT FOUND}"
+            echo -e "$email\t\t$first_name\t\t$last_name\t\t${dept:-NOT FOUND}\t\t${dept_name:-NOT FOUND}"
         fi
     done
