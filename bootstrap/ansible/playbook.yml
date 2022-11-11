@@ -302,15 +302,76 @@
                 state: started
                 enabled: yes
 
-            - name: Permit http and https traffic in public zone
+            - name: Permit http traffic in public zone
               ansible.posix.firewalld:
                 zone: public
-                service: "{{ item }}"
+                service: http
                 state: enabled
                 permanent: yes
-              loop:
-                - http
-                - https
+
+            - name: Run Cloudflare Tasks
+              block:
+                # 443/tcp should only be allowed in Cloudflare IP ranges.
+                # https://commons.lbl.gov/pages/viewpage.action?pageId=203489943
+                - name: Do not permit https traffic in public zone
+                  ansible.posix.firewalld:
+                    zone: public
+                    service: https
+                    state: disabled
+                    permanent: yes
+
+                - name: Deny 443/tcp in public zone
+                  ansible.posix.firewalld:
+                    zone: public
+                    port: 443/tcp
+                    state: disabled
+                    permanent: yes
+
+                - name: Create firewalld zone for Cloudflare IP ranges
+                  ansible.posix.firewalld:
+                    zone: cloudflare
+                    state: present
+                    permanent: yes
+
+                # Firewalld must be reloaded after zone transactions.
+                # https://docs.ansible.com/ansible/latest/collections/ansible/posix/firewalld_module.html#notes
+                - name: Reload firewalld service
+                  service:
+                    name: firewalld
+                    state: reloaded
+
+                - name: Add Cloudflare IP ranges to Cloudflare zone
+                  ansible.posix.firewalld:
+                    zone: cloudflare
+                    source: "{{ item }}"
+                    permanent: yes
+                    state: enabled
+                  loop: "{{ cloudflare_ip_ranges }}"
+
+                - name: Permit http and https traffic in Cloudflare zone
+                  ansible.posix.firewalld:
+                    zone: cloudflare
+                    service: "{{ item }}"
+                    state: enabled
+                    permanent: yes
+                  loop:
+                    - http
+                    - https
+
+                # Log the original client IP address of each request instead of the Cloudflare IP.
+                # Source: https://support.cloudflare.com/hc/en-us/articles/200170786-Restoring-original-visitor-IPs#C5XWe97z77b3XZV
+                - name: Update httpd combined LogFormat in accordance with mod_remoteip
+                  lineinfile:
+                    path: /etc/httpd/conf/httpd.conf
+                    regexp: '^    LogFormat .+ combined$'
+                    line: '    LogFormat "%a %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined'
+
+              when: cloudflare_enabled
+
+            - name: Reload firewalld service
+              service:
+                name: firewalld
+                state: reloaded
 
           when: flag_lrc_enabled
 
