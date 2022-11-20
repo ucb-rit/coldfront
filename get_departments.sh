@@ -21,39 +21,42 @@ sudo -u postgres psql -d cf_brc_db -c \
         email=$(echo $line | cut -d'|' -f1 | xargs -0 echo)
         first_name=$(echo $line | cut -d'|' -f2 | xargs -0 echo)
         last_name=$(echo $line | cut -d'|' -f3 | xargs -0 echo)
-        dept=''
-        dept_name=''
-        dept_num=''
-
-        while read line; do
-            if [[ $(echo $line | grep berkeleyEduPrimaryDeptUnit | wc -l) -gt 0 ]]; then
-                dept=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
-            elif [[ $(echo $line | grep berkeleyEduUnitHRDeptName | wc -l) -gt 0 ]]; then
-                dept_name=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
-            elif [[ $(echo $line | grep departmentNumber | wc -l) -gt 0 ]]; then
-                dept_num=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+        dept_unit=""
+        dept_name=""
+        dept_num=""
+        for ou in "people" "advcon people" "guests" "expired people"; do
+            if [[ "$dept_unit" == "" ]]; then
+                while read line; do
+                    if [[ $(echo $line | grep berkeleyEduPrimaryDeptUnit | wc -l) -gt 0 ]]; then
+                        dept=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+                    elif [[ $(echo $line | grep berkeleyEduUnitHRDeptName | wc -l) -gt 0 ]]; then
+                        dept_name=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+                    elif [[ $(echo $line | grep departmentNumber | wc -l) -gt 0 ]]; then
+                        dept_num=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+                    fi
+                done < <(ldapsearch -LLL -H ldaps://ldap.berkeley.edu \
+                        -x -D "ou=$ou,dc=berkeley,dc=edu" \
+                        "(&(objectClass=person)(mail=$email))" \
+                        berkeleyEduPrimaryDeptUnit berkeleyEduUnitHRDeptName \
+                        departmentNumber | grep -v '^$' | grep -v '^dn:')
             fi
-        done < <(ldapsearch -LLL -H ldaps://ldap.berkeley.edu \
-                   -x -D "ou=people,dc=berkeley,dc=edu" \
-                   "(&(objectClass=person)(mail=$email))" \
-                   berkeleyEduPrimaryDeptUnit berkeleyEduUnitHRDeptName \
-                   departmentNumber | grep -v '^$' | grep -v '^dn:')
 
-        if [[ "$dept" == "" || "$dept_name" == "" ]]; then
-            while read line; do
-                if [[ $(echo $line | grep berkeleyEduPrimaryDeptUnit | wc -l) -gt 0 ]]; then
-                    dept=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
-                elif [[ $(echo $line | grep berkeleyEduUnitHRDeptName | wc -l) -gt 0 ]]; then
-                    dept_name=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
-                elif [[ $(echo $line | grep departmentNumber | wc -l) -gt 0 ]]; then
-                    dept_num=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
-                fi
-            done < <(ldapsearch -LLL -H ldaps://ldap.berkeley.edu \
-                       -x -D "ou=people,dc=berkeley,dc=edu" \
-                       "(&(objectClass=person)(givenName=$first_name)(sn=$last_name))" \
-                       berkeleyEduPrimaryDeptUnit berkeleyEduUnitHRDeptName \
-                       departmentNumber | grep -v '^$' | grep -v '^dn:')
-        fi
+            if [[ "$dept_unit" == "" ]]; then
+                while read line; do
+                    if [[ $(echo $line | grep berkeleyEduPrimaryDeptUnit | wc -l) -gt 0 ]]; then
+                        dept=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+                    elif [[ $(echo $line | grep berkeleyEduUnitHRDeptName | wc -l) -gt 0 ]]; then
+                        dept_name=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+                    elif [[ $(echo $line | grep departmentNumber | wc -l) -gt 0 ]]; then
+                        dept_num=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+                    fi
+                done < <(ldapsearch -LLL -H ldaps://ldap.berkeley.edu \
+                        -x -D "ou=$ou,dc=berkeley,dc=edu" \
+                        "(&(objectClass=person)(givenName=$first_name)(sn=$last_name))" \
+                        berkeleyEduPrimaryDeptUnit berkeleyEduUnitHRDeptName \
+                        departmentNumber | grep -v '^$' | grep -v '^dn:')
+            fi
+        done
 
         email="${email##*( )}"
         email="${email%%*( )}"
@@ -61,9 +64,11 @@ sudo -u postgres psql -d cf_brc_db -c \
         first_name="${first_name%%*( )}"
         last_name="${last_name##*( )}"
         last_name="${last_name%%*( )}"
-        dept="${dept##*( )}"
-        dept="${dept%%*( )}"
+        dept_unit="${dept_unit##*( )}"
+        dept_unit="${dept_unit%%*( )}"
         dept_name="${dept_name##*( )}"
         dept_name="${dept_name%%*( )}"
+        dept_num="${dept_num##*( )}"
+        dept_num="${dept_num%%*( )}"
         echo "$email,$first_name,$last_name,$dept,$dept_name,$dept_num"
     done
