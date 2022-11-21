@@ -1,6 +1,7 @@
+#!/usr/bin/env bash
 shopt -s extglob
 echo -n "email,first_name,last_name,dept_unit,dept_unit_hierarchy,"
-echo "dept_unit_desc,dept_num,dept_num_hierarchy,dept_num_desc,dept_name"
+echo "dept_unit_desc,dept_num,dept_num_hierarchy,dept_num_desc"
 sudo -u postgres psql -d cf_brc_db -c \
     "SELECT ea.email, au.first_name, au.last_name \
     FROM project_projectuser AS pu INNER JOIN auth_user AS au ON \
@@ -13,11 +14,11 @@ sudo -u postgres psql -d cf_brc_db -c \
         last_name=$(echo $line | cut -d'|' -f3 | xargs -0 echo)
         dept_unit=""
         dept_name=""
-        dept_num=""
         dept_unit_hierarchy=""
         dept_unit_desc=""
-        dept_num_hierarchy=""
-        dept_num_desc=""
+        dept_num=()
+        dept_num_hierarchy=()
+        dept_num_desc=()
 
         for filter in "(mail=$email)" "(givenName=$first_name)(sn=$last_name)"; do
             while read line; do
@@ -26,7 +27,10 @@ sudo -u postgres psql -d cf_brc_db -c \
                 elif [[ $(echo $line | grep berkeleyEduUnitHRDeptName | wc -l) -gt 0 ]]; then
                     dept_name=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
                 elif [[ $(echo $line | grep departmentNumber | wc -l) -gt 0 ]]; then
-                    dept_num=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+                    var="$(echo $line | cut -d' ' -f2- | xargs -0 echo)"
+                    var="${var##*( )}"
+                    var="${var%%*( )}"
+                    dept_num+=("$var")
                 fi
             done < <(ldapsearch -LLL -H ldaps://ldap.berkeley.edu \
                     -x -D "ou=,dc=berkeley,dc=edu" \
@@ -39,16 +43,34 @@ sudo -u postgres psql -d cf_brc_db -c \
         done
 
         if [[ "$dept_unit" != "" ]]; then
-            for type in "unit" "num"; do
+            while read line; do
+                if [[ $(echo $line | grep berkeleyEduOrgUnitHierarchyString | wc -l) -gt 0 ]]; then
+                    dept_unit_hierarchy="$(echo $line | cut -d' ' -f2- | xargs -0 echo)"
+                elif [[ $(echo $line | grep description | wc -l) -gt 0 ]]; then
+                    dept_unit_desc="$(echo $line | cut -d' ' -f2- | xargs -0 echo)"
+                fi
+            done < <(ldapsearch -LLL -H ldaps://ldap.berkeley.edu \
+                    -x -D "ou=people,dc=berkeley,dc=edu" \
+                    "(&(objectClass=organizationalunit)(ou=$dept_unit))" \
+                    berkeleyEduOrgUnitHierarchyString description \
+                    | grep -v '^$' | grep -v '^dn:')
+            
+            for num in $dept_num; do
                 while read line; do
                     if [[ $(echo $line | grep berkeleyEduOrgUnitHierarchyString | wc -l) -gt 0 ]]; then
-                        eval "dept_${type}_hierarchy=\"$(echo $line | cut -d' ' -f2- | xargs -0 echo)\""
+                        var=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+                        var="${var##*( )}"
+                        var="${var%%*( )}"
+                        dept_num_hierarchy+=("$var")
                     elif [[ $(echo $line | grep description | wc -l) -gt 0 ]]; then
-                        eval "dept_${type}_desc=\"$(echo $line | cut -d' ' -f2- | xargs -0 echo)\""
+                        var=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+                        var="${var##*( )}"
+                        var="${var%%*( )}"
+                        dept_num_desc+=("$var")
                     fi
                 done < <(ldapsearch -LLL -H ldaps://ldap.berkeley.edu \
                         -x -D "ou=people,dc=berkeley,dc=edu" \
-                        "(&(objectClass=organizationalunit)(ou=$(eval echo "\$dept_${type}")))" \
+                        "(&(objectClass=organizationalunit)(ou=$num))" \
                         berkeleyEduOrgUnitHierarchyString description \
                         | grep -v '^$' | grep -v '^dn:')
             done
@@ -60,7 +82,13 @@ sudo -u postgres psql -d cf_brc_db -c \
             eval "$var=\"\${$var##*( )}\""
             eval "$var=\"\${$var%%*( )}\""
         done
+
+        IFS=","
         echo -n "$email,$first_name,$last_name,"
-        echo -n "$dept_unit,$dept_unit_hierarchy,$dept_unit_desc,"
-        echo "$dept_num,$dept_num_hierarchy,$dept_num_desc,$dept_name"
+        echo -n "$dept_unit,$dept_unit_hierarchy,$dept_unit_desc"
+        if [[ "$dept_num" != "" ]]; then
+            echo ",\"$dept_num\",\"$dept_num_hierarchy\",\"$dept_num_desc\""
+        else
+            echo ",,,"
+        fi
     done
