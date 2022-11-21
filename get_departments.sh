@@ -1,5 +1,6 @@
 shopt -s extglob
-echo "email,first_name,last_name,dept_unit,dept_unit_hierarchy,dept_unit_desc,dept_num,dept_num_hierarchy,dept_num_desc,dept_name"
+echo -n "email,first_name,last_name,dept_unit,dept_unit_hierarchy,"
+echo "dept_unit_desc,dept_num,dept_num_hierarchy,dept_num_desc,dept_name"
 sudo -u postgres psql -d cf_brc_db -c \
     "SELECT ea.email, au.first_name, au.last_name \
     FROM project_projectuser AS pu INNER JOIN auth_user AS au ON \
@@ -59,5 +60,7 @@ sudo -u postgres psql -d cf_brc_db -c \
             eval "$var=\"\${$var##*( )}\""
             eval "$var=\"\${$var%%*( )}\""
         done
-        echo "$email,$first_name,$last_name,$dept_unit,$dept_unit_hierarchy,$dept_unit_desc,$dept_num,$dept_num_hierarchy,$dept_num_desc,$dept_name"
+        echo -n "$email,$first_name,$last_name,"
+        echo -n "$dept_unit,$dept_unit_hierarchy,$dept_unit_desc,"
+        echo "$dept_num,$dept_num_hierarchy,$dept_num_desc,$dept_name"
     done
