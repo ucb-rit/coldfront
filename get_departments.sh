@@ -55,13 +55,12 @@ sudo -u postgres psql -d cf_brc_db -c \
                     berkeleyEduOrgUnitHierarchyString description \
                     | grep -v '^$' | grep -v '^dn:')
             
-            for num in $dept_num; do
-                while read line; do
-                    if [[ $(echo $line | grep berkeleyEduOrgUnitHierarchyString | wc -l) -gt 0 ]]; then
-                        var=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
+            for num in "${dept_num[@]}"; do
+                while read line; do if [[ $(echo $line | grep berkeleyEduOrgUnitHierarchyString | wc -l) -gt 0 ]]; then var=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
                         var="${var##*( )}"
                         var="${var%%*( )}"
                         dept_num_hierarchy+=("$var")
+                        echo ${dept_num_hierarchy[@]}
                     elif [[ $(echo $line | grep description | wc -l) -gt 0 ]]; then
                         var=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
                         var="${var##*( )}"
@@ -83,12 +82,25 @@ sudo -u postgres psql -d cf_brc_db -c \
             eval "$var=\"\${$var%%*( )}\""
         done
 
-        IFS=","
         echo -n "$email,$first_name,$last_name,"
-        echo -n "$dept_unit,$dept_unit_hierarchy,$dept_unit_desc"
-        if [[ "$dept_num" != "" ]]; then
-            echo ",\"$dept_num\",\"$dept_num_hierarchy\",\"$dept_num_desc\""
-        else
-            echo ",,,"
-        fi
+        echo -n "$dept_unit,$dept_unit_hierarchy,$dept_unit_desc,\""
+        delim=""
+        for j in "${dept_num[@]}"; do
+            echo -n "$delim$j"
+            delim=","
+        done
+        echo -n "\",\""
+        delim=""
+        for j in "${dept_num_hierarchy[@]}"; do
+            echo -n "$delim$j"
+            delim=","
+        done
+        echo -n "\",\""
+        delim=""
+        for j in "${dept_num_desc[@]}"; do
+            echo -n "$delim$j"
+            delim=","
+        done
+        echo -n "\""
+        echo
     done
