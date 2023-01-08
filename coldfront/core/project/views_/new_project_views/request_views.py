@@ -377,12 +377,15 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
     def show_pi_department_form_condition(self):
         # TODO
+        return False
         step_name = 'new_pi'
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        print(cleaned_data)
-        conn = self.__user_ldap_search(cleaned_data['email'], cleaned_data['first_name'], cleaned_data['last_name'])
-        return flag_enabled('USER_DEPARTMENTS_ENABLED') and not conn.result
+        self.logger.error(str(cleaned_data))
+        if cleaned_data:
+            conn = self.__user_ldap_search(cleaned_data['email'], cleaned_data['first_name'], cleaned_data['last_name'])
+            return flag_enabled('USER_DEPARTMENTS_ENABLED') and not conn.result
+        return False
 
     def show_pool_allocations_form_condition(self):
         step_name = 'computing_allowance'
