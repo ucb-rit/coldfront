@@ -21,6 +21,8 @@ CENTER_PROJECT_RENEWAL_HELP_URL = CENTER_BASE_URL + '/help'
 
 EMAIL_PORT = 1025
 EMAIL_SUBJECT_PREFIX = '[MyBRC-User-Portal]'
+# A list of admin email addresses to be notified about new requests and other
+# events.
 EMAIL_ADMIN_LIST = ['admin@localhost']
 EMAIL_SENDER = 'test@test.test'
 EMAIL_TICKET_SYSTEM_ADDRESS = 'help@localhost'
@@ -68,6 +70,13 @@ SESSION_COOKIE_SECURE = False
 
 CILOGON_APP_CLIENT_ID = ''
 CILOGON_APP_SECRET = ''
+
+#------------------------------------------------------------------------------
+# django debug toolbar settings
+#------------------------------------------------------------------------------
+
+# IP addresses other than 127.0.0.1 that can view the django debug toolbar.
+EXTRA_INTERNAL_IPS = []
 
 #------------------------------------------------------------------------------
 # django-flags settings
