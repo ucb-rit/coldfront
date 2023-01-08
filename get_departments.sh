@@ -7,7 +7,7 @@ sudo -u postgres psql -d cf_brc_db -c \
     FROM project_projectuser AS pu INNER JOIN auth_user AS au ON \
      pu.user_id=au.id INNER JOIN user_emailaddress AS ea ON au.id = ea.user_id \
     WHERE pu.role_id=3 AND ea.email LIKE '%berkeley.edu'" | \
-    grep -v 'email.*first_name.*last_name' | grep -v '^[-+]*$' | \
+    grep -v 'email.*first_name.*last_name' | grep -v '^[-+]*$' | sort | uniq | \
     while read line; do
         email=$(echo $line | cut -d'|' -f1 | xargs -0 echo)
         first_name=$(echo $line | cut -d'|' -f2 | xargs -0 echo)
@@ -33,7 +33,7 @@ sudo -u postgres psql -d cf_brc_db -c \
                     dept_num+=("$var")
                 fi
             done < <(ldapsearch -LLL -H ldaps://ldap.berkeley.edu \
-                    -x -D "ou=,dc=berkeley,dc=edu" \
+                    -x -D "ou=people,dc=berkeley,dc=edu" \
                     "(&(objectClass=person)$filter)" \
                     berkeleyEduPrimaryDeptUnit berkeleyEduUnitHRDeptName \
                     departmentNumber | grep -v '^$' | grep -v '^dn:')
@@ -60,7 +60,6 @@ sudo -u postgres psql -d cf_brc_db -c \
                         var="${var##*( )}"
                         var="${var%%*( )}"
                         dept_num_hierarchy+=("$var")
-                        echo ${dept_num_hierarchy[@]}
                     elif [[ $(echo $line | grep description | wc -l) -gt 0 ]]; then
                         var=$(echo $line | cut -d' ' -f2- | xargs -0 echo)
                         var="${var##*( )}"

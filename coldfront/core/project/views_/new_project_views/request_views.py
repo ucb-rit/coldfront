@@ -8,6 +8,7 @@ from coldfront.core.project.forms_.new_project_forms.request_forms import SavioP
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectExistingPIForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectICAExtraFieldsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectNewPIForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPIDepartmentForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPoolAllocationsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPooledProjectSelectionForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectRechargeExtraFieldsForm
@@ -49,6 +50,7 @@ from django.views.generic.edit import FormView
 from flags.state import flag_enabled
 from formtools.wizard.views import SessionWizardView
 
+from ldap3 import Server, Connection, SAFE_SYNC
 import logging
 
 
@@ -123,6 +125,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         ('allocation_period', SavioProjectAllocationPeriodForm),
         ('existing_pi', SavioProjectExistingPIForm),
         ('new_pi', SavioProjectNewPIForm),
+        ('pi_department', SavioProjectPIDepartmentForm),
         ('ica_extra_fields', SavioProjectICAExtraFieldsForm),
         ('recharge_extra_fields', SavioProjectRechargeExtraFieldsForm),
         ('pool_allocations', SavioProjectPoolAllocationsForm),
@@ -160,6 +163,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         SavioProjectAllocationPeriodForm,
         SavioProjectExistingPIForm,
         SavioProjectNewPIForm,
+        SavioProjectPIDepartmentForm,
         SavioProjectICAExtraFieldsForm,
         SavioProjectRechargeExtraFieldsForm,
         SavioProjectPoolAllocationsForm,
@@ -200,6 +204,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         required_keys_by_step_name = {
             'allocation_period': ['computing_allowance'],
             'existing_pi': ['computing_allowance', 'allocation_period'],
+            'pi_department': ['departments'],
             'pooled_project_selection': ['computing_allowance'],
             'details': ['computing_allowance'],
             'survey': ['computing_allowance'],
@@ -316,12 +321,13 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         return {
             '1': view.show_allocation_period_form_condition,
             '3': view.show_new_pi_form_condition,
-            '4': view.show_ica_extra_fields_form_condition,
-            '5': view.show_recharge_extra_fields_form_condition,
-            '6': view.show_pool_allocations_form_condition,
-            '7': view.show_pooled_project_selection_form_condition,
-            '8': view.show_details_form_condition,
-            '9': view.show_billing_id_form_condition,
+            '4': view.show_pi_department_form_condition,
+            '5': view.show_ica_extra_fields_form_condition,
+            '6': view.show_recharge_extra_fields_form_condition,
+            '7': view.show_pool_allocations_form_condition,
+            '8': view.show_pooled_project_selection_form_condition,
+            '9': view.show_details_form_condition,
+            '10': view.show_billing_id_form_condition,
         }
 
     def show_allocation_period_form_condition(self):
@@ -368,6 +374,15 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         return cleaned_data.get('PI', None) is None
+
+    def show_pi_department_form_condition(self):
+        # TODO
+        step_name = 'new_pi'
+        step = str(self.step_numbers_by_form_name[step_name])
+        cleaned_data = self.get_cleaned_data_for_step(step) or {}
+        print(cleaned_data)
+        conn = self.__user_ldap_search(cleaned_data['email'], cleaned_data['first_name'], cleaned_data['last_name'])
+        return flag_enabled('USER_DEPARTMENTS_ENABLED') and not conn.result
 
     def show_pool_allocations_form_condition(self):
         step_name = 'computing_allowance'
@@ -465,6 +480,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         # Create a new User object intended to be a new PI.
         step_number = self.step_numbers_by_form_name['new_pi']
         data = form_data[step_number]
+
         try:
             email = data['email']
             pi = User.objects.create(
@@ -486,9 +502,38 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             raise e
         pi_profile.middle_name = data['middle_name']
         pi_profile.upgrade_request = utc_now_offset_aware()
-        pi_profile.save()
 
+        conn = self.__user_ldap_search(data['email'], data['first_name'], data['last_name'])
+        if conn.result:
+            # self.department_found = True
+            # TODO
+            #departments = department_search.result
+            #pi_profile.department.add(Department.objects.get(name__in=departments))
+            pass
+        else:
+            # self.department_found = False
+            pass
+
+        pi_profile.save()
         return pi
+
+    def __user_ldap_search(self, email, first_name, last_name):
+        conn = Connection('ldap.berkeley.edu', auto_bind=True)
+        conn.search('ou=people,dc=berkeley,dc=edu',
+                    f'(&(objectClass=person)(mail={email}))',
+                    attributes=['departmentNumber']) or \
+        conn.search('ou=people,dc=berkeley,dc=edu',
+                    '(&(objectClass=person)'
+                    f'(givenName={first_name})(sn={last_name}))',
+                    attributes=['departmentNumber'])
+        return conn
+
+    def __handle_pi_department(self, form_data):
+        """Store the User-provided PI LDAP search in the given dictionary
+        to be used during request creation."""
+        step_number = self.step_numbers_by_form_name['new_pi_department']
+        data = form_data[step_number]
+
 
     def __handle_recharge_allowance(self, form_data,
                                     computing_allowance_wrapper,

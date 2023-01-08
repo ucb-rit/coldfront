@@ -1,5 +1,6 @@
 from coldfront.core.allocation.forms import AllocationPeriodChoiceField
 from coldfront.core.allocation.models import AllocationPeriod
+from coldfront.core.department.models import Department
 from coldfront.core.project.forms import DisabledChoicesSelectWidget
 from coldfront.core.project.models import Project
 from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses
@@ -24,6 +25,7 @@ from django.core.validators import MinLengthValidator
 from django.core.validators import MinValueValidator
 from django.core.validators import RegexValidator
 from django.db.models import Q
+from django.db.models import QuerySet
 from django.forms.widgets import TextInput
 from django.utils.safestring import mark_safe
 
@@ -242,6 +244,17 @@ class SavioProjectNewPIForm(forms.Form):
                     'New PI must be an LBL employee with an LBL email.')
 
         return email
+
+class SavioProjectPIDepartmentForm(forms.Form):
+    '''Form prompting for the primary department of a new PI. If one department
+    is found, have it selected by default. If multiple departments are found,
+    have the user select from them. Otherwise, have the user select from a list
+    of all departments.
+    '''
+    departments = forms.ModelMultipleChoiceField(
+        label='Department',
+        queryset=Department.objects.all(),
+        required=True) 
 
 
 class SavioProjectExtraFieldsForm(forms.Form):

@@ -19,6 +19,8 @@ CENTER_BASE_URL = '{{ full_host_path }}'
 CENTER_HELP_URL = CENTER_BASE_URL + '/help'
 CENTER_PROJECT_RENEWAL_HELP_URL = CENTER_BASE_URL + '/help'
 
+DEPARTMENT_DISPLAY_NAME = '{{ department_display_name }}'
+
 EMAIL_PORT = {{ email_port }}
 EMAIL_SUBJECT_PREFIX = '{{ email_subject_prefix }}'
 EMAIL_ADMIN_LIST = ['admin@{{ hostname }}']
@@ -153,6 +155,7 @@ FLAGS = {
     'SECURE_DIRS_REQUESTABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': {{ flag_sso_enabled }}}],
+    'USER_DEPARTMENTS_ENABLED': [{'condition': 'boolean', 'value': {{ flag_user_departments_enabled }}}],
 }
 
 #------------------------------------------------------------------------------

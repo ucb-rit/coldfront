@@ -1,4 +1,5 @@
 from coldfront.core.billing.models import BillingActivity
+from coldfront.core.department.models import Department
 from django.contrib.auth.models import User
 from django.core.validators import EmailValidator
 from django.core.validators import MinLengthValidator
@@ -43,6 +44,19 @@ class UserProfile(models.Model):
 
     history = HistoricalRecords()
 
+    departments = models.ManyToManyField(Department, through='UserDepartment')
+
+class UserDepartment(models.Model):
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    is_authoritative = models.BooleanField(default=False)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        return f'{self.user_profile.user.username}-{self.department.acronym}'
+
+    class Meta:
+        unique_together = ('user_profile', 'department')
 
 class EmailAddress(models.Model):
     user = models.ForeignKey(
