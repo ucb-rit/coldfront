@@ -2,6 +2,8 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
+from coldfront.core.department.models import Department
+from coldfront.core.department.models import UserDepartment
 from coldfront.core.project.forms_.new_project_forms.request_forms import ComputingAllowanceForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectAllocationPeriodForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectDetailsForm
@@ -34,6 +36,7 @@ from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.ldap import ldap_search_user
+from coldfront.core.utils.ldap import get_L4_code_from_department_code
 
 from django.conf import settings
 from django.contrib import messages
@@ -376,15 +379,12 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         return cleaned_data.get('PI', None) is None
 
     def show_pi_department_form_condition(self):
-        # TODO
-        return False
         step_name = 'new_pi'
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        self.logger.error(str(cleaned_data))
         if cleaned_data:
-            conn = self.__user_ldap_search(cleaned_data['email'], cleaned_data['first_name'], cleaned_data['last_name'])
-            return flag_enabled('USER_DEPARTMENTS_ENABLED') and not conn.result
+            conn = ldap_search_user(cleaned_data['email'], cleaned_data['first_name'], cleaned_data['last_name'])
+            return flag_enabled('USER_DEPARTMENTS_ENABLED') and not conn.entries
         return False
 
     def show_pool_allocations_form_condition(self):
@@ -478,46 +478,53 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         step_number = self.step_numbers_by_form_name['existing_pi']
         data = form_data[step_number]
         if data['PI']:
-            return data['PI']
-
-        # Create a new User object intended to be a new PI.
-        step_number = self.step_numbers_by_form_name['new_pi']
-        data = form_data[step_number]
-
-        try:
-            email = data['email']
-            pi = User.objects.create(
-                username=email,
-                first_name=data['first_name'],
-                last_name=data['last_name'],
-                email=email,
-                is_active=False)
-        except IntegrityError as e:
-            self.logger.error(f'User {email} unexpectedly exists.')
-            raise e
-
-        # Set the user's middle name in the UserProfile; generate a PI request.
-        try:
+            pi = data['PI']
             pi_profile = pi.userprofile
-        except UserProfile.DoesNotExist as e:
-            self.logger.error(
-                f'User {email} unexpectedly has no UserProfile.')
-            raise e
-        pi_profile.middle_name = data['middle_name']
-        pi_profile.upgrade_request = utc_now_offset_aware()
-
-        conn = ldap_search_user(data['email'], data['first_name'], data['last_name'])
-        if conn.result:
-            # self.department_found = True
-            # TODO
-            #departments = department_search.result
-            #pi_profile.department.add(Department.objects.get(name__in=departments))
-            pass
+            # return PI if user already has departments
+            if UserDepartment.objects.filter(userprofile=pi_profile, is_authoritative=True).exists():
+                return pi
         else:
-            # self.department_found = False
-            pass
+            # Create a new User object intended to be a new PI.
+            step_number = self.step_numbers_by_form_name['new_pi']
+            data = form_data[step_number]
 
-        pi_profile.save()
+            try:
+                email = data['email']
+                pi = User.objects.create(
+                    username=email,
+                    first_name=data['first_name'],
+                    last_name=data['last_name'],
+                    email=email,
+                    is_active=False)
+            except IntegrityError as e:
+                self.logger.error(f'User {email} unexpectedly exists.')
+                raise e
+
+            # Set user's middle name in the UserProfile; generate a PI request.
+            try:
+                pi_profile = pi.userprofile
+            except UserProfile.DoesNotExist as e:
+                self.logger.error(
+                    f'User {email} unexpectedly has no UserProfile.')
+                raise e
+            pi_profile.middle_name = data['middle_name']
+            pi_profile.upgrade_request = utc_now_offset_aware()
+            pi_profile.save()
+
+        # Set the user's authoritative departments in the UserProfile.
+        for department_code in data['ldap_departments']:
+            department_code = get_L4_code_from_department_code(department_code)
+            department = Department.objects.get(code=department_code)
+            UserDepartment.objects.get_or_create(userprofile=pi_profile,
+                department=department,
+                is_authoritative=True)
+
+        step_number = self.step_numbers_by_form_name['pi_department']
+        data = form_data[step_number]
+        for department in data['departments']:
+            UserDepartment.objects.get_or_create(userprofile=pi_profile,
+                department=department,
+                is_authoritative=False)
         return pi
 
     def __handle_pi_department(self, form_data):
@@ -640,6 +647,12 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary.update({
                     'breadcrumb_pi': (
                         f'New PI: {first_name} {last_name} ({email})')
+                })
+                conn = ldap_search_user(email, first_name, last_name)
+                dictionary.update({
+                    'ldap_departments': \
+                        conn.entries[0].departmentNumber.values if \
+                            conn.entries else []
                 })
 
         pool_allocations_step = \
