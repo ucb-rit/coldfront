@@ -136,8 +136,7 @@
 
         - name: Install Redis
           yum:
-            name:
-              - redis
+            name: redis
             state: present
 
         - name: Set Redis password
@@ -149,8 +148,7 @@
 
         - name: Install Supervisor
           yum:
-            name:
-              - supervisor
+            name: supervisor
             state: present
 
         # ini_file is included in community.general.
@@ -476,6 +474,15 @@
     - name: Run Staging Provisioning Tasks
       block:
         # Don't do anything as there aren't any provisioning-specific tasks yet.
+        - meta: noop
+      # Uncomment when tasks are added.
+      # when: provisioning_tasks == true and deployment == "staging"
+      tags: provisioning
+
+    # Development only provisioning tasks.
+    - name: Run Development Provisioning Tasks
+      block:
+
         - name: Install vim
           yum:
             name: vim
@@ -483,20 +490,10 @@
 
         - name: Modify .bashrc to start in application directory by default
           lineinfile:
-            path: ~/.bashrc
+            path: /home/{{ djangooperator }}/.bashrc
             line: cd {{ git_prefix }}/{{ reponame }} && source ../venv/bin/activate
 
-      # Uncomment when tasks are added.
-      when: provisioning_tasks == true and deployment == "staging"
-      tags: provisioning
-
-    # Development only provisioning tasks.
-    - name: Run Development Provisioning Tasks
-      block:
-        # Don't do anything as there aren't any development-specific tasks yet.
-        - meta: noop
-      # Uncomment when tasks are added.
-      # when: provisioning_tasks == true and deployment == "dev"
+      when: provisioning_tasks == true and deployment == "dev"
       tags: provisioning
 
     # Non-provisioning tasks common to development and production.

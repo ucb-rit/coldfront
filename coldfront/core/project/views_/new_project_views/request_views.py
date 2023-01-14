@@ -33,6 +33,7 @@ from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.ldap import ldap_search_user
 
 from django.conf import settings
 from django.contrib import messages
@@ -50,7 +51,6 @@ from django.views.generic.edit import FormView
 from flags.state import flag_enabled
 from formtools.wizard.views import SessionWizardView
 
-from ldap3 import Server, Connection, SAFE_SYNC
 import logging
 
 
@@ -506,7 +506,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         pi_profile.middle_name = data['middle_name']
         pi_profile.upgrade_request = utc_now_offset_aware()
 
-        conn = self.__user_ldap_search(data['email'], data['first_name'], data['last_name'])
+        conn = ldap_search_user(data['email'], data['first_name'], data['last_name'])
         if conn.result:
             # self.department_found = True
             # TODO
@@ -519,17 +519,6 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
         pi_profile.save()
         return pi
-
-    def __user_ldap_search(self, email, first_name, last_name):
-        conn = Connection('ldap.berkeley.edu', auto_bind=True)
-        conn.search('ou=people,dc=berkeley,dc=edu',
-                    f'(&(objectClass=person)(mail={email}))',
-                    attributes=['departmentNumber']) or \
-        conn.search('ou=people,dc=berkeley,dc=edu',
-                    '(&(objectClass=person)'
-                    f'(givenName={first_name})(sn={last_name}))',
-                    attributes=['departmentNumber'])
-        return conn
 
     def __handle_pi_department(self, form_data):
         """Store the User-provided PI LDAP search in the given dictionary

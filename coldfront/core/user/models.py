@@ -1,5 +1,6 @@
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.department.models import Department
+from coldfront.core.department.models import UserDepartment
 from django.contrib.auth.models import User
 from django.core.validators import EmailValidator
 from django.core.validators import MinLengthValidator
@@ -12,7 +13,6 @@ from model_utils.models import TimeStampedModel
 from phonenumber_field.modelfields import PhoneNumberField
 from rest_framework.authtoken.models import Token
 from simple_history.models import HistoricalRecords
-
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -42,21 +42,11 @@ class UserProfile(models.Model):
         User, related_name='host_user', blank=True, null=True,
         on_delete=models.SET_NULL)
 
-    history = HistoricalRecords()
+    departments = models.ManyToManyField(Department, through=UserDepartment)
 
-    departments = models.ManyToManyField(Department, through='UserDepartment')
+    history = HistoricalRecords(m2m_fields=[departments])
 
-class UserDepartment(models.Model):
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
-    is_authoritative = models.BooleanField(default=False)
-    history = HistoricalRecords()
 
-    def __str__(self):
-        return f'{self.user_profile.user.username}-{self.department.acronym}'
-
-    class Meta:
-        unique_together = ('user_profile', 'department')
 
 class EmailAddress(models.Model):
     user = models.ForeignKey(
