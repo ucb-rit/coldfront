@@ -14,6 +14,9 @@
     provisioning_tasks: true
     common_tasks: true
 
+    python_version_dotless: "{{ python_version | regex_replace('\\.','') }}"
+    postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
+
   vars_files:
     - "../../main.yml"
 
@@ -105,21 +108,21 @@
             role: smbambling.scl
           vars:
             scl_packages:
-              - name: rh-python{{ python_version | regex_replace('\.','') }}
-              - name: rh-python{{ python_version | regex_replace('\.','') }}-python
-              - name: rh-python{{ python_version | regex_replace('\.','') }}-python-devel
-              - name: rh-python{{ python_version | regex_replace('\.','') }}-python-pip
+              - name: rh-python{{ python_version_dotless }}-python
+              - name: rh-python{{ python_version_dotless }}-python-devel
+              - name: rh-python{{ python_version_dotless }}-python-pip
+              # - name: rh-python{{ python_version_dotless }}
         
-        - name: Permanently enable Python and Postgres in SCL.
-          copy:
-            content: |
-              #!/bin/bash
-              source scl_source enable rh-python{{ python_version | regex_replace('\.','') }}
-              source scl_source enable rh-postgresql{{ postgres_version | regex_replace('\.','') }}
-            dest: /etc/profile.d/ansible_scl_enable.sh
-            owner: root
-            group: root
-            mode: 0644
+        # - name: Permanently enable Python and Postgres in SCL.
+        #   copy:
+        #     content: |
+        #       #!/bin/bash
+        #       source scl_source enable rh-python{{ python_version_dotless }}
+        #       source scl_source enable rh-postgresql{{ postgres_version_dotless }}
+        #     dest: /etc/profile.d/ansible_scl_enable.sh
+        #     owner: root
+        #     group: root
+        #     mode: 0644
 
         - name: Install required web packages
           yum:
@@ -172,35 +175,35 @@
             option: 'numprocs'
             value: '1'
 
-        # - name: Add yum repository
-        #   yum_repository:
-        #     name: postgres-repository
-        #     description: postgres repository
-        #     baseurl: https://download.postgresql.org/pub/repos/yum/{{ postgres_version }}/redhat/rhel-7-x86_64/
-        #     gpgkey: http://yum.postgresql.org/RPM-GPG-KEY-PGDG-94
+        - name: Add yum repository
+          yum_repository:
+            name: postgres-repository
+            description: postgres repository
+            baseurl: https://download.postgresql.org/pub/repos/yum/{{ postgres_version }}/redhat/rhel-7-x86_64/
+            gpgkey: http://yum.postgresql.org/RPM-GPG-KEY-PGDG-94
             
-        # - name: Install Postgresql packages
-        #   yum:
-        #     name:
-        #       - 'postgresql{{ postgres_version }}'
-        #       - 'postgresql{{ postgres_version }}-libs'
-        #       - 'postgresql{{ postgres_version }}-devel'
-        #       - 'postgresql{{ postgres_version }}-test'
-        #       - 'postgresql{{ postgres_version }}-server'
-        #     state: present
-
         - name: Install Postgresql packages
-          include_role:
-            role: smbambling.scl
-            tasks_from: packages
-          vars:
-            scl_packages:
-              - name: rh-postgresql{{ postgres_version | regex_replace('\.','') }}
-              - name: rh-postgresql{{ postgres_version | regex_replace('\.','') }}-postgresql
-              - name: rh-postgresql{{ postgres_version | regex_replace('\.','') }}-postgresql-libs
-              - name: rh-postgresql{{ postgres_version | regex_replace('\.','') }}-postgresql-devel
-              - name: rh-postgresql{{ postgres_version | regex_replace('\.','') }}-postgresql-test
-              - name: rh-postgresql{{ postgres_version | regex_replace('\.','') }}-postgresql-server
+          yum:
+            name:
+              - 'postgresql{{ postgres_version }}'
+              - 'postgresql{{ postgres_version }}-libs'
+              - 'postgresql{{ postgres_version }}-devel'
+              - 'postgresql{{ postgres_version }}-test'
+              - 'postgresql{{ postgres_version }}-server'
+            state: present
+
+        # - name: Install Postgresql packages
+        #   include_role:
+        #     role: smbambling.scl
+        #     tasks_from: packages
+        #   vars:
+        #     scl_packages:
+        #       - name: rh-postgresql{{ postgres_version_dotless }}
+        #       - name: rh-postgresql{{ postgres_version_dotless }}-postgresql
+        #       - name: rh-postgresql{{ postgres_version_dotless }}-postgresql-libs
+        #       - name: rh-postgresql{{ postgres_version_dotless }}-postgresql-devel
+        #       - name: rh-postgresql{{ postgres_version_dotless }}-postgresql-test
+        #       - name: rh-postgresql{{ postgres_version_dotless }}-postgresql-server
 
         # - name: Install Postgresql packages
         #   yum:
@@ -220,7 +223,7 @@
           register: pgdata_dir_version
 
         - name: Initialize PostgreSQL if not already initialized
-          command: /usr/pgsql-{{ postgres_version }}/bin/postgresql-{{ postgres_version | regex_replace('\.','') }}-setup initdb
+          command: /usr/pgsql-{{ postgres_version }}/bin/postgresql-{{ postgres_version_dotless }}-setup initdb
           when: not pgdata_dir_version.stat.exists
 
         - name: Start and enable PostgreSQL service
@@ -294,7 +297,7 @@
         - name: Initialize Python virtual environment
           shell: >
               test -f {{ git_prefix }}/venv/bin/activate
-              || (python{{ python_version }} -m venv {{ git_prefix }}/venv
+              || (/opt/rh/rh-python{{ python_version_dotless }}/root/usr/bin/python -m venv {{ git_prefix }}/venv
               && echo created)
           register: venv_register
           become_user: "{{ djangooperator }}"
@@ -309,7 +312,7 @@
             requirements: "{{ git_prefix }}/{{ reponame }}/requirements.txt"
             executable: "{{ git_prefix }}/venv/bin/pip3"
           become_user: "{{ djangooperator }}"
-          environment:
+          environment: # needed as pg_config isn't in PATH by default
             PATH: "{{ ansible_env.PATH }}:/usr/pgsql-{{ postgres_version }}/bin"
 
         # TODO: If this raises an error, the token is exposed in stderr.
@@ -564,6 +567,8 @@
             requirements: "{{ git_prefix }}/{{ reponame }}/requirements.txt"
             executable: "{{ git_prefix }}/venv/bin/pip3"
           become_user: "{{ djangooperator }}"
+          environment: # needed as pg_config isn't in PATH by default
+            PATH: "{{ ansible_env.PATH }}:/usr/pgsql-{{ postgres_version }}/bin"
 
         # Run Django management commands.
 
