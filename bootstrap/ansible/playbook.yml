@@ -13,7 +13,8 @@
     cwd: "{{ lookup('env', 'PWD') }} "
     provisioning_tasks: true
     common_tasks: true
-
+    python_version: 3.8
+    postgres_version: 10
     python_version_dotless: "{{ python_version | regex_replace('\\.','') }}"
     postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
 
