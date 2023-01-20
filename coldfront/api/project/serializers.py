@@ -3,9 +3,51 @@ from datetime import datetime
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from coldfront.core.project.models import Project, \
-    ProjectUserRemovalRequestStatusChoice, ProjectUserRemovalRequest, \
-    ProjectUser, ProjectUserStatusChoice, ProjectUserRoleChoice
+from coldfront.core.project.models import Project
+from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
+from coldfront.core.project.models import ProjectUserRemovalRequestStatusChoice
+from coldfront.core.project.models import ProjectUserRemovalRequest
+from coldfront.core.project.models import ProjectUser
+from coldfront.core.project.models import ProjectUserStatusChoice
+from coldfront.core.project.models import ProjectUserRoleChoice
+from coldfront.core.project.models import SavioProjectAllocationRequest
+
+
+class NewProjectRequestSetupSerializerField(serializers.Field):
+    """A serializer field that handles the representation of the 'setup'
+    entry in the state field of a SavioProjectAllocationRequest."""
+
+    def get_attribute(self, request):
+        return request.state['setup']
+
+    def to_representation(self, setup):
+        return setup
+
+    def to_internal_value(self, data):
+        return data
+
+
+class NewProjectRequestSerializer(serializers.ModelSerializer):
+    """A serializer for the SavioProjectAllocationRequest model."""
+
+    status = serializers.SlugRelatedField(
+        slug_field='name',
+        queryset=ProjectAllocationRequestStatusChoice.objects.all())
+    setup = NewProjectRequestSetupSerializerField()
+
+    class Meta:
+        model = SavioProjectAllocationRequest
+        fields = (
+            'id', 'project', 'pi', 'requester', 'allocation_period', 'pool',
+            'status', 'request_time', 'approval_time', 'completion_time',
+            'billing_activity', 'setup')
+        read_only_fields = (
+            'id', 'project', 'pi', 'requester', 'allocation_period', 'pool',
+            'request_time', 'approval_time', 'completion_time',
+            'billing_activity')
+
+    # def validate(self, data):
+    #     """TODO"""
 
 
 class ProjectSerializer(serializers.ModelSerializer):
