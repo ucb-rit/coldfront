@@ -5,7 +5,7 @@
 
 
 {% block title %}
-Update Departments
+Update {{ department_display_name }}s
 {% endblock %}
 
 {% block head %}
@@ -17,9 +17,9 @@ Update Departments
 <script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
 <link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
 
-<p>Select all the departments you are associated with.
-All unselected departments will be removed if previously associated.</p>
-<p>Only non-authoritative (user-selected) departments can be modified.</p>
+<p>Select all the {{ department_display_name | lower }}s you are associated with.
+All unselected {{ department_display_name | lower }}s will be removed if previously associated.</p>
+<p>Only non-authoritative (user-selected) {{ department_display_name | lower}}s can be modified.</p>
 
 <div class="card mb-3">
   <div class="card-body">

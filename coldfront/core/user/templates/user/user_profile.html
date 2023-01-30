@@ -83,23 +83,26 @@ User Profile{% if not requester_is_viewed_user %}: {{ viewed_user.username }}{% 
           {% endif %}
         </tr>
         <tr>
-          <th scope="row">Departments:</th>
+          <th scope="row">{{ department_display_name }}s:</th>
           {% if has_cluster_access %}
             <td>
               <p>
-              <a href="{% url 'update-departments' %}" class="btn btn-secondary float-right">
-                <i class="far fa-edit" aria-hidden="true"></i>
-                Update
-              </a>
+              {% flag_enabled 'USER_DEPARTMENTS_ENABLED' as user_departments_enabled %}
+              {% if user_departments_enabled %}
+                <a href="{% url 'update-departments' %}" class="btn btn-secondary float-right">
+                  <i class="far fa-edit" aria-hidden="true"></i>
+                  Update
+                </a>
+              {% endif %}
               {% if department_list %}
                 {% for department in department_list %}
-                  {{department}} <br>
+                  {{ department }} <br>
                 {% endfor %}
               {% else %}
               -
               {% endif %}
               </p>
-              <p>These are the departments you are associated with.</p>
+              <p>These are the {{ department_display_name | lower }}s you are associated with.</p>
             </td>
           {% else %}
             <td>You do not have a cluster account.</td>
@@ -207,8 +210,6 @@ User Profile{% if not requester_is_viewed_user %}: {{ viewed_user.username }}{% 
   </div>
 
   <br>
-
-  <!-- User Departments, with an option to add/remove non-authoritative departments -->
 
   {% if core_user_email_addresses_visible %}
   <div class="card">

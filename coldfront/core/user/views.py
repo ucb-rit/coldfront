@@ -93,11 +93,14 @@ class UserProfile(TemplateView):
         context['group_list'] = group_list
 
         department_list = [f'{ud.department.name} ({ud.department.code})' + \
-            " (authoritative)" * ud.is_authoritative \
+            " (authoritative)" * (ud.is_authoritative and \
+                                  flag_enabled('USER_DEPARTMENTS_ENABLED'))\
             for ud in UserDepartment.objects.select_related('department') \
                 .filter(userprofile=viewed_user.userprofile) \
                     .order_by('-is_authoritative', 'department__name')]
         context['department_list'] = department_list
+        context['department_display_name'] = \
+                                import_from_settings('DEPARTMENT_DISPLAY_NAME')
 
         context['viewed_user'] = viewed_user
 
