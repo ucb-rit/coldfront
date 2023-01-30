@@ -25,9 +25,11 @@ from django.views.generic import CreateView, ListView, TemplateView
 from django.views.generic.edit import FormView
 
 from coldfront.core.allocation.utils import has_cluster_access
+from coldfront.core.department.models import UserDepartment
 from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.user.models import IdentityLinkingRequest, IdentityLinkingRequestStatusChoice
 from coldfront.core.user.models import UserProfile as UserProfileModel
+from coldfront.core.user.forms import DepartmentSelectionForm
 from coldfront.core.user.forms import EmailAddressAddForm
 from coldfront.core.user.forms import UserReactivateForm
 from coldfront.core.user.forms import PrimaryEmailAddressSelectionForm
@@ -89,6 +91,14 @@ class UserProfile(TemplateView):
         group_list = ', '.join(
             [group.name for group in viewed_user.groups.all()])
         context['group_list'] = group_list
+
+        department_list = [f'{ud.department.name} ({ud.department.code})' + \
+            " (authoritative)" * ud.is_authoritative \
+            for ud in UserDepartment.objects.select_related('department') \
+                .filter(userprofile=viewed_user.userprofile) \
+                    .order_by('-is_authoritative', 'department__name')]
+        context['department_list'] = department_list
+
         context['viewed_user'] = viewed_user
 
         context['has_cluster_access'] = has_cluster_access(viewed_user)
@@ -899,6 +909,30 @@ class UpdatePrimaryEmailAddressView(LoginRequiredMixin, FormView):
     def get_success_url(self):
         return reverse('user-profile')
 
+class UpdateDepartmentsView(LoginRequiredMixin, FormView):
+
+    form_class = DepartmentSelectionForm
+    template_name = 'user/user_update_departments.html'
+    login_url = '/'
+
+    error_message = 'Unexpected failure. Please contact an administrator.'
+
+    def form_valid(self, form):
+        user = self.request.user
+        form_data = form.cleaned_data
+        new_departments = form_data['departments']
+        userprofile = user.userprofile
+        for department in new_departments:
+            UserDepartment.objects.get_or_create(userprofile=userprofile,
+                                                 department=department)
+        UserDepartment.objects.filter(userprofile=userprofile,
+                                      is_authoritative=False) \
+                              .exclude(department__in=new_departments).delete()
+        
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('user-profile')
 
 class EmailAddressExistsView(View):
 

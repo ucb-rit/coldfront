@@ -95,6 +95,9 @@ with flagged_paths('BASIC_AUTH_ENABLED') as f_path:
         f_path('update-primary-email-address',
                user_views.UpdatePrimaryEmailAddressView.as_view(),
                name='update-primary-email-address'),
+        f_path('update-departments',
+               user_views.UpdateDepartmentsView.as_view(),
+               name='update-departments'),
 
     ]
 

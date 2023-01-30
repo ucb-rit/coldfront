@@ -2,7 +2,6 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
-from coldfront.core.department.models import Department
 from coldfront.core.department.models import UserDepartment
 from coldfront.core.project.forms_.new_project_forms.request_forms import ComputingAllowanceForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectAllocationPeriodForm
@@ -36,7 +35,7 @@ from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.ldap import ldap_search_user
-from coldfront.core.utils.ldap import get_L4_code_from_department_code
+from coldfront.core.utils.ldap import fetch_and_set_user_departments
 
 from django.conf import settings
 from django.contrib import messages
@@ -147,6 +146,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             'project/project_request/savio/project_existing_pi.html',
         'new_pi':
             'project/project_request/savio/project_new_pi.html',
+        'pi_department':
+            'project/project_request/savio/project_pi_department.html',
         'ica_extra_fields':
             'project/project_request/savio/project_ica_extra_fields.html',
         'recharge_extra_fields':
@@ -379,12 +380,27 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         return cleaned_data.get('PI', None) is None
 
     def show_pi_department_form_condition(self):
+        if not flag_enabled('USER_DEPARTMENTS_ENABLED'):
+            return False
         step_name = 'new_pi'
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         if cleaned_data:
-            conn = ldap_search_user(cleaned_data['email'], cleaned_data['first_name'], cleaned_data['last_name'])
-            return flag_enabled('USER_DEPARTMENTS_ENABLED') and not conn.entries
+            conn = ldap_search_user(cleaned_data['email'],
+                                    cleaned_data['first_name'],
+                                    cleaned_data['last_name'])
+            return len(conn.entries) != 1
+        else:
+            step_name = 'existing_pi'
+            step = str(self.step_numbers_by_form_name[step_name])
+            cleaned_data = self.get_cleaned_data_for_step(step) or {}
+            if cleaned_data.get('PI', None) is not None and \
+                        not UserDepartment.objects.filter(
+                        userprofile=cleaned_data['PI'].userprofile).exists():
+                conn = ldap_search_user(cleaned_data['PI'].email,
+                                        cleaned_data['PI'].first_name,
+                                        cleaned_data['PI'].last_name)
+                return len(conn.entries) != 1
         return False
 
     def show_pool_allocations_form_condition(self):
@@ -480,9 +496,6 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         if data['PI']:
             pi = data['PI']
             pi_profile = pi.userprofile
-            # return PI if user already has departments
-            if UserDepartment.objects.filter(userprofile=pi_profile, is_authoritative=True).exists():
-                return pi
         else:
             # Create a new User object intended to be a new PI.
             step_number = self.step_numbers_by_form_name['new_pi']
@@ -512,27 +525,19 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             pi_profile.save()
 
         # Set the user's authoritative departments in the UserProfile.
-        for department_code in data['ldap_departments']:
-            department_code = get_L4_code_from_department_code(department_code)
-            department = Department.objects.get(code=department_code)
-            UserDepartment.objects.get_or_create(userprofile=pi_profile,
-                department=department,
-                is_authoritative=True)
+        
+        fetch_and_set_user_departments(pi, pi_profile)
+        
+        # Set the user's non-authoritative departments in the UserProfile.
 
         step_number = self.step_numbers_by_form_name['pi_department']
         data = form_data[step_number]
-        for department in data['departments']:
-            UserDepartment.objects.get_or_create(userprofile=pi_profile,
-                department=department,
-                is_authoritative=False)
+        if data:
+            for department in data['departments']:
+                UserDepartment.objects.get_or_create(userprofile=pi_profile,
+                    department=department,
+                    is_authoritative=False)
         return pi
-
-    def __handle_pi_department(self, form_data):
-        """Store the User-provided PI LDAP search in the given dictionary
-        to be used during request creation."""
-        step_number = self.step_numbers_by_form_name['new_pi_department']
-        data = form_data[step_number]
-
 
     def __handle_recharge_allowance(self, form_data,
                                     computing_allowance_wrapper,
@@ -647,12 +652,6 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary.update({
                     'breadcrumb_pi': (
                         f'New PI: {first_name} {last_name} ({email})')
-                })
-                conn = ldap_search_user(email, first_name, last_name)
-                dictionary.update({
-                    'ldap_departments': \
-                        conn.entries[0].departmentNumber.values if \
-                            conn.entries else []
                 })
 
         pool_allocations_step = \

@@ -1,0 +1,45 @@
+{% extends "common/base.html" %}
+{% load feature_flags %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Update Departments
+{% endblock %}
+
+{% block head %}
+{{ wizard.form.media }}
+{% endblock %}
+
+{% block content %}
+<script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
+<script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
+<link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
+
+<p>Select all the departments you are associated with.
+All unselected departments will be removed if previously associated.</p>
+<p>Only non-authoritative (user-selected) departments can be modified.</p>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form action="" method="post">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <input class="btn btn-primary" type="submit" value="Submit" />
+      <a href="{% url 'user-profile' %}" class="btn btn-secondary">
+        Cancel
+      </a>
+    </form>
+  </div>
+</div>
+
+<script>
+  $('select').selectize({
+    create: false,
+    sortField: 'text'
+  })
+</script>
+
+
+{% endblock %}

@@ -17,6 +17,7 @@ from django.utils.translation import gettext_lazy as _
 
 from coldfront.core.user.utils import send_account_activation_email
 from coldfront.core.user.models import UserProfile, EmailAddress
+from coldfront.core.department.models import Department
 from coldfront.core.utils.mail import dummy_email_address
 
 from phonenumber_field.formfields import PhoneNumberField
@@ -273,6 +274,20 @@ class PrimaryEmailAddressSelectionForm(forms.Form):
         self.fields['email_address'].queryset = EmailAddress.objects.filter(
             user=user, is_verified=True, is_primary=False)
 
+class DepartmentSelectionForm(forms.Form):
+    '''Form prompting for the departments of a new PI if one is not found
+    through LDAP. Has user select one or more from the dozens of departments
+    present in Department.objects.all()'''
+
+    departments = forms.ModelMultipleChoiceField(
+        label='Departments',
+        queryset=Department.objects.order_by('name').all(),
+        required=True
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.departments = kwargs.pop('departments', None)
+        super().__init__(*args, **kwargs)
 
 class VerifiedEmailAddressPasswordResetForm(PasswordResetForm):
     """A subclass of django.contrib.auth.forms.PasswordResetForm that

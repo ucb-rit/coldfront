@@ -246,16 +246,26 @@ class SavioProjectNewPIForm(forms.Form):
         return email
 
 class SavioProjectPIDepartmentForm(forms.Form):
-    '''Form prompting for the primary department of a new PI. If one department
-    is found, have it selected by default. If multiple departments are found,
-    have the user select from them. Otherwise, have the user select from a list
-    of all departments.
-    '''
-    departments = forms.ModelMultipleChoiceField(
-        label='Department',
-        queryset=Department.objects.all(),
-        required=True) 
+    '''Form prompting for the departments of a new PI if one is not found
+    through LDAP. Has user select one or more from the dozens of departments
+    present in Department.objects.all()'''
 
+    departments = forms.ModelMultipleChoiceField(
+        label='Departments',
+        queryset=Department.objects.order_by('name').all(),
+        required=True
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.departments = kwargs.pop('departments', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_departments(self):
+        cleaned_data = super().clean()
+        departments = cleaned_data['departments']
+        if not departments:
+            raise forms.ValidationError('Please select at least one department.')
+        return departments
 
 class SavioProjectExtraFieldsForm(forms.Form):
     """A base form for retrieving additional information for the

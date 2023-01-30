@@ -46,8 +46,6 @@ class UserProfile(models.Model):
 
     history = HistoricalRecords(m2m_fields=[departments])
 
-
-
 class EmailAddress(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='emailaddress_user')
