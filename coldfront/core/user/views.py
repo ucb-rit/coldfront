@@ -72,7 +72,8 @@ class UserProfile(TemplateView):
 
                 # error if they tried to do something naughty
                 if not request.user.username == viewed_username:
-                    messages.error(request, "You aren't allowed to view other user profiles!")
+                    messages.error(
+                        request, "You aren't allowed to view other user profiles!")
                 # if they used their own username, no need to provide an error - just redirect
 
                 return HttpResponseRedirect(reverse('user-profile'))
@@ -217,14 +218,16 @@ class UserProjectsManagersView(ListView):
 
                 # error if they tried to do something naughty
                 if not request.user.username == viewed_username:
-                    messages.error(request, "You aren't allowed to view projects for other users!")
+                    messages.error(
+                        request, "You aren't allowed to view projects for other users!")
                 # if they used their own username, no need to provide an error - just redirect
 
                 return HttpResponseRedirect(reverse('user-projects-managers'))
 
         # get_queryset does not get kwargs, so we need to store it off here
         if viewed_username:
-            self.viewed_user = get_object_or_404(User, username=viewed_username)
+            self.viewed_user = get_object_or_404(
+                User, username=viewed_username)
         else:
             self.viewed_user = self.request.user
 
@@ -415,27 +418,23 @@ class UserSearchAll(LoginRequiredMixin, ListView):
             users = User.objects.order_by(order_by)
 
             if data.get('first_name'):
-                users = users.filter(first_name__icontains=data.get('first_name'))
+                users = users.filter(
+                    first_name__icontains=data.get('first_name'))
 
             if data.get('middle_name'):
-                users = users.filter(userprofile__middle_name__icontains=data.get('middle_name'))
+                users = users.filter(
+                    userprofile__middle_name__icontains=data.get('middle_name'))
 
             if data.get('last_name'):
-                users = users.filter(last_name__icontains=data.get('last_name'))
+                users = users.filter(
+                    last_name__icontains=data.get('last_name'))
 
             if data.get('username'):
                 users = users.filter(username__icontains=data.get('username'))
 
-            if flag_enabled('LRC_ONLY'):
-                if data.get('email'):
-                    _users = EmailAddress_LRC.objects.filter(is_primary=False, email__icontains=data.get('email'))\
-                        .order_by('user').values_list('user__id')
-                    users = users.filter(Q(email__icontains=data.get('email')) | Q(id__in=_users))
-            else:
-                if data.get('email'):
-                    _users = EmailAddress.objects.filter(is_primary=False, email__icontains=data.get('email'))\
-                        .order_by('user').values_list('user__id')
-                    users = users.filter(Q(email__icontains=data.get('email')) | Q(id__in=_users))
+            if data.get('email'):
+                users = UserSearchAll._filter_users_by_email(self, users, data)
+
         else:
             users = User.objects.all().order_by(order_by)
 
@@ -467,7 +466,8 @@ class UserSearchAll(LoginRequiredMixin, ListView):
         order_by = self.request.GET.get('order_by')
         if order_by:
             direction = self.request.GET.get('direction')
-            filter_parameters_with_order_by = filter_parameters + 'order_by=%s&direction=%s&' % (order_by, direction)
+            filter_parameters_with_order_by = filter_parameters + \
+                'order_by=%s&direction=%s&' % (order_by, direction)
         else:
             filter_parameters_with_order_by = filter_parameters
 
@@ -489,6 +489,19 @@ class UserSearchAll(LoginRequiredMixin, ListView):
             user_list = paginator.page(paginator.num_pages)
 
         return context
+
+    def _filter_users_by_email(self, users, data):
+        if flag_enabled('LRC_ONLY'):
+            _users = EmailAddress_LRC.objects.filter(primary=False, email__icontains=data.get('email'))\
+                .order_by('user').values_list('user__id')
+            users = users.filter(
+                Q(email__icontains=data.get('email')) | Q(id__in=_users))
+        else:
+            _users = EmailAddress.objects.filter(is_primary=False, email__icontains=data.get('email'))\
+                .order_by('user').values_list('user__id')
+            users = users.filter(
+                Q(email__icontains=data.get('email')) | Q(id__in=_users))
+        return users
 
 
 class UserSearchResults(LoginRequiredMixin, UserPassesTestMixin, View):
