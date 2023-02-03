@@ -93,3 +93,13 @@ FLAGS = {
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': True}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': False}],
 }
+
+#------------------------------------------------------------------------------
+# Cache settings
+#------------------------------------------------------------------------------
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.DummyCache',
+    }
+}
