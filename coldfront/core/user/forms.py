@@ -282,12 +282,16 @@ class DepartmentSelectionForm(forms.Form):
     departments = forms.ModelMultipleChoiceField(
         label='Departments',
         queryset=Department.objects.order_by('name').all(),
-        required=True
+        required=True,
     )
 
     def __init__(self, *args, **kwargs):
         self.departments = kwargs.pop('departments', None)
+        userprofile = kwargs.pop('user', None).userprofile
         super().__init__(*args, **kwargs)
+
+        self.fields['departments'].initial = Department.objects \
+            .filter(userprofile=userprofile)
 
 class VerifiedEmailAddressPasswordResetForm(PasswordResetForm):
     """A subclass of django.contrib.auth.forms.PasswordResetForm that

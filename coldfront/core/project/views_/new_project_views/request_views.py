@@ -382,26 +382,35 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
     def show_pi_department_form_condition(self):
         if not flag_enabled('USER_DEPARTMENTS_ENABLED'):
             return False
-        step_name = 'new_pi'
-        step = str(self.step_numbers_by_form_name[step_name])
-        cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        if cleaned_data:
-            conn = ldap_search_user(cleaned_data['email'],
-                                    cleaned_data['first_name'],
-                                    cleaned_data['last_name'])
-            return len(conn.entries) != 1
-        else:
-            step_name = 'existing_pi'
+        extra_data = self.request.session[ \
+            'wizard_savio_project_request_wizard']['extra_data']
+        key = 'ldap_lookup_connection'
+        email = fn = ln = None
+        if key not in extra_data:
+            step_name = 'new_pi'
             step = str(self.step_numbers_by_form_name[step_name])
             cleaned_data = self.get_cleaned_data_for_step(step) or {}
-            if cleaned_data.get('PI', None) is not None and \
-                        not UserDepartment.objects.filter(
-                        userprofile=cleaned_data['PI'].userprofile).exists():
-                conn = ldap_search_user(cleaned_data['PI'].email,
-                                        cleaned_data['PI'].first_name,
-                                        cleaned_data['PI'].last_name)
-                return len(conn.entries) != 1
-        return False
+            if cleaned_data:
+                email = cleaned_data['email']
+                fn = cleaned_data['first_name']
+                ln = cleaned_data['last_name']
+            else:
+                step_name = 'existing_pi'
+                step = str(self.step_numbers_by_form_name[step_name])
+                cleaned_data = self.get_cleaned_data_for_step(step) or {}
+                if cleaned_data.get('PI', None) is not None and \
+                            not UserDepartment.objects.filter(
+                            userprofile=cleaned_data['PI'].userprofile).exists():
+                    email = cleaned_data['PI'].email
+                    fn = cleaned_data['PI'].first_name
+                    ln = cleaned_data['PI'].last_name
+            if email:
+                conn = ldap_search_user(email, fn, ln)
+                extra_data[key] = conn
+                self.request.session.modified = True
+        else:
+            conn = extra_data[key]
+        return len(conn.entries) != 1
 
     def show_pool_allocations_form_condition(self):
         step_name = 'computing_allowance'

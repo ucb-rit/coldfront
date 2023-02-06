@@ -39,13 +39,17 @@ def fetch_and_set_user_departments(user, userprofile):
                             len(conn.entries) == 1 else []
         for department_code in ldap_departments:
             department_code = get_L4_code_from_department_code(department_code)
-            # if department doesn't exist
+            # if department doesn't exist, make it
             if not Department.objects.filter(code=department_code).exists():
                 name = get_department_name_from_code(department_code)
                 department, _ = Department.objects.get_or_create(name=name,
                                                         code=department_code)
             else:
                 department = Department.objects.get(code=department_code)
+            # replace non-authoritative associations with authoritative ones
+            UserDepartment.objects.filter(userprofile=userprofile,
+                                          department=department,
+                                          is_authoritative=False).delete()
             UserDepartment.objects.get_or_create(userprofile=userprofile,
                 department=department,
                 is_authoritative=True)
