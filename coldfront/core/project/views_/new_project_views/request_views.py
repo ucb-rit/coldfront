@@ -208,7 +208,6 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         required_keys_by_step_name = {
             'allocation_period': ['computing_allowance'],
             'existing_pi': ['computing_allowance', 'allocation_period'],
-            'pi_department': ['departments'],
             'pooled_project_selection': ['computing_allowance'],
             'details': ['computing_allowance'],
             'survey': ['computing_allowance'],
@@ -384,7 +383,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             return False
         extra_data = self.request.session[ \
             'wizard_savio_project_request_wizard']['extra_data']
-        key = 'ldap_lookup_connection'
+        key = 'ldap_lookup_has_entry'
         email = fn = ln = None
         if key not in extra_data:
             step_name = 'new_pi'
@@ -399,18 +398,20 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 step = str(self.step_numbers_by_form_name[step_name])
                 cleaned_data = self.get_cleaned_data_for_step(step) or {}
                 if cleaned_data.get('PI', None) is not None and \
-                            not UserDepartment.objects.filter(
-                            userprofile=cleaned_data['PI'].userprofile).exists():
+                        not UserDepartment.objects.filter(
+                        userprofile=cleaned_data['PI'].userprofile).exists():
                     email = cleaned_data['PI'].email
                     fn = cleaned_data['PI'].first_name
                     ln = cleaned_data['PI'].last_name
             if email:
-                conn = ldap_search_user(email, fn, ln)
-                extra_data[key] = conn
+                has_entry = len(ldap_search_user(email, fn, ln).entries) == 1
+                extra_data[key] = has_entry
                 self.request.session.modified = True
+            else:
+                return False
         else:
-            conn = extra_data[key]
-        return len(conn.entries) != 1
+            has_entry = extra_data[key]
+        return has_entry
 
     def show_pool_allocations_form_condition(self):
         step_name = 'computing_allowance'
@@ -652,7 +653,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary.update({
                     'breadcrumb_pi': (
                         f'Existing PI: {pi.first_name} {pi.last_name} '
-                        f'({pi.email})')
+                        f'({pi.email})'),
                 })
             else:
                 first_name = new_pi_form_data['first_name']

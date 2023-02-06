@@ -93,8 +93,8 @@ class UserProfile(TemplateView):
         context['group_list'] = group_list
 
         department_list = [f'{ud.department.name} ({ud.department.code})' + \
-            " (authoritative)" * (ud.is_authoritative and \
-                                  flag_enabled('USER_DEPARTMENTS_ENABLED'))\
+            ' (verified)' * \
+            (ud.is_authoritative and flag_enabled('USER_DEPARTMENTS_ENABLED'))\
             for ud in UserDepartment.objects.select_related('department') \
                 .filter(userprofile=viewed_user.userprofile) \
                     .order_by('-is_authoritative', 'department__name')]
@@ -938,6 +938,12 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
         return kwargs
+
+    def get_context_data(self, viewed_username=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['department_display_name'] = \
+                                import_from_settings('DEPARTMENT_DISPLAY_NAME')
+        return context
 
     def get_success_url(self):
         return reverse('user-profile')

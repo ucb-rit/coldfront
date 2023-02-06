@@ -256,10 +256,6 @@ class SavioProjectPIDepartmentForm(forms.Form):
         required=True
     )
 
-    def __init__(self, *args, **kwargs):
-        self.departments = kwargs.pop('departments', None)
-        super().__init__(*args, **kwargs)
-
     def clean_departments(self):
         cleaned_data = super().clean()
         departments = cleaned_data['departments']
