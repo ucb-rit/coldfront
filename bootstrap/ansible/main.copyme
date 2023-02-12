@@ -25,11 +25,11 @@ db_name: cf_brc_db
 # The credentials for the database admin user.
 # TODO: Replace the username and password.
 db_admin_user: admin
-db_admin_passwd: ''
+db_admin_passwd: root
 
 # The password for Redis.
 # TODO: Replace the password.
-redis_passwd: ''
+redis_passwd: root
 
 # Log paths.
 # TODO: For LRC, use the substring 'cf_mylrc'.
@@ -278,16 +278,13 @@ sentry_dsn: ""
 
 # # Email settings.
 # email_port: 1025
-# # TODO: Set these addresses to yours.
-# from_email: you@email.com
-# admin_email: you@email.com
+# from_email: placeholder@dev.dev
+# admin_email: placeholder@dev.dev
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
 # # A list of admin email addresses to be notified about new requests and other
 # # events.
-# # TODO: Set these addresses to yours.
-# email_admin_list: ['you@email.com']
+# email_admin_list: []
 # # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: ['you@email.com']
+# request_approval_cc_list: []

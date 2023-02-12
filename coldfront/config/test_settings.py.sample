@@ -19,6 +19,8 @@ CENTER_BASE_URL = 'http://localhost:8880'
 CENTER_HELP_URL = CENTER_BASE_URL + '/help'
 CENTER_PROJECT_RENEWAL_HELP_URL = CENTER_BASE_URL + '/help'
 
+DEPARTMENT_DISPLAY_NAME = 'Department'
+
 EMAIL_PORT = 1025
 EMAIL_SUBJECT_PREFIX = '[MyBRC-User-Portal]'
 # A list of admin email addresses to be notified about new requests and other
