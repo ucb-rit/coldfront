@@ -1,8 +1,7 @@
 from django.core.management import BaseCommand
 from coldfront.core.department.models import Department
-from coldfront.core.utils.ldap import LDAP_URL
-from coldfront.core.utils.ldap import DEPARTMENT_OU
-
+from coldfront.core.department.utils.ldap import LDAP_URL
+from coldfront.core.department.utils.ldap import DEPARTMENT_OU
 from ldap3 import Connection
 
 class Command(BaseCommand):

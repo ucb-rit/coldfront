@@ -34,8 +34,8 @@ from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.utils.ldap import ldap_search_user
-from coldfront.core.utils.ldap import fetch_and_set_user_departments
+from coldfront.core.department.utils.ldap import ldap_search_user
+from coldfront.core.department.utils.ldap import fetch_and_set_user_departments
 
 from django.conf import settings
 from django.contrib import messages
@@ -381,37 +381,42 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
     def show_pi_department_form_condition(self):
         if not flag_enabled('USER_DEPARTMENTS_ENABLED'):
             return False
-        extra_data = self.request.session[ \
-            'wizard_savio_project_request_wizard']['extra_data']
-        key = 'ldap_lookup_has_entry'
+        extra_data = self.request.session \
+            ['wizard_savio_project_request_wizard']['extra_data']
+        has_entry_key = 'ldap_lookup_has_entry'
+        email_key = 'ldap_lookup_email'
+
+        # get email, fn, ln
         email = fn = ln = None
-        if key not in extra_data:
-            step_name = 'new_pi'
+        step_name = 'new_pi'
+        step = str(self.step_numbers_by_form_name[step_name])
+        cleaned_data = self.get_cleaned_data_for_step(step) or {}
+        if cleaned_data:
+            email = cleaned_data['email']
+            fn = cleaned_data['first_name']
+            ln = cleaned_data['last_name']
+        else:
+            step_name = 'existing_pi'
             step = str(self.step_numbers_by_form_name[step_name])
             cleaned_data = self.get_cleaned_data_for_step(step) or {}
-            if cleaned_data:
-                email = cleaned_data['email']
-                fn = cleaned_data['first_name']
-                ln = cleaned_data['last_name']
-            else:
-                step_name = 'existing_pi'
-                step = str(self.step_numbers_by_form_name[step_name])
-                cleaned_data = self.get_cleaned_data_for_step(step) or {}
-                if cleaned_data.get('PI', None) is not None and \
-                        not UserDepartment.objects.filter(
-                        userprofile=cleaned_data['PI'].userprofile).exists():
-                    email = cleaned_data['PI'].email
-                    fn = cleaned_data['PI'].first_name
-                    ln = cleaned_data['PI'].last_name
-            if email:
-                has_entry = len(ldap_search_user(email, fn, ln).entries) == 1
-                extra_data[key] = has_entry
-                self.request.session.modified = True
-            else:
-                return False
+            if cleaned_data.get('PI', None):
+                if UserDepartment.objects.filter(
+                    userprofile=cleaned_data['PI'].userprofile).exists():
+                    return False
+                email = cleaned_data['PI'].email
+                fn = cleaned_data['PI'].first_name
+                ln = cleaned_data['PI'].last_name
+        if not email:
+            return False
+
+        if has_entry_key not in extra_data or email != extra_data[email_key]:
+            has_entry = len(ldap_search_user(email, fn, ln).entries) == 1
+            extra_data[has_entry_key] = has_entry
+            extra_data[email_key] = email
+            self.request.session.modified = True
         else:
-            has_entry = extra_data[key]
-        return has_entry
+            has_entry = extra_data[has_entry_key]
+        return not has_entry
 
     def show_pool_allocations_form_condition(self):
         step_name = 'computing_allowance'

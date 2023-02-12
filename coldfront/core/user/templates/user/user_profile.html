@@ -94,12 +94,24 @@ User Profile{% if not requester_is_viewed_user %}: {{ viewed_user.username }}{% 
                   Update
                 </a>
               {% endif %}
-              {% if department_list %}
-                {% for department in department_list %}
+              {% if auth_department_list %}
+                {% for department in auth_department_list %}
+                  {{ department }}
+                  {% if user_departments_enabled %}
+                  <span class="badge badge-success" title="Verified by the campus directory.">
+                    <i class="fas fa-check"></i>
+                  </span>
+                  {% endif %}
+                  <br>
+                {% endfor %}
+              {% endif %}
+              {% if non_auth_department_list %}
+                {% for department in non_auth_department_list %}
                   {{ department }} <br>
                 {% endfor %}
-              {% else %}
-              -
+              {% endif %}
+              {% if auth_department_list|length == 0 and non_auth_department_list|length == 0 %}
+                -
               {% endif %}
               </p>
               <p>These are the {{ department_display_name | lower }}s you are associated with.</p>
