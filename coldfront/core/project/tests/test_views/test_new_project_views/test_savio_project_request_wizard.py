@@ -55,7 +55,7 @@ class TestSavioProjectRequestWizard(TestBase):
             current_step_key: '2',
         }
         pi_department_form_data = {
-            '4-departments': [selected_dept.pk], #Department.objects.filter(code=selected_dept.code),
+            '4-departments': [selected_dept.pk],
             current_step_key: '4'
         }
         pool_allocations_data = {
