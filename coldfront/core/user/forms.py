@@ -282,7 +282,7 @@ class DepartmentSelectionForm(forms.Form):
     departments = forms.ModelMultipleChoiceField(
         label='Departments',
         queryset=Department.objects.order_by('name').all(),
-        required=True,
+        required=False,
     )
 
     def __init__(self, *args, **kwargs):
