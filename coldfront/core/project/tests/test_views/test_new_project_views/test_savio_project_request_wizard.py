@@ -51,19 +51,19 @@ class TestSavioProjectRequestWizard(TestBase):
             current_step_key: '2',
         }
         pool_allocations_data = {
-            '6-pool': False,
-            current_step_key: '6',
+            '7-pool': False,
+            current_step_key: '7',
         }
         details_data = {
-            '8-name': 'name',
-            '8-title': 'title',
-            '8-description': 'a' * 20,
-            current_step_key: '8',
+            '9-name': 'name',
+            '9-title': 'title',
+            '9-description': 'a' * 20,
+            current_step_key: '9',
         }
         survey_data = {
-            '10-scope_and_intent': 'b' * 20,
-            '10-computational_aspects': 'c' * 20,
-            current_step_key: '10',
+            '11-scope_and_intent': 'b' * 20,
+            '11-computational_aspects': 'c' * 20,
+            current_step_key: '11',
         }
         form_data = [
             computing_allowance_form_data,
@@ -97,16 +97,16 @@ class TestSavioProjectRequestWizard(TestBase):
         self.assertEqual(request.allocation_period, allocation_period)
         self.assertEqual(request.pi, self.user)
         self.assertEqual(request.project, project)
-        self.assertEqual(project.name, f'fc_{details_data["8-name"]}')
-        self.assertEqual(project.title, details_data['8-title'])
-        self.assertEqual(project.description, details_data['8-description'])
+        self.assertEqual(project.name, f'fc_{details_data["9-name"]}')
+        self.assertEqual(project.title, details_data['9-title'])
+        self.assertEqual(project.description, details_data['9-description'])
         self.assertFalse(request.pool)
         self.assertEqual(
             request.survey_answers['scope_and_intent'],
-            survey_data['10-scope_and_intent'])
+            survey_data['11-scope_and_intent'])
         self.assertEqual(
             request.survey_answers['computational_aspects'],
-            survey_data['10-computational_aspects'])
+            survey_data['11-computational_aspects'])
         self.assertEqual(request.status.name, 'Under Review')
 
     # TODO
