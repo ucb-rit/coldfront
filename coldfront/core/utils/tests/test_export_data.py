@@ -256,7 +256,8 @@ class TestNewClusterAccounts(TestBaseExportData):
         """Setup test data"""
         super().setUp()
 
-        self.pre_time = utc_now_offset_aware().replace(tzinfo=None)
+        self.pre_time = utc_now_offset_aware().replace(tzinfo=None,
+                                                       microsecond=0)
 
     def test_json_no_date(self):
         """Testing new_cluster_accounts subcommand with NO date arg passed,
