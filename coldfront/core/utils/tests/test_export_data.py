@@ -256,8 +256,7 @@ class TestNewClusterAccounts(TestBaseExportData):
         """Setup test data"""
         super().setUp()
 
-        self.pre_time = utc_now_offset_aware().replace(tzinfo=None,
-                                                       microsecond=999999)
+        self.pre_time = utc_now_offset_aware().replace(tzinfo=None)
 
     def test_json_no_date(self):
         """Testing new_cluster_accounts subcommand with NO date arg passed,
@@ -267,7 +266,7 @@ class TestNewClusterAccounts(TestBaseExportData):
                                           '--format=json')
         output = self.convert_output(output, 'json')
 
-        post_time = utc_now_offset_aware().replace(tzinfo=None, microsecond=999999)
+        post_time = utc_now_offset_aware().replace(tzinfo=None)
         for index, item in enumerate(output):
             self.assertEqual(item['username'], f'user{index}')
             date_created = \
@@ -304,7 +303,7 @@ class TestNewClusterAccounts(TestBaseExportData):
         output = self.convert_output(output, 'json')
 
         # this should only output the cluster account creation for user1
-        post_time = utc_now_offset_aware().replace(tzinfo=None, microsecond=999999)
+        post_time = utc_now_offset_aware().replace(tzinfo=None)
         self.assertEqual(len(output), 1)
         self.assertEqual(output[0]['username'], 'user1')
         date_created = \
@@ -322,7 +321,7 @@ class TestNewClusterAccounts(TestBaseExportData):
                                           '--format=csv')
         output = self.convert_output(output, 'csv')
 
-        post_time = utc_now_offset_aware().replace(tzinfo=None, microsecond=999999)
+        post_time = utc_now_offset_aware().replace(tzinfo=None)
         for index, item in enumerate(output):
             if index == 0:
                 self.assertEqual(item, ['username', 'date_created'])
@@ -361,7 +360,7 @@ class TestNewClusterAccounts(TestBaseExportData):
                                           f'--start_date={start_date}')
         output = self.convert_output(output, 'csv')
 
-        post_time = utc_now_offset_aware().replace(tzinfo=None, microsecond=999999)
+        post_time = utc_now_offset_aware().replace(tzinfo=None)
         for index, item in enumerate(output):
             if index == 0:
                 self.assertEqual(item, ['username', 'date_created'])
