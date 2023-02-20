@@ -82,18 +82,17 @@ User Profile{% if not requester_is_viewed_user %}: {{ viewed_user.username }}{% 
             <td>You do not have a cluster account.</td>
           {% endif %}
         </tr>
+        {% flag_enabled 'USER_DEPARTMENTS_ENABLED' as user_departments_enabled %}
+        {% if user_departments_enabled %}
         <tr>
           <th scope="row">{{ department_display_name }}s:</th>
           {% if has_cluster_access %}
             <td>
               <p>
-              {% flag_enabled 'USER_DEPARTMENTS_ENABLED' as user_departments_enabled %}
-              {% if user_departments_enabled %}
                 <a href="{% url 'update-departments' %}" class="btn btn-secondary float-right">
                   <i class="far fa-edit" aria-hidden="true"></i>
                   Update
                 </a>
-              {% endif %}
               {% if auth_department_list %}
                 {% for department in auth_department_list %}
                   {{ department }}
@@ -120,6 +119,7 @@ User Profile{% if not requester_is_viewed_user %}: {{ viewed_user.username }}{% 
             <td>You do not have a cluster account.</td>
           {% endif %}
         </tr>
+        {% endif %}
 <!--        {% comment %}-->
 <!--        <tr>-->
 <!--          <th scope="row">PI Status:</th>-->

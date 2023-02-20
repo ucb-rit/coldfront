@@ -4,6 +4,7 @@ from coldfront.core.project.utils_.renewal_utils import get_current_allowance_ye
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.department.models import Department, UserDepartment
 from coldfront.core.utils.tests.test_base import TestBase
 from django.urls import reverse
 from http import HTTPStatus
@@ -36,6 +37,9 @@ class TestSavioProjectRequestWizard(TestBase):
         computing_allowance = Resource.objects.get(name=BRCAllowances.FCA)
         allocation_period = get_current_allowance_year_period()
 
+        selected_dept = Department.objects.get_or_create(name='Department 1', code='DEPT1')[0]
+        not_selected_dept = Department.objects.get_or_create(name='Department 2', code='DEPT2')[0]
+
         view_name = 'savio_project_request_wizard'
         current_step_key = f'{view_name}-current_step'
         computing_allowance_form_data = {
@@ -49,6 +53,10 @@ class TestSavioProjectRequestWizard(TestBase):
         existing_pi_form_data = {
             '2-PI': self.user.pk,
             current_step_key: '2',
+        }
+        pi_department_form_data = {
+            '4-departments': [selected_dept.pk], #Department.objects.filter(code=selected_dept.code),
+            current_step_key: '4'
         }
         pool_allocations_data = {
             '7-pool': False,
@@ -69,6 +77,7 @@ class TestSavioProjectRequestWizard(TestBase):
             computing_allowance_form_data,
             allocation_period_form_data,
             existing_pi_form_data,
+            pi_department_form_data,
             pool_allocations_data,
             details_data,
             survey_data,
@@ -86,7 +95,12 @@ class TestSavioProjectRequestWizard(TestBase):
         self.assertEqual(requests.count(), 1)
         projects = Project.objects.all()
         self.assertEqual(projects.count(), 1)
-
+        userdepartments = UserDepartment.objects.all()
+        self.assertEqual(userdepartments.count(), 1)
+        self.assertEqual(UserDepartment.objects.filter(
+                                        userprofile=self.user.userprofile,
+                                        department=selected_dept,
+                                        is_authoritative=False).exists(), True)
         request = requests.first()
         project = projects.first()
         self.assertEqual(request.requester, self.user)
