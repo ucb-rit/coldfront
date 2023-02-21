@@ -13,12 +13,16 @@ Update {{ department_display_name }}s
 {% endblock %}
 
 {% block content %}
+
+<h1>Update Departments</h1>
+<hr>
+
 <script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
 <script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
 <link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
 
 <p>Select all the {{ department_display_name | lower }}s you are associated with.
-All unselected {{ department_display_name | lower }}s will be removed if previously associated.</p>
+Unselect a {{ department_display_name | lower }} to remove it from your associations.</p>
 <p>Only non-authoritative (user-selected) {{ department_display_name | lower}}s can be modified.</p>
 
 <div class="card mb-3">
