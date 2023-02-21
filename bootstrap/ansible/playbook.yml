@@ -55,55 +55,6 @@
               - libffi-devel
             state: present
 
-        # # From https://github.com/narbutas/ansible-python37-centos7/blob/master/tasks/install-python.yml
-        # # modified ./configure to include --enable-shared
-        # - name: "Get current python3 version"
-        #   shell: /usr/local/bin/python3 --version |sed 's/^Python //'
-        #   register: python_version_current
-        #   changed_when: 'python_version_current.stdout != python_version'
-        #   check_mode: false
-
-        # - block:
-        #   - name: "Download python {{ python_version }} source code"
-        #     get_url:
-        #       url: https://www.python.org/ftp/python/{{ python_version }}/Python-{{ python_version }}.tgz
-        #       dest: /usr/src/Python-{{ python_version }}.tgz
-        #       mode: '0644'
-        #     become: true
-
-        #   - name: "Unpack python {{ python_version }} source code"
-        #     unarchive:
-        #       src: /usr/src/Python-{{ python_version }}.tgz
-        #       dest: /usr/src/
-        #       remote_src: true
-        #     become: true
-
-        #   - name: "Run 'configure' target as root"
-        #     command: chdir=/usr/src/Python-{{ python_version }} ./configure --enable-optimizations --enable-shared
-        #     become: true
-        #     tags: skip_ansible_lint
-
-        #   - name: "Run 'make install' target as root"
-        #     make:
-        #       chdir: /usr/src/Python-{{ python_version }}
-        #       target: install
-        #       file: /usr/src/Python-{{ python_version }}/Makefile
-        #     become: true
-        #     tags: skip_ansible_lint
-
-        #   - name: Mark python as existing
-        #     file:
-        #       path: /usr/src/Python-{{ python_version }}/exists
-        #       state: touch
-        #       mode: 0644
-
-        #   - name: "Remove python source code archive"
-        #     file:
-        #       path: /usr/src/Python-{{ python_version }}.tgz
-        #       state: absent
-        #     become: true
-        #   when: 'python_version_current.stdout != python_version'
-
         - name: Install Python {{ python_version }}
           include_role:
             role: smbambling.scl
@@ -114,17 +65,6 @@
               - name: rh-python{{ python_version_dotless }}-python-pip
               # - name: rh-python{{ python_version_dotless }}
         
-        # - name: Permanently enable Python and Postgres in SCL.
-        #   copy:
-        #     content: |
-        #       #!/bin/bash
-        #       source scl_source enable rh-python{{ python_version_dotless }}
-        #       source scl_source enable rh-postgresql{{ postgres_version_dotless }}
-        #     dest: /etc/profile.d/ansible_scl_enable.sh
-        #     owner: root
-        #     group: root
-        #     mode: 0644
-
         - name: Install required web packages
           yum:
             name:
