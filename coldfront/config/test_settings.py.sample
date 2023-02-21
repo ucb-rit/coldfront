@@ -94,4 +94,5 @@ FLAGS = {
     'SECURE_DIRS_REQUESTABLE': [{'condition': 'boolean', 'value': True}],
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': True}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': False}],
+    'USER_DEPARTMENTS_ENABLED': [{'condition': 'boolean', 'value': True}],
 }

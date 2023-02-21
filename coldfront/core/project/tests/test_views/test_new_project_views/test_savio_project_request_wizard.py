@@ -95,11 +95,12 @@ class TestSavioProjectRequestWizard(TestBase):
         self.assertEqual(requests.count(), 1)
         projects = Project.objects.all()
         self.assertEqual(projects.count(), 1)
+        print(UserDepartment.objects.all())
         self.assertEqual(UserDepartment.objects.count(), 1)
-        self.assertEqual(UserDepartment.objects.filter(
+        self.assertTrue(UserDepartment.objects.filter(
                                         userprofile=self.user.userprofile,
                                         department=selected_dept,
-                                        is_authoritative=False).exists(), True)
+                                        is_authoritative=False).exists())
         request = requests.first()
         project = projects.first()
         self.assertEqual(request.requester, self.user)

@@ -31,10 +31,10 @@ class TestAddDepartments(TestBase):
         response = self.client.post(self.request_url(), form_data)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
         self.assertEqual(UserDepartment.objects.count(), 1)
-        self.assertEqual(UserDepartment.objects.filter(
+        self.assertTrue(UserDepartment.objects.filter(
                                         userprofile=self.user.userprofile,
                                         department=department,
-                                        is_authoritative=False).exists(), True)
+                                        is_authoritative=False).exists())
 
         department2 = Department.objects.get_or_create(name='Department 2', code='DEPT2')[0]
         form_data = {
@@ -43,10 +43,10 @@ class TestAddDepartments(TestBase):
         response = self.client.post(self.request_url(), form_data)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
         self.assertEqual(UserDepartment.objects.count(), 1)
-        self.assertEqual(UserDepartment.objects.filter(
+        self.assertTrue(UserDepartment.objects.filter(
                                         userprofile=self.user.userprofile,
                                         department=department2,
-                                        is_authoritative=False).exists(), True)
+                                        is_authoritative=False).exists())
 
         form_data = {
             'departments': [],
