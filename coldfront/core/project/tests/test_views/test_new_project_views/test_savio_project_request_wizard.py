@@ -95,8 +95,7 @@ class TestSavioProjectRequestWizard(TestBase):
         self.assertEqual(requests.count(), 1)
         projects = Project.objects.all()
         self.assertEqual(projects.count(), 1)
-        userdepartments = UserDepartment.objects.all()
-        self.assertEqual(userdepartments.count(), 1)
+        self.assertEqual(UserDepartment.objects.count(), 1)
         self.assertEqual(UserDepartment.objects.filter(
                                         userprofile=self.user.userprofile,
                                         department=selected_dept,
