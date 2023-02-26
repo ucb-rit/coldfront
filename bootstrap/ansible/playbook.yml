@@ -14,7 +14,7 @@
     provisioning_tasks: true
     common_tasks: true
     python_version: 3.8
-    postgres_version: 10
+    postgres_version: 15
     python_version_dotless: "{{ python_version | regex_replace('\\.','') }}"
     postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
 
@@ -255,22 +255,21 @@
           when: install_billing_validation_package
           no_log: true
 
-        # Create a PostgreSQL database and a user for the Django application.
+        # Create a PostgreSQL user and database for the Django application.
 
-        - name: Create a new PostgreSQL database
-          postgresql_db:
-            name: "{{ db_name }}"
+        - name: Create a PostgreSQL admin user
+          postgresql_user:
+            name: "{{ db_admin_user }}"
+            password: "{{ db_admin_passwd }}"
+            role_attr_flags: CREATEDB
           become_user: postgres
           vars:
             ansible_python_interpreter: "{{ git_prefix }}/venv/bin/python3"
 
-        - name: Create a PostgreSQL admin user and grant permissions
-          postgresql_user:
-            name: "{{ db_admin_user }}"
-            db: "{{ db_name }}"
-            priv: ALL
-            password: "{{ db_admin_passwd }}"
-            role_attr_flags: CREATEDB
+        - name: Create a new PostgreSQL database under the admin user
+          postgresql_db:
+            name: "{{ db_name }}"
+            owner: "{{ db_admin_user }}"
           become_user: postgres
           vars:
             ansible_python_interpreter: "{{ git_prefix }}/venv/bin/python3"
