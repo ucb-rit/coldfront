@@ -18,11 +18,6 @@
     python_version_dotless: "{{ python_version | regex_replace('\\.','') }}"
     postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
 
-    python_version: 3.6
-    postgres_version: 15
-    python_version_dotless: "{{ python_version | regex_replace('\\.','') }}"
-    postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
-
   vars_files:
     - "../../main.yml"
 
@@ -137,13 +132,6 @@
         # Install and configure PostgreSQL.
 
         - name: Add Postgres yum repository
-          yum_repository:
-            name: postgres-repository
-            description: postgres repository
-            baseurl: https://download.postgresql.org/pub/repos/yum/{{ postgres_version }}/redhat/rhel-7-x86_64/
-            gpgkey: http://yum.postgresql.org/RPM-GPG-KEY-PGDG-94
-
-        - name: Add yum repository
           yum_repository:
             name: postgres-repository
             description: postgres repository
@@ -318,13 +306,6 @@
               service:
                 name: firewalld
                 state: started
-                enabled: true
-
-            - name: Permit http traffic in public zone
-              ansible.posix.firewalld:
-                zone: public
-                service: http
-                state: enabled
                 permanent: true
 
             - name: Run Cloudflare Tasks

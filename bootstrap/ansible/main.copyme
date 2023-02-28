@@ -285,6 +285,6 @@ sentry_dsn: ""
 
 # # A list of admin email addresses to be notified about new requests and other
 # # events.
-# email_admin_list: []
+# email_admin_list: ['placeholder@dev.dev']
 # # A list of email addresses to CC when certain requests are processed.
-# request_approval_cc_list: []
+# request_approval_cc_list: ['placeholder@dev.dev']

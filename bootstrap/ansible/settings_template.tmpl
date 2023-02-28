@@ -45,9 +45,6 @@ DEFAULT_FROM_EMAIL = EMAIL_FROM
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#        'OPTIONS': {
-#                'options': '-c search_path={{ schema_name }}'
-#            },
         'NAME': '{{ db_name }}',
         'USER': '{{ db_admin_user }}',
         'PASSWORD': '{{ db_admin_passwd }}',
