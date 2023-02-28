@@ -18,6 +18,11 @@
     python_version_dotless: "{{ python_version | regex_replace('\\.','') }}"
     postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
 
+    python_version: 3.6
+    postgres_version: 15
+    python_version_dotless: "{{ python_version | regex_replace('\\.','') }}"
+    postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
+
   vars_files:
     - "../../main.yml"
 
@@ -63,8 +68,7 @@
               - name: rh-python{{ python_version_dotless }}-python
               - name: rh-python{{ python_version_dotless }}-python-devel
               - name: rh-python{{ python_version_dotless }}-python-pip
-              # - name: rh-python{{ python_version_dotless }}
-        
+
         - name: Install required web packages
           yum:
             name:
@@ -77,7 +81,7 @@
 
         # Install and configure Redis.
 
-        - name: Install redis
+        - name: Install Redis
           yum:
             name: redis
             state: present
@@ -130,7 +134,14 @@
             state: restarted
             enabled: true
 
-        # Configure PostgreSQL.
+        # Install and configure PostgreSQL.
+
+        - name: Add Postgres yum repository
+          yum_repository:
+            name: postgres-repository
+            description: postgres repository
+            baseurl: https://download.postgresql.org/pub/repos/yum/{{ postgres_version }}/redhat/rhel-7-x86_64/
+            gpgkey: http://yum.postgresql.org/RPM-GPG-KEY-PGDG-94
 
         - name: Add yum repository
           yum_repository:
@@ -163,30 +174,6 @@
             name: postgresql-{{ postgres_version }}
             state: started
             enabled: true
-
-        - name: Update pg_hba.conf to change host auth from ident to md5 (1/2)
-          postgresql_pg_hba:
-            dest: /var/lib/pgsql/{{ postgres_version }}/data/pg_hba.conf
-            backup: true
-            method: md5
-            contype: host
-            source: ::1
-
-        - name: Update pg_hba.conf to change host auth from ident to md5 (2/2)
-          postgresql_pg_hba:
-            dest: /var/lib/pgsql/{{ postgres_version }}/data/pg_hba.conf
-            backup: true
-            method: md5
-            contype: host
-            source: 127.0.0.1/32
-
-        - name: Update pg_hba.conf to set authentication for all to md5
-          postgresql_pg_hba:
-            dest: /var/lib/pgsql/{{ postgres_version }}/data/pg_hba.conf
-            backup: true
-            method: md5
-            contype: host
-            source: "0.0.0.0/0"
 
         # Create Django application log files.
 
@@ -234,6 +221,12 @@
           register: venv_register
           become_user: "{{ djangooperator }}"
           changed_when: venv_register.stdout == "created"
+        
+        - name: Upgrade pip
+          pip:
+            name: pip
+            executable: "{{ git_prefix }}/venv/bin/pip3"
+            state: latest
 
         # Install Django application dependencies, including psycopg2,
         # required to create the PostgreSQL database and user, and mod-wsgi,
@@ -421,10 +414,15 @@
             name: vim
             state: present
 
-        - name: Modify .bashrc to start in application directory by default
-          lineinfile:
+        - name: Add dev QOL lines to .bashrc
+          blockinfile:
             path: /home/{{ djangooperator }}/.bashrc
-            line: cd {{ git_prefix }}/{{ reponame }} && source ../venv/bin/activate
+            block: |
+              # Upon login, navigate to the ColdFront directory and source the virtual environment.
+              cd {{ git_prefix }}/{{ reponame }}
+              source ../venv/bin/activate
+              # Restart Apache with a keyword.
+              alias reload="sudo service httpd reload"
 
       when: provisioning_tasks == true and deployment == "dev"
       tags: provisioning
