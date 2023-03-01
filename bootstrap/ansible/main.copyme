@@ -5,6 +5,7 @@
 # Types of Ansible tasks to run by default.
 provisioning_tasks: true
 common_tasks: true
+chmod_tasks: true # Can be false when a Windows FS is mounted
 
 ###############################################################################
 # General Settings
