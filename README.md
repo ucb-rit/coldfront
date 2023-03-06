@@ -46,28 +46,26 @@ of variables used by Ansible to configure the system.
    ```
    cp bootstrap/ansible/main.copyme main.yml
    ```
-7. Customize `main.yml`. In particular, uncomment everything under the `dev_settings` section, and fill in the below variables. Note
-that quotes need not be provided, except in the list variable.
-   ```
-   db_admin_passwd: password_here
-   redis_passwd: password_here
-   from_email: you@email.com
-   admin_email: you@email.com
-   email_admin_list: ["you@email.com"]
-   request_approval_cc_list: ["you@email.com"]
-   ```
-8. Provision the VM. This should run the Ansible playbook. Expect this to take
+7. In `main.yml`, uncomment everything under the dev_settings section.
+You can delete the staging and prod sections as they are not relevant for a dev environment.
+8. (Optional) Customize the following variables with your own values.
+```
+chmod_tasks: true # Can be false when a Windows FS is mounted
+db_admin_passwd: root
+redis_passwd: root
+```
+9. Provision the VM. This should run the Ansible playbook. Expect this to take
 a few minutes on the first run.
    ```
    vagrant up
    ```
-9. SSH into the VM.
+10. SSH into the VM.
    ```
    vagrant ssh
    ```
-10. On the host machine, navigate to `http://localhost:8880`, where the
+11. On the host machine, navigate to `http://localhost:8880`, where the
 application should be served.
-11. (Optional) Load data from a database dump file.
+12. (Optional) Load data from a database dump file.
     ```
     # Clear the Django database to avoid conflicts.
     python manage.py sqlflush | python manage.py dbshell
