@@ -372,8 +372,7 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                         'email/allocation_activated.txt',
                         template_context,
                         EMAIL_SENDER,
-                        email_receiver_list,
-                        html_template='email/allocation_activated.html'
+                        email_receiver_list
                     )
 
             elif old_status != 'Denied' and new_status == 'Denied':
@@ -400,8 +399,7 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                         'email/allocation_denied.txt',
                         template_context,
                         EMAIL_SENDER,
-                        email_receiver_list,
-                        html_template='email/allocation_denied.html'
+                        email_receiver_list
                     )
 
             allocation_obj.refresh_from_db()
@@ -748,8 +746,7 @@ class AllocationCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
                 'email/new_allocation_request.txt',
                 template_context,
                 EMAIL_SENDER,
-                [EMAIL_TICKET_SYSTEM_ADDRESS, ],
-                html_template='email/new_allocation_request.html'
+                [EMAIL_TICKET_SYSTEM_ADDRESS, ]
             )
 
         return super().form_valid(form)
@@ -1185,8 +1182,7 @@ class AllocationActivateRequestView(LoginRequiredMixin, UserPassesTestMixin, Vie
                 'email/allocation_activated.txt',
                 template_context,
                 EMAIL_SENDER,
-                email_receiver_list,
-                html_template='email/allocation_activated.html'
+                email_receiver_list
             )
 
         return HttpResponseRedirect(reverse('allocation-request-list'))
@@ -1245,8 +1241,7 @@ class AllocationDenyRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
                 'email/allocation_denied.txt',
                 template_context,
                 EMAIL_SENDER,
-                email_receiver_list,
-                html_template='email/allocation_denied.html'
+                email_receiver_list
             )
 
         return HttpResponseRedirect(reverse('allocation-request-list'))
@@ -1424,8 +1419,7 @@ class AllocationRenewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView)
                     'email/allocation_renewed.txt',
                     template_context,
                     EMAIL_SENDER,
-                    [EMAIL_TICKET_SYSTEM_ADDRESS, ],
-                    html_template='email/allocation_renewed.html'
+                    [EMAIL_TICKET_SYSTEM_ADDRESS, ]
                 )
 
             messages.success(request, 'Allocation renewed successfully')

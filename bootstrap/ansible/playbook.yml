@@ -55,7 +55,7 @@
               - libffi-devel
             state: present
 
-        - name: Install Python {{ python_version }}
+        - name: Install SCL and Python {{ python_version }}
           include_role:
             role: smbambling.scl
           vars:
@@ -204,8 +204,9 @@
         - name: Initialize Python virtual environment
           shell: >
               test -f {{ git_prefix }}/venv/bin/activate
-              || (/opt/rh/rh-python{{ python_version_dotless }}/root/usr/bin/python -m venv {{ git_prefix }}/venv
-              && echo created)
+              || (source scl_source enable rh-python{{ python_version_dotless }}
+                  && python3 -m venv {{ git_prefix }}/venv
+                  && echo created)
           register: venv_register
           become_user: "{{ djangooperator }}"
           changed_when: venv_register.stdout == "created"
@@ -306,6 +307,13 @@
               service:
                 name: firewalld
                 state: started
+                enabled: true
+
+            - name: Permit http traffic in public zone
+              ansible.posix.firewalld:
+                zone: public
+                service: http
+                state: enabled
                 permanent: true
 
             - name: Run Cloudflare Tasks
@@ -399,6 +407,7 @@
           blockinfile:
             path: /home/{{ djangooperator }}/.bashrc
             block: |
+              source scl_source enable rh-python{{ python_version_dotless }}
               # Upon login, navigate to the ColdFront directory and source the virtual environment.
               cd {{ git_prefix }}/{{ reponame }}
               source ../venv/bin/activate
