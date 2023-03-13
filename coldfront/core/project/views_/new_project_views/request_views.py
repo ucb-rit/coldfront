@@ -410,7 +410,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             return False
 
         if has_entry_key not in extra_data or email != extra_data[email_key]:
-            has_entry = len(ldap_search_user(email, fn, ln).entries) == 1
+            has_entry = ldap_search_user(email, fn, ln) is not None
             extra_data[has_entry_key] = has_entry
             extra_data[email_key] = email
             self.request.session.modified = True
