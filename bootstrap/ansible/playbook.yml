@@ -55,7 +55,10 @@
               - libffi-devel
             state: present
 
-        - name: Install SCL and Python {{ python_version }}
+        # The SCL role runs many tasks when it's included, so having it do
+        # everything in one run would be ideal to not have redundant tasks.
+
+        - name: Install SCL for Postgres and installing Python {{ python_version }}
           include_role:
             role: smbambling.scl
           vars:
@@ -407,6 +410,7 @@
           blockinfile:
             path: /home/{{ djangooperator }}/.bashrc
             block: |
+              # Add the SCL-installed Python 3 to PATH by default
               source scl_source enable rh-python{{ python_version_dotless }}
               # Upon login, navigate to the ColdFront directory and source the virtual environment.
               cd {{ git_prefix }}/{{ reponame }}
