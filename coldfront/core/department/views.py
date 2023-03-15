@@ -12,7 +12,7 @@ from coldfront.core.utils.common import import_from_settings
 class UpdateDepartmentsView(LoginRequiredMixin, FormView):
 
     form_class = DepartmentSelectionForm
-    template_name = 'user/user_update_departments.html'
+    template_name = 'user_update_departments.html'
     login_url = '/'
 
     error_message = 'Unexpected failure. Please contact an administrator.'
