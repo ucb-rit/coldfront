@@ -208,8 +208,8 @@
           shell: >
               test -f {{ git_prefix }}/venv/bin/activate
               || (source scl_source enable rh-python{{ python_version_dotless }}
-                  && python3 -m venv {{ git_prefix }}/venv
-                  && echo created)
+              && python3 -m venv {{ git_prefix }}/venv
+              && echo created)
           register: venv_register
           become_user: "{{ djangooperator }}"
           changed_when: venv_register.stdout == "created"

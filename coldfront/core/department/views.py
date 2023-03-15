@@ -7,8 +7,6 @@ from coldfront.core.department.models import UserDepartment
 from coldfront.core.department.forms import DepartmentSelectionForm
 from coldfront.core.utils.common import import_from_settings
 
-
-
 # Create your views here.
 
 class UpdateDepartmentsView(LoginRequiredMixin, FormView):
