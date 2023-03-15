@@ -409,13 +409,15 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         if not email:
             return False
 
-        if has_entry_key not in extra_data or email != extra_data[email_key]:
-            has_entry = ldap_search_user(email, fn, ln) is not None
+        if has_entry_key in extra_data and email == extra_data[email_key]:
+            has_entry = extra_data[has_entry_key]
+        else:
+            entry = ldap_search_user(email, fn, ln)
+            has_entry = entry is not None and bool(entry.departmentNumber)
             extra_data[has_entry_key] = has_entry
             extra_data[email_key] = email
             self.request.session.modified = True
-        else:
-            has_entry = extra_data[has_entry_key]
+
         return not has_entry
 
     def show_pool_allocations_form_condition(self):

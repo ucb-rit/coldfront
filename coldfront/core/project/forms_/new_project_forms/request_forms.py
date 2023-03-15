@@ -256,13 +256,6 @@ class SavioProjectPIDepartmentForm(forms.Form):
         required=True
     )
 
-    def clean_departments(self):
-        cleaned_data = super().clean()
-        departments = cleaned_data['departments']
-        if not departments:
-            raise forms.ValidationError('Please select at least one department.')
-        return departments
-
 class SavioProjectExtraFieldsForm(forms.Form):
     """A base form for retrieving additional information for the
     requested allowance."""
