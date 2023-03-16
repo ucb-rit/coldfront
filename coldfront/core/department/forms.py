@@ -18,4 +18,4 @@ class DepartmentSelectionForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         self.fields['departments'].initial = Department.objects \
-            .filter(userprofile=user_profile)
+            .filter(user_profile=user_profile)

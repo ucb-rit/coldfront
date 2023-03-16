@@ -2,20 +2,39 @@ from django.core.management import BaseCommand
 from coldfront.core.department.models import Department
 from coldfront.core.department.utils.ldap import LDAP_URL
 from coldfront.core.department.utils.ldap import DEPARTMENT_OU
+from coldfront.core.utils.common import add_argparse_dry_run_argument
 from ldap3 import Connection
 import logging
-
 
 class Command(BaseCommand):
 
     help = 'Fetches departments from LDAP and sets them in the database'
     logger = logging.getLogger(__name__)
 
+    def add_arguments(self, parser):
+        add_argparse_dry_run_argument(parser)
+    
+    def log(self, message, dry_run):
+        if not dry_run:
+            self.logger.info(message)
+        print(message)
+
     def handle(self, *args, **options):
-        department, created = Department.objects.get_or_create(
+        dry_run = options['dry_run']
+
+        if dry_run:
+            department = Department()
+            department.pk = '{placeholder_pk}'
+            created = False
+            if not Department.objects.filter(code='OTH').exists():
+                created = True
+        else:
+            department, created = Department.objects.get_or_create(
                     code='OTH', name='Other')
         if created:
-            self.logger.info(f'Created department {department.pk}, Other (OTH)')
+            self.log(f'Created department {department.pk}, Other (OTH)',
+                     dry_run)
+
         # auto_range=True is needed for large searches
         conn = Connection(LDAP_URL, auto_bind=True, auto_range=True)
         conn.search(DEPARTMENT_OU,
@@ -26,8 +45,16 @@ class Command(BaseCommand):
             hierarchy = entry.berkeleyEduOrgUnitHierarchyString.value
             # filter L4 hierarchies
             if hierarchy.count('-') == 3:
-                department, created = Department.objects.get_or_create(
-                    code=hierarchy.split('-')[3], name=entry.description.value)
+                code = hierarchy.split('-')[3]
+                if dry_run and not Department.objects.filter(code=code) \
+                                                                    .exists():
+                    created = True
+                    department.name = entry.description.value
+                    department.code = code
+                else:
+                    department, created = Department.objects.get_or_create(
+                                                code=code,
+                                                name=entry.description.value)
                 if created:
-                    self.logger.info(f'Created department {department.pk}, '
-                                f'{department.name} ({department.code})')
+                    self.log(f'Created department {department.pk}, '
+                             f'{department.name} ({department.code})', dry_run)

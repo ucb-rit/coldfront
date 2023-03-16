@@ -55,7 +55,7 @@ def get_department_name_from_code(code):
                 attributes=['description'])
     return conn.entries[0].description.value
 
-def fetch_and_set_user_departments(user, user_profile):
+def fetch_and_set_user_departments(user, user_profile, dry_run=False):
     ''' Fetches a user's departments from LDAP and sets them in the database
     Parameters:
         user (User): Django User object
