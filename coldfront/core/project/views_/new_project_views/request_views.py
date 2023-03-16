@@ -401,7 +401,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             cleaned_data = self.get_cleaned_data_for_step(step) or {}
             if cleaned_data.get('PI', None):
                 if UserDepartment.objects.filter(
-                    userprofile=cleaned_data['PI'].userprofile).exists():
+                    user_profile=cleaned_data['PI'].userprofile).exists():
                     return False
                 email = cleaned_data['PI'].email
                 fn = cleaned_data['PI'].first_name
@@ -552,7 +552,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             data = form_data[step_number]
             if data:
                 for department in data['departments']:
-                    UserDepartment.objects.get_or_create(userprofile=pi_profile,
+                    UserDepartment.objects.get_or_create(user_profile=pi_profile,
                         department=department,
                         is_authoritative=False)
         return pi

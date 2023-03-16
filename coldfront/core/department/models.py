@@ -11,13 +11,13 @@ class Department(models.Model):
         return f'{self.name} ({self.code})'
 
 class UserDepartment(models.Model):
-    userprofile = models.ForeignKey('user.UserProfile', on_delete=models.CASCADE)
+    user_profile = models.ForeignKey('user.UserProfile', on_delete=models.CASCADE)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     is_authoritative = models.BooleanField(default=False)
     history = HistoricalRecords()
 
     def __str__(self):
-        return f'{self.userprofile.user.username}-{self.department.code}'
+        return f'{self.user_profile.user.username}-{self.department.code}'
 
     class Meta:
-        unique_together = ('userprofile', 'department')
+        unique_together = ('user_profile', 'department')

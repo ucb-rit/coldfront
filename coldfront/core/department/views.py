@@ -21,12 +21,12 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
         user = self.request.user
         form_data = form.cleaned_data
         new_departments = form_data['departments']
-        userprofile = user.userprofile
+        user_profile = user.userprofile
         for department in new_departments:
-            UserDepartment.objects.get_or_create(userprofile=userprofile,
+            UserDepartment.objects.get_or_create(userprofile=user_profile,
                                                  department=department,
                                                  is_authoritative=False)
-        UserDepartment.objects.filter(userprofile=userprofile,
+        UserDepartment.objects.filter(userprofile=user_profile,
                                       is_authoritative=False) \
                               .exclude(department__in=new_departments).delete()
         

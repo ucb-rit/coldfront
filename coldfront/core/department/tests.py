@@ -34,7 +34,7 @@ class TestAddDepartments(TestBase):
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
         self.assertEqual(UserDepartment.objects.count(), 1)
         self.assertTrue(UserDepartment.objects.filter(
-                                        userprofile=self.user.userprofile,
+                                        user_profile=self.user.userprofile,
                                         department=department1,
                                         is_authoritative=False).exists())
 
@@ -45,11 +45,11 @@ class TestAddDepartments(TestBase):
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
         self.assertEqual(UserDepartment.objects.count(), 2)
         self.assertTrue(UserDepartment.objects.filter(
-                                        userprofile=self.user.userprofile,
+                                        user_profile=self.user.userprofile,
                                         department=department2,
                                         is_authoritative=False).exists())
         self.assertTrue(UserDepartment.objects.filter(
-                                        userprofile=self.user.userprofile,
+                                        user_profile=self.user.userprofile,
                                         department=department3,
                                         is_authoritative=False).exists())
 
