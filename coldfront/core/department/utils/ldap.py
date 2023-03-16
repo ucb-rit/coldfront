@@ -60,9 +60,12 @@ def fetch_and_set_user_departments(user, user_profile, dry_run=False):
     Parameters:
         user (User): Django User object
         user_profile (UserProfile): Coldfront UserProfile object
+        dry_run (bool): If True, don't actually make changes (default: False)
     Returns:
         None
     '''
+    if dry_run:
+        logger.info = print
     user_entry = ldap_search_user(user.email, user.first_name, user.last_name)
     ldap_departments = user_entry.departmentNumber.values if user_entry else []
     for department_code in ldap_departments:
@@ -82,3 +85,7 @@ def fetch_and_set_user_departments(user, user_profile, dry_run=False):
                                         userprofile=user_profile,
                                         department=department,
                                         defaults={'is_authoritative': True})
+        if dry_run and created:
+            print(f'Created UserDepartment {userdepartment.pk}, '
+                        f'{userdepartment.user_profile.user.username}-'
+                        f'{userdepartment.department.name}')
