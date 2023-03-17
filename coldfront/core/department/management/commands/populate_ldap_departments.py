@@ -32,7 +32,7 @@ class Command(BaseCommand):
             department, created = Department.objects.get_or_create(
                     code='OTH', name='Other')
         if created:
-            self.log(f'Created department {department.pk}, Other (OTH)',
+            self.log(f'Created Department {department.pk}, Other (OTH)',
                      dry_run)
 
         # auto_range=True is needed for large searches
@@ -56,5 +56,5 @@ class Command(BaseCommand):
                                                 code=code,
                                                 name=entry.description.value)
                 if created:
-                    self.log(f'Created department {department.pk}, '
+                    self.log(f'Created Department {department.pk}, '
                              f'{department.name} ({department.code})', dry_run)
