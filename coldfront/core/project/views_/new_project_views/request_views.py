@@ -542,19 +542,18 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             pi_profile.save()
 
         if flag_enabled('USER_DEPARTMENTS_ENABLED'):
-            # Set the user's authoritative departments in the UserProfile.
-            
-            fetch_and_set_user_departments(pi, pi_profile)
-            
             # Set the user's non-authoritative departments in the UserProfile.
-
             step_number = self.step_numbers_by_form_name['pi_department']
             data = form_data[step_number]
-            if data:
+            if data.get('departments', None):
                 for department in data['departments']:
                     UserDepartment.objects.get_or_create(user_profile=pi_profile,
                         department=department,
                         is_authoritative=False)
+            else:
+                # Set the user's authoritative departments in the UserProfile.
+                fetch_and_set_user_departments(pi, pi_profile)
+            
         return pi
 
     def __handle_recharge_allowance(self, form_data,
