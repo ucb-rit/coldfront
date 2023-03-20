@@ -10,6 +10,7 @@ from django.views.generic import TemplateView
 from flags.urls import flagged_paths
 
 import coldfront.core.user.views as user_views
+import coldfront.core.department.views as department_views
 import coldfront.core.user.views_.request_hub_views as request_hub_views
 from coldfront.core.user.forms import VerifiedEmailAddressPasswordResetForm
 from coldfront.core.user.forms import UserLoginForm
@@ -97,6 +98,12 @@ with flagged_paths('BASIC_AUTH_ENABLED') as f_path:
                name='update-primary-email-address'),
     ]
 
+with flagged_paths('USER_DEPARTMENTS_ENABLED') as f_path:
+    urlpatterns = [
+        f_path('update-departments',
+            department_views.UpdateDepartmentsView.as_view(),
+            name='update-departments'),
+    ]
 
 with flagged_paths('SSO_ENABLED') as f_path:
     urlpatterns += [
