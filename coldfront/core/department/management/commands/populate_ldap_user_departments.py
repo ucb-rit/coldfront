@@ -14,5 +14,5 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry_run = options['dry_run']
         for user in User.objects.select_related('userprofile').all():
-            user_profile = user.userprofile
-            fetch_and_set_user_departments(user, user_profile, dry_run)
+            userprofile = user.userprofile
+            fetch_and_set_user_departments(user, userprofile, dry_run)

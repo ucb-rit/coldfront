@@ -55,11 +55,11 @@ def get_department_name_from_code(code):
                 attributes=['description'])
     return conn.entries[0].description.value
 
-def fetch_and_set_user_departments(user, user_profile, dry_run=False):
+def fetch_and_set_user_departments(user, userprofile, dry_run=False):
     ''' Fetches a user's departments from LDAP and sets them in the database
     Parameters:
         user (User): Django User object
-        user_profile (UserProfile): Coldfront UserProfile object
+        userprofile (UserProfile): Coldfront UserProfile object
         dry_run (bool): If True, don't actually make changes (default: False)
     Returns:
         None
@@ -92,11 +92,11 @@ def fetch_and_set_user_departments(user, user_profile, dry_run=False):
         # Create UserDepartment association, updating is_authorative if needed
         if not dry_run:
             userdepartment, created = UserDepartment.objects.update_or_create(
-                                            user_profile=user_profile,
+                                            userprofile=userprofile,
                                             department=department,
                                             defaults={'is_authoritative': True})
 
-        if dry_run and UserDepartment.objects.filter(user_profile=user_profile,
+        if dry_run and UserDepartment.objects.filter(userprofile=userprofile,
                                             department__code=department_code,
                                             is_authoritative=True).exists():
             print(f'Created UserDepartment {userdepartment.pk}, '

@@ -14,8 +14,8 @@ class DepartmentSelectionForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.departments = kwargs.pop('departments', None)
-        user_profile = kwargs.pop('user', None).userprofile
+        userprofile = kwargs.pop('user', None).userprofile
         super().__init__(*args, **kwargs)
 
         self.fields['departments'].initial = Department.objects \
-            .filter(user_profile=user_profile)
+            .filter(userprofile=userprofile)

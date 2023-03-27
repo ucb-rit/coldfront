@@ -11,13 +11,16 @@ class Department(models.Model):
         return f'{self.name} ({self.code})'
 
 class UserDepartment(models.Model):
-    user_profile = models.ForeignKey('user.UserProfile', on_delete=models.CASCADE)
+    # This field must be named 'userprofile' because django-simple-history uses
+    # the lowercase name of the UserProfile model to filter UserDepartents.
+    # https://github.com/jazzband/django-simple-history/blob/master/simple_history/models.py#L671
+    userprofile = models.ForeignKey('user.UserProfile', on_delete=models.CASCADE)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     is_authoritative = models.BooleanField(default=False)
     history = HistoricalRecords()
 
     def __str__(self):
-        return f'{self.user_profile.user.username}-{self.department.code}'
+        return f'{self.userprofile.user.username}-{self.department.code}'
 
     class Meta:
-        unique_together = ('user_profile', 'department')
+        unique_together = ('userprofile', 'department')
