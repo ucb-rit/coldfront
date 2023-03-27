@@ -99,7 +99,7 @@ with flagged_paths('BASIC_AUTH_ENABLED') as f_path:
     ]
 
 with flagged_paths('USER_DEPARTMENTS_ENABLED') as f_path:
-    urlpatterns = [
+    urlpatterns += [
         f_path('update-departments',
             department_views.UpdateDepartmentsView.as_view(),
             name='update-departments'),
