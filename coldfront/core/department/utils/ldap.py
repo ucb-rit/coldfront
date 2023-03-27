@@ -96,7 +96,8 @@ def fetch_and_set_user_departments(user, userprofile, dry_run=False):
                                             department=department,
                                             defaults={'is_authoritative': True})
 
-        if dry_run and UserDepartment.objects.filter(userprofile=userprofile,
+        if dry_run and not UserDepartment.objects.filter(
+                                            userprofile=userprofile,
                                             department__code=department_code,
                                             is_authoritative=True).exists():
             print(f'Created UserDepartment {userdepartment.pk}, '
