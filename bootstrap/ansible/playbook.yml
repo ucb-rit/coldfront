@@ -58,7 +58,7 @@
         # The SCL role runs many tasks when it's included, so having it do
         # everything in one run would be ideal to not have redundant tasks.
 
-        - name: Install SCL for Postgres and installing Python {{ python_version }}
+        - name: Install SCL for Postgres and Python; Install Python {{ python_version }}
           include_role:
             role: smbambling.scl
           vars:
