@@ -43,7 +43,6 @@ logger = logging.getLogger(__name__)
 
 class AllocationRenewalRequestListView(LoginRequiredMixin, TemplateView):
     template_name = 'project/project_renewal/project_renewal_request_list.html'
-    login_url = '/'
     completed = False
 
     def get_queryset(self):
@@ -111,9 +110,11 @@ class AllocationRenewalRequestMixin(object):
         num_service_units = Decimal(
             ComputingAllowanceInterface().service_units_from_name(
                 self.computing_allowance_obj.get_name()))
-        return prorated_allocation_amount(
-            num_service_units, self.request_obj.request_time,
-            self.allocation_period_obj)
+        if self.computing_allowance_obj.are_service_units_prorated():
+            num_service_units = prorated_allocation_amount(
+                num_service_units, self.request_obj.request_time,
+                self.allocation_period_obj)
+        return num_service_units
 
     def set_common_context_data(self, context):
         """Given a dictionary of context variables to include in the
@@ -138,7 +139,6 @@ class AllocationRenewalRequestDetailView(LoginRequiredMixin,
     model = AllocationRenewalRequest
     template_name = (
         'project/project_renewal/project_renewal_request_detail.html')
-    login_url = '/'
 
     error_message = 'Unexpected failure. Please contact an administrator.'
     request_obj = None
@@ -335,7 +335,6 @@ class AllocationRenewalRequestReviewEligibilityView(LoginRequiredMixin,
                                                     FormView):
     form_class = ReviewStatusForm
     template_name = 'project/project_renewal/review_eligibility.html'
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -411,7 +410,6 @@ class AllocationRenewalRequestReviewDenyView(LoginRequiredMixin,
                                              FormView):
     form_class = ReviewDenyForm
     template_name = 'project/project_renewal/review_deny.html'
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -488,7 +486,6 @@ class AllocationRenewalRequestReviewDenyView(LoginRequiredMixin,
 #                                          UserPassesTestMixin,
 #                                          AllocationRenewalRequestMixin,
 #                                          View):
-#     login_url = '/'
 #
 #     def test_func(self):
 #         """UserPassesTestMixin tests."""
