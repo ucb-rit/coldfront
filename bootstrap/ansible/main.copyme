@@ -88,6 +88,8 @@ flag_sso_enabled: False
 # TODO: For LRC, disable BRC and enable LRC.
 flag_brc_enabled: True
 flag_lrc_enabled: False
+# TODO: For LRC, disable department functionality.
+flag_user_departments_enabled: True
 # The number of the month in which users should be able to request renewal for
 # the next allowance year.
 # TODO: For LRC, set the month number to 9 (September).
@@ -106,10 +108,8 @@ center_user_guide: "https://docs-research-it.berkeley.edu/services/high-performa
 center_login_guide: "https://docs-research-it.berkeley.edu/services/high-performance-computing/user-guide/logging-brc-clusters/#Logging-in"
 # TODO: For MyLRC, use "hpcshelp@lbl.gov".
 center_help_email: "brc-hpc-help@berkeley.edu"
-# TODO: For MyLRC, use "Division"
+# TODO: For MyLRC, use "Division".
 department_display_name: "Department"
-# TODO: For MyLRC, use False
-flag_user_departments_enabled: True
 
 # LRC billing validation package settings (for Pip installation).
 # TODO: For LRC deployments with access to the package for billing validation

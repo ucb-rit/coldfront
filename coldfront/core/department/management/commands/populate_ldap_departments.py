@@ -6,6 +6,7 @@ from coldfront.core.utils.common import add_argparse_dry_run_argument
 from ldap3 import Connection
 import logging
 
+
 class Command(BaseCommand):
 
     help = 'Fetches departments from LDAP and sets them in the database'
@@ -17,7 +18,7 @@ class Command(BaseCommand):
     def log(self, message, dry_run):
         if not dry_run:
             self.logger.info(message)
-        print(message)
+        self.stdout.write(self.style.SUCCESS(message))
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
@@ -30,31 +31,32 @@ class Command(BaseCommand):
                 created = True
         else:
             department, created = Department.objects.get_or_create(
-                    code='OTH', name='Other')
+                code='OTH', name='Other')
         if created:
-            self.log(f'Created Department {department.pk}, Other (OTH)',
-                     dry_run)
+            self.log(
+                f'Created Department {department.pk}, Other (OTH)', dry_run)
 
         # auto_range=True is needed for large searches
         conn = Connection(LDAP_URL, auto_bind=True, auto_range=True)
-        conn.search(DEPARTMENT_OU,
-                '(berkeleyEduOrgUnitHierarchyString=*-*-*-*)',
-                attributes=['berkeleyEduOrgUnitHierarchyString', 'description'])
+        conn.search(
+            DEPARTMENT_OU,
+            '(berkeleyEduOrgUnitHierarchyString=*-*-*-*)',
+            attributes=['berkeleyEduOrgUnitHierarchyString', 'description'])
         
         for entry in conn.entries[1:]:
             hierarchy = entry.berkeleyEduOrgUnitHierarchyString.value
             # filter L4 hierarchies
             if hierarchy.count('-') == 3:
                 code = hierarchy.split('-')[3]
-                if dry_run and not Department.objects.filter(code=code) \
-                                                                    .exists():
+                if dry_run and not Department.objects.filter(
+                        code=code).exists():
                     created = True
                     department.name = entry.description.value
                     department.code = code
                 else:
                     department, created = Department.objects.get_or_create(
-                                                code=code,
-                                                name=entry.description.value)
+                        code=code, name=entry.description.value)
                 if created:
-                    self.log(f'Created Department {department.pk}, '
-                             f'{department.name} ({department.code})', dry_run)
+                    self.log(
+                        f'Created Department {department.pk}, '
+                        f'{department.name} ({department.code})', dry_run)

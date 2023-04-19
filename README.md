@@ -49,11 +49,11 @@ of variables used by Ansible to configure the system.
 7. In `main.yml`, uncomment everything under the dev_settings section.
 You can delete the staging and prod sections as they are not relevant for a dev environment.
 8. (Optional) Customize the following variables with your own values.
-```
-chmod_tasks: true # Can be false when a Windows FS is mounted
-db_admin_passwd: root
-redis_passwd: root
-```
+    ```
+    chmod_tasks: true # Can be false when a Windows FS is mounted
+    db_admin_passwd: root
+    redis_passwd: root
+    ```
 9. Provision the VM. This should run the Ansible playbook. Expect this to take
 a few minutes on the first run.
    ```
