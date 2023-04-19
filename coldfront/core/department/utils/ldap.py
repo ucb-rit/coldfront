@@ -63,7 +63,7 @@ def get_department_name_from_code(code):
 
 
 def fetch_and_set_user_departments(user, userprofile, dry_run=False):
-    """Fetch a user's departments from LDAP and sets them in the
+    """Fetch a user's departments from LDAP and set them in the
     database.
 
     Parameters:
