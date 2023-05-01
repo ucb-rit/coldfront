@@ -218,7 +218,7 @@ class SavioProjectExistingPIForm(forms.Form):
         """Exclude certain Users from being displayed as PI options."""
         # Exclude any user that does not have an email address.
         self.fields['PI'].queryset = User.objects.exclude(
-            Q(email__isnull=True) | Q(email__exact=''))
+            Q(email__isnull=True) | Q(email__exact='') | Q(is_active=False))
 
 
 class SavioProjectNewPIForm(forms.Form):
