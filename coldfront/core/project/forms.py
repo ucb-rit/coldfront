@@ -6,7 +6,8 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
 from coldfront.core.project.models import (Project, ProjectReview,
-                                           ProjectUserRoleChoice)
+                                           ProjectUserRoleChoice,
+                                           TestFileModel)
 from coldfront.core.user.utils_.host_user_utils import eligible_host_project_users
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.resource.utils import get_compute_resource_names
@@ -17,6 +18,12 @@ EMAIL_DIRECTOR_PENDING_PROJECT_REVIEW_EMAIL = import_from_settings(
 EMAIL_ADMIN_LIST = import_from_settings('EMAIL_ADMIN_LIST', [])
 EMAIL_DIRECTOR_EMAIL_ADDRESS = import_from_settings(
     'EMAIL_DIRECTOR_EMAIL_ADDRESS', '')
+
+
+class FileUploadForm(forms.ModelForm):
+    class Meta:
+        model = TestFileModel
+        fields = ('description', 'document')
 
 
 class ProjectSearchForm(forms.Form):

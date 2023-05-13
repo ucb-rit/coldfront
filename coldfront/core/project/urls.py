@@ -36,6 +36,10 @@ urlpatterns = [
     path('project-review/<int:pk>/email', project_views.ProjectReivewEmailView.as_view(), name='project-review-email'),
 ]
 
+# test url path for google drive upload form
+urlpatterns += [
+    path('test-path', project_views.TestPathView.as_view(), name='test-path')
+]
 
 # Join Requests
 urlpatterns += [

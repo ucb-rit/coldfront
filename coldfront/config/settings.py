@@ -75,6 +75,11 @@ INSTALLED_APPS += [
     'coldfront.core.socialaccount',
 ]
 
+# Google Cloud Integration
+INSTALLED_APPS += [
+    'gdstorage'
+]
+
 # ------------------------------------------------------------------------------
 # Django Middleware
 # ------------------------------------------------------------------------------
