@@ -18,9 +18,14 @@ djangoprojname: coldfront
 # BRC/LRC Config
 ###############################################################################
 
+# The secret key used by Django for cryptographic signing.
+# TODO: Generate one using: `openssl rand -base64 64`.
+django_secret_key:
+
 # The name of the PostgreSQL database.
 # TODO: For LRC, set this to 'cf_lrc_db'.
 db_name: cf_brc_db
+db_host: localhost
 
 # The credentials for the database admin user.
 # TODO: Replace the username and password.
@@ -30,6 +35,7 @@ db_admin_passwd: ''
 # The password for Redis.
 # TODO: Replace the password.
 redis_passwd: ''
+redis_host: localhost
 
 # Log paths.
 # TODO: For LRC, use the substring 'cf_mylrc'.
@@ -81,9 +87,10 @@ cilogon_app_client_id: ""
 cilogon_app_secret: ""
 
 # Django Flags settings.
-# TODO: For LRC, disable basic auth. and enable SSO.
-flag_basic_auth_enabled: True
-flag_sso_enabled: False
+# TODO: For LRC, disable link login.
+flag_basic_auth_enabled: False
+flag_sso_enabled: True
+flag_link_login_enabled: True
 # TODO: For LRC, disable BRC and enable LRC.
 flag_brc_enabled: True
 flag_lrc_enabled: False
@@ -91,6 +98,7 @@ flag_lrc_enabled: False
 # the next allowance year.
 # TODO: For LRC, set the month number to 9 (September).
 flag_next_period_renewal_requestable_month: 5
+flag_multiple_email_addresses_allowed: False
 
 # Portal settings.
 # TODO: For LRC, use "MyLRC", "Laboratory Research Computing", "LRC", and

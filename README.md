@@ -46,9 +46,15 @@ of variables used by Ansible to configure the system.
    ```
    cp bootstrap/ansible/main.copyme main.yml
    ```
-7. Customize `main.yml`. In particular, uncomment everything under the `dev_settings` section, and fill in the below variables. Note
+7. Generate a key to be used as the `SECRET_KEY` for Django.
+   ```
+   # This produces two lines: condense them into one.
+   openssl rand -base64 64
+   ```
+8. Customize `main.yml`. In particular, uncomment everything under the `dev_settings` section, and fill in the below variables. Note
 that quotes need not be provided, except in the list variable.
    ```
+   django_secret_key: secret_key_from_previous_step
    db_admin_passwd: password_here
    redis_passwd: password_here
    from_email: you@email.com
@@ -56,18 +62,18 @@ that quotes need not be provided, except in the list variable.
    email_admin_list: ["you@email.com"]
    request_approval_cc_list: ["you@email.com"]
    ```
-8. Provision the VM. This should run the Ansible playbook. Expect this to take
+9. Provision the VM. This should run the Ansible playbook. Expect this to take
 a few minutes on the first run.
    ```
    vagrant up
    ```
-9. SSH into the VM.
+10. SSH into the VM.
    ```
    vagrant ssh
    ```
-10. On the host machine, navigate to `http://localhost:8880`, where the
+11. On the host machine, navigate to `http://localhost:8880`, where the
 application should be served.
-11. (Optional) Load data from a database dump file.
+12. (Optional) Load data from a database dump file.
     ```
     # Clear the Django database to avoid conflicts.
     python manage.py sqlflush | python manage.py dbshell
@@ -206,6 +212,15 @@ multiple files or directories to omit.
   
     - Open `htmlcov/index.html` in a browser to view which lines of 
   code were covered by the tests and which were not.
+
+## Docker - Quick Install (Recommend)
+1. Generate configuration (`dev_settings.py`): have Python with the `jinja2` and `pyyaml` libraries installed, and then run `bootstrap/development/gen_config.sh`
+2. Build Images: In the base directory, run `docker build . -t coldfront` and `docker build . -f Dockerfile.db -t coldfront_db`. `--build-arg PORTAL=mylrc` can be added to the build command to build for mylrc.
+3. If needed, modify `.env` to customize the web server port and the database name (e.g from `cf_mybrc_db` to `cf_mylrc_db`)
+4. To run: In the base directory, run `docker compose up`
+5. To enter the coldfront container (similar to `vagrant ssh`): run `docker exec -it coldfront-coldfront-1 bash`
+6. To load a database backup: run `bootstrap/development/docker_load_database_backup.sh ${DB_NAME} ${PATH_TO_DUMP}`
+7. To start from scratch (delete volumes): In the base directory, run `docker compose down --volumes`
 
 ## Local Machine - Quick Install (Not Recommended)
 
