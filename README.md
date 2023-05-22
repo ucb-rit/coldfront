@@ -57,7 +57,7 @@ and customize the following variables with your own values.
     django_secret_key: secret_key_from_previous_step 
     chmod_tasks: true # Can be false when a Windows FS is mounted
     db_admin_passwd: root
-    redis_passwd: ''
+    redis_passwd: root
     ```
 9. Provision the VM. This should run the Ansible playbook. Expect this to take
 a few minutes on the first run.
@@ -227,8 +227,10 @@ multiple files or directories to omit.
    docker build . -f Dockerfile.email -t coldfront_email
    ```
    Note: The above commands build images meant for a MyBRC instance. To build MyLRC images, include `--build-arg PORTAL=mylrc`.
-4. Configure environment variables to be injected into containers by creating a `.env` file in the root directory (ignored by Git) or by setting them manually.
+4. Configure environment variables to be injected into containers by creating a `.env` file in the root directory (ignored by Git) or by setting them manually. The passwords should match those generated via `main.yml`
    - `DB_NAME=cf_brc_db`: The name of the database can be customized (e.g., for a MyLRC instance, change it to `cf_lrc_db`).
+   - `DB_PASSWORD=root`: The password for the database admin user.
+   - `REDIS_PASSWORD=root`: The password for redis.
    - `COLDFRONT_PORT=8880`: The port can be customized so that multiple instances can be run without conflicting.
 5. Bring up the stack. In the root directory, run:
    ```bash
