@@ -34,6 +34,7 @@ from coldfront.core.resource.utils_.allowance_utils.computing_allowance import C
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
+from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.department.utils.ldap import ldap_search_user
@@ -563,7 +564,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 for department in data['departments']:
                     UserDepartment.objects.get_or_create(userprofile=pi_profile,
                         department=department,
-                        is_authoritative=False)
+                        defaults={'is_authoritative':False})
             else:
                 # Set the user's authoritative departments in the UserProfile.
                 fetch_and_set_user_departments(pi, pi_profile)
@@ -684,6 +685,13 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                     'breadcrumb_pi': (
                         f'New PI: {first_name} {last_name} ({email})')
                 })
+
+        pi_department_step = self.step_numbers_by_form_name['pi_department']
+        if step > pi_department_step:
+            dictionary.update({
+                'department_display_name': \
+                    import_from_settings('DEPARTMENT_DISPLAY_NAME'),
+            })
 
         pool_allocations_step = \
             self.step_numbers_by_form_name['pool_allocations']

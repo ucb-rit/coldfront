@@ -5,7 +5,7 @@
 
 
 {% block title %}
-{{ PRIMARY_CLUSTER_NAME }} Project Request - PI Department
+{{ PRIMARY_CLUSTER_NAME }} Project Request - PI {{ department_display_name }}
 {% endblock %}
 
 
@@ -29,8 +29,11 @@
   <li>{{ breadcrumb_pi }}</li>
 </ol>
 
-<p>Select one or more departments for the Principal Investigator of the project. You may search for the department(s) in the selection field.</p>
-<p>Non-Berkeley users should select "Other".</p>
+<p>Select one or more {{ department_display_name | lower}}s for the Principal Investigator of the project. You may search for the {{ department_display_name | lower }}(s) in the selection field.</p>
+<p>
+  {% flag_enabled 'BRC_ONLY' as brc_only %}
+  {% if brc_only %} Non-Berkeley {% else %} Non-Lab {% fi %}
+  users should select "Other".</p>
 
 <form action="" method="post">
   {% csrf_token %}

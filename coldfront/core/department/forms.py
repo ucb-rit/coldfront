@@ -13,7 +13,7 @@ class DepartmentSelectionForm(forms.Form):
         required=False)
 
     def __init__(self, *args, **kwargs):
-        self.departments = kwargs.pop('departments', None)
+        # self.departments = kwargs.pop('departments', None)
         userprofile = kwargs.pop('user', None).userprofile
         super().__init__(*args, **kwargs)
 

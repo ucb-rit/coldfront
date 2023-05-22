@@ -33,6 +33,9 @@ def ldap_search_user(email, first_name, last_name):
 
 def get_L4_code_from_department_code(code):
     """Return the L4 code for a department from a L4+ code.
+    L4 are departments like "Integrative Biology (IBIBI)"
+    L5 are subsets of L4 like "BSINB Dept Administration (IBADM)"
+    L6 are subsets of L5 like "IB Student Services (IBSTD)"
 
     Parameters:
         code (str): L4+ department code
@@ -48,7 +51,8 @@ def get_L4_code_from_department_code(code):
 
 
 def get_department_name_from_code(code):
-    """Return the name of a department from a code.
+    """Return the name of a department from its code (any level but ideally only L4).
+    Example: "IBIBI" -> "Integrative Biology"
 
     Parameters:
        code (str): department code
