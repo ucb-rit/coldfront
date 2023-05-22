@@ -74,7 +74,8 @@ class TestProjectRenewalPISelectionForm(TestBase):
         self.assertIsNotNone(next_allowance_year_allocation_period)
         kwargs = {
             'computing_allowance': computing_allowance,
-            'allocation_period': next_allowance_year_allocation_period,
+            'allocation_period_pk': next_allowance_year_allocation_period.pk,
+            'project_pks': [self.project.pk],
         }
 
         # The PI should be selectable.
