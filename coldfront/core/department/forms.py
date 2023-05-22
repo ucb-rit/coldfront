@@ -1,5 +1,6 @@
 from django import forms
 from coldfront.core.department.models import Department
+from coldfront.core.department.utils.ldap import fetch_and_set_user_departments
 
 
 class DepartmentSelectionForm(forms.Form):
@@ -13,9 +14,10 @@ class DepartmentSelectionForm(forms.Form):
         required=False)
 
     def __init__(self, *args, **kwargs):
-        # self.departments = kwargs.pop('departments', None)
-        userprofile = kwargs.pop('user', None).userprofile
+        user = kwargs.pop('user', None)
+        userprofile = user.userprofile
         super().__init__(*args, **kwargs)
 
+        fetch_and_set_user_departments(user, userprofile)
         self.fields['departments'].initial = Department.objects.filter(
             userprofile=userprofile)
