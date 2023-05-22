@@ -1,3 +1,5 @@
+from allauth.account.models import EmailAddress
+
 from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.billing.forms import BillingIDValidationForm
@@ -540,6 +542,18 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             pi_profile.middle_name = data['middle_name']
             pi_profile.upgrade_request = utc_now_offset_aware()
             pi_profile.save()
+
+            # Create an unverified, primary EmailAddress for the new User object.
+            try:
+                EmailAddress.objects.create(
+                    user=pi,
+                    email=email,
+                    verified=False,
+                    primary=True)
+            except IntegrityError as e:
+                self.logger.error(
+                    f'EmailAddress {email} unexpectedly already exists.')
+                raise e
 
         if flag_enabled('USER_DEPARTMENTS_ENABLED'):
             # Set the user's non-authoritative departments in the UserProfile.
