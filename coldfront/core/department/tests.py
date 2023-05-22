@@ -1,6 +1,7 @@
 from coldfront.core.utils.tests.test_base import TestBase
 from coldfront.core.department.models import Department
 from coldfront.core.department.models import UserDepartment
+from coldfront.core.department.models import HistoricalUserDepartment
 from django.urls import reverse
 
 from http import HTTPStatus
@@ -37,6 +38,7 @@ class TestAddDepartments(TestBase):
                                         userprofile=self.user.userprofile,
                                         department=department1,
                                         is_authoritative=False).exists())
+        self.assertEqual(HistoricalUserDepartment.objects.count(), 1)
 
         form_data = {
             'departments': [department2.pk, department3.pk],
@@ -52,6 +54,7 @@ class TestAddDepartments(TestBase):
                                         userprofile=self.user.userprofile,
                                         department=department3,
                                         is_authoritative=False).exists())
+        self.assertEqual(HistoricalUserDepartment.objects.count(), 4)
 
         form_data = {
             'departments': [],
@@ -59,3 +62,4 @@ class TestAddDepartments(TestBase):
         response = self.client.post(self.request_url(), form_data)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
         self.assertEqual(UserDepartment.objects.count(), 0)
+        self.assertEqual(HistoricalUserDepartment.objects.count(), 6)
