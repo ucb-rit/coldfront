@@ -685,9 +685,6 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                     'breadcrumb_pi': (
                         f'New PI: {first_name} {last_name} ({email})')
                 })
-
-        pi_department_step = self.step_numbers_by_form_name['pi_department']
-        if step > pi_department_step:
             dictionary.update({
                 'department_display_name': \
                     import_from_settings('DEPARTMENT_DISPLAY_NAME'),
