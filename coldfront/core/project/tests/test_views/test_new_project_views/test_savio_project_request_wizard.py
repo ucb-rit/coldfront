@@ -1,6 +1,7 @@
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
+from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectExistingPIForm
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
@@ -36,6 +37,27 @@ class TestSavioProjectRequestWizard(TestBase):
 
         computing_allowance = Resource.objects.get(name=BRCAllowances.FCA)
         allocation_period = get_current_allowance_year_period()
+
+        kwargs = {
+            'computing_allowance': computing_allowance,
+            'allocation_period': allocation_period,
+        }
+
+        # The PI should not be selectable.
+        self.user.is_active = False
+        self.user.save()
+        form = SavioProjectExistingPIForm(**kwargs)
+        pi_field_queryset = \
+            form.fields['PI'].queryset
+        self.assertNotIn(self.user, pi_field_queryset)
+
+        # The PI should be selectable.
+        self.user.is_active = True
+        self.user.save()
+        form = SavioProjectExistingPIForm(**kwargs)
+        pi_field_queryset = \
+            form.fields['PI'].queryset
+        self.assertIn(self.user, pi_field_queryset)
 
         selected_dept = Department.objects.get_or_create(name='Department 1', code='DEPT1')[0]
         not_selected_dept = Department.objects.get_or_create(name='Department 2', code='DEPT2')[0]
@@ -122,4 +144,7 @@ class TestSavioProjectRequestWizard(TestBase):
             survey_data['11-computational_aspects'])
         self.assertEqual(request.status.name, 'Under Review')
 
+
+
+    
     # TODO
