@@ -24,6 +24,18 @@ Update {{ department_display_name }}s
 <p>Select all the {{ department_display_name | lower }}s you are associated with.
 Deselect a {{ department_display_name | lower }} to remove it from your associations.</p>
 <p>Only non-authoritative (user-selected) {{ department_display_name | lower}}s can be modified.</p>
+{% if auth_department_list %}
+  <p>Your authoritative departments are listed here:
+    <br>
+    {% for department in auth_department_list %}
+      {{ department }}
+      <span class="badge badge-success" title="Verified by the campus directory.">
+        <i class="fas fa-check"></i>
+      </span>
+      <br>
+    {% endfor %}
+  </p>
+{% endif %}
 <p>Non-Berkeley users should select "Other".</p>
 
 <div class="card mb-3">

@@ -41,6 +41,12 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
         context = super().get_context_data(**kwargs)
         context['department_display_name'] = \
                                 import_from_settings('DEPARTMENT_DISPLAY_NAME')
+        context['auth_department_list'] = \
+            [f'{ud.department.name} ({ud.department.code})'
+            for ud in UserDepartment.objects.select_related('department') \
+            .filter(userprofile=self.request.user.userprofile,
+                    is_authoritative=True) \
+            .order_by('department__name')]
         return context
 
     def get_success_url(self):

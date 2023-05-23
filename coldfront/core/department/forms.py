@@ -1,5 +1,7 @@
 from django import forms
 from coldfront.core.department.models import Department
+from coldfront.core.department.models import UserDepartment
+from coldfront.core.department.utils.ldap import fetch_and_set_user_departments
 
 class DepartmentSelectionForm(forms.Form):
     """Form prompting for the departments of a new PI if one is not found
@@ -12,9 +14,16 @@ class DepartmentSelectionForm(forms.Form):
         required=False)
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        userprofile = user.userprofile
+        self.user = kwargs.pop('user', None)
+        self.userprofile = self.user.userprofile
         super().__init__(*args, **kwargs)
 
+        fetch_and_set_user_departments(self.user, self.userprofile)
+        self.exclude_department_choices()
         self.fields['departments'].initial = Department.objects.filter(
-            userprofile=userprofile)
+           userprofile=self.userprofile, userdepartment__is_authoritative=False)
+
+    def exclude_department_choices(self):
+        # exclude departments with userdepartment associations that are authoritative
+        self.fields['departments'].queryset = Department.objects.exclude(
+            userprofile=self.userprofile, userdepartment__is_authoritative=True)
