@@ -3,6 +3,8 @@ import os
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = {{ debug }}
 
+SECRET_KEY = '{{ django_secret_key }}'
+
 ALLOWED_HOSTS = ['0.0.0.0', '{{ hostname }}', '{{ host_ip }}']
 
 PORTAL_NAME = '{{ portal_name }}'
@@ -19,6 +21,7 @@ CENTER_BASE_URL = '{{ full_host_path }}'
 CENTER_HELP_URL = CENTER_BASE_URL + '/help'
 CENTER_PROJECT_RENEWAL_HELP_URL = CENTER_BASE_URL + '/help'
 
+EMAIL_HOST = '{{ email_host}}'
 EMAIL_PORT = {{ email_port }}
 EMAIL_SUBJECT_PREFIX = '{{ email_subject_prefix }}'
 # A list of admin email addresses to be notified about new requests and other
@@ -108,7 +111,8 @@ if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[DjangoIntegration()],
-        traces_sample_rate=0.01,
+        sample_rate=0.1,
+        traces_sample_rate=0.001,
         send_default_pii=True)
     # Ignore noisy loggers.
     ignore_logger('coldfront.api')
@@ -168,11 +172,29 @@ FLAGS = {
     ],
     'BASIC_AUTH_ENABLED': [{'condition': 'boolean', 'value': {{ flag_basic_auth_enabled }}}],
     'BRC_ONLY': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
+    'LINK_LOGIN_ENABLED': [{'condition': 'boolean', 'value': {{ flag_link_login_enabled }}}],
     'LRC_ONLY': [{'condition': 'boolean', 'value': {{ flag_lrc_enabled }}}],
+    'MULTIPLE_EMAIL_ADDRESSES_ALLOWED': [{'condition': 'boolean', 'value': {{ flag_multiple_email_addresses_allowed }}}],
     'SECURE_DIRS_REQUESTABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': {{ flag_sso_enabled }}}],
 }
+
+# Enforce that boolean flags are consistent with each other.
+from django.core.exceptions import ImproperlyConfigured
+if not (FLAGS['BRC_ONLY'][0]['value'] ^ FLAGS['LRC_ONLY'][0]['value']):
+    raise ImproperlyConfigured(
+        'Exactly one of BRC_ONLY, LRC_ONLY should be enabled.')
+if not (
+        FLAGS['BASIC_AUTH_ENABLED'][0]['value'] ^
+        FLAGS['SSO_ENABLED'][0]['value']):
+    raise ImproperlyConfigured(
+        'Exactly one of BASIC_AUTH_ENABLED, SSO_ENABLED should be enabled.')
+if (not FLAGS['SSO_ENABLED'][0]['value'] and
+        FLAGS['LINK_LOGIN_ENABLED'][0]['value']):
+    raise ImproperlyConfigured(
+        'LINK_LOGIN_ENABLED should only be enabled when SSO_ENABLED is '
+        'enabled.')
 
 #------------------------------------------------------------------------------
 # django-q settings
