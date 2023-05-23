@@ -80,40 +80,34 @@ def fetch_and_set_user_departments(user, userprofile, dry_run=False):
     """
     if dry_run:
         logger.info = print
-        department = Department()
-        department.pk = '{placeholder_pk}'
-        userdepartment = UserDepartment()
-        userdepartment.pk = '{placeholder_pk}'
     user_entry = ldap_search_user(user.email, user.first_name, user.last_name)
     ldap_departments = user_entry.departmentNumber.values if user_entry else []
     for department_code in ldap_departments:
         department_code = get_L4_code_from_department_code(department_code)
         # If a Department doesn't exist, create it.
-        name = None if Department.objects.filter(code=department_code).exists() \
+        name = None if Department.objects.filter(code=department_code).exists()\
             else get_department_name_from_code(department_code)
         if dry_run:
+            department = Department(code=department_code, name=name)
+            userdepartment = UserDepartment(userprofile=userprofile,
+                                department=department, is_authoritative=True)
             created = name is not None
-            department.code = department_code
-            department.name = department_code
         else:
             department, created = Department.objects.get_or_create(
                                                     code=department_code,
                                                     defaults={'name': name})
         if created:
-            logger.info(f'Created Department {department.pk}, '
-                        f'{department.name} ({department.code})')
+            logger.info(f'Created Department {department}')
 
         # Create a UserDepartment association, updating is_authoritative if
         # needed.
-        if not dry_run:
-            userdepartment, created = UserDepartment.objects.update_or_create(
-                                            userprofile=userprofile,
-                                            department=department,
-                                            defaults={'is_authoritative': True})
+        if not UserDepartment.objects.filter(userprofile=userprofile,
+                                             department__code=department_code,
+                                             is_authoritative=True).exists():
+            if dry_run:
+                print(f'Created UserDepartment {userdepartment}')
+            else:
+                UserDepartment.objects.update_or_create(userprofile=userprofile,
+                                        department=department,
+                                        defaults={'is_authoritative': True})
 
-        if dry_run and not UserDepartment.objects.filter(
-                                            userprofile=userprofile,
-                                            department__code=department_code,
-                                            is_authoritative=True).exists():
-            print(f'Created UserDepartment {userdepartment.pk}, '
-                        f'{user.first_name} {user.last_name}-{department_code}')

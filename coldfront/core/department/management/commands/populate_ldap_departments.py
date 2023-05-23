@@ -58,5 +58,5 @@ class Command(BaseCommand):
                         code=code, name=entry.description.value)
                 if created:
                     self.log(
-                        f'Created Department {department.pk}, '
-                        f'{department.name} ({department.code})', dry_run)
+                        f'Created Department {department.pk}, {department}',
+                        dry_run)
