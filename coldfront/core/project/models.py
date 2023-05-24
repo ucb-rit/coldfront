@@ -17,19 +17,22 @@ from coldfront.core.utils.common import import_from_settings
 PROJECT_ENABLE_PROJECT_REVIEW = import_from_settings(
     'PROJECT_ENABLE_PROJECT_REVIEW', False)
 
-from gdstorage.storage import GoogleDriveStorage, GoogleDrivePermissionType, GoogleDrivePermissionRole, GoogleDriveFilePermission
-permission = GoogleDriveFilePermission(
-    GoogleDrivePermissionRole.READER,
-    GoogleDrivePermissionType.USER,
-    "<user_who_can_view_uploaded_files_in_drive@gmail.com>"
-)
-gd_storage = GoogleDriveStorage(permissions=(permission, ))
+# from gdstorage.storage import (GoogleDriveStorage,
+#                               GoogleDrivePermissionType,
+#                               GoogleDrivePermissionRole,
+#                               GoogleDriveFilePermission)
+# permission = GoogleDriveFilePermission(
+#     GoogleDrivePermissionRole.READER,
+#     GoogleDrivePermissionType.USER,
+#     "hamza.kkundi@gmail.com>"
+# )
+# gd_storage = GoogleDriveStorage(permissions=(permission, ))
 
 
 class TestFileModel(models.Model):
     id = models.AutoField(primary_key=True)
     description = models.CharField(max_length=200)
-    document = models.FileField(upload_to='files', storage=gd_storage)
+    document = models.FileField(upload_to='files')#, storage=gd_storage)
 
 
 class ProjectStatusChoice(TimeStampedModel):
@@ -482,6 +485,11 @@ class SavioProjectAllocationRequest(TimeStampedModel):
     billing_activity = models.ForeignKey(
         'billing.BillingActivity', blank=True, null=True,
         on_delete=models.SET_NULL, related_name='billing_activity')
+    
+    mou_file = models.FileField(upload_to = \
+                            import_from_settings('FILE_STORAGE') \
+                             ['details']['NEW_PROJECT_REQUEST_MOU']['location'],
+                            null=True)
 
     history = HistoricalRecords()
 
