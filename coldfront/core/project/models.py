@@ -14,19 +14,10 @@ from simple_history.models import HistoricalRecords
 from coldfront.core.field_of_science.models import FieldOfScience
 from coldfront.core.utils.common import import_from_settings
 
+from gdstorage.storage import GoogleDriveStorage
+
 PROJECT_ENABLE_PROJECT_REVIEW = import_from_settings(
     'PROJECT_ENABLE_PROJECT_REVIEW', False)
-
-# from gdstorage.storage import (GoogleDriveStorage,
-#                               GoogleDrivePermissionType,
-#                               GoogleDrivePermissionRole,
-#                               GoogleDriveFilePermission)
-# permission = GoogleDriveFilePermission(
-#     GoogleDrivePermissionRole.READER,
-#     GoogleDrivePermissionType.USER,
-#     "hamza.kkundi@gmail.com>"
-# )
-# gd_storage = GoogleDriveStorage(permissions=(permission, ))
 
 
 # class TestFileModel(models.Model):
@@ -486,10 +477,13 @@ class SavioProjectAllocationRequest(TimeStampedModel):
         'billing.BillingActivity', blank=True, null=True,
         on_delete=models.SET_NULL, related_name='billing_activity')
     
-    mou_file = models.FileField(upload_to = \
-                            import_from_settings('FILE_STORAGE')['details'] \
-                                ['NEW_PROJECT_REQUEST_MOU']['location'],
-                            null=True)
+    mou_file = models.FileField( \
+        upload_to=import_from_settings('FILE_STORAGE')['details'] \
+                           ['NEW_PROJECT_REQUEST_MOU']['location'],
+        storage=GoogleDriveStorage() if \
+            import_from_settings('FILE_STORAGE')['backend'] == 'google_drive' \
+            else FileSystemStorage(),
+        null=True)
 
     history = HistoricalRecords()
 

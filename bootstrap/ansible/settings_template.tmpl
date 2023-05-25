@@ -65,6 +65,17 @@ REQUEST_APPROVAL_CC_LIST = {{ request_approval_cc_list }}
 ALLOW_ALL_JOBS = True
 {% endif %}
 
+#------------------------------------------------------------------------------
+# File Storage Settings
+#------------------------------------------------------------------------------
+
+{% if file_storage_backend == 'google_drive' %}
+GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = '{{ google_drive_private_key_file_path }}'
+GOOGLE_DRIVE_STORAGE_MEDIA_ROOT = '{{ google_drive_storage_root }}'
+from gdstorage.storage import GoogleDriveStorage
+{% else %}
+from django.core.files.storage import FileSystemStorage
+{% endif %}
 FILE_STORAGE = {
     'backend': '{{ file_storage_backend }}',
     'details': {
@@ -77,7 +88,8 @@ FILE_STORAGE = {
         'SERVICE_UNITS_PURCHASE_REQUEST_MOU': {
             'location': '{{ service_units_purchase_request_mou_path }}'
         }
-    }
+    },
+    'storage': {% if file_storage_backend == 'google_drive' %}GoogleDriveStorage(json_keyfile_path=GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE){% else %}FileSystemStorage(){% endif %},
 }
 
 #------------------------------------------------------------------------------

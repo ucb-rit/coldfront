@@ -160,11 +160,13 @@ sentry_dsn: ""
 # full_host_path: http://scgup-dev.lbl.gov:8000
 
 # # Storage settings.
-# # TODO: fill out mou paths
+# # TODO: fill these out
 # file_storage_backend: 'google_drive'
-# new_project_request_mou_path: ''
-# secure_directory_request_mou_path: ''
-# service_units_purchase_request_mou_path: ''
+# new_project_request_mou_path: 'mou/new_project_requests/'
+# secure_directory_request_mou_path: 'mou/secure_directory_requests/'
+# service_unit_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
+# google_drive_private_key_file_path: 'google-drive-key.json'
+# google_drive_storage_root: '/MyBRC Portal Data/'
 
 # # SSL settings.
 # ssl_enabled: false
@@ -223,11 +225,13 @@ sentry_dsn: ""
 # full_host_path: https://mybrc.brc.berkeley.edu
 
 # # Storage settings.
-# # TODO: fill out mou paths
+# # TODO: fill these out
 # file_storage_backend: 'google_drive'
-# new_project_request_mou_path: ''
-# secure_directory_request_mou_path: ''
-# service_units_purchase_request_mou_path: ''
+# new_project_request_mou_path: 'mou/new_project_requests/'
+# secure_directory_request_mou_path: 'mou/secure_directory_requests/'
+# service_unit_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
+# google_drive_private_key_file_path: 'google-drive-key.json'
+# google_drive_storage_root: '/MyBRC Portal Data/'
 
 # # SSL settings.
 # ssl_enabled: true
@@ -283,11 +287,13 @@ sentry_dsn: ""
 # full_host_path: http://localhost:8880
 
 # # Storage settings.
-# # TODO: fill out mou paths
-# file_storage_backend: 'local_disk'
+# # TODO: fill these out
+# file_storage_backend: 'google_drive'
 # new_project_request_mou_path: 'mou/new_project_requests/'
 # secure_directory_request_mou_path: 'mou/secure_directory_requests/'
-# service_units_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
+# service_unit_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
+# google_drive_private_key_file_path: 'google-drive-key.json'
+# google_drive_storage_root: '/MyBRC Portal Data/'
 
 # # SSL settings.
 # ssl_enabled: false
