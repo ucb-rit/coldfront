@@ -53,6 +53,7 @@ class MOUUploadView(LoginRequiredMixin, UserPassesTestMixin, FormView):
         context = {}
         context['form'] = FileUploadForm()
         context['request_obj'] = self.request_obj
+        context['mou_type'] = self.mou_type
         context['mou_type_long'] = self.mou_type_long
         return context
     

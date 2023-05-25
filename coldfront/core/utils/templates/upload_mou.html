@@ -28,7 +28,11 @@ MOU Upload
   </table>
   <br>
   <input class="btn btn-primary" type="submit" value="Submit" />
-  <a href="{% url 'new-project-request' %}{{ request_obj.pk }}/" class="btn btn-secondary">
+  <a href=
+  {% if mou_type == "new-project" %}"{% url 'new-project-request-detail' request_obj.pk %}"
+  {% elif mou_type == "secure-dir" %}"{% url 'secure-dir-request-detail' request_obj.pk %}"
+  {% elif mou_type == "service-units" %}"{% url 'service-units-purchase-request-detail' request_obj.pk %}"
+  {% endif %} class="btn btn-secondary">
     Cancel
   </a>
 </form>
