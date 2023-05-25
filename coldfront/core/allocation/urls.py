@@ -7,6 +7,7 @@ import coldfront.core.allocation.views as allocation_views
 import coldfront.core.allocation.views_.cluster_access_views as \
     cluster_access_views
 import coldfront.core.allocation.views_.secure_dir_views as secure_dir_views
+import coldfront.core.utils.views.mou_views as mou_views
 
 
 urlpatterns = [
@@ -125,6 +126,12 @@ with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
         path('secure-dir-request/<int:pk>/undeny',
              secure_dir_views.SecureDirRequestUndenyRequestView.as_view(),
              name='secure-dir-request-undeny'),
+        path('secure-dir-request/<int:pk>/upload-mou/<str:mou_type>/',
+             mou_views.MOUUploadView.as_view(),
+             name='secure-dir-upload-mou'),
+        path('secure-dir-request/<int:pk>/download-mou/<str:mou_type>/',
+             mou_views.MOUDownloadView.as_view(),
+             name='secure-dir-download-mou')
     ]
 
 urlpatterns = urlpatterns + flagged_url_patterns

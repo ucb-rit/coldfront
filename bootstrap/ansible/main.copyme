@@ -159,6 +159,13 @@ sentry_dsn: ""
 # app_port: 8000
 # full_host_path: http://scgup-dev.lbl.gov:8000
 
+# # Storage settings.
+# # TODO: fill out mou paths
+# file_storage_backend: 'google_drive'
+# new_project_request_mou_path: ''
+# secure_directory_request_mou_path: ''
+# service_units_purchase_request_mou_path: ''
+
 # # SSL settings.
 # ssl_enabled: false
 # ssl_certificate_file: /etc/ssl/ssl_certificate.file
@@ -215,6 +222,13 @@ sentry_dsn: ""
 # # TODO: For LRC, use https://mylrc.lbl.gov.
 # full_host_path: https://mybrc.brc.berkeley.edu
 
+# # Storage settings.
+# # TODO: fill out mou paths
+# file_storage_backend: 'google_drive'
+# new_project_request_mou_path: ''
+# secure_directory_request_mou_path: ''
+# service_units_purchase_request_mou_path: ''
+
 # # SSL settings.
 # ssl_enabled: true
 # ssl_certificate_file: /etc/ssl/ssl_certificate.file
@@ -267,6 +281,13 @@ sentry_dsn: ""
 # host_ip: localhost
 # app_port: 80
 # full_host_path: http://localhost:8880
+
+# # Storage settings.
+# # TODO: fill out mou paths
+# file_storage_backend: 'local_disk'
+# new_project_request_mou_path: 'mou/new_project_requests/'
+# secure_directory_request_mou_path: 'mou/secure_directory_requests/'
+# service_units_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
 
 # # SSL settings.
 # ssl_enabled: false

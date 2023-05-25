@@ -65,6 +65,21 @@ REQUEST_APPROVAL_CC_LIST = {{ request_approval_cc_list }}
 ALLOW_ALL_JOBS = True
 {% endif %}
 
+FILE_STORAGE = {
+    'backend': '{{ file_storage_backend }}',
+    'details': {
+        'NEW_PROJECT_REQUEST_MOU': {
+            'location': '{{ new_project_request_mou_path }}'
+        },
+        'SECURE_DIRECTORY_REQUEST_MOU': {
+            'location': '{{ secure_directory_request_mou_path }}'
+        },
+        'SERVICE_UNITS_PURCHASE_REQUEST_MOU': {
+            'location': '{{ service_units_purchase_request_mou_path }}'
+        }
+    }
+}
+
 #------------------------------------------------------------------------------
 # Billing settings
 #------------------------------------------------------------------------------

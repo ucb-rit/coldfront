@@ -132,6 +132,9 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
             self.request.user.is_superuser and
             self.request_obj.status.name not in ('Denied', 'Complete'))
 
+        context['savio_request'] = self.request_obj
+        context['mou_uploaded'] = bool(self.request_obj.mou_file)
+
         return context
 
     def is_checklist_complete(self):

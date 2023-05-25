@@ -586,6 +586,11 @@ class AllocationAdditionRequest(TimeStampedModel):
     state = models.JSONField(default=allocation_addition_request_state_schema)
     extra_fields = models.JSONField(default=dict)
 
+    mou_file = models.FileField(upload_to = \
+                        import_from_settings('FILE_STORAGE')['details'] \
+                            ['SERVICE_UNITS_PURCHASE_REQUEST_MOU']['location'],
+                        null=True)
+
     def __str__(self):
         project_name = self.project.name
         num_sus = self.num_service_units
@@ -725,6 +730,11 @@ class SecureDirRequest(TimeStampedModel):
     completion_time = models.DateTimeField(null=True, blank=True)
 
     state = models.JSONField(default=secure_dir_request_state_schema)
+
+    mou_file = models.FileField(upload_to = \
+                    import_from_settings('FILE_STORAGE')['details'] \
+                        ['SECURE_DIRECTORY_REQUEST_MOU']['location'],
+                    null=True)
 
     def __str__(self):
         return f'{self.directory_name} ({self.project.name})'

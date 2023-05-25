@@ -2,8 +2,6 @@ from django.urls import path
 from django.views.generic import TemplateView
 from flags.urls import flagged_paths
 
-from flags.urls import flagged_paths
-
 import coldfront.core.project.views as project_views
 import coldfront.core.project.views_.addition_views.approval_views as addition_approval_views
 import coldfront.core.project.views_.addition_views.request_views as addition_request_views
@@ -15,6 +13,7 @@ import coldfront.core.project.views_.removal_views as removal_views
 import coldfront.core.project.views_.renewal_views.approval_views as renewal_approval_views
 import coldfront.core.project.views_.renewal_views.request_views as renewal_request_views
 import coldfront.core.allocation.views_.secure_dir_views as secure_dir_views
+import coldfront.core.utils.views.mou_views as mou_views
 
 
 urlpatterns = [
@@ -34,11 +33,6 @@ urlpatterns = [
     path('project-review-complete/<int:project_review_pk>/', project_views.ProjectReviewCompleteView.as_view(),
          name='project-review-complete'),
     path('project-review/<int:pk>/email', project_views.ProjectReivewEmailView.as_view(), name='project-review-email'),
-]
-
-# test url path for google drive upload form
-urlpatterns += [
-    path('test-path', project_views.TestPathView.as_view(), name='test-path')
 ]
 
 # Join Requests
@@ -100,6 +94,12 @@ urlpatterns += [
     path('new-project-request/<int:pk>/undeny',
          new_project_approval_views.SavioProjectUndenyRequestView.as_view(),
          name='new-project-undeny-request'),
+    path('new-project-request/<int:pk>/upload-mou/<str:mou_type>/',
+         mou_views.MOUUploadView.as_view(),
+         name='new-project-request-upload-mou'),
+    path('new-project-request/<int:pk>/download-mou/<str:mou_type>/',
+         mou_views.MOUDownloadView.as_view(),
+         name='new-project-request-download-mou')
 ]
 
 
@@ -224,6 +224,12 @@ with flagged_paths('SERVICE_UNITS_PURCHASABLE'):
         f_path('service-units-purchase-request/<int:pk>/deny',
                addition_approval_views.AllocationAdditionReviewDenyView.as_view(),
                name='service-units-purchase-request-review-deny'),
+        f_path('new-project-request/<int:pk>/upload-mou/<str:mou_type>/',
+               mou_views.MOUUploadView.as_view(),
+               name='service-units-purchase-request-upload-mou'),
+        f_path('new-project-request/<int:pk>/download-mou/<str:mou_type>/',
+               mou_views.MOUDownloadView.as_view(),
+               name='service-units-purchase-request-download-mou')
     ]
 
 # Request a secure directory

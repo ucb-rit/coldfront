@@ -29,10 +29,10 @@ PROJECT_ENABLE_PROJECT_REVIEW = import_from_settings(
 # gd_storage = GoogleDriveStorage(permissions=(permission, ))
 
 
-class TestFileModel(models.Model):
-    id = models.AutoField(primary_key=True)
-    description = models.CharField(max_length=200)
-    document = models.FileField(upload_to='files')#, storage=gd_storage)
+# class TestFileModel(models.Model):
+#     id = models.AutoField(primary_key=True)
+#     description = models.CharField(max_length=200)
+#     document = models.FileField(upload_to='files')#, storage=gd_storage)
 
 
 class ProjectStatusChoice(TimeStampedModel):
@@ -487,8 +487,8 @@ class SavioProjectAllocationRequest(TimeStampedModel):
         on_delete=models.SET_NULL, related_name='billing_activity')
     
     mou_file = models.FileField(upload_to = \
-                            import_from_settings('FILE_STORAGE') \
-                             ['details']['NEW_PROJECT_REQUEST_MOU']['location'],
+                            import_from_settings('FILE_STORAGE')['details'] \
+                                ['NEW_PROJECT_REQUEST_MOU']['location'],
                             null=True)
 
     history = HistoricalRecords()

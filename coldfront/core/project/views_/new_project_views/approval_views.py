@@ -280,6 +280,11 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
 
+        context['mou_required'] = \
+            ComputingAllowance(self.request_obj.computing_allowance) \
+                .requires_memorandum_of_understanding()
+        context['mou_uploaded'] = bool(self.request_obj.mou_file)
+
         return context
 
     def post(self, request, *args, **kwargs):

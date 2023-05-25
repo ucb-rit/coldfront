@@ -33,7 +33,7 @@ from coldfront.core.project.forms import (ProjectAddUserForm,
                                           ProjectReviewForm,
                                           ProjectSearchForm,
                                           ProjectUpdateForm,
-                                          ProjectUserUpdateForm, FileUploadForm)
+                                          ProjectUserUpdateForm)
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
 from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectReviewStatusChoice,
@@ -41,7 +41,6 @@ from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectUserRoleChoice,
                                            ProjectUserStatusChoice,
                                            ProjectUserRemovalRequest,
-                                           TestFileModel,
                                            SavioProjectAllocationRequest)
 from coldfront.core.project.utils import (annotate_queryset_with_cluster_name,
                                           is_primary_cluster_project)
@@ -79,31 +78,6 @@ if EMAIL_ENABLED:
     EMAIL_ADMIN_LIST = import_from_settings('EMAIL_ADMIN_LIST')
 
 logger = logging.getLogger(__name__)
-
-
-class TestPathView(LoginRequiredMixin, UserPassesTestMixin, FormView):
-    template_name = 'project/test_path.html'
-    form_class = FileUploadForm
-    success_url = 'test-path'
-
-    def test_func(self):
-        """ UserPassesTestMixin Tests"""
-        if self.request.user.is_superuser:
-            return True
-
-        if self.request.user.has_perm('project.can_view_all_projects'):
-            return True
-
-        return True
-
-    def form_valid(self, form):
-        form.save()
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        form = FileUploadForm()
-        return { 'form': form }
-
 
 class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Project

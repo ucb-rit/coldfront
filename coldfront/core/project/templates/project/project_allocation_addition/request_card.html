@@ -46,5 +46,20 @@
         View
       </button>
     </p>
+    <p class="card-text text-justify">
+      <strong>Signed Memorandum of Understanding: </strong>
+      {% if mou_uploaded %}
+        <a href="{% url 'service-units-purchase-request-download-mou' savio_request.pk 'service-units' %}" class="btn btn-primary">
+          <i class="fas fa-download" aria-hidden="true"></i>
+          Download
+        </a>
+      {% endif %}
+      <a href="{% url 'service-units-purchase-request-upload-mou' savio_request.pk 'service-units' %}"
+      class="btn {% if mou_uploaded %} btn-secondary {% else %} btn-primary {% endif %}">
+        <i class="fas fa-upload" aria-hidden="true"></i>
+        Upload {% if mou_uploaded %} new {% endif %}
+      </a>
+      {% if not mou_uploaded %} <span style="color: red; font-weight: bold;">*</span> {% endif %}
+    </p>
   </div>
 </div>

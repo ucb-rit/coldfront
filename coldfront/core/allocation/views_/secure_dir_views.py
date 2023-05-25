@@ -1241,6 +1241,9 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
 
+        context['savio_request'] = self.request_obj
+        context['mou_uploaded'] = bool(self.request_obj.mou_file)
+
         set_sec_dir_context(context, self.request_obj)
 
         return context
