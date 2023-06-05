@@ -72,10 +72,19 @@ ALLOW_ALL_JOBS = True
 {% if file_storage_backend == 'google_drive' %}
 GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = '{{ google_drive_private_key_file_path }}'
 GOOGLE_DRIVE_STORAGE_MEDIA_ROOT = '{{ google_drive_storage_root }}'
-from gdstorage.storage import GoogleDriveStorage
-{% else %}
-from django.core.files.storage import FileSystemStorage
+
+from gdstorage.storage import (GoogleDrivePermissionType,
+                               GoogleDrivePermissionRole,
+                               GoogleDriveFilePermission)
+GOOGLE_DRIVE_PERMISSIONS = (GoogleDriveFilePermission(
+                            GoogleDrivePermissionRole.READER,
+                            GoogleDrivePermissionType.USER,
+                            'hamza.kkundi@gmail.com'), )
+{% elif file_storage_backend == 'dropbox' %}
+DEFAULT_FILE_STORAGE = "storages.backends.dropbox.DropboxStorage"
+DROPBOX_OAUTH2_REFRESH_TOKEN
 {% endif %}
+
 FILE_STORAGE = {
     'backend': '{{ file_storage_backend }}',
     'details': {
@@ -89,7 +98,6 @@ FILE_STORAGE = {
             'location': '{{ service_units_purchase_request_mou_path }}'
         }
     },
-    'storage': {% if file_storage_backend == 'google_drive' %}GoogleDriveStorage(json_keyfile_path=GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE){% else %}FileSystemStorage(){% endif %},
 }
 
 #------------------------------------------------------------------------------

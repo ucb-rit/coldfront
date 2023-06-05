@@ -17,7 +17,6 @@ from django.utils.html import mark_safe
 from django.utils.module_loading import import_string
 from model_utils.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
-from gdstorage.storage import GoogleDriveStorage
 
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.project.models import Project
@@ -26,6 +25,8 @@ from coldfront.core.resource.models import Resource
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import display_time_zone_current_date
 
+if import_from_settings('FILE_STORAGE')['backend'] == 'google_drive':
+    from gdstorage.storage import GoogleDriveStorage
 
 logger = logging.getLogger(__name__)
 
@@ -592,9 +593,9 @@ class AllocationAdditionRequest(TimeStampedModel):
     mou_file = models.FileField( \
         upload_to=import_from_settings('FILE_STORAGE')['details'] \
                 ['SERVICE_UNITS_PURCHASE_REQUEST_MOU']['location'],
-        storage=GoogleDriveStorage() if \
+        storage=GoogleDriveStorage(permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS')) if \
             import_from_settings('FILE_STORAGE')['backend'] == 'google_drive' \
-            else FileSystemStorage(),
+            else None,
         null=True)
 
     def __str__(self):
@@ -740,9 +741,9 @@ class SecureDirRequest(TimeStampedModel):
     mou_file = models.FileField( \
         upload_to=import_from_settings('FILE_STORAGE')['details'] \
                       ['SECURE_DIRECTORY_REQUEST_MOU']['location'],
-        storage=GoogleDriveStorage() if \
+        storage=GoogleDriveStorage(permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS')) if \
             import_from_settings('FILE_STORAGE')['backend'] == 'google_drive' \
-            else FileSystemStorage(),
+            else None,
         null=True)
 
     def __str__(self):

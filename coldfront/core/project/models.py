@@ -14,7 +14,8 @@ from simple_history.models import HistoricalRecords
 from coldfront.core.field_of_science.models import FieldOfScience
 from coldfront.core.utils.common import import_from_settings
 
-from gdstorage.storage import GoogleDriveStorage
+if import_from_settings('FILE_STORAGE')['backend'] == 'google_drive':
+    from gdstorage.storage import GoogleDriveStorage
 
 PROJECT_ENABLE_PROJECT_REVIEW = import_from_settings(
     'PROJECT_ENABLE_PROJECT_REVIEW', False)
@@ -480,9 +481,9 @@ class SavioProjectAllocationRequest(TimeStampedModel):
     mou_file = models.FileField( \
         upload_to=import_from_settings('FILE_STORAGE')['details'] \
                            ['NEW_PROJECT_REQUEST_MOU']['location'],
-        storage=GoogleDriveStorage() if \
+        storage=GoogleDriveStorage(permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS')) if \
             import_from_settings('FILE_STORAGE')['backend'] == 'google_drive' \
-            else FileSystemStorage(),
+            else None,
         null=True)
 
     history = HistoricalRecords()

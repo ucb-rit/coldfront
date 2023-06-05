@@ -224,10 +224,10 @@ with flagged_paths('SERVICE_UNITS_PURCHASABLE'):
         f_path('service-units-purchase-request/<int:pk>/deny',
                addition_approval_views.AllocationAdditionReviewDenyView.as_view(),
                name='service-units-purchase-request-review-deny'),
-        f_path('new-project-request/<int:pk>/upload-mou/<str:mou_type>/',
+        f_path('service-units-request/<int:pk>/upload-mou/<str:mou_type>/',
                mou_views.MOUUploadView.as_view(),
                name='service-units-purchase-request-upload-mou'),
-        f_path('new-project-request/<int:pk>/download-mou/<str:mou_type>/',
+        f_path('service-units-request/<int:pk>/download-mou/<str:mou_type>/',
                mou_views.MOUDownloadView.as_view(),
                name='service-units-purchase-request-download-mou')
     ]
