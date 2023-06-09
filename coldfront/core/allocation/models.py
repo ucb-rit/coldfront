@@ -24,6 +24,7 @@ from coldfront.core.project.models import ProjectUser
 from coldfront.core.resource.models import Resource
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import display_time_zone_current_date
+from coldfront.core.utils.mou import upload_to_func
 
 if import_from_settings('FILE_STORAGE')['backend'] == 'google_drive':
     from gdstorage.storage import GoogleDriveStorage
@@ -591,8 +592,7 @@ class AllocationAdditionRequest(TimeStampedModel):
     extra_fields = models.JSONField(default=dict)
 
     mou_file = models.FileField( \
-        upload_to=import_from_settings('FILE_STORAGE')['details'] \
-                ['SERVICE_UNITS_PURCHASE_REQUEST_MOU']['location'],
+        upload_to=upload_to_func,
         storage=GoogleDriveStorage(permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS')) if \
             import_from_settings('FILE_STORAGE')['backend'] == 'google_drive' \
             else None,
@@ -739,8 +739,7 @@ class SecureDirRequest(TimeStampedModel):
     state = models.JSONField(default=secure_dir_request_state_schema)
 
     mou_file = models.FileField( \
-        upload_to=import_from_settings('FILE_STORAGE')['details'] \
-                      ['SECURE_DIRECTORY_REQUEST_MOU']['location'],
+        upload_to=upload_to_func,
         storage=GoogleDriveStorage(permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS')) if \
             import_from_settings('FILE_STORAGE')['backend'] == 'google_drive' \
             else None,

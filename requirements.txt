@@ -13,6 +13,7 @@ django-durationwidget==1.0.5
 django-filter==2.3.0
 django-flags==5.0.8
 django-formtools==2.2
+django-googledrive-storage==1.6.0
 django-model-utils==4.1.1
 django-phonenumber-field==5.1.0
 django-picklefield==2.0
@@ -21,7 +22,6 @@ django-sesame==3.1
 django-settings-export==1.2.1
 django-simple-history==3.3.0
 django-sslserver==0.20
-django-storages[dropbox]==1.13.2
 django-su==1.0.0
 djangorestframework==3.11.1
 doi2bib==0.3.0

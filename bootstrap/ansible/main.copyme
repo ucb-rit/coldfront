@@ -164,9 +164,8 @@ sentry_dsn: ""
 # file_storage_backend: 'google_drive'
 # new_project_request_mou_path: 'mou/new_project_requests/'
 # secure_directory_request_mou_path: 'mou/secure_directory_requests/'
-# service_unit_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
+# service_units_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
 # google_drive_private_key_file_path: 'google-drive-key.json'
-# google_drive_storage_root: '/MyBRC Portal Data/'
 
 # # SSL settings.
 # ssl_enabled: false
@@ -229,9 +228,8 @@ sentry_dsn: ""
 # file_storage_backend: 'google_drive'
 # new_project_request_mou_path: 'mou/new_project_requests/'
 # secure_directory_request_mou_path: 'mou/secure_directory_requests/'
-# service_unit_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
+# service_units_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
 # google_drive_private_key_file_path: 'google-drive-key.json'
-# google_drive_storage_root: '/MyBRC Portal Data/'
 
 # # SSL settings.
 # ssl_enabled: true
@@ -291,9 +289,8 @@ sentry_dsn: ""
 # file_storage_backend: 'google_drive'
 # new_project_request_mou_path: 'mou/new_project_requests/'
 # secure_directory_request_mou_path: 'mou/secure_directory_requests/'
-# service_unit_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
+# service_units_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
 # google_drive_private_key_file_path: 'google-drive-key.json'
-# google_drive_storage_root: '/MyBRC Portal Data/'
 
 # # SSL settings.
 # ssl_enabled: false
