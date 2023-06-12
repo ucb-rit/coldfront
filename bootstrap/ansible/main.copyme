@@ -162,9 +162,9 @@ sentry_dsn: ""
 # # Storage settings.
 # # TODO: fill these out
 # file_storage_backend: 'google_drive'
-# new_project_request_mou_path: 'mou/new_project_requests/'
-# secure_directory_request_mou_path: 'mou/secure_directory_requests/'
-# service_units_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
+# new_project_request_mou_path: 'new_project_requests/'
+# secure_directory_request_mou_path: 'secure_directory_requests/'
+# service_units_purchase_request_mou_path: 'service_units_purchase_requests/'
 # google_drive_private_key_file_path: 'google-drive-key.json'
 
 # # SSL settings.
@@ -226,9 +226,9 @@ sentry_dsn: ""
 # # Storage settings.
 # # TODO: fill these out
 # file_storage_backend: 'google_drive'
-# new_project_request_mou_path: 'mou/new_project_requests/'
-# secure_directory_request_mou_path: 'mou/secure_directory_requests/'
-# service_units_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
+# new_project_request_mou_path: 'new_project_requests/'
+# secure_directory_request_mou_path: 'secure_directory_requests/'
+# service_units_purchase_request_mou_path: 'service_units_purchase_requests/'
 # google_drive_private_key_file_path: 'google-drive-key.json'
 
 # # SSL settings.
@@ -287,9 +287,9 @@ sentry_dsn: ""
 # # Storage settings.
 # # TODO: fill these out
 # file_storage_backend: 'google_drive'
-# new_project_request_mou_path: 'mou/new_project_requests/'
-# secure_directory_request_mou_path: 'mou/secure_directory_requests/'
-# service_units_purchase_request_mou_path: 'mou/service_units_purchase_requests/'
+# new_project_request_mou_path: 'new_project_requests/'
+# secure_directory_request_mou_path: 'secure_directory_requests/'
+# service_units_purchase_request_mou_path: 'service_units_purchase_requests/'
 # google_drive_private_key_file_path: 'google-drive-key.json'
 
 # # SSL settings.
