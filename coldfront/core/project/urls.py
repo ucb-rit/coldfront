@@ -94,6 +94,9 @@ urlpatterns += [
     path('new-project-request/<int:pk>/undeny',
          new_project_approval_views.SavioProjectUndenyRequestView.as_view(),
          name='new-project-undeny-request'),
+    path('new-project-request/<int:pk>/download-base-mou/<str:mou_type>/',
+         mou_views.UnsignedMOUDownloadView.as_view(),
+         name='new-project-request-download-unsigned-mou')
     path('new-project-request/<int:pk>/upload-mou/<str:mou_type>/',
          mou_views.MOUUploadView.as_view(),
          name='new-project-request-upload-mou'),

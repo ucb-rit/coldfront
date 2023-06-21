@@ -104,3 +104,44 @@ class MOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
         return reverse(
             ret,
             kwargs={'pk': self.kwargs.get('pk')})
+
+class UnsignedMOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
+    
+    def test_func(self):
+        """UserPassesTestMixin Tests"""
+        if self.request.user.is_superuser:
+            return True
+        if self.request.user.has_perm('project.can_view_all_projects'):
+            return True
+        return True
+
+    def dispatch(self, request, *args, **kwargs):
+        pk = self.kwargs.get('pk')
+        self.set_attributes(pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def set_attributes(self, pk):
+        """Set this instance's request_obj to be the
+        SavioProjectAllocationRequest with the given primary key."""
+        self.mou_type = self.kwargs['mou_type']
+        self.request_class = \
+            {'new-project': SavioProjectAllocationRequest,
+             'secure-dir': SecureDirRequest,
+             'service-units': AllocationAdditionRequest}[self.mou_type]
+        self.request_obj = get_object_or_404(
+            self.request_class.objects, pk=pk)
+    
+    def get(self, request, *args, **kwargs):
+        from django.http import FileResponse
+        response = FileResponse(self.request_obj.mou_file)
+        response['Content-Type'] = 'application/pdf'
+        response['Content-Disposition'] = 'attachment;filename="mou.pdf"'
+        return response
+
+    def get_success_url(self, **kwargs):
+        ret = {'new-project': 'new-project-request-detail',
+               'secure-dir': 'secure-dir-request-detail',
+               'service-units': 'service-units-purchase-request-detail'}[self.mou_type]
+        return reverse(
+            ret,
+            kwargs={'pk': self.kwargs.get('pk')})

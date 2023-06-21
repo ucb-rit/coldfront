@@ -121,6 +121,13 @@
       <strong>Survey Responses: </strong>
       <button id="view-survey" class="btn btn-primary" role="button">View</button>
     </p>
+    <p class="card-text text-justify">
+      <strong>Unsigned Memorandum of Understanding: </strong>
+      <a href="{% url 'new-project-request-download-unsigned-mou' savio_request.pk 'new-project' %}" class="btn btn-primary">
+        <i class="fas fa-download" aria-hidden="true"></i>
+        Download
+      </a>
+    </p>
     {% if mou_required and can_upload_mou or mou_required and mou_uploaded %}
     <p class="card-text text-justify">
       <strong>Signed Memorandum of Understanding: </strong>
