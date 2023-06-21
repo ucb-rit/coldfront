@@ -60,6 +60,25 @@ API_LOG_PATH = '/var/log/user_portals/cf_mybrc/cf_mybrc_api.log'
 REQUEST_APPROVAL_CC_LIST = ['test@test.test']
 
 #------------------------------------------------------------------------------
+# File Storage Settings
+#------------------------------------------------------------------------------
+
+FILE_STORAGE = {
+    'backend': 'local_storage',
+    'details': {
+        'NEW_PROJECT_REQUEST_MOU': {
+            'location': 'New Project Request MOUs/'
+        },
+        'SECURE_DIRECTORY_REQUEST_MOU': {
+            'location': 'Secure Directory Request MOUs/'
+        },
+        'SERVICE_UNITS_PURCHASE_REQUEST_MOU': {
+            'location': 'Service Units Purchase Request MOUs/'
+        }
+    },
+}
+
+#------------------------------------------------------------------------------
 # SSL settings
 #------------------------------------------------------------------------------
 
