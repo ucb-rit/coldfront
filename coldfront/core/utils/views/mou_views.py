@@ -4,7 +4,6 @@ from django.views.generic.edit import FormView
 from django.views import View
 from coldfront.core.allocation.models import AllocationAdditionRequest, SecureDirRequest
 from coldfront.core.utils.forms.file_upload_forms import PDFUploadForm
-from django.core.validators import FileExtensionValidator
 from coldfront.core.project.models import SavioProjectAllocationRequest
 
 from django.shortcuts import get_object_or_404
@@ -51,9 +50,7 @@ class MOUUploadView(LoginRequiredMixin, UserPassesTestMixin, FormView):
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
-        context = {}
-        context['form'] = \
-            PDFUploadForm()
+        context = super().get_context_data(**kwargs)
         context['request_obj'] = self.request_obj
         context['mou_type'] = self.mou_type
         context['mou_type_long'] = self.mou_type_long

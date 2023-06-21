@@ -27,11 +27,6 @@ MOU Upload
   {{ form.as_table }}
   </table>
   <br>
-  {% comment %}
-  {{ form }}
-  {{ form.file.errors }}
-  {{ form.errors }}
-  {% endcomment %}
   <input class="btn btn-primary" type="submit" value="Submit" />
   <a href=
   {% if mou_type == "new-project" %}"{% url 'new-project-request-detail' request_obj.pk %}"
