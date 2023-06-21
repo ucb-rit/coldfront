@@ -1,9 +1,9 @@
 from django import forms
-from django.core.validators import MinLengthValidator
+from django.core.validators import (MinLengthValidator, 
+                                    MaxLengthValidator,
+                                    FileExtensionValidator)
 
-class FileUploadForm(forms.Form):
-    file = forms.FileField()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['file'].validators.append(MinLengthValidator(1))
+class PDFUploadForm(forms.Form):
+    file = forms.FileField(validators=[MinLengthValidator(1),
+                                       MaxLengthValidator(1024*1024*20), # 20 MB
+                                       FileExtensionValidator(['pdf'])])

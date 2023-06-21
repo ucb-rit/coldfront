@@ -1242,6 +1242,9 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
             self.request.user.is_superuser
 
         context['savio_request'] = self.request_obj
+
+        context['can_upload_mou'] = \
+            self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
 
         set_sec_dir_context(context, self.request_obj)

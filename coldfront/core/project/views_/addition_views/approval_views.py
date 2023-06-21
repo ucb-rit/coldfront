@@ -133,6 +133,9 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
             self.request_obj.status.name not in ('Denied', 'Complete'))
 
         context['savio_request'] = self.request_obj
+
+        context['can_upload_mou'] = \
+            self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
 
         return context

@@ -283,6 +283,8 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         context['mou_required'] = \
             ComputingAllowance(self.request_obj.computing_allowance) \
                 .requires_memorandum_of_understanding()
+        context['can_upload_mou'] = \
+            self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
 
         return context

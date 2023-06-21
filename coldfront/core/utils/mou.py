@@ -1,5 +1,5 @@
 from coldfront.core.utils.common import import_from_settings
-from datetime import date
+from datetime import datetime
 def upload_to_func(instance, filename):
     fs = import_from_settings('FILE_STORAGE')
     path = ''
@@ -15,5 +15,7 @@ def upload_to_func(instance, filename):
     elif isinstance(instance, allocation_models.SecureDirRequest):
         path += fs['details']['SECURE_DIRECTORY_REQUEST_MOU']['location']
         type_ = 'SecureDirectory'
-    path += f'{instance.requester.last_name}_{type_}_MOU_{date.today().strftime("%B%Y")}'
+    path += \
+       f'{datetime.now().replace(microsecond=0).isoformat()}_' \
+       f'{instance.project.name}_{instance.requester.last_name}_{type_}_MOU.pdf'
     return path
