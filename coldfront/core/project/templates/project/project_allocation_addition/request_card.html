@@ -46,6 +46,13 @@
         View
       </button>
     </p>
+    <p class="card-text text-justify">
+      <strong>Unsigned Memorandum of Understanding: </strong>
+      <a href="{% url 'service-units-purchase-request-download-unsigned-mou' savio_request.pk 'new-project' %}" class="btn btn-primary">
+        <i class="fas fa-download" aria-hidden="true"></i>
+        Download
+      </a>
+    </p>
     {% if can_upload_mou or mou_uploaded %}
       <p class="card-text text-justify">
         <strong>Signed Memorandum of Understanding: </strong>

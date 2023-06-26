@@ -3,11 +3,17 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.views.generic.edit import FormView
 from django.views import View
 from coldfront.core.allocation.models import AllocationAdditionRequest, SecureDirRequest
-from coldfront.core.utils.forms.file_upload_forms import PDFUploadForm
 from coldfront.core.project.models import SavioProjectAllocationRequest
+from coldfront.core.utils.forms.file_upload_forms import PDFUploadForm
+from coldfront.core.utils.mou import get_context
 
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.http import FileResponse
+
+import datetime
+import os
+from pypdf import PdfReader, PdfWriter
 
 class MOUUploadView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     template_name = 'upload_mou.html'
@@ -132,8 +138,17 @@ class UnsignedMOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
             self.request_class.objects, pk=pk)
     
     def get(self, request, *args, **kwargs):
-        from django.http import FileResponse
-        response = FileResponse(self.request_obj.mou_file)
+        context = get_context(self.request_obj)
+        # log context
+        
+        reader = PdfReader('mou_base.pdf')
+        writer = PdfWriter()
+        writer.append(reader)
+        writer.update_page_form_field_values(
+            writer.pages[0], context
+        )
+        writer.write('mou_unsigned.pdf')
+        response = FileResponse('mou_unsigned.pdf')
         response['Content-Type'] = 'application/pdf'
         response['Content-Disposition'] = 'attachment;filename="mou.pdf"'
         return response
