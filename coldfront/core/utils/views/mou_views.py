@@ -9,11 +9,14 @@ from coldfront.core.utils.mou import get_context
 
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.http import FileResponse
+from django.http import HttpResponse
 
 import datetime
 import os
 from pypdf import PdfReader, PdfWriter
+from pypdf.generic import (NameObject, NumberObject,
+                          BooleanObject, IndirectObject)
+from io import BytesIO
 
 class MOUUploadView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     template_name = 'upload_mou.html'
@@ -47,7 +50,7 @@ class MOUUploadView(LoginRequiredMixin, UserPassesTestMixin, FormView):
              'service-units': ('Service Unit Purchase Request',
                               AllocationAdditionRequest)}[self.mou_type]
         self.request_obj = get_object_or_404(
-            self.request_class.objects, pk=pk)
+            self.request_class, pk=pk)
 
     def form_valid(self, form):
         '''set request's MOU to the uploaded file'''
@@ -94,7 +97,7 @@ class MOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
              'secure-dir': SecureDirRequest,
              'service-units': AllocationAdditionRequest}[self.mou_type]
         self.request_obj = get_object_or_404(
-            self.request_class.objects, pk=pk)
+            self.request_class, pk=pk)
     
     def get(self, request, *args, **kwargs):
         from django.http import FileResponse
@@ -135,21 +138,44 @@ class UnsignedMOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
              'secure-dir': SecureDirRequest,
              'service-units': AllocationAdditionRequest}[self.mou_type]
         self.request_obj = get_object_or_404(
-            self.request_class.objects, pk=pk)
+            self.request_class, pk=pk)
     
     def get(self, request, *args, **kwargs):
         context = get_context(self.request_obj)
-        # log context
+        print(context)
         
-        reader = PdfReader('mou_base.pdf')
+        reader = PdfReader('mou_template.pdf', strict=False)
+        if "/AcroForm" in reader.trailer["/Root"]:
+            reader.trailer["/Root"]["/AcroForm"].update(
+                {NameObject("/NeedAppearances"): BooleanObject(True)}
+            )
         writer = PdfWriter()
-        writer.append(reader)
+        set_need_appearances_writer(writer)
+        if "/AcroForm" in writer._root_object:
+            writer._root_object["/AcroForm"].update(
+                {NameObject("/NeedAppearances"): BooleanObject(True)}
+            )
+
+        writer.add_page(reader.pages[0])
+        page = writer.pages[0]
         writer.update_page_form_field_values(
-            writer.pages[0], context
+           page, context
         )
-        writer.write('mou_unsigned.pdf')
-        response = FileResponse('mou_unsigned.pdf')
-        response['Content-Type'] = 'application/pdf'
+
+        # setting form fields to read-only and multiline and no spell check
+        for i in range(len(page['/Annots'])):
+            writer_annot = page['/Annots'][i].get_object()
+            for field in context:
+                if writer_annot.get('/T') == field:
+                    print(writer_annot[NameObject("/DA")])
+                    writer_annot.update({
+                        NameObject("/Ff"): NumberObject(1+(1<<12)+(1<<22)),
+                    })
+
+        output_stream = BytesIO()
+        writer.write(output_stream)
+        response = HttpResponse(output_stream.getvalue(),
+                                content_type='application/pdf')
         response['Content-Disposition'] = 'attachment;filename="mou.pdf"'
         return response
 
@@ -160,3 +186,27 @@ class UnsignedMOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
         return reverse(
             ret,
             kwargs={'pk': self.kwargs.get('pk')})
+
+def set_need_appearances_writer(writer):
+    # See 12.7.2 and 7.7.2 for more information:
+    # http://www.adobe.com/content/dam/acom/en/devnet/acrobat/
+    #     pdfs/PDF32000_2008.pdf
+    try:
+        catalog = writer._root_object
+        # get the AcroForm tree and add "/NeedAppearances attribute
+        if "/AcroForm" not in catalog:
+            writer._root_object.update(
+                {
+                    NameObject("/AcroForm"): IndirectObject(
+                        len(writer._objects), 0, writer
+                    )
+                }
+            )
+
+        need_appearances = NameObject("/NeedAppearances")
+        writer._root_object["/AcroForm"][need_appearances] = BooleanObject(True)
+        return writer
+
+    except Exception as e:
+        print("set_need_appearances_writer() catch : ", repr(e))
+        return writer
