@@ -142,19 +142,18 @@ class UnsignedMOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
     
     def get(self, request, *args, **kwargs):
         context = get_context(self.request_obj)
-        print(context)
         
         reader = PdfReader('mou_template.pdf', strict=False)
-        if "/AcroForm" in reader.trailer["/Root"]:
-            reader.trailer["/Root"]["/AcroForm"].update(
-                {NameObject("/NeedAppearances"): BooleanObject(True)}
-            )
+        # if "/AcroForm" in reader.trailer["/Root"]:
+        #     reader.trailer["/Root"]["/AcroForm"].update(
+        #         {NameObject("/NeedAppearances"): BooleanObject(True)}
+        #     )
         writer = PdfWriter()
-        set_need_appearances_writer(writer)
-        if "/AcroForm" in writer._root_object:
-            writer._root_object["/AcroForm"].update(
-                {NameObject("/NeedAppearances"): BooleanObject(True)}
-            )
+        # set_need_appearances_writer(writer)
+        # if "/AcroForm" in writer._root_object:
+        #     writer._root_object["/AcroForm"].update(
+        #         {NameObject("/NeedAppearances"): BooleanObject(True)}
+        #     )
 
         writer.add_page(reader.pages[0])
         page = writer.pages[0]
@@ -167,7 +166,6 @@ class UnsignedMOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
             writer_annot = page['/Annots'][i].get_object()
             for field in context:
                 if writer_annot.get('/T') == field:
-                    print(writer_annot[NameObject("/DA")])
                     writer_annot.update({
                         NameObject("/Ff"): NumberObject(1+(1<<12)+(1<<22)),
                     })

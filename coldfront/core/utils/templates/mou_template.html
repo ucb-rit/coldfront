@@ -1,0 +1,57 @@
+<html>
+<head>
+<style>
+table {
+  float: right;
+  border-collapse: collapse;
+}
+
+td {
+  border: 1px solid black;
+  padding: 5px;
+}
+
+.gray {
+  color: gray;
+  font-size: large;
+}
+
+.mou {
+  color: gray;
+  font-size: 36px;
+  text-align: right;
+}
+.signature {
+  float: left;
+}
+
+</style>
+</head>
+<body>
+<img src="brc_logo.png" alt="BRC Logo" style="float: left;" height=200>
+<table>
+  <tr>
+    <td class="gray">Between:</td>
+    <td>{{ between }}</td>
+  </tr>
+  <tr>
+    <td class="gray">Date:</td>
+    <td>{{ date }}</td>
+  </tr>
+  <tr>
+    <td class="gray">Re:</td>
+    <td>{{ re }}</td>
+  </tr>
+</table>
+<br><br><br><br><br>
+<p class="mou">Memorandum of Understanding</p>
+<p>{{ body }}</p>
+<div class="signature">
+<img src="ken_signature.png" alt="Ken Lutz Signature">
+<p class="ken_signature">Ken Lutz, BRC Program Director, UC Berkeley</p>
+</div>
+<div style="float: right;">
+<p class="signature">{{ signature }}</p>
+</div>
+</body>
+</html>
