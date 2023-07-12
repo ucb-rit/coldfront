@@ -64,6 +64,13 @@
       <strong>Proposed Scratch Path: </strong>
       {{ scratch_path }}
     </p>
+    <p class="card-text text-justify">
+      <strong>Unsigned Memorandum of Understanding: </strong>
+      <a href="{% url 'secure-dir-request-download-unsigned-mou' savio_request.pk 'secure-dir' %}" class="btn btn-primary">
+        <i class="fas fa-download" aria-hidden="true"></i>
+        Download
+      </a>
+    </p>
     {% if can_upload_mou or mou_uploaded %}
       <p class="card-text text-justify">
         <strong>Signed Memorandum of Understanding: </strong>
