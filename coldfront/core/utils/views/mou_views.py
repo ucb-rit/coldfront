@@ -13,6 +13,8 @@ from django.http import HttpResponse
 
 import datetime
 import os
+import jinja2
+import pdfkit
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import (NameObject, NumberObject,
                           BooleanObject, IndirectObject)
@@ -142,39 +144,20 @@ class UnsignedMOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
     
     def get(self, request, *args, **kwargs):
         context = get_context(self.request_obj)
-        
-        reader = PdfReader('mou_template.pdf', strict=False)
-        # if "/AcroForm" in reader.trailer["/Root"]:
-        #     reader.trailer["/Root"]["/AcroForm"].update(
-        #         {NameObject("/NeedAppearances"): BooleanObject(True)}
-        #     )
-        writer = PdfWriter()
-        # set_need_appearances_writer(writer)
-        # if "/AcroForm" in writer._root_object:
-        #     writer._root_object["/AcroForm"].update(
-        #         {NameObject("/NeedAppearances"): BooleanObject(True)}
-        #     )
-
-        writer.add_page(reader.pages[0])
-        page = writer.pages[0]
-        writer.update_page_form_field_values(
-           page, context
-        )
-
-        # setting form fields to read-only and multiline and no spell check
-        for i in range(len(page['/Annots'])):
-            writer_annot = page['/Annots'][i].get_object()
-            for field in context:
-                if writer_annot.get('/T') == field:
-                    writer_annot.update({
-                        NameObject("/Ff"): NumberObject(1+(1<<12)+(1<<22)),
-                    })
-
-        output_stream = BytesIO()
-        writer.write(output_stream)
-        response = HttpResponse(output_stream.getvalue(),
+        templateLoader = jinja2.FileSystemLoader(searchpath='./')
+        templateEnv = jinja2.Environment(loader=templateLoader)
+        TEMPLATE_FILE = 'coldfront/core/utils/templates/mou_template.html'
+        template = templateEnv.get_template(TEMPLATE_FILE)
+        outputHtml = template.render(**context)
+        print(outputHtml)
+        options = {
+            'page-size': 'Letter',
+            'enable-local-file-access': '',
+        }
+        outputPdf = pdfkit.from_string(outputHtml, False, options=options)
+        response = HttpResponse(outputPdf,
                                 content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment;filename="mou.pdf"'
+        response['Content-Disposition'] = 'attachment; filename="mou.pdf"'
         return response
 
     def get_success_url(self, **kwargs):
@@ -184,27 +167,3 @@ class UnsignedMOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
         return reverse(
             ret,
             kwargs={'pk': self.kwargs.get('pk')})
-
-def set_need_appearances_writer(writer):
-    # See 12.7.2 and 7.7.2 for more information:
-    # http://www.adobe.com/content/dam/acom/en/devnet/acrobat/
-    #     pdfs/PDF32000_2008.pdf
-    try:
-        catalog = writer._root_object
-        # get the AcroForm tree and add "/NeedAppearances attribute
-        if "/AcroForm" not in catalog:
-            writer._root_object.update(
-                {
-                    NameObject("/AcroForm"): IndirectObject(
-                        len(writer._objects), 0, writer
-                    )
-                }
-            )
-
-        need_appearances = NameObject("/NeedAppearances")
-        writer._root_object["/AcroForm"][need_appearances] = BooleanObject(True)
-        return writer
-
-    except Exception as e:
-        print("set_need_appearances_writer() catch : ", repr(e))
-        return writer

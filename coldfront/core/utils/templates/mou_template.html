@@ -1,6 +1,11 @@
 <html>
 <head>
 <style>
+* {
+  font-family: 'Bitstream Charter';
+  font-size: 20px;
+}
+
 table {
   float: right;
   border-collapse: collapse;
@@ -18,9 +23,11 @@ td {
 
 .mou {
   color: gray;
-  font-size: 36px;
+  font-size: 40px;
+  font-weight: bold;
   text-align: right;
 }
+
 .signature {
   float: left;
 }
@@ -28,7 +35,7 @@ td {
 </style>
 </head>
 <body>
-<img src="brc_logo.png" alt="BRC Logo" style="float: left;" height=200>
+<img src="/vagrant/coldfront_app/coldfront/coldfront/static/core/portal/imgs/brc_logo.png" alt="BRC Logo" style="float: left;" height=200>
 <table>
   <tr>
     <td class="gray">Between:</td>
@@ -47,10 +54,11 @@ td {
 <p class="mou">Memorandum of Understanding</p>
 <p>{{ body }}</p>
 <div class="signature">
-<img src="ken_signature.png" alt="Ken Lutz Signature">
-<p class="ken_signature">Ken Lutz, BRC Program Director, UC Berkeley</p>
+<img src="/vagrant/coldfront_app/coldfront/coldfront/static/core/portal/imgs/ken_signature.png" alt="Ken Lutz Signature" height=100>
+<p class="ken_signature">Ken Lutz <br> BRC Program Director, UC Berkeley</p>
 </div>
 <div style="float: right;">
+<br><br><br><br>
 <p class="signature">{{ signature }}</p>
 </div>
 </body>

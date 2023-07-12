@@ -283,6 +283,44 @@ class NewProjectExtraFieldsFormFactory(object):
 
 class SavioProjectICAExtraFieldsForm(SavioProjectExtraFieldsForm):
 
+    course_name = forms.CharField(
+        help_text=(
+            'Specify the full name of the course, e.g. '
+            '"CHEM 121: Introduction to Computational Chemistry"'),
+        label = 'Course Name',
+        required=True,
+        validators=[
+            MinLengthValidator(5),
+        ]
+        )
+
+    course_department = forms.CharField(
+        help_text=(
+            'Specify the full name of the department that will be offering this'
+            'course, e.g "Dept. of Chemistry", "Dept. of Economics"'),
+        label='Course Department',
+        required=True,
+        validators=[
+            MinLengthValidator(5),
+        ]
+    )
+
+    point_of_contact = forms.CharField(
+        help_text=(
+            'Specify the full name of the point of contact for this course, '
+            'e.g. "John Doe". The POC will attempt to resolve issues and '
+            'questions from students. Issues that cannot be resolved locally '
+            'by the POC or other staff will be raised by the POC through normal'
+            ' BRC channels (e.g. brc-hpc-help@berkeley.edu). The POC is also '
+            'responsible for monitoring activity against the allowance and '
+            'ensuring any policies about individual usage.'),
+        label='Point of Contact',
+        required=True,
+        validators=[
+            MinLengthValidator(5),
+        ]
+    )
+
     num_students = forms.IntegerField(
         help_text=(
             'Specify the number of students you anticipate having in this '
