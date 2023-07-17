@@ -31,11 +31,11 @@ def get_context(request_obj):
     from coldfront.core.project.models import SavioProjectAllocationRequest
     brc_name = 'Ken Lutz'
     pi_name = f'{request_obj.requester.first_name} {request_obj.requester.last_name}'
-    between = f'{brc_name} (BRC) and {pi_name}'
     date = datetime.date.today().strftime("%B %d, %Y")
     project = request_obj.project.name
     mou_title = 'Memorandum of Understanding'
     mou_subtitle = ''
+    footer = ''
 
     if isinstance(request_obj, SavioProjectAllocationRequest) and \
                         ComputingAllowance(request_obj.computing_allowance) \
@@ -44,6 +44,7 @@ def get_context(request_obj):
                                                 .get_attribute('Service Units')
         course_dept = request_obj.extra_fields['course_department']
         dept_and_pi = f'{course_dept}/{pi_name}'
+        between = f'{brc_name} (BRC) and {pi_name}'
         re = f'{dept_and_pi} ICA Agreement'
         course_name = request_obj.extra_fields['course_name']
         point_of_contact = request_obj.extra_fields['point_of_contact']
@@ -57,21 +58,21 @@ def get_context(request_obj):
         signature = f'{pi_name}<br>{course_dept}'
         body = \
             f'This document outlines the agreement between the Berkeley Research Computing (BRC) program and ' \
-            f'{course_dept} to provide an Instructional Computing Allowance (ICA) for computing on Savio' \
-            f'associated with {pi_name} course {course_name}<br><br>' \
-            f'The BRC ICA is provided in the context of an active partnership between the Dept of Chemistry and BRC, wherein' \
+            f'{course_dept} to provide an Instructional Computing Allowance (ICA) for computing on Savio ' \
+            f'associated with {pi_name}\'s course {course_name}<br><br>' \
+            f'The BRC ICA is provided in the context of an active partnership between {dept_and_pi} and BRC, wherein ' \
             f'both parties agree to specific roles and responsibilities and associated activities:<br>' \
-            f'<ul><li>{dept_and_pi} agrees to name a front-line point-of-contact (specified below; this point-of-contact' \
+            f'<ul><li>{dept_and_pi} agrees to name a front-line point-of-contact (specified below; this point-of-contact ' \
             f'for a course will generally be a course GSI) who will attempt to resolve issues and questions from students.</li>' \
             f'<ul><li>Students will not contact BRC staff directly (via email, telephone, or in person) with issues.</li>' \
-            f'<li>All issues that cannot be resolved locally by the point-of-contact or other {course_dept} faculty or staff, will' \
+            f'<li>All issues that cannot be resolved locally by the point-of-contact or other {course_dept} faculty or staff, will ' \
             f'be raised by the point-of-contact through normal BRC issue channels (e.g., brc-hpc-help@berkeley.edu).</li>' \
             f'<li>For this {dept_and_pi} ICA, the point-of-contact will be {point_of_contact}</li>' \
-            f'<li>If {dept_and_pi} wishes to change the point-of-contact, the new person must have sufficient training' \
+            f'<li>If {dept_and_pi} wishes to change the point-of-contact, the new person must have sufficient training ' \
             f'and/or experience with the high performance computing in Savio to support the students, and must be ' \
             f'approved in advance by BRC staff before the change can be made.</li>' \
             f'<li>Bulk account creations (e.g., a student list) will be requested at least 2 weeks before they are required for use.</li>' \
-            f'<li>If there are ongoing problems with students contacting BRC directly rather than going through the point-of-contact' \
+            f'<li>If there are ongoing problems with students contacting BRC directly rather than going through the point-of-contact ' \
             f'contact, BRC reserves the right to terminate the agreement, canceling the allowance and deactivating student accounts.</li></ul>' \
             f'<br><li>BRC agrees to provide an allowance of {service_units} Service Units for use on the Savio computing cluster, ' \
             f'and up to 10 associated accounts for trainees. BRC will provide standard support to the point-of-contact, ' \
@@ -93,9 +94,13 @@ def get_context(request_obj):
     elif isinstance(request_obj, AllocationAdditionRequest) or \
                 (isinstance(request_obj, SavioProjectAllocationRequest) and \
                 ComputingAllowance(request_obj.computing_allowance)\
-                                                        .is_instructional()):
+                                                        .is_recharge()):
+        between = f'{brc_name} (BRC) and {pi_name}'
         re = f'{project} Savio Allowance Purchase Agreement'
-        service_units = int(request_obj.num_service_units)
+        if isinstance(request_obj, AllocationAdditionRequest):
+            service_units = int(request_obj.num_service_units)
+        else:
+            service_units = int(request_obj.extra_fields['num_service_units'])
         chartstring = request_obj.extra_fields['campus_chartstring']
         cost = f'${(0.01 * service_units):.2f} ($0.01/SU)'
         signature = f'{pi_name}<br>{project}'
@@ -119,6 +124,7 @@ def get_context(request_obj):
             f'additional separate MOU\'s may be negotiated.'
 
     elif isinstance(request_obj, SecureDirRequest):
+        between = f'Research IT (Research, Teaching and Learning) and {pi_name}'
         re = f'P3 Savio project Researcher Use Agreement'
         signature = f'{pi_name}<br>{project}'
         mou_title = 'Researcher Use Agreement (RUA)'

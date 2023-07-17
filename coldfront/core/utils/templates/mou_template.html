@@ -6,10 +6,6 @@
   font-size: 20px;
 }
 
-/* The article fills all the space between header & footer */
-body{ display:flex; flex-direction:column; }
-article{ flex:1; }
-
 table {
   float: right;
   border-collapse: collapse;
@@ -67,6 +63,7 @@ td {
     {% endif %}
   </p>
   {{ body }}
+  <br><br><br><br>
   <div class="signature">
     <img src="/vagrant/coldfront_app/coldfront/coldfront/static/core/portal/imgs/ken_signature.png" alt="Ken Lutz Signature" height=100>
     <p class="ken_signature">Ken Lutz <br> BRC Program Director, UC Berkeley</p>
@@ -76,8 +73,8 @@ td {
     <p class="signature">{{ signature }}</p>
   </div>
 </body>
-<br><br><br><br><br><br><br><br><br><br>
 {% if footer %}
+<br><br><br><br><br><br><br><br><br><br>
   <footer>
     {{ footer }}
   </footer>
