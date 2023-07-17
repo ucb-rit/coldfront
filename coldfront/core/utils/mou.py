@@ -34,6 +34,8 @@ def get_context(request_obj):
     between = f'{brc_name} (BRC) and {pi_name}'
     date = datetime.date.today().strftime("%B %d, %Y")
     project = request_obj.project.name
+    mou_title = 'Memorandum of Understanding'
+    mou_subtitle = ''
 
     if isinstance(request_obj, SavioProjectAllocationRequest) and \
                         ComputingAllowance(request_obj.computing_allowance) \
@@ -119,8 +121,11 @@ def get_context(request_obj):
     elif isinstance(request_obj, SecureDirRequest):
         re = f'P3 Savio project Researcher Use Agreement'
         signature = f'{pi_name}<br>{project}'
+        mou_title = 'Researcher Use Agreement (RUA)'
+        mou_subtitle = 'for using P3 data in the Savio HPC environment'
         body = \
-'''This document outlines the agreement between the Berkeley Research Computing (BRC) program and the PI named above (hereafter referred to as "the PI") for the use of P3 data, as defined in the UC Berkeley Data Classification Standard, in the Savio High Performing Computing (HPC) system. The agreement is based upon a shared responsibility model for ensuring the security of the data, and compliance with the UC Berkeley Minimum Security Standard for Electronic Information policy and any associated Data Use Agreement (DUA). This agreement details the responsibilities of the PI, as well as any other researchers that are granted access by the PI to use the data in Savio. 
+'''
+This document outlines the agreement between the Berkeley Research Computing (BRC) program and the PI named above (hereafter referred to as "the PI") for the use of P3 data, as defined in the UC Berkeley Data Classification Standard, in the Savio High Performing Computing (HPC) system. The agreement is based upon a shared responsibility model for ensuring the security of the data, and compliance with the UC Berkeley Minimum Security Standard for Electronic Information policy and any associated Data Use Agreement (DUA). This agreement details the responsibilities of the PI, as well as any other researchers that are granted access by the PI to use the data in Savio. 
 <br><br>Before use of P3 data in Savio, Research IT staff will evaluate the data protection level of the data in question, which generally involves a review of relevant data use agreement (DUA) requirements to ensure Savio is in compliance. If Research IT staff deem it necessary, the evaluation will be escalated to Information Security & Policy (ISP) for a more formal data protection level assessment. If the data meet the requirements of the review and other approval requirements, the request for access may be granted. If the assessment reveals that the data are at the P4 level, Savio will not be allowed to be used for the research project. 
 <br><br>The responsibilities are described in alignment with the Savio MSSEI PL1 Self-Assessment Plan; section numbers are references to that plan. In the text below, "Principal Investigator" and "PI" should be understood to be the project lead (generally the PI, and/or whoever signs the DUA), and "Researchers" includes all approved users in the group. 
 <br><br>In addition to the researcher responsibilities described in this Agreement, researchers must be familiar with the Savio PL1 Incident Response Plan and the end-user requirements therein that are associated with responding to suspicious cybersecurity events. UC Berkeley's Information Security and Policy Incident Response Planning Guide, defines a suspicious event as:
@@ -165,12 +170,12 @@ Researchers must not download covered data to their personal laptop if it is not
 <br><br>Note that covered P3 data may not be stored in user directories in Savio. This policy ensures that covered data will not be included in UC Backup program, which avoids the potential for data to reside on unencrypted tape media, and simplifies the deletion of covered data at the end of a project. 
 </p><h2>15.3 Secure deletion upon decommission</h2>
 <p style='margin-left: 40px;'>
-Researchers and PIs are responsible for secure deletion of covered P3 data at the end of their research project. This includes both data on project storage areas, as well as in scratch1. 
+Researchers and PIs are responsible for secure deletion of covered P3 data at the end of their research project. This includes both data on project storage areas, as well as in scratch<sup>1</sup>. 
 <br><br>Project storage: All files on the project storage array should be deleted using normal file removal commands (e.g., rm). Inasmuch as all files on project storage must be encrypted, this will suffice. 
-<br><br>Scratch (parallel filesystem) storage: All files (including in particular decrypted files and derivatives) must be deleted using a secure deletion utility such as shred. While users may choose to use the default number of passes (3), it is sufficient to run a single pass over the data; for large files this will significantly reduce the resources required to complete the secure deletion2. 
+<br><br>Scratch (parallel filesystem) storage: All files (including in particular decrypted files and derivatives) must be deleted using a secure deletion utility such as shred. While users may choose to use the default number of passes (3), it is sufficient to run a single pass over the data; for large files this will significantly reduce the resources required to complete the secure deletion<sup>2</sup>. 
 </p><h2>Additional NIH Security Best Practices for Controlled-Access Data Subject to the NIH Genomic Data Sharing (GDS) Policy ("NIH Data")</h2>
 <p style='margin-left: 40px;'>
-In addition to the campus security policy requirements listed above, Researchers working with NIH dbGaP data are responsible for the NIH security requirements detailed below. These requirements and guidelines refer to the NIH Security Best Practices document. See that original3 for details. 
+In addition to the campus security policy requirements listed above, Researchers working with NIH dbGaP data are responsible for the NIH security requirements detailed below. These requirements and guidelines refer to the NIH Security Best Practices document. See that original<sup>3</sup> for details. 
 <br><ul style='margin-left: 40px'><li> Researchers working with NIH data must not post this data, or otherwise make it publicly available. BRC staff will not make any NIH data publicly available.
 </li><li>NIH requires that approved users must retain the original version of the encrypted data, track all copies or extracts and ensure that the information is not divulged to anyone except authorized staff members at the institution. NIH therefore recommends ensuring careful control of physical copies of data and providing appropriate logging on machines where such data is resident. This is the responsibility of the P3 project PI.
 </li><li> As collaborating investigators from other institutions must submit an independent DAR and be approved by NIH to access to the data, restrict outbound access from devices that host controlled access data.
@@ -179,4 +184,9 @@ In addition to the campus security policy requirements listed above, Researchers
 </li><li>Encrypt data at rest with a user's own keys. SRA-toolkit includes this feature; other software providers offer tools to meet this requirement. The NIH Active Research workflow for NIH data in Savio describes requirements and responsibilities for deletion of unencrypted data when not in active use (i.e., at rest).
 </li></ul></p><br>This agreement will cover all current and future datasets, throughout the period of time that the researcher (and designated collaborators) are utilizing the Research IT resources.
 '''
-    return dict(between=between, date=date, re=re, signature=signature, body=body)
+        footer = \
+            '<sup>1</sup> If users have data on a personal device (laptops, workstations, etc.), they should review the campus Secure Deletion Guideline (available at: https://security.berkeley.edu/secure-deletion-guideline) for more information on secure deletion of data.' \
+            '<br><sup>2</sup>For an analysis of the issues, see Wright C., Kleiman D., and Shyaam S. R. S., (2008). "Overwriting Hard Drive Data: The Great  Wiping Controversy", Lecture Notes in Computer Science (Springer Berlin / Heidelberg). Available at: https://www.researchgate.net/publication/221160815_Overwriting_Hard_Drive_Data_The_Great_Wiping_Controvers' \
+            '<br><sup>3</sup> Available at: https://osp.od.nih.gov/wp-content/uploads/NIH_Best_Practices_for_Controlled_Access_Data_Subject_to_the_NIH_GDS_Policy.pdf'
+    return dict(mou_title=mou_title, mou_subtitle=mou_subtitle, between=between,
+                date=date, re=re, signature=signature, body=body, footer=footer)

@@ -149,7 +149,8 @@ class UnsignedMOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
         TEMPLATE_FILE = 'coldfront/core/utils/templates/mou_template.html'
         template = templateEnv.get_template(TEMPLATE_FILE)
         outputHtml = template.render(**context)
-        print(outputHtml)
+        with open('test.html', 'w') as f:
+            f.write(outputHtml)
         options = {
             'page-size': 'Letter',
             'enable-local-file-access': '',

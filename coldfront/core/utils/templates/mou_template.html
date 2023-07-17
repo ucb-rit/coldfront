@@ -6,6 +6,10 @@
   font-size: 20px;
 }
 
+/* The article fills all the space between header & footer */
+body{ display:flex; flex-direction:column; }
+article{ flex:1; }
+
 table {
   float: right;
   border-collapse: collapse;
@@ -21,9 +25,15 @@ td {
   font-size: large;
 }
 
-.mou {
+.title {
   color: gray;
   font-size: 40px;
+  font-weight: bold;
+  text-align: right;
+}
+.subtitle {
+  color: gray;
+  font-size: 30px;
   font-weight: bold;
   text-align: right;
 }
@@ -35,31 +45,41 @@ td {
 </style>
 </head>
 <body>
-<img src="/vagrant/coldfront_app/coldfront/coldfront/static/core/portal/imgs/brc_logo.png" alt="BRC Logo" style="float: left;" height=200>
-<table>
-  <tr>
-    <td class="gray">Between:</td>
-    <td>{{ between }}</td>
-  </tr>
-  <tr>
-    <td class="gray">Date:</td>
-    <td>{{ date }}</td>
-  </tr>
-  <tr>
-    <td class="gray">Re:</td>
-    <td>{{ re }}</td>
-  </tr>
-</table>
-<br><br><br><br><br>
-<p class="mou">Memorandum of Understanding</p>
-<p>{{ body }}</p>
-<div class="signature">
-<img src="/vagrant/coldfront_app/coldfront/coldfront/static/core/portal/imgs/ken_signature.png" alt="Ken Lutz Signature" height=100>
-<p class="ken_signature">Ken Lutz <br> BRC Program Director, UC Berkeley</p>
-</div>
-<div style="float: right;">
-<br><br><br><br>
-<p class="signature">{{ signature }}</p>
-</div>
+  <img src="/vagrant/coldfront_app/coldfront/coldfront/static/core/portal/imgs/brc_logo.png" alt="BRC Logo" style="float: left;" height=200>
+  <table>
+    <tr>
+      <td class="gray">Between:</td>
+      <td>{{ between }}</td>
+    </tr>
+    <tr>
+      <td class="gray">Date:</td>
+      <td>{{ date }}</td>
+    </tr>
+    <tr>
+      <td class="gray">Re:</td>
+      <td>{{ re }}</td>
+    </tr>
+  </table>
+  <br><br><br><br><br>
+  <p class="title">{{ mou_title }}
+    {% if mou_subtitle %}
+      <span class="subtitle"><br>{{ mou_subtitle }}</span>
+    {% endif %}
+  </p>
+  {{ body }}
+  <div class="signature">
+    <img src="/vagrant/coldfront_app/coldfront/coldfront/static/core/portal/imgs/ken_signature.png" alt="Ken Lutz Signature" height=100>
+    <p class="ken_signature">Ken Lutz <br> BRC Program Director, UC Berkeley</p>
+  </div>
+  <div style="float: right;">
+    <br><br><br><br>
+    <p class="signature">{{ signature }}</p>
+  </div>
 </body>
+<br><br><br><br><br><br><br><br><br><br>
+{% if footer %}
+  <footer>
+    {{ footer }}
+  </footer>
+{% endif %}
 </html>
