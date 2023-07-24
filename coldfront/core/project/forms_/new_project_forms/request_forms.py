@@ -285,8 +285,8 @@ class SavioProjectICAExtraFieldsForm(SavioProjectExtraFieldsForm):
 
     course_name = forms.CharField(
         help_text=(
-            'Specify the full name of the course, e.g. '
-            '"CHEM 121: Introduction to Computational Chemistry"'),
+            'Specify the full name of the course (e.g. '
+            '"CHEM 121: Introduction to Computational Chemistry").'),
         label = 'Course Name',
         required=True,
         validators=[
@@ -297,7 +297,7 @@ class SavioProjectICAExtraFieldsForm(SavioProjectExtraFieldsForm):
     course_department = forms.CharField(
         help_text=(
             'Specify the full name of the department that will be offering this'
-            'course, e.g "Dept. of Chemistry", "Dept. of Economics"'),
+            ' course (e.g "Dept. of Chemistry", "Dept. of Economics").'),
         label='Course Department',
         required=True,
         validators=[

@@ -19,12 +19,6 @@ EMAIL_DIRECTOR_EMAIL_ADDRESS = import_from_settings(
     'EMAIL_DIRECTOR_EMAIL_ADDRESS', '')
 
 
-# class FileUploadForm(forms.ModelForm):
-#     class Meta:
-#         model = TestFileModel
-#         fields = ('description', 'document')
-
-
 class ProjectSearchForm(forms.Form):
     """ Search form for the Project list page.
     """

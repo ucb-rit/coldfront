@@ -161,10 +161,13 @@ sentry_dsn: ""
 
 # # Storage settings.
 # # TODO: fill these out
-# file_storage_backend: 'google_drive'
-# new_project_request_mou_path: 'new_project_requests/'
-# secure_directory_request_mou_path: 'secure_directory_requests/'
-# service_units_purchase_request_mou_path: 'service_units_purchase_requests/'
+# file_storage_backend: 'google_drive' # local_storage or google_drive
+# # for google_drive, provide only the bottom-level directory name
+# # with a slash at the end.
+# new_project_request_mou_path: 'New Project Request MOUs/'
+# secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
+# service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
+# # only if using google_drive
 # google_drive_private_key_file_path: 'google-drive-key.json'
 
 # # SSL settings.
@@ -225,10 +228,13 @@ sentry_dsn: ""
 
 # # Storage settings.
 # # TODO: fill these out
-# file_storage_backend: 'google_drive'
-# new_project_request_mou_path: 'new_project_requests/'
-# secure_directory_request_mou_path: 'secure_directory_requests/'
-# service_units_purchase_request_mou_path: 'service_units_purchase_requests/'
+# file_storage_backend: 'google_drive' # local_storage or google_drive
+# # for google_drive, provide only the bottom-level directory name
+# # with a slash at the end.
+# new_project_request_mou_path: 'New Project Request MOUs/'
+# secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
+# service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
+# # only if using google_drive
 # google_drive_private_key_file_path: 'google-drive-key.json'
 
 # # SSL settings.
@@ -286,10 +292,13 @@ sentry_dsn: ""
 
 # # Storage settings.
 # # TODO: fill these out
-# file_storage_backend: 'google_drive'
-# new_project_request_mou_path: 'new_project_requests/'
-# secure_directory_request_mou_path: 'secure_directory_requests/'
-# service_units_purchase_request_mou_path: 'service_units_purchase_requests/'
+# file_storage_backend: 'local_storage' # local_storage or google_drive
+# # for google_drive, provide only the bottom-level directory name
+# # with a slash at the end.
+# new_project_request_mou_path: 'New Project Request MOUs/'
+# secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
+# service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
+# # only if using google_drive
 # google_drive_private_key_file_path: 'google-drive-key.json'
 
 # # SSL settings.
