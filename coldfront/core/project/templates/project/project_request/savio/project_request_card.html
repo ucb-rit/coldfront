@@ -86,9 +86,13 @@
       <strong>Allowance: </strong>
       {{ computing_allowance_name }}
       {% if allowance_has_extra_fields %}
-        <button id="view-extra-fields" class="btn btn-info" role="button">
+        <button id="view-extra-fields" class="btn btn-primary" role="button">
           Details
         </button>
+        <a href="{% url 'new-project-request-edit-extra-fields' savio_request.pk %}" class="btn btn-secondary">
+          <i class="fas fa-edit" aria-hidden="true"></i>
+          Edit
+        </a>
       {% endif %}
     </p>
     <p class="card-text text-justify">

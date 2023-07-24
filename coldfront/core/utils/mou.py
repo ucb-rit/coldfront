@@ -83,7 +83,6 @@ def get_mou_html(request_obj):
         context['body'] = templateEnv.get_template('recharge_body_template.html') \
                           .render(**context)
 
-
     elif isinstance(request_obj, SecureDirRequest):
         context['between'] = f'RTL / Research IT and {context["pi_name"]}'
         context['re'] = f'P2/P3 Savio project Researcher Use Agreement'
@@ -92,7 +91,7 @@ def get_mou_html(request_obj):
         context['mou_subtitle'] = 'for using P2/P3 data in the Savio HPC environment'
         with open('./coldfront/core/utils/templates/secure_dir_body.html', 'r') as f, \
              open('./coldfront/core/utils/templates/secure_dir_footer.html', 'r') as f2:
-            context['body'] = f.read()
-            context['footer'] = f2.read()
+            context['body'] = str(f.read())
+            context['footer'] = str(f2.read())
 
     return templateEnv.get_template('mou_template.html').render(**context)

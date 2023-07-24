@@ -5,9 +5,10 @@ from coldfront.core.project.forms import MemorandumSignedForm
 from coldfront.core.project.forms import ReviewDenyForm
 from coldfront.core.project.forms import ReviewStatusForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import NewProjectExtraFieldsFormFactory
+from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectExtraFieldsForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
 from coldfront.core.project.forms_.new_project_forms.approval_forms import SavioProjectReviewSetupForm
 from coldfront.core.project.forms_.new_project_forms.approval_forms import VectorProjectReviewSetupForm
-from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.project.models import VectorProjectAllocationRequest
@@ -113,7 +114,7 @@ class SavioProjectRequestMixin(object):
         assert isinstance(self.request_obj, SavioProjectAllocationRequest)
         assert isinstance(self.computing_allowance_obj, ComputingAllowance)
 
-    def get_extra_fields_form(self):
+    def get_extra_fields_form(self, disable_fields=True):
         """Return a form of extra fields for the request, based on its
         computing allowance, and populated with initial data."""
         self.assert_attributes_set()
@@ -121,7 +122,7 @@ class SavioProjectRequestMixin(object):
         extra_fields = self.request_obj.extra_fields
         kwargs = {
             'initial': extra_fields,
-            'disable_fields': True,
+            'disable_fields': disable_fields,
         }
         factory = NewProjectExtraFieldsFormFactory()
         return factory.get_form(computing_allowance, **kwargs)
@@ -190,6 +191,58 @@ class SavioProjectRequestMixin(object):
         context['survey_form'] = SavioProjectSurveyForm(
             initial=self.request_obj.survey_answers, disable_fields=True)
 
+class SavioProjectRequestEditExtraFieldsView(LoginRequiredMixin,
+                                             UserPassesTestMixin,
+                                             SavioProjectRequestMixin,
+                                             TemplateView):
+    template_name = 'project/project_request/savio/project_request_edit_extra_fields.html'
+
+    logger = logging.getLogger(__name__)
+
+    error_message = 'Unexpected failure. Please contact an administrator.'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user.is_superuser:
+            return True
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        pk = self.kwargs.get('pk')
+        self.set_attributes(pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        context = {}
+        context['form'] = self.get_extra_fields_form(disable_fields=False)
+        context['savio_request'] = self.request_obj
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = NewProjectExtraFieldsFormFactory() \
+                        .get_form(self.computing_allowance_obj, request.POST)
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form):
+        """Save the form."""
+        self.request_obj.extra_fields = form.cleaned_data
+        self.request_obj.save()
+        message = 'The request has been updated.'
+        messages.success(self.request, message)
+        return HttpResponseRedirect(reverse('new-project-request-detail',
+                                            kwargs={'pk':self.request_obj.pk}))
+
+    def form_invalid(self, form):
+        """Handle invalid forms."""
+        message = 'Please correct the errors below.'
+        messages.error(self.request, message)
+        return self.render_to_response(
+            self.get_context_data(form=form))
 
 class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                                     SavioProjectRequestMixin, DetailView):
