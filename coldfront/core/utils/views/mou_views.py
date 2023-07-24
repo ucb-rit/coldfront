@@ -5,7 +5,7 @@ from django.views import View
 from coldfront.core.allocation.models import AllocationAdditionRequest, SecureDirRequest
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.utils.forms.file_upload_forms import PDFUploadForm
-from coldfront.core.utils.mou import get_context
+from coldfront.core.utils.mou import get_mou_html
 
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -143,14 +143,7 @@ class UnsignedMOUDownloadView(LoginRequiredMixin, UserPassesTestMixin, View):
             self.request_class, pk=pk)
     
     def get(self, request, *args, **kwargs):
-        context = get_context(self.request_obj)
-        templateLoader = jinja2.FileSystemLoader(searchpath='./')
-        templateEnv = jinja2.Environment(loader=templateLoader)
-        TEMPLATE_FILE = 'coldfront/core/utils/templates/mou_template.html'
-        template = templateEnv.get_template(TEMPLATE_FILE)
-        outputHtml = template.render(**context)
-        with open('test.html', 'w') as f:
-            f.write(outputHtml)
+        outputHtml = get_mou_html(self.request_obj)
         options = {
             'page-size': 'Letter',
             'enable-local-file-access': '',
