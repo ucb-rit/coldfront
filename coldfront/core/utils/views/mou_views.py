@@ -13,12 +13,7 @@ from django.http import HttpResponse
 
 import datetime
 import os
-import jinja2
 import pdfkit
-from pypdf import PdfReader, PdfWriter
-from pypdf.generic import (NameObject, NumberObject,
-                          BooleanObject, IndirectObject)
-from io import BytesIO
 
 class MOUUploadView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     template_name = 'upload_mou.html'
