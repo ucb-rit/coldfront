@@ -1,7 +1,7 @@
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
+from django.template.loader import render_to_string
 import datetime
-import jinja2
 
 def upload_to_func(instance, filename):
     fs = import_from_settings('FILE_STORAGE')
@@ -31,6 +31,7 @@ def get_mou_html(request_obj):
                                                   AllocationPeriod)
     from coldfront.core.project.models import SavioProjectAllocationRequest
     context = {}
+    context['static_root'] = import_from_settings('STATIC_ROOT')
     context['brc_name'] = 'Ken Lutz'
     context['pi_name'] = f'{request_obj.requester.first_name} {request_obj.requester.last_name}'
     context['date'] = datetime.date.today().strftime("%B %d, %Y")
@@ -38,10 +39,6 @@ def get_mou_html(request_obj):
     context['mou_title'] = 'Memorandum of Understanding'
     context['mou_subtitle'] = ''
     context['footer'] = ''
-
-    templateLoader = jinja2.FileSystemLoader( \
-                                searchpath='./coldfront/core/utils/templates/')
-    templateEnv = jinja2.Environment(loader=templateLoader)
 
     if isinstance(request_obj, SavioProjectAllocationRequest) and \
                         ComputingAllowance(request_obj.computing_allowance) \
@@ -63,9 +60,8 @@ def get_mou_html(request_obj):
                      end_date__gte=allowance_end).name
         context['allowance_year_short'] = f'AY {allowance_year.split(" ")[2][2:]}/' \
                                  f'{allowance_year.split(" ")[4][2:]}'
-        context['signature'] = f'{context["pi_name"]}<br>{context["course_dept"]}'
-        context['body'] = templateEnv.get_template('ica_body_template.html') \
-                                     .render(**context)
+        context['signature'] = f'{context["pi_name"]}\n{context["course_dept"]}'
+        context['body'] = render_to_string('ica_body_template.html', context)
 
     elif isinstance(request_obj, AllocationAdditionRequest) or \
                 (isinstance(request_obj, SavioProjectAllocationRequest) and \
@@ -79,14 +75,13 @@ def get_mou_html(request_obj):
             service_units = int(request_obj.extra_fields['num_service_units'])
         context['chartstring'] = request_obj.extra_fields['campus_chartstring']
         context['cost'] = f'${(0.01 * service_units):.2f} ($0.01/SU)'
-        context['signature'] = f'{context["pi_name"]}<br>{context["project"]}'
-        context['body'] = templateEnv.get_template('recharge_body_template.html') \
-                          .render(**context)
+        context['signature'] = f'{context["pi_name"]}\n{context["project"]}'
+        context['body'] = render_to_string('recharge_body_template.html', context)
 
     elif isinstance(request_obj, SecureDirRequest):
         context['between'] = f'RTL / Research IT and {context["pi_name"]}'
         context['re'] = f'P2/P3 Savio project Researcher Use Agreement'
-        context['signature'] = f'{context["pi_name"]}<br>{context["project"]}'
+        context['signature'] = f'{context["pi_name"]}\n{context["project"]}'
         context['mou_title'] = 'Researcher Use Agreement (RUA)'
         context['mou_subtitle'] = 'for using P2/P3 data in the Savio HPC environment'
         with open('./coldfront/core/utils/templates/secure_dir_body.html', 'r') as f, \
@@ -94,4 +89,4 @@ def get_mou_html(request_obj):
             context['body'] = str(f.read())
             context['footer'] = str(f2.read())
 
-    return templateEnv.get_template('mou_template.html').render(**context)
+    return render_to_string('mou_template.html', context)
