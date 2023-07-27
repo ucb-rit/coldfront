@@ -333,6 +333,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
 
+        context['is_superuser'] = self.request.user.is_superuser
         context['mou_required'] = \
             ComputingAllowance(self.request_obj.computing_allowance) \
                 .requires_memorandum_of_understanding()

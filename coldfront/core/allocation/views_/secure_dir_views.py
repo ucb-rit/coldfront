@@ -907,12 +907,14 @@ class SecureDirRequestWizard(LoginRequiredMixin,
                 'requester': self.request.user,
             }
 
+            department = self.__get_department(form_data)
             data_description = self.__get_data_description(form_data)
             rdm_consultation = self.__get_rdm_consultation(form_data)
             existing_project = self.project
             directory_name = self.__get_directory_name(form_data)
 
             # Store transformed form data in a request.
+            request_kwargs['department'] = data_description
             request_kwargs['data_description'] = data_description
             request_kwargs['rdm_consultation'] = rdm_consultation
             request_kwargs['project'] = existing_project
@@ -981,6 +983,12 @@ class SecureDirRequestWizard(LoginRequiredMixin,
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         return cleaned_data.get('rdm_consultation', False)
+
+    def __get_department(self, form_data):
+        """Return the department that the user submitted."""
+        step_number = self.step_numbers_by_form_name['data_description']
+        data = form_data[step_number]
+        return data.get('department')
 
     def __get_data_description(self, form_data):
         """Return the data description the user submitted."""

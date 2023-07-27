@@ -89,10 +89,12 @@
         <button id="view-extra-fields" class="btn btn-primary" role="button">
           Details
         </button>
-        <a href="{% url 'new-project-request-edit-extra-fields' savio_request.pk %}" class="btn btn-secondary">
-          <i class="fas fa-edit" aria-hidden="true"></i>
-          Edit
-        </a>
+        {% if is_superuser %}
+          <a href="{% url 'new-project-request-edit-extra-fields' savio_request.pk %}" class="btn btn-secondary">
+            <i class="fas fa-edit" aria-hidden="true"></i>
+            Edit
+          </a>
+        {% endif %}
       {% endif %}
     </p>
     <p class="card-text text-justify">

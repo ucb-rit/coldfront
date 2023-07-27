@@ -5,7 +5,7 @@
 
 
 {% block title %}
-Update Extra Fields
+Update Allowance Details
 {% endblock %}
 
 {% block head %}
@@ -14,14 +14,14 @@ Update Extra Fields
 
 {% block content %}
 
-<h1>Update Extra Fields</h1>
+<h1>Update Allowance Details</h1>
 <hr>
 
 <script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
 <script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
 <link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
 
-<p>Modify extra_fields that are used in MOU generation.</p>
+<p>Update allowance details that are used in MOU generation.</p>
 
 <div class="card mb-3">
   <div class="card-body">
@@ -35,13 +35,6 @@ Update Extra Fields
     </form>
   </div>
 </div>
-
-<script>
-  $('select').selectize({
-    create: false,
-    sortField: 'text'
-  })
-</script>
 
 
 {% endblock %}

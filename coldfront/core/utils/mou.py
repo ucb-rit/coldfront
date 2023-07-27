@@ -79,7 +79,8 @@ def get_mou_html(request_obj):
         context['body'] = render_to_string('recharge_body_template.html', context)
 
     elif isinstance(request_obj, SecureDirRequest):
-        context['between'] = f'RTL / Research IT and {context["pi_name"]}'
+        department = request_obj.department
+        context['between'] = f'RTL / Research IT and {department}/{context["pi_name"]}'
         context['re'] = f'P2/P3 Savio project Researcher Use Agreement'
         context['signature'] = f'{context["pi_name"]}\n{context["project"]}'
         context['mou_title'] = 'Researcher Use Agreement (RUA)'
