@@ -1,0 +1,171 @@
+import os
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+
+ALLOWED_HOSTS = ['0.0.0.0', 'localhost', 'localhost']
+
+PORTAL_NAME = 'MyLRC'
+PROGRAM_NAME_LONG = 'Laboratory Research Computing'
+PROGRAM_NAME_SHORT = 'LRC'
+PRIMARY_CLUSTER_NAME = 'Lawrencium'
+
+CENTER_NAME = PROGRAM_NAME_SHORT + ' HPC Resources'
+CENTER_USER_GUIDE = 'https://it.lbl.gov/service/scienceit/high-performance-computing/lrc/'
+CENTER_LOGIN_GUIDE = 'https://it.lbl.gov/resource/hpc/for-users/getting-started/'
+CENTER_HELP_EMAIL = 'hpcshelp@lbl.gov'
+
+CENTER_BASE_URL = 'http://localhost:8880'
+CENTER_HELP_URL = CENTER_BASE_URL + '/help'
+CENTER_PROJECT_RENEWAL_HELP_URL = CENTER_BASE_URL + '/help'
+
+EMAIL_PORT = 1025
+EMAIL_SUBJECT_PREFIX = '[MyLRC-User-Portal]'
+# A list of admin email addresses to be notified about new requests and other
+# events.
+EMAIL_ADMIN_LIST = ['tyfong@lbl.gov'] or ['admin@localhost']
+EMAIL_SENDER = 'tyfong@lbl.gov'
+EMAIL_TICKET_SYSTEM_ADDRESS = 'help@localhost'
+EMAIL_DIRECTOR_EMAIL_ADDRESS = 'director@localhost'
+EMAIL_PROJECT_REVIEW_CONTACT = 'review@localhost'
+EMAIL_DEVELOPMENT_EMAIL_LIST = ['dev1@localhost', 'dev2@localhost']
+EMAIL_OPT_OUT_INSTRUCTION_URL = CENTER_BASE_URL + '/optout'
+EMAIL_SIGNATURE = """
+MyLRC User Portal team
+http://localhost:8880
+Email : tyfong@lbl.gov
+"""
+
+EMAIL_FROM = 'tyfong@lbl.gov'
+EMAIL_ADMIN = 'tyfong@lbl.gov'
+DEFAULT_FROM_EMAIL = EMAIL_FROM
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'cf_lrc_db',
+        'USER': 'admin',
+        'PASSWORD': 'root',
+        'HOST': 'db',
+        'PORT': '5432',
+    },
+}
+
+LOG_PATH = '/var/log/user_portals/cf_mylrc/cf_mylrc_portal.log'
+API_LOG_PATH = '/var/log/user_portals/cf_mylrc/cf_mylrc_api.log'
+
+# A list of admin email addresses to CC when certain requests are approved.
+REQUEST_APPROVAL_CC_LIST = ['tyfong@lbl.gov']
+
+
+
+#------------------------------------------------------------------------------
+# Billing settings
+#------------------------------------------------------------------------------
+
+
+
+#------------------------------------------------------------------------------
+# SSL settings
+#------------------------------------------------------------------------------
+
+# Use a secure cookie for the session cookie (HTTPS only).
+
+SESSION_COOKIE_SECURE = False
+
+
+#------------------------------------------------------------------------------
+# Sentry settings
+#------------------------------------------------------------------------------
+
+# Configure Sentry.
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import ignore_logger
+
+
+
+SENTRY_DSN = ''
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=0.01,
+        send_default_pii=True)
+    # Ignore noisy loggers.
+    ignore_logger('coldfront.api')
+    ignore_logger('coldfront.core.utils.middleware')
+
+#------------------------------------------------------------------------------
+# Django All-Auth settings
+#------------------------------------------------------------------------------
+
+CILOGON_APP_CLIENT_ID = ''
+CILOGON_APP_SECRET = ''
+
+#------------------------------------------------------------------------------
+# django-constance settings
+#------------------------------------------------------------------------------
+
+from datetime import date
+
+
+CONSTANCE_CONFIG = {
+    'FEEDBACK_FORM_URL': ('', 'The URL to the feedback form.'),
+    'DOCS_GETTING_HELP_URL': (
+        '', 'The URL to the documentation page on getting help.'),
+    'LAUNCH_DATE': (date(1970, 1, 1), 'The date the portal was launched.'),
+}
+CONSTANCE_REDIS_CONNECTION = {
+    'host': 'redis',
+    'port': 6379,
+    'db': 0,
+    'password': 'root',
+}
+
+#------------------------------------------------------------------------------
+# django debug toolbar settings
+#------------------------------------------------------------------------------
+
+# IP addresses other than 127.0.0.1 that can view the django debug toolbar.
+EXTRA_INTERNAL_IPS = [
+
+    '10.0.2.2',
+
+]
+
+if DEBUG:
+    # For Docker support
+    import socket
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS = [ip[: ip.rfind('.')] + '.1' for ip in ips] + ['10.0.2.2']
+
+#------------------------------------------------------------------------------
+# django-flags settings
+#------------------------------------------------------------------------------
+
+FLAGS = {
+    'ALLOCATION_RENEWAL_FOR_NEXT_PERIOD_REQUESTABLE': [
+        {'condition': 'during month', 'value': '9'},
+    ],
+    'BASIC_AUTH_ENABLED': [{'condition': 'boolean', 'value': True}],
+    'BRC_ONLY': [{'condition': 'boolean', 'value': False}],
+    'LRC_ONLY': [{'condition': 'boolean', 'value': True}],
+    'SECURE_DIRS_REQUESTABLE': [{'condition': 'boolean', 'value': False}],
+    'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': False}],
+    'SSO_ENABLED': [{'condition': 'boolean', 'value': False}],
+}
+
+#------------------------------------------------------------------------------
+# django-q settings
+#------------------------------------------------------------------------------
+
+Q_CLUSTER = {
+    'redis': {
+        'host': 'redis',
+        'port': 6379,
+        'db': 0,
+        'password': 'root',
+    }
+}
