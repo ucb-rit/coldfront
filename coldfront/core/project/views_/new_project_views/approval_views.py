@@ -218,6 +218,7 @@ class SavioProjectRequestEditExtraFieldsView(LoginRequiredMixin,
         context = {}
         context['form'] = self.get_extra_fields_form(disable_fields=False)
         context['savio_request'] = self.request_obj
+        context['notify_pi'] = False
         return context
 
     def post(self, request, *args, **kwargs):
@@ -243,6 +244,29 @@ class SavioProjectRequestEditExtraFieldsView(LoginRequiredMixin,
         messages.error(self.request, message)
         return self.render_to_response(
             self.get_context_data(form=form))
+
+class SavioProjectRequestNotifyPIView(SavioProjectRequestEditExtraFieldsView):
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context['notify_pi'] = True
+        return context
+
+    def form_valid(self, form):
+        """Save the form."""
+        self.request_obj.extra_fields = form.cleaned_data
+        self.request_obj.save()
+        #TODO
+        #email_pi()
+        timestamp = utc_now_offset_aware().isoformat()
+        self.request_obj.state['notified'] = {
+            'status': 'Complete',
+            'timestamp': timestamp,
+        }
+        self.request_obj.save()
+        message = 'The request has been updated and the user has been notified.'
+        messages.success(self.request, message)
+        return HttpResponseRedirect(reverse('new-project-request-detail',
+                                            kwargs={'pk':self.request_obj.pk}))
 
 class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                                     SavioProjectRequestMixin, DetailView):
@@ -337,6 +361,11 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         context['mou_required'] = \
             ComputingAllowance(self.request_obj.computing_allowance) \
                 .requires_memorandum_of_understanding()
+        context['is_recharge'] = \
+            ComputingAllowance(self.request_obj.computing_allowance) \
+                .is_recharge()
+        context['can_download_mou'] = self.request_obj \
+                                      .state['notified']['status'] == 'Complete'
         context['can_upload_mou'] = \
             self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
@@ -451,6 +480,20 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         mou_required = \
             self.computing_allowance_obj.requires_memorandum_of_understanding()
         if mou_required:
+            notified = state['notified']
+            task_text = (
+                'Confirm or edit allowance details, and '
+                'enable/notify the PI to sign the Memorandum of Understanding.')
+            checklist.append([
+                task_text,
+                notified['status'],
+                notified['timestamp'],
+                is_eligible and is_ready,
+                reverse('new-project-request-review-notify-pi',
+                        kwargs={'pk': pk})
+            ])
+            is_notified = notified['status'] == 'Complete'
+
             memorandum_signed = state['memorandum_signed']
             task_text = (
                 'Confirm that the Memorandum of Understanding has been '
@@ -463,11 +506,12 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                 task_text,
                 memorandum_signed['status'],
                 memorandum_signed['timestamp'],
-                is_eligible and is_ready,
+                is_eligible and is_ready and is_notified,
                 reverse(
                     'new-project-request-review-memorandum-signed',
                     kwargs={'pk': pk})
             ])
+        is_notified = not mou_required or (state['notified']['status'] == 'Complete')
         is_memorandum_signed = (
             not mou_required or
             state['memorandum_signed']['status'] == 'Complete')
@@ -477,7 +521,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
             'Perform project setup on the cluster.',
             self.get_setup_status(),
             setup['timestamp'],
-            is_eligible and is_ready and is_memorandum_signed,
+            is_eligible and is_ready and is_notified and is_memorandum_signed,
             reverse('new-project-request-review-setup', kwargs={'pk': pk})
         ])
 

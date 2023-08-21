@@ -552,6 +552,10 @@ def allocation_addition_request_state_schema():
     """Return the schema for the AllocationAdditionRequest.state
     field."""
     return {
+        'notified': {
+            'status': 'Pending',
+            'timestamp': ''
+        },
         'memorandum_signed': {
             'status': 'Pending',
             'timestamp': '',

@@ -389,6 +389,10 @@ def savio_project_request_ica_state_schema():
     """Return the schema for the SavioProjectAllocationRequest.state
     field for Instructional Computing Allowance (ICA) projects."""
     schema = savio_project_request_state_schema()
+    schema['notified'] = {
+        'status': 'Pending',
+        'timestamp': ''
+    }
     schema['memorandum_signed'] = {
         'status': 'Pending',
         'timestamp': '',
@@ -400,6 +404,10 @@ def savio_project_request_recharge_state_schema():
     """Return the schema for the SavioProjectAllocationRequest.state
     field for Recharge projects."""
     schema = savio_project_request_state_schema()
+    schema['notified'] = {
+        'status': 'Pending',
+        'timestamp': ''
+    }
     schema['memorandum_signed'] = {
         'status': 'Pending',
         'timestamp': '',

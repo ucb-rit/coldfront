@@ -2,6 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.views.generic.edit import FormView
 from django.views import View
+from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationAdditionRequest
 from coldfront.core.allocation.models import SecureDirRequest
 from coldfront.core.project.models import SavioProjectAllocationRequest
@@ -12,7 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.http import HttpResponse
 
-import pdfkit
+import coldfront_mou_gen
 
 class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
 
@@ -38,7 +39,7 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
                              SavioProjectAllocationRequest),
              'secure-dir': ('Secure Directory Request',
                             SecureDirRequest),
-             'service-units': ('Service Unit Purchase Request',
+             'service-units-purchase': ('Service Unit Purchase Request',
                               AllocationAdditionRequest)}[self.mou_type]
         self.request_obj = get_object_or_404(
             self.request_class, pk=pk)
@@ -46,7 +47,7 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
     def get_success_url(self, **kwargs):
         ret = {'new-project': 'new-project-request-detail',
                'secure-dir': 'secure-dir-request-detail',
-               'service-units': 'service-units-purchase-request-detail'}[self.mou_type]
+               'service-units-purchase': 'service-units-purchase-request-detail'}[self.mou_type]
         return reverse(ret, kwargs={'pk': self.kwargs.get('pk')})
 
 class MOUUploadView(BaseMOUView, FormView):
@@ -78,13 +79,33 @@ class MOUDownloadView(BaseMOUView, View):
 class UnsignedMOUDownloadView(BaseMOUView, View):
     
     def get(self, request, *args, **kwargs):
-        outputHtml = get_mou_html(self.request_obj)
-        options = {
-            'page-size': 'Letter',
-            'enable-local-file-access': '',
-        }
-        outputPdf = pdfkit.from_string(outputHtml, False, options=options)
-        response = HttpResponse(outputPdf,
+        mou_kwargs = {}
+        if self.mou_type == 'new-project':
+            mou_kwargs['service_units'] = int(float(self.request_obj \
+                        .computing_allowance.get_attribute('Service Units')))
+            mou_kwargs['extra_fields'] = self.request_obj.extra_fields
+            allowance_end = self.request_obj.allocation_period.end_date
+            mou_kwargs['allowance_end'] = allowance_end
+            mou_kwargs['allowance_year'] = AllocationPeriod.objects.get(
+                     name__startswith='Allowance Year',
+                     start_date__lte=allowance_end,
+                     end_date__gte=allowance_end).name
+        elif self.mou_type == 'service-units-purchase':
+            mou_kwargs['extra_fields'] = self.request_obj.extra_fields
+            if isinstance(self.request_obj, AllocationAdditionRequest):
+                mou_kwargs['service_units'] = int(self.request_obj.num_service_units)
+            else:
+                mou_kwargs['service_units'] = int(self.request_obj \
+                                            .extra_fields['num_service_units'])
+        elif self.mou_type == 'secure-dir':
+            mou_kwargs['department'] = self.request_obj.department
+
+        pdf = coldfront_mou_gen.generate_pdf(self.mou_type_long,
+                                        self.request_obj.requester.first_name,
+                                        self.request_obj.requester.last_name,
+                                        self.request_obj.project.name,
+                                        **mou_kwargs)
+        response = HttpResponse(pdf,
                                 content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="mou.pdf"'
         return response
