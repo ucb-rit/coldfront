@@ -251,7 +251,11 @@ multiple files or directories to omit.
    ```bash
    docker compose down --volumes
    ```
-
+9. Once you have run the Docker install, remember that if you pull changes from the repo, you will have to compare your `main.yml` file to  the `coldfront/bootstrap/ansible/main.copyme` that results after pulling changes. 
+    If there are changes, you will have to run step 2 again, and again call 
+    ```bash
+    sh bootstrap/development/gen_config.sh
+    ```
 ## Local Machine - Quick Install (Not Recommended)
 
 1. ColdFront requires Python 3.6, memcached, and redis.
