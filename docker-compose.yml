@@ -13,6 +13,7 @@ services:
       LOAD_DUMP: true
     volumes:
       - db_data:/var/lib/postgresql/data
+      - /Users/TYFong/Downloads/2023_08_15-01-30.dump:/tmp/2023_04_19-01-30.dump
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "admin", "-d", "${DB_NAME}"]
       interval: 10s
