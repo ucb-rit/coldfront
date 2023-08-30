@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
+
 import coldfront.core.portal.views as portal_views
 
 admin.site.site_header = 'ColdFront Administration'
@@ -26,6 +27,8 @@ urlpatterns = [
     # path('publication/', include('coldfront.core.publication.urls')),
     # path('research-output/', include('coldfront.core.research_output.urls')),
     path('help', TemplateView.as_view(template_name='portal/help.html'), name='help'),
+    path('test-400-bad-request/', portal_views.test_400_bad_request_view,
+    name='test_400_bad_request')
 ]
 
 if 'debug_toolbar' in settings.EXTRA_APPS:

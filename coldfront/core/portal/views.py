@@ -7,6 +7,10 @@ from django.contrib.humanize.templatetags.humanize import intcomma
 from django.db.models import Count, Q, Sum
 from django.shortcuts import render
 from django.views.decorators.cache import cache_page
+# Begin Test code
+from django.core.exceptions import BadRequest
+from django.http import HttpResponse
+# End Test code
 
 from coldfront.core.allocation.models import (Allocation,
                                               AllocationUser,
@@ -25,6 +29,13 @@ from coldfront.core.project.models import ProjectUserRemovalRequest
 # from coldfront.core.publication.models import Publication
 # from coldfront.core.research_output.models import ResearchOutput
 
+
+#Begin test code for bad requests
+def test_400_bad_request_view(request):
+    raise BadRequest("This is a bad request , 400")
+
+
+#End test code for bad requests
 
 def home(request):
 
