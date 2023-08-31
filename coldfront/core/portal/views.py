@@ -31,8 +31,8 @@ from coldfront.core.project.models import ProjectUserRemovalRequest
 
 
 #Begin test code for bad requests
-def test_400_bad_request_view(request):
-    raise BadRequest("This is a bad request , 400")
+#def test_400_bad_request_view(request):
+#    raise BadRequest("This is a bad request , 400")
 
 
 #End test code for bad requests
