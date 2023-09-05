@@ -85,17 +85,6 @@
     <p class="card-text text-justify">
       <strong>Allowance: </strong>
       {{ computing_allowance_name }}
-      {% if allowance_has_extra_fields %}
-        <button id="view-extra-fields" class="btn btn-primary" role="button">
-          Details
-        </button>
-        {% if is_superuser %}
-          <a href="{% url 'new-project-request-edit-extra-fields' savio_request.pk %}" class="btn btn-secondary">
-            <i class="fas fa-edit" aria-hidden="true"></i>
-            Edit
-          </a>
-        {% endif %}
-      {% endif %}
     </p>
     <p class="card-text text-justify">
       <strong>Initial Allocation Period: </strong>
@@ -127,11 +116,24 @@
       <strong>Survey Responses: </strong>
       <button id="view-survey" class="btn btn-primary" role="button">View</button>
     </p>
+    <p class="card-text text-justify">
+      <strong>Extra Request Details:</strong>
+      {% if allowance_has_extra_fields %}
+        <button id="view-extra-fields" class="btn btn-primary" role="button">
+          Details
+        </button>
+        {% if is_superuser %}
+          <a href="{% url 'new-project-request-edit-extra-fields' savio_request.pk %}" class="btn btn-secondary">
+            <i class="fas fa-edit" aria-hidden="true"></i>
+            Edit
+          </a>
+        {% endif %}
+      {% endif %}
+    </p>
     {% if can_download_mou %}
       <p class="card-text text-justify">
         <strong>Unsigned Memorandum of Understanding: </strong>
-        <a href={% if is_recharge %}"{% url 'new-project-request-download-unsigned-mou' savio_request.pk 'service-units-purchase' %}"
-                {% else %}"{% url 'new-project-request-download-unsigned-mou' savio_request.pk 'new-project' %}"{% endif %}
+        <a href="{% url 'new-project-request-download-unsigned-mou' savio_request.pk 'new-project' %}"
                 class="btn btn-primary">
           <i class="fas fa-download" aria-hidden="true"></i>
           Download

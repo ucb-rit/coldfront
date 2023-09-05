@@ -6,8 +6,8 @@ from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationAdditionRequest
 from coldfront.core.allocation.models import SecureDirRequest
 from coldfront.core.project.models import SavioProjectAllocationRequest
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.utils.forms.file_upload_forms import PDFUploadForm
-from coldfront.core.utils.mou import get_mou_html
 
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -33,21 +33,21 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
     def set_attributes(self, pk):
         """Set this instance's request_obj to be the
         SavioProjectAllocationRequest with the given primary key."""
-        self.mou_type = self.kwargs['mou_type']
-        self.mou_type_long, self.request_class = \
+        self.request_type = self.kwargs['mou_type']
+        self.request_type_long, self.request_class = \
             {'new-project': ('New Project Request',
-                             SavioProjectAllocationRequest),
+                            SavioProjectAllocationRequest),
              'secure-dir': ('Secure Directory Request',
                             SecureDirRequest),
              'service-units-purchase': ('Service Unit Purchase Request',
-                              AllocationAdditionRequest)}[self.mou_type]
+                            AllocationAdditionRequest)}[self.request_type]
         self.request_obj = get_object_or_404(
             self.request_class, pk=pk)
 
     def get_success_url(self, **kwargs):
         ret = {'new-project': 'new-project-request-detail',
                'secure-dir': 'secure-dir-request-detail',
-               'service-units-purchase': 'service-units-purchase-request-detail'}[self.mou_type]
+               'service-units-purchase': 'service-units-purchase-request-detail'}[self.request_type]
         return reverse(ret, kwargs={'pk': self.kwargs.get('pk')})
 
 class MOUUploadView(BaseMOUView, FormView):
@@ -63,8 +63,8 @@ class MOUUploadView(BaseMOUView, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['request_obj'] = self.request_obj
-        context['mou_type'] = self.mou_type
-        context['mou_type_long'] = self.mou_type_long
+        context['mou_type'] = self.request_type
+        context['mou_type_long'] = self.request_type_long
         return context
 
 class MOUDownloadView(BaseMOUView, View):
@@ -79,8 +79,11 @@ class MOUDownloadView(BaseMOUView, View):
 class UnsignedMOUDownloadView(BaseMOUView, View):
     
     def get(self, request, *args, **kwargs):
+        mou_type = ''
         mou_kwargs = {}
-        if self.mou_type == 'new-project':
+        if self.request_type == 'new-project' and ComputingAllowance(
+                       self.request_obj.computing_allowance).is_instructional():
+            mou_type = 'instructional'
             mou_kwargs['service_units'] = int(float(self.request_obj \
                         .computing_allowance.get_attribute('Service Units')))
             mou_kwargs['extra_fields'] = self.request_obj.extra_fields
@@ -90,19 +93,32 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
                      name__startswith='Allowance Year',
                      start_date__lte=allowance_end,
                      end_date__gte=allowance_end).name
-        elif self.mou_type == 'service-units-purchase':
+        elif self.request_type == 'service-units-purchase' or \
+                    (self.request_type == 'new-project' and ComputingAllowance(
+                        self.request_obj.computing_allowance).is_recharge()):
+            mou_type = 'recharge'
             mou_kwargs['extra_fields'] = self.request_obj.extra_fields
-            if isinstance(self.request_obj, AllocationAdditionRequest):
+            if self.request_type == 'service-units-purchase':
                 mou_kwargs['service_units'] = int(self.request_obj.num_service_units)
             else:
                 mou_kwargs['service_units'] = int(self.request_obj \
                                             .extra_fields['num_service_units'])
-        elif self.mou_type == 'secure-dir':
+        elif self.request_type == 'secure-dir':
+            mou_type = 'secure-dir'
             mou_kwargs['department'] = self.request_obj.department
+        
+        if self.request_type == 'new-project':
+            first_name = self.request_obj.pi.first_name
+            last_name = self.request_obj.pi.last_name
+        else:
+            first_name = self.request_obj.requester.first_name
+            last_name = self.request_obj.requester.last_name
+            
+            
 
-        pdf = coldfront_mou_gen.generate_pdf(self.mou_type_long,
-                                        self.request_obj.requester.first_name,
-                                        self.request_obj.requester.last_name,
+        pdf = coldfront_mou_gen.generate_pdf(mou_type,
+                                        first_name,
+                                        last_name,
                                         self.request_obj.project.name,
                                         **mou_kwargs)
         response = HttpResponse(pdf,

@@ -14,14 +14,16 @@ Update Allowance Details
 
 {% block content %}
 
-<h1>Update Allowance Details</h1>
+<h1>Review and Update Allowance Details</h1>
 <hr>
 
 <script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
 <script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
 <link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
 
-<p>Update allowance details that are used in MOU generation.</p>
+<p>Review allowance details, updating as needed. These are used to generate the Memorandum of Understanding (MOU).{% if notify_pi %}
+  Clicking "Submit and Notify" will generate the MOU and send an email notification to the PI.{% endif %}
+</p>
 
 <div class="card mb-3">
   <div class="card-body">

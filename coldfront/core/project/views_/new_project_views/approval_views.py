@@ -188,6 +188,9 @@ class SavioProjectRequestMixin(object):
         context['allowance_requires_funds_transfer'] = (
             self.computing_allowance_obj.is_recharge() and
             context['allowance_has_extra_fields'])
+        context['allowance_mou_requires_extra_details'] = \
+            context['allowance_requires_mou'] and not \
+                self.computing_allowance_obj.is_recharge()
         context['survey_form'] = SavioProjectSurveyForm(
             initial=self.request_obj.survey_answers, disable_fields=True)
 
