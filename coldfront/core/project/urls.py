@@ -84,7 +84,7 @@ urlpatterns += [
          name='new-project-request-review-readiness'),
     path('new-project-request/<int:pk>/notify-pi/',
          new_project_approval_views.SavioProjectRequestNotifyPIView.as_view(),
-         name='new-project-request-review-notify-pi'),
+         name='new-project-request-notify-pi'),
     path('new-project-request/<int:pk>/memorandum-signed/',
          new_project_approval_views.SavioProjectReviewMemorandumSignedView.as_view(),
          name='new-project-request-review-memorandum-signed'),

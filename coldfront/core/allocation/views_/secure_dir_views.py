@@ -23,7 +23,8 @@ from coldfront.core.allocation.forms_.secure_dir_forms import (
     SecureDirManageUsersRequestUpdateStatusForm,
     SecureDirManageUsersRequestCompletionForm, SecureDirDataDescriptionForm,
     SecureDirRDMConsultationForm, SecureDirDirectoryNamesForm,
-    SecureDirSetupForm, SecureDirRDMConsultationReviewForm)
+    SecureDirSetupForm, SecureDirRDMConsultationReviewForm,
+    SecureDirRequestEditDepartmentForm)
 from coldfront.core.allocation.models import (Allocation,
                                               SecureDirAddUserRequest,
                                               SecureDirRemoveUserRequest,
@@ -914,7 +915,7 @@ class SecureDirRequestWizard(LoginRequiredMixin,
             directory_name = self.__get_directory_name(form_data)
 
             # Store transformed form data in a request.
-            request_kwargs['department'] = data_description
+            request_kwargs['department'] = department
             request_kwargs['data_description'] = data_description
             request_kwargs['rdm_consultation'] = rdm_consultation
             request_kwargs['project'] = existing_project
@@ -986,7 +987,7 @@ class SecureDirRequestWizard(LoginRequiredMixin,
 
     def __get_department(self, form_data):
         """Return the department that the user submitted."""
-        step_number = self.step_numbers_by_form_name['data_description']
+        step_number = self.step_numbers_by_form_name['ata_description']
         data = form_data[step_number]
         return data.get('department')
 
@@ -1279,13 +1280,27 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
                 'secure-dir-request-review-rdm-consultation', kwargs={'pk': pk})
         ])
         rdm_consulted = rdm['status'] == 'Approved'
+        
+        notified = state['notified']
+        task_text = (
+            'Confirm or edit allowance details, and '
+            'enable/notify the PI to sign the Memorandum of Understanding.')
+        checklist.append([
+            task_text,
+            notified['status'],
+            notified['timestamp'],
+            True,
+            reverse('secure-dir-request-notify-pi',
+                    kwargs={'pk': pk})
+        ])
+        is_notified = notified['status'] == 'Complete'
 
         mou = state['mou']
         checklist.append([
             'Confirm that the PI has signed the Memorandum of Understanding.',
             mou['status'],
             mou['timestamp'],
-            True,
+            is_notified,
             reverse(
                 'secure-dir-request-review-mou', kwargs={'pk': pk})
         ])
@@ -1296,7 +1311,7 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
             'Perform secure directory setup on the cluster.',
             self.get_setup_status(),
             setup['timestamp'],
-            rdm_consulted and mou_signed,
+            rdm_consulted and is_notified and mou_signed,
             reverse('secure-dir-request-review-setup', kwargs={'pk': pk})
         ])
 
@@ -1700,3 +1715,66 @@ class SecureDirRequestUndenyRequestView(LoginRequiredMixin,
             reverse(
                 'secure-dir-request-detail',
                 kwargs={'pk': kwargs.get('pk')}))
+
+class SecureDirRequestEditDepartmentView(FormView, LoginRequiredMixin,
+                                         UserPassesTestMixin,
+                                         SecureDirRequestMixin):
+    template_name = 'secure_dir/secure_dir_request/secure_dir_request_edit_department.html'
+    form_class = SecureDirRequestEditDepartmentForm
+
+    logger = logging.getLogger(__name__)
+
+    error_message = 'Unexpected failure. Please contact an administrator.'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user.is_superuser:
+            return True
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        pk = self.kwargs.get('pk')
+        self.set_request_obj(pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['savio_request'] = self.request_obj
+        context['notify_pi'] = False
+        return context
+
+    def form_valid(self, form):
+        """Save the form."""
+        self.request_obj.department = form.cleaned_data.get('department')
+        self.request_obj.save()
+        message = 'The request has been updated.'
+        messages.success(self.request, message)
+        return HttpResponseRedirect(reverse('secure-dir-request-detail',
+                                            kwargs={'pk':self.request_obj.pk}))
+
+    def form_invalid(self, form):
+        """Handle invalid forms."""
+        message = 'Please correct the errors below.'
+        messages.error(self.request, message)
+        return self.render_to_response(
+            self.get_context_data(form=form))
+
+class SecureDirRequestNotifyPIView(SecureDirRequestEditDepartmentView):
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context['notify_pi'] = True
+        return context
+
+    def form_valid(self, form):
+        """Save the form."""
+        #TODO
+        #email_pi()
+        timestamp = utc_now_offset_aware().isoformat()
+        self.request_obj.state['notified'] = {
+            'status': 'Complete',
+            'timestamp': timestamp,
+        }
+        self.request_obj.save()
+        return super().form_valid(form)

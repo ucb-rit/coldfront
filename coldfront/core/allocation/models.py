@@ -711,6 +711,10 @@ def secure_dir_request_state_schema():
             'justification': '',
             'timestamp': ''
         },
+        'notified': {
+            'status': 'Pending',
+            'timestamp': ''
+        },
         'mou': {
             'status': 'Pending',
             'justification': '',

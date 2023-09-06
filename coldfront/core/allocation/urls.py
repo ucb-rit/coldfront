@@ -134,7 +134,13 @@ with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
              name='secure-dir-upload-mou'),
         path('secure-dir-request/<int:pk>/download-mou/<str:mou_type>/',
              mou_views.MOUDownloadView.as_view(),
-             name='secure-dir-download-mou')
+             name='secure-dir-download-mou'),
+        path('secure-dir-request/<int:pk>/edit-department/',
+             secure_dir_views.SecureDirRequestEditDepartmentView.as_view(),
+             name='secure-dir-request-edit-department'),
+        path('secure-dir-request/<int:pk>/notify-pi/',
+             secure_dir_views.SecureDirRequestNotifyPIView.as_view(),
+             name='secure-dir-request-notify-pi'),
     ]
 
 urlpatterns = urlpatterns + flagged_url_patterns

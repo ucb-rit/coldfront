@@ -188,9 +188,6 @@ class SavioProjectRequestMixin(object):
         context['allowance_requires_funds_transfer'] = (
             self.computing_allowance_obj.is_recharge() and
             context['allowance_has_extra_fields'])
-        context['allowance_mou_requires_extra_details'] = \
-            context['allowance_requires_mou'] and not \
-                self.computing_allowance_obj.is_recharge()
         context['survey_form'] = SavioProjectSurveyForm(
             initial=self.request_obj.survey_answers, disable_fields=True)
 
@@ -256,8 +253,6 @@ class SavioProjectRequestNotifyPIView(SavioProjectRequestEditExtraFieldsView):
 
     def form_valid(self, form):
         """Save the form."""
-        self.request_obj.extra_fields = form.cleaned_data
-        self.request_obj.save()
         #TODO
         #email_pi()
         timestamp = utc_now_offset_aware().isoformat()
@@ -266,10 +261,7 @@ class SavioProjectRequestNotifyPIView(SavioProjectRequestEditExtraFieldsView):
             'timestamp': timestamp,
         }
         self.request_obj.save()
-        message = 'The request has been updated and the user has been notified.'
-        messages.success(self.request, message)
-        return HttpResponseRedirect(reverse('new-project-request-detail',
-                                            kwargs={'pk':self.request_obj.pk}))
+        return super().form_valid(form)
 
 class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                                     SavioProjectRequestMixin, DetailView):
@@ -311,7 +303,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
             context['allocation_amount'] = self.get_service_units_to_allocate()
         except Exception as e:
             self.logger.exception(e)
-            messages.error(self.request, self.error_message)
+            eessages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
 
         try:
@@ -360,18 +352,18 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
 
-        context['is_superuser'] = self.request.user.is_superuser
         context['mou_required'] = \
             ComputingAllowance(self.request_obj.computing_allowance) \
                 .requires_memorandum_of_understanding()
+        if context['mou_required']:
+            context['can_download_mou'] = self.request_obj \
+                                        .state['notified']['status'] == 'Complete'
+            context['can_upload_mou'] = \
+                self.request_obj.status.name == 'Under Review'
+            context['mou_uploaded'] = bool(self.request_obj.mou_file)
         context['is_recharge'] = \
             ComputingAllowance(self.request_obj.computing_allowance) \
                 .is_recharge()
-        context['can_download_mou'] = self.request_obj \
-                                      .state['notified']['status'] == 'Complete'
-        context['can_upload_mou'] = \
-            self.request_obj.status.name == 'Under Review'
-        context['mou_uploaded'] = bool(self.request_obj.mou_file)
 
         return context
 
@@ -492,7 +484,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                 notified['status'],
                 notified['timestamp'],
                 is_eligible and is_ready,
-                reverse('new-project-request-review-notify-pi',
+                reverse('new-project-request-notify-pi',
                         kwargs={'pk': pk})
             ])
             is_notified = notified['status'] == 'Complete'

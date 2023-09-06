@@ -122,7 +122,7 @@
         <button id="view-extra-fields" class="btn btn-primary" role="button">
           Details
         </button>
-        {% if is_superuser %}
+        {% if is_allowed_to_manage_request %}
           <a href="{% url 'new-project-request-edit-extra-fields' savio_request.pk %}" class="btn btn-secondary">
             <i class="fas fa-edit" aria-hidden="true"></i>
             Edit

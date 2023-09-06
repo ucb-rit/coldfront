@@ -207,3 +207,12 @@ class SecureDirRDMConsultationReviewForm(forms.Form):
         validators=[MinLengthValidator(10)],
         required=False,
         widget=forms.Textarea(attrs={'rows': 3}))
+
+class SecureDirRequestEditDepartmentForm(forms.Form):
+
+    department = forms.CharField(
+        label=('Specify the full name of the department that this directory ' 
+            'will belong to (e.g "Dept. of Chemistry", "Dept. of Economics").'),
+        validators=[MinLengthValidator(5)],
+        required=True,
+        widget=forms.Textarea(attrs={'rows': 3}))
