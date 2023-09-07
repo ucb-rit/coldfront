@@ -106,6 +106,37 @@
             name: supervisor
             state: present
 
+        - name: Create a Systemd drop-in directory for overriding Supervisor configuration
+          file:
+            path: /etc/systemd/system/supervisord.service.d
+            state: directory
+            mode: 0755
+
+        - name: Create a Systemd drop-in file for overriding Supervisor configuration
+          file:
+            path: /etc/systemd/system/supervisord.service.d/override.conf
+            state: touch
+            mode: 0644
+
+        - name: Configure Systemd to only start Supervisor after the codebase has been mounted (dev only)
+          ini_file:
+            path: /etc/systemd/system/supervisord.service.d/override.conf
+            section: 'Unit'
+            option: 'After'
+            value: '{{ codebase_mount_systemd_unit }}'
+          when: codebase_mount_systemd_unit is defined
+
+        - name: Configure Systemd Supervisor ExecStop, ExecReload, and Restart behavior
+          ini_file:
+            path: /etc/systemd/system/supervisord.service.d/override.conf
+            section: 'Service'
+            option: '{{ item.option }}'
+            value: '{{ item.value }}'
+          with_items:
+            - { option: 'ExecStop', value: '/usr/bin/supervisorctl shutdown'}
+            - { option: 'ExecReload', value: '/usr/bin/supervisorctl reload'}
+            - { option: 'Restart', value: 'always'}
+
         # ini_file is included in community.general.
         - name: Set django_q command in supervisord.conf
           ini_file:
@@ -128,9 +159,17 @@
             option: 'numprocs'
             value: '1'
 
-        - name: Restart and enable Supervisord
-          service:
+        - name: Set django_q autorestart in supervisord.conf
+          ini_file:
+            path: /etc/supervisord.conf
+            section: 'program:django_q'
+            option: 'autorestart'
+            value: 'true'
+
+        - name: Reload, restart and enable Supervisord
+          systemd:
             name: supervisord
+            daemon_reload: true
             state: restarted
             enabled: true
 
@@ -232,6 +271,22 @@
           become_user: "{{ djangooperator }}"
           environment: # needed as pg_config isn't in PATH by default
             PATH: "{{ ansible_env.PATH }}:/usr/pgsql-{{ postgres_version }}/bin"
+
+        - name: Add Oracle yum repository
+          yum_repository:
+            name: oracle-repository
+            description: oracle repository
+            baseurl: https://yum.oracle.com/repo/OracleLinux/OL7/oracle/instantclient21/x86_64/
+            # https://linux.oracle.com/security/gpg/
+            gpgkey: https://yum.oracle.com/RPM-GPG-KEY-oracle-ol7
+          when: install_billing_validation_package
+
+        - name: Install Oracle dependency for Python package for validating LBL billing IDs
+          yum:
+            name:
+              - oracle-instantclient-basic.x86_64
+            state: present
+          when: install_billing_validation_package
 
         # TODO: If this raises an error, the token is exposed in stderr.
         - name: Install the Python package for validating LBL billing IDs
@@ -519,6 +574,15 @@
             virtualenv: "{{ git_prefix }}/venv"
           become_user: "{{ djangooperator }}"
 
+        - name: Run Django management command - create_allocation_periods
+          django_manage:
+            command: create_allocation_periods
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+
         - name: Run Django management command - add_allowance_defaults
           django_manage:
             command: add_allowance_defaults
@@ -531,15 +595,6 @@
         - name: Run Django management command - add_directory_defaults
           django_manage:
             command: add_directory_defaults
-            app_path: "{{ git_prefix }}/{{ reponame }}"
-            settings: "config.settings"
-            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
-            virtualenv: "{{ git_prefix }}/venv"
-          become_user: "{{ djangooperator }}"
-
-        - name: Run Django management command - create_allocation_periods
-          django_manage:
-            command: create_allocation_periods
             app_path: "{{ git_prefix }}/{{ reponame }}"
             settings: "config.settings"
             pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
