@@ -40,7 +40,7 @@
       <strong>Department: </strong>
       {{ secure_dir_request.department }}
       {% if is_allowed_to_manage_request %}
-        <a href="{% url 'secure-dir-request-edit-department' savio_request.pk %}" class="btn btn-secondary">
+        <a href="{% url 'secure-dir-request-edit-department' addition_request.pk %}" class="btn btn-secondary">
           <i class="fas fa-edit" aria-hidden="true"></i>
           Edit
         </a>
@@ -76,7 +76,7 @@
     </p>
     <p class="card-text text-justify">
       <strong>Unsigned Memorandum of Understanding: </strong>
-      <a href="{% url 'secure-dir-request-download-unsigned-mou' savio_request.pk 'secure-dir' %}" class="btn btn-primary">
+      <a href="{% url 'secure-dir-request-download-unsigned-mou' addition_request.pk 'secure-dir' %}" class="btn btn-primary">
         <i class="fas fa-download" aria-hidden="true"></i>
         Download
       </a>
@@ -85,13 +85,13 @@
       <p class="card-text text-justify">
         <strong>Signed Memorandum of Understanding: </strong>
         {% if mou_uploaded %}
-          <a href="{% url 'secure-dir-download-mou' savio_request.pk 'secure-dir' %}" class="btn btn-primary">
+          <a href="{% url 'secure-dir-download-mou' addition_request.pk 'secure-dir' %}" class="btn btn-primary">
             <i class="fas fa-download" aria-hidden="true"></i>
             Download
           </a>
         {% endif %}
         {% if can_upload_mou %}
-          <a href="{% url 'secure-dir-upload-mou' savio_request.pk 'secure-dir' %}"
+          <a href="{% url 'secure-dir-upload-mou' addition_request.pk 'secure-dir' %}"
           class="btn {% if mou_uploaded %} btn-secondary {% else %} btn-primary {% endif %}">
             <i class="fas fa-upload" aria-hidden="true"></i>
             Upload {% if mou_uploaded %} new {% endif %}

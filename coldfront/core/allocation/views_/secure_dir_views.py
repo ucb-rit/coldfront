@@ -1250,7 +1250,7 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
 
-        context['savio_request'] = self.request_obj
+        context['addition_request'] = self.request_obj
 
         context['can_upload_mou'] = \
             self.request_obj.status.name == 'Under Review'
@@ -1741,7 +1741,7 @@ class SecureDirRequestEditDepartmentView(FormView, LoginRequiredMixin,
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['savio_request'] = self.request_obj
+        context['addition_request'] = self.request_obj
         context['notify_pi'] = False
         return context
 

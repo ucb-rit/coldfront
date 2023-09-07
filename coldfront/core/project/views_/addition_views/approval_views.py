@@ -63,13 +63,28 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
         timestamp, is "Manage" button available, URL of "Manage"
         button]."""
         checklist = []
+        notified = self.request_obj.state['notified']
+        task_text = (
+            'Confirm or edit allowance details, and '
+            'enable/notify the PI to sign the Memorandum of Understanding.')
+        checklist.append([
+            task_text,
+            notified['status'],
+            notified['timestamp'],
+            True,
+            reverse(
+                'service-units-purchase-request-notify-pi',
+                kwargs={'pk': self.request_obj.pk})
+        ])
+        is_notified = notified['status'] == 'Complete'
+        
         memorandum_signed = self.request_obj.state['memorandum_signed']
         checklist.append([
             ('Confirm that the Memorandum of Understanding has been signed '
              'and that funds have been transferred.'),
             memorandum_signed['status'],
             memorandum_signed['timestamp'],
-            True,
+            is_notified,
             reverse(
                 'service-units-purchase-request-review-memorandum-signed',
                 kwargs={'pk': self.request_obj.pk})
@@ -132,8 +147,9 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
             self.request.user.is_superuser and
             self.request_obj.status.name not in ('Denied', 'Complete'))
 
-        context['savio_request'] = self.request_obj
+        context['addition_request'] = self.request_obj
 
+        context['is_superuser'] = self.request.user.is_superuser
         context['can_upload_mou'] = \
             self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
@@ -420,3 +436,70 @@ class AllocationAdditionReviewMemorandumSignedView(AllocationAdditionReviewBase)
     def get_template_names(self):
         return [
             os.path.join(self.template_dir, 'review_memorandum_signed.html')]
+
+class AllocationAdditionEditExtraFieldsView(LoginRequiredMixin,
+                                            UserPassesTestMixin,
+                                            FormView):
+    template_name = 'project/project_allocation_addition/request_edit_extra_fields.html'
+    form_class = SavioProjectRechargeExtraFieldsForm
+    request_obj = None
+
+    logger = logging.getLogger(__name__)
+
+    error_message = 'Unexpected failure. Please contact an administrator.'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user.is_superuser:
+            return True
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        pk = self.kwargs.get('pk')
+        self.request_obj = get_object_or_404(AllocationAdditionRequest, pk=pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'].initial = self.request_obj.extra_fields
+        context['addition_request'] = self.request_obj
+        context['notify_pi'] = False
+        return context
+
+    def form_valid(self, form):
+        """Save the form."""
+        self.request_obj.extra_fields = form.cleaned_data
+        if form.cleaned_data['num_service_units'] != str(self.request_obj.num_service_units):
+            self.request_obj.num_service_units = float(form.cleaned_data['num_service_units'])
+        self.request_obj.save()
+        message = 'The request has been updated.'
+        messages.success(self.request, message)
+        return HttpResponseRedirect(reverse('service-units-purchase-request-detail',
+                                            kwargs={'pk':self.request_obj.pk}))
+
+    def form_invalid(self, form):
+        """Handle invalid forms."""
+        message = 'Please correct the errors below.'
+        messages.error(self.request, message)
+        return self.render_to_response(
+            self.get_context_data(form=form))
+
+class AllocationAdditionNotifyPIView(AllocationAdditionEditExtraFieldsView):
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context['notify_pi'] = True
+        return context
+
+    def form_valid(self, form):
+        """Save the form."""
+        #TODO
+        #email_pi()
+        timestamp = utc_now_offset_aware().isoformat()
+        self.request_obj.state['notified'] = {
+            'status': 'Complete',
+            'timestamp': timestamp,
+        }
+        self.request_obj.save()
+        return super().form_valid(form)
