@@ -1,6 +1,8 @@
 from django.urls import path
 from django.views.generic import TemplateView
 
+from flags.urls import flagged_paths
+
 import coldfront.core.project.views as project_views
 import coldfront.core.project.views_.addition_views.approval_views as addition_approval_views
 import coldfront.core.project.views_.addition_views.request_views as addition_request_views

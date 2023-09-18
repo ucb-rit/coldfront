@@ -311,8 +311,9 @@ class SavioProjectICAExtraFieldsForm(SavioProjectExtraFieldsForm):
             'e.g. "John Doe". The POC will attempt to resolve issues and '
             'questions from students. Issues that cannot be resolved locally '
             'by the POC or other staff will be raised by the POC through normal'
-            ' BRC channels (e.g. brc-hpc-help@berkeley.edu). The POC is also '
-            'responsible for monitoring activity against the allowance and '
+            f' {settings.PROGRAM_NAME_SHORT} channels (e.g. '
+            f'{settings.CENTER_HELP_EMAIL}). The POC is also responsible for '
+            'monitoring activity against the allowance and '
             'ensuring any policies about individual usage.'),
         label='Point of Contact',
         required=True,
