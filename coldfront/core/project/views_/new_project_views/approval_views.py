@@ -289,22 +289,23 @@ class SavioProjectRequestNotifyPIView(SavioProjectRequestEditExtraFieldsView):
         context['notify_pi'] = True
         return context
     
-    def email_pi(self, pi_email, pi_name):
+    def email_pi(self):
         """Send an email to the PI."""
-        subject = 'Your Savio project request is ready to be signed'
-        # def send_email_template(subject, template_name, context, sender,
-        #                         receiver_list, cc=[], html_template=None):
+        subject = 'Savio Project Request Ready To Be Signed'
         try:
             send_email_template(subject,
-                                'project/project_request/savio/project_request_mou_email.html',
-                                {'pi_name': pi_name,
+                                'request_mou_email.html',
+                                {'pi_name': self.request_obj.pi.get_full_name(),
                                  'savio_request': self.request_obj,
+                                 'mou_type': 'MOU',
+                                 'mou_for': f'{self.request_obj.project.name} project request',
                                  'base_url': settings.CENTER_BASE_URL,
                                  'signature': 'MyBRC User Portal team', },
-                                settings.DEFAULT_FROM_EMAIL, [pi_email])
+                                settings.DEFAULT_FROM_EMAIL,
+                                [self.request_obj.pi.email])
         except Exception as e:
             self.logger.error(
-                f'Failed to send email to PI {pi_email} for request '
+                f'Failed to send email to PI {self.request_obj.pi.email} for request '
                 f'{self.request_obj.pk}: {e}')
             message = 'Failed to send email to PI.'
             messages.error(self.request, message)
@@ -313,7 +314,7 @@ class SavioProjectRequestNotifyPIView(SavioProjectRequestEditExtraFieldsView):
         """Save the form."""
         #TODO
         #email_pi()
-        self.email_pi(self.request_obj.pi.email, self.request_obj.pi.get_full_name())
+        self.email_pi()
         timestamp = utc_now_offset_aware().isoformat()
         self.request_obj.state['notified'] = {
             'status': 'Complete',

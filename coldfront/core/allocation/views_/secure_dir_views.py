@@ -1767,10 +1767,32 @@ class SecureDirRequestNotifyPIView(SecureDirRequestEditDepartmentView):
         context['notify_pi'] = True
         return context
 
+    def email_pi(self):
+        """Send an email to the PI."""
+        subject = 'Secure Directory Request Ready To Be Signed'
+        try:
+            send_email_template(subject,
+                                'request_mou_email.html',
+                                {'to_name': self.request_obj.requester.get_full_name(),
+                                 'savio_request': self.request_obj,
+                                 'mou_type': 'RUA',
+                                 'mou_for': f'{self.request_obj.project.name} secure directory request',
+                                 'base_url': settings.CENTER_BASE_URL,
+                                 'signature': 'MyBRC User Portal team', },
+                                settings.DEFAULT_FROM_EMAIL,
+                                [self.request_obj.requester.email])
+        except Exception as e:
+            self.logger.error(
+                f'Failed to send email to PI {self.request_obj.requester.email} for request '
+                f'{self.request_obj.pk}: {e}')
+            message = 'Failed to send email to PI.'
+            messages.error(self.request, message)
+
     def form_valid(self, form):
         """Save the form."""
         #TODO
         #email_pi()
+        self.email_pi()
         timestamp = utc_now_offset_aware().isoformat()
         self.request_obj.state['notified'] = {
             'status': 'Complete',
