@@ -1,10 +1,13 @@
+from io import BytesIO
 from coldfront.core.project.tests.test_views.test_renewal_views.utils import TestRenewalViewsMixin
 from coldfront.core.resource.models import Resource
+from coldfront.core.resource.models import ResourceAttribute
+from coldfront.core.resource.models import ResourceAttributeType
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.tests.test_base import TestBase
 from coldfront.core.utils.tests.test_base import enable_deployment
-from coldfront.core.allocation.models import AllocationAdditionRequest, AllocationAdditionRequestStatusChoice, AllocationRenewalRequest
+from coldfront.core.allocation.models import AllocationAdditionRequest, AllocationAdditionRequestStatusChoice, AllocationRenewalRequest, SecureDirRequest, SecureDirRequestStatusChoice
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.project.models import Project, ProjectAllocationRequestStatusChoice, SavioProjectAllocationRequest, savio_project_request_ica_extra_fields_schema, savio_project_request_ica_state_schema
 from coldfront.core.project.models import ProjectStatusChoice
@@ -17,7 +20,9 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from django.test import Client
 from django.core import mail
+from django.core.files import File
 from decimal import Decimal
+from http import HTTPStatus
 
 class MOUTestBase(TestBase):
 
@@ -34,23 +39,47 @@ class MOUTestBase(TestBase):
             first_name='Admin',
             last_name='User',
             username='admin',
-            password='admin',
-            is_superuser=True)
+            is_superuser=True,
+            is_staff=True,)
+        self.admin_user.set_password('admin')
+        self.admin_user.save()
         self.admin_client = Client()
         self.admin_client.login(username='admin', password='admin')
-
-    @staticmethod
-    def eligibility_url(pk, request_type):
-        return reverse(f'{request_type}-request-review-eligibility', kwargs={'pk': pk})
-
-    @staticmethod
-    def readiness_url(pk, request_type):
-        return reverse(f'{request_type}-request-review-readiness', kwargs={'pk': pk})
+        self.request = None
 
     @staticmethod
     def review_notify_url(pk, request_type):
         return reverse(f'{request_type}-request-notify-pi', kwargs={'pk': pk})
+
+    @staticmethod
+    def download_unsigned_mou_url(pk, request_type):
+        return reverse(f'{request_type}-request-download-unsigned-mou', kwargs={'pk': pk, 'mou_type': request_type})
+
+    @staticmethod
+    def upload_mou_url(pk, request_type):
+        return reverse(f'{request_type}-request-upload-mou', kwargs={'pk': pk, 'mou_type': request_type})
+
+    @staticmethod
+    def download_mou_url(pk, request_type):
+        return reverse(f'{request_type}-request-download-mou', kwargs={'pk': pk, 'mou_type': request_type})
     
+    def _test_download_upload_download(self, request_type):
+        url = self.download_unsigned_mou_url(self.request.pk, request_type)
+        response = self.client.get(url)
+        self.assertEqual(response.get('Content-Disposition'),
+                         'attachment; filename="mou.pdf"')
+
+        url = self.upload_mou_url(self.request.pk, request_type)
+        self.assert_has_access(url, self.user)
+        self.client.login(username=self.user.username, password=self.password)
+        self.request.mou_file = File(BytesIO(b'abc'), 'mou.pdf')
+        self.request.save()
+        self.request.refresh_from_db()
+
+        url = self.download_mou_url(self.request.pk, request_type)
+        response = self.client.get(url)
+        self.assertEqual(next(response.streaming_content), b'abc')
+
 class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
 
     @enable_deployment('BRC')
@@ -59,6 +88,11 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
         super().setUp()
 
         computing_allowance = Resource.objects.get(name='Instructional Computing Allowance')
+        ResourceAttribute.objects.create(
+            resource_attribute_type=ResourceAttributeType.objects.get(name='Service Units'),
+            resource=computing_allowance,
+            value=Decimal(100000)).save()
+            
         self.project, self.request = self.create_project_and_request(
             'ic_testproject',
             computing_allowance,
@@ -102,6 +136,14 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
             )
         return project, project_request
     
+    @staticmethod
+    def eligibility_url(pk):
+        return reverse(f'new-project-request-review-eligibility', kwargs={'pk': pk})
+
+    @staticmethod
+    def readiness_url(pk):
+        return reverse(f'new-project-request-review-readiness', kwargs={'pk': pk})
+    
     @enable_deployment('BRC')
     def test_new_project(self):
         """Test that the MOU notification task, MOU upload, and MOU download
@@ -119,12 +161,16 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
             'max_simultaneous_jobs': 10,
             'max_simultaneous_nodes': 10,
         }
-        url = self.eligibility_url(self.request.pk, 'new-project')
-        self.admin_client.post(url, data=eligibility)
-        url = self.readiness_url(self.request.pk, 'new-project')
-        self.admin_client.post(url, data=readiness)
-        url = self.review_notify_url(self.request.pk, 'new-project')
-        self.admin_client.post(url, data=extra_fields)
+
+        request_type = 'new-project'
+
+        url = self.eligibility_url(self.request.pk)
+        response = self.admin_client.post(url, data=eligibility)
+        url = self.readiness_url(self.request.pk)
+        response = self.admin_client.post(url, data=readiness)
+        url = self.review_notify_url(self.request.pk, request_type)
+        response = self.admin_client.post(url, data=extra_fields)
+
         self.request.refresh_from_db()
         self.assertEqual(self.request.state['eligibility']['status'], 'Approved')
         self.assertEqual(self.request.state['readiness']['status'], 'Approved')
@@ -133,7 +179,9 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
         self.assertEqual(self.request.extra_fields['course_department'], 'Dept. of Testing')
         self.assertEqual(self.request.extra_fields['point_of_contact'], 'Test User')
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].subject, 'Your Savio Project request is ready to be signed')
+        self.assertEqual(mail.outbox[0].subject, '[MyBRC-User-Portal] Savio Project Request Ready To Be Signed')
+
+        self._test_download_upload_download(request_type)
 
 class TestAllocationAdditionMOUNotifyUploadDownload(MOUTestBase):
 
@@ -160,6 +208,7 @@ class TestAllocationAdditionMOUNotifyUploadDownload(MOUTestBase):
     def test_allocation_addition(self):
         """Test that the MOU notification task, MOU upload, and MOU download
         features work as expected."""
+        request_type = 'service-units-purchase'
         eligibility = { 'status': 'Approved' }
         readiness = { 'status': 'Approved' }
         extra_fields = {
@@ -169,11 +218,60 @@ class TestAllocationAdditionMOUNotifyUploadDownload(MOUTestBase):
             'chartstring_contact_name': 'Test User',
             'chartstring_contact_email': 'test@email.com',
         }
-        url = self.review_notify_url(self.request.pk, 'service-units-purchase')
+        url = self.review_notify_url(self.request.pk, request_type)
         self.admin_client.post(url, data=extra_fields)
+
         self.request.refresh_from_db()
         self.assertEqual(self.request.state['notified']['status'], 'Complete')
-        self.assertEqual(self.request.extra_fields['num_service_units'], 'TEST 101')
+        self.assertEqual(self.request.extra_fields['num_service_units'], 100000)
         self.assertEqual(self.request.extra_fields['chartstring_contact_name'], 'Test User')
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].subject, 'Service Units Purchase Request Ready To Be Signed')
+        self.assertEqual(mail.outbox[0].subject, '[MyBRC-User-Portal] Service Units Purchase Request Ready To Be Signed')
+
+        self._test_download_upload_download(request_type)
+
+class SecureDirMOUNotifyUploadDownload(MOUTestBase):
+
+    @enable_deployment('BRC')
+    def setUp(self):
+        """Setup test data"""
+        super().setUp()
+        self.project = self.create_active_project_with_pi('fc_testproject', self.user)
+        self.request = self.create_secure_dir_request(self.project, self.user)
+
+
+    @staticmethod
+    def create_secure_dir_request(project, requester):
+        """Create an 'Under Review' request for the given Project by the
+        given requester."""
+        return SecureDirRequest.objects.create(
+            directory_name = 'test_dir',
+            data_description = 'test description',
+            requester=requester,
+            project=project,
+            status=SecureDirRequestStatusChoice.objects.get(
+                name='Under Review'))
+    @staticmethod
+    def rdm_consultation_url(pk):
+        return reverse('secure-dir-request-review-rdm-consultation', kwargs={'pk': pk})
+
+    @enable_deployment('BRC')
+    def test_allocation_addition(self):
+        """Test that the MOU notification task, MOU upload, and MOU download
+        features work as expected."""
+        request_type = 'secure-dir'
+        rdm_consultation = { 'status': 'Approved' }
+        department = { 'department': 'Dept. of Testing', }
+
+        url = self.rdm_consultation_url(pk=self.request.pk)
+        self.admin_client.post(url, data=rdm_consultation)
+        url = self.review_notify_url(self.request.pk, request_type)
+        self.admin_client.post(url, data=department)
+
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.state['notified']['status'], 'Complete')
+        self.assertEqual(self.request.department, 'Dept. of Testing')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, '[MyBRC-User-Portal] Secure Directory Request Ready To Be Signed')
+
+        self._test_download_upload_download(request_type)

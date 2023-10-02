@@ -114,8 +114,6 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
             first_name = self.request_obj.requester.first_name
             last_name = self.request_obj.requester.last_name
             
-            
-
         pdf = coldfront_mou_gen.generate_pdf(mou_type,
                                         first_name,
                                         last_name,
