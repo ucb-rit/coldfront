@@ -537,6 +537,25 @@
             state: reloaded
             enabled: true
 
+        # Allow pip installation of private git repo for mou generation.
+
+        - name: Check if github in known_hosts
+          shell: ssh-keygen -F github.com
+          register: github_known_hosts
+          changed_when: false
+
+        - name: Add github.com to known_hosts
+          shell: ssh-keyscan github.com >> /home/{{ djangooperator }}/.ssh/known_hosts
+          changed_when: github_known_hosts.rc != 0
+
+        - name: Copy deploy key to root user's .ssh directory
+          copy:
+            src: "{{ git_prefix }}/{{ reponame }}/bootstrap/development/id_coldfront"
+            dest: /home/{{ djangooperator }}/.ssh/id_rsa
+            owner: "{{ djangooperator }}"
+            group: "{{ djangooperator }}"
+            mode: 0600
+
         # Install Django application dependencies
 
         - name: Install Django application dependencies

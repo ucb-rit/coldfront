@@ -61,7 +61,7 @@ services:
     volumes:
       - ./:/vagrant/coldfront_app/coldfront/
     extra_hosts:
-        - "host.docker.internal:host-gateway"
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
@@ -70,6 +70,7 @@ services:
       email:
         condition: service_healthy
     restart: unless-stopped
+    
 
 volumes:
   db_data:

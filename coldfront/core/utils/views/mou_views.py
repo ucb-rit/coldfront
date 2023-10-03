@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.http import HttpResponse
 
-import coldfront_mou_gen
+import mou_generator
 
 class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
 
@@ -114,7 +114,7 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
             first_name = self.request_obj.requester.first_name
             last_name = self.request_obj.requester.last_name
             
-        pdf = coldfront_mou_gen.generate_pdf(mou_type,
+        pdf = mou_generator.generate_pdf(mou_type,
                                         first_name,
                                         last_name,
                                         self.request_obj.project.name,

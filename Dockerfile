@@ -5,6 +5,8 @@ LABEL description="coldfront"
 USER root
 WORKDIR /root
 COPY requirements.txt ./
+RUN mkdir /root/.ssh && ssh-keyscan github.com > /root/.ssh/known_hosts
+COPY --chmod=0600 bootstrap/development/id_coldfront /root/.ssh/id_rsa
 RUN pip install -r requirements.txt && rm requirements.txt
 RUN pip install jinja2 pyyaml
 RUN yum -y install https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos7.x86_64.rpm
