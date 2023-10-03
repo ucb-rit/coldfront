@@ -64,6 +64,7 @@ REQUEST_APPROVAL_CC_LIST = ['test@test.test']
 #------------------------------------------------------------------------------
 
 GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE_CONTENTS = ''
+GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = None
 
 FILE_STORAGE = {
     'backend': 'local_storage',
