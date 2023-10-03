@@ -222,6 +222,7 @@ FLAGS = {
     'SECURE_DIRS_REQUESTABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': {{ flag_sso_enabled }}}],
+    'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': {{ flag_mou_generation_enabled }}}],
 }
 
 # Enforce that boolean flags are consistent with each other.

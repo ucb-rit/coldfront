@@ -13,7 +13,10 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.http import HttpResponse
 
-import mou_generator
+from flags.state import flag_enabled
+
+if flag_enabled('MOU_GENERATION_ENABLED'):
+    import mou_generator
 
 class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
 
@@ -114,11 +117,15 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
             first_name = self.request_obj.requester.first_name
             last_name = self.request_obj.requester.last_name
             
-        pdf = mou_generator.generate_pdf(mou_type,
-                                        first_name,
-                                        last_name,
-                                        self.request_obj.project.name,
-                                        **mou_kwargs)
+        if flag_enabled('MOU_GENERATION_ENABLED'):
+            pdf = mou_generator.generate_pdf(mou_type,
+                                            first_name,
+                                            last_name,
+                                            self.request_obj.project.name,
+                                            **mou_kwargs)
+        else:
+            pdf = b''
+
         response = HttpResponse(pdf,
                                 content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="mou.pdf"'

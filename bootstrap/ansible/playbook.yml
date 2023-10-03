@@ -537,24 +537,32 @@
             state: reloaded
             enabled: true
 
-        # Allow pip installation of private git repo for mou generation.
+        block:
+          # Allow pip installation of private git repo for mou generation.
 
-        - name: Check if github in known_hosts
-          shell: ssh-keygen -F github.com
-          register: github_known_hosts
-          changed_when: false
+          - name: Check if github in known_hosts
+            shell: ssh-keygen -F github.com
+            register: github_known_hosts
+            changed_when: false
 
-        - name: Add github.com to known_hosts
-          shell: ssh-keyscan github.com >> /home/{{ djangooperator }}/.ssh/known_hosts
-          changed_when: github_known_hosts.rc != 0
+          - name: Add github.com to known_hosts
+            shell: ssh-keyscan github.com >> /home/{{ djangooperator }}/.ssh/known_hosts
+            changed_when: github_known_hosts.rc != 0
 
-        - name: Copy deploy key to root user's .ssh directory
-          copy:
-            src: "{{ git_prefix }}/{{ reponame }}/bootstrap/development/id_coldfront"
-            dest: /home/{{ djangooperator }}/.ssh/id_rsa
-            owner: "{{ djangooperator }}"
-            group: "{{ djangooperator }}"
-            mode: 0600
+          - name: Copy deploy key to root user's .ssh directory
+            copy:
+              src: "{{ git_prefix }}/{{ reponame }}/bootstrap/development/id_coldfront"
+              dest: /home/{{ djangooperator }}/.ssh/id_rsa
+              owner: "{{ djangooperator }}"
+              group: "{{ djangooperator }}"
+              mode: 0600
+
+          - name: Install mou generation package
+            pip:
+              name: git+ssh://git@github.com/ucb-rit/mou-generator.git
+              executable: "{{ git_prefix }}/venv/bin/pip3"
+            become_user: "{{ djangooperator }}"
+        when: flag_mou_generation_enabled
 
         # Install Django application dependencies
 
