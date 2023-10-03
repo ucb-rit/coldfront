@@ -3,7 +3,6 @@ beautifulsoup4==4.10.0
 bibtexparser==1.1.0
 blessed==1.15.0
 chardet==3.0.4
-mou-generator @ git+ssh://git@github.com/ucb-rit/mou-generator.git
 coverage==6.2
 Django==3.2.5
 django-allauth==0.46.0
