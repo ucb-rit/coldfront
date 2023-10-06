@@ -211,15 +211,25 @@ class AllocationRenewalRequestDetailView(LoginRequiredMixin,
 
         context['has_allocation_period_started'] = \
             self.__has_request_allocation_period_started()
-        context['is_allowed_to_manage_request'] = is_superuser
-        if is_superuser:
+        is_allowed_to_manage_request = is_superuser
+
+        context['show_checklist_section'] = (
+            is_allowed_to_manage_request and
+            self.request_obj.status.name == 'Under Review')
+        if context['show_checklist_section']:
             context['checklist'] = self.__get_checklist()
-        context['is_checklist_complete'] = self.__is_checklist_complete()
+            context['is_checklist_complete'] = self.__is_checklist_complete()
+
+        context['show_process_section'] = (
+            is_allowed_to_manage_request and
+            context['has_allocation_period_started'] and
+            self.request_obj.status.name == 'Approved')
+
         return context
 
     def post(self, request, *args, **kwargs):
-        """Approve the request. Process it if its AllocationPeriod has
-        already started."""
+        """Approve the request if it has not already been approved.
+        Process it if its AllocationPeriod has already started."""
         pk = self.request_obj.pk
         if not request.user.is_superuser:
             message = 'You do not have permission to POST to this page.'
@@ -232,21 +242,25 @@ class AllocationRenewalRequestDetailView(LoginRequiredMixin,
 
         email_strategy = EnqueueEmailStrategy()
         try:
+            # Only approve the request if it has not already been approved.
+            should_approve_request = (
+                self.request_obj.status.name == 'Under Review')
             should_process_request = \
                 self.__has_request_allocation_period_started()
             num_service_units = self.get_service_units_to_allocate()
 
             with transaction.atomic():
-                # Approve the request. If the request will be processed
-                # immediately after, avoid sending an approval email.
-                if should_process_request:
-                    approval_email_strategy = DropEmailStrategy()
-                else:
-                    approval_email_strategy = email_strategy
-                approval_runner = AllocationRenewalApprovalRunner(
-                    self.request_obj, num_service_units,
-                    email_strategy=approval_email_strategy)
-                approval_runner.run()
+                if should_approve_request:
+                    # If the request will be processed immediately after, avoid
+                    # sending an approval email.
+                    if should_process_request:
+                        approval_email_strategy = DropEmailStrategy()
+                    else:
+                        approval_email_strategy = email_strategy
+                    approval_runner = AllocationRenewalApprovalRunner(
+                        self.request_obj, num_service_units,
+                        email_strategy=approval_email_strategy)
+                    approval_runner.run()
 
                 if should_process_request:
                     self.request_obj.refresh_from_db()

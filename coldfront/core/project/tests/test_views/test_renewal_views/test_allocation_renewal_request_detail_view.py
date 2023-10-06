@@ -166,6 +166,139 @@ class TestAllocationRenewalRequestDetailView(TestBase, TestRenewalViewsMixin):
         message = 'Please complete the checklist before final activation.'
         self.assertEqual(message, self.get_message_strings(response)[0])
 
+    def test_post_allows_approved_request_for_started_period(self):
+        """Test that a POST request for a renewal request under an
+        AllocationPeriod that has already started is processed if the
+        request has already been approved."""
+        self.assertEqual(len(mail.outbox), 0)
+
+        self.user.is_superuser = True
+        self.user.save()
+
+        # Set the request's eligibility state.
+        allocation_renewal_request = self.allocation_renewal_request
+        allocation_renewal_request.state['eligibility']['status'] = 'Approved'
+        allocation_renewal_request.save()
+
+        # Approve the request.
+        allocation_renewal_request.status = \
+            AllocationRenewalRequestStatusChoice.objects.get(name='Approved')
+        allocation_renewal_request.approval_time = utc_now_offset_aware()
+        allocation_renewal_request.save()
+
+        # The request's AllocationPeriod has already started.
+        self.assertLessEqual(
+            allocation_renewal_request.allocation_period.start_date,
+            display_time_zone_current_date())
+
+        pre_time = utc_now_offset_aware()
+
+        url = self.pi_allocation_renewal_request_detail_url(
+            allocation_renewal_request.pk)
+        data = {}
+        response = self.client.post(url, data)
+
+        post_time = utc_now_offset_aware()
+
+        # The view should redirect to the list of requests and display a
+        # message.
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(
+            response.url, self.pi_allocation_renewal_request_list_url())
+        message = f'PI {self.user.username}\'s allocation has been renewed.'
+        self.assertEqual(message, self.get_message_strings(response)[0])
+
+        # The request's status should have been set to 'Complete'. Its
+        # approval_time should not have been updated, but its completion_time
+        # should have been.
+        allocation_renewal_request.refresh_from_db()
+        self.assertEqual(allocation_renewal_request.status.name, 'Complete')
+        self.assertTrue(allocation_renewal_request.approval_time <= pre_time)
+        self.assertTrue(
+            pre_time <= allocation_renewal_request.completion_time <= post_time)
+
+        # One email about processing should have been sent; an email about
+        # approval should not have been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn(f'{allocation_renewal_request} Processed', email.subject)
+
+        # The 'CLUSTER_NAME Compute' Allocation's Service Units should have
+        # increased.
+        expected_num_service_units = (
+            self.existing_service_units +
+            allocation_renewal_request.num_service_units)
+        self.service_units_attribute.refresh_from_db()
+        self.assertEqual(
+            expected_num_service_units,
+            Decimal(self.service_units_attribute.value))
+
+    def test_post_allows_approved_request_for_non_started_period(self):
+        """Test that a POST request for a renewal request under an
+        AllocationPeriod that has not yet started is processed if the
+        request has already been approved."""
+        self.assertEqual(len(mail.outbox), 0)
+
+        self.user.is_superuser = True
+        self.user.save()
+
+        # Set the request's eligibility state.
+        allocation_renewal_request = self.allocation_renewal_request
+        allocation_renewal_request.state['eligibility']['status'] = 'Approved'
+        allocation_renewal_request.save()
+
+        # Approve the request.
+        allocation_renewal_request.status = \
+            AllocationRenewalRequestStatusChoice.objects.get(name='Approved')
+        allocation_renewal_request.approval_time = utc_now_offset_aware()
+        allocation_renewal_request.save()
+
+        # Set the request's AllocationPeriod to one that has not already
+        # started.
+        next_allowance_year_allocation_period = \
+            get_next_allowance_year_period()
+        self.assertIsNotNone(next_allowance_year_allocation_period)
+        allocation_renewal_request.allocation_period = \
+            next_allowance_year_allocation_period
+        allocation_renewal_request.save()
+
+        pre_time = utc_now_offset_aware()
+
+        url = self.pi_allocation_renewal_request_detail_url(
+            allocation_renewal_request.pk)
+        data = {}
+        response = self.client.post(url, data)
+
+        # The view should redirect to the list of requests and display a
+        # message.
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(
+            response.url, self.pi_allocation_renewal_request_list_url())
+        formatted_start_date = format_date_month_name_day_year(
+            next_allowance_year_allocation_period.start_date)
+        message = (
+            f'PI {self.user.username}\'s allocation is scheduled for renewal '
+            f'on {formatted_start_date}.')
+        self.assertEqual(message, self.get_message_strings(response)[0])
+
+        # The request's status should still be 'Approved'. Neither its
+        # approval_time nor its completion_time should have been updated.
+        allocation_renewal_request.refresh_from_db()
+        self.assertEqual(allocation_renewal_request.status.name, 'Approved')
+        self.assertTrue(allocation_renewal_request.approval_time <= pre_time)
+        self.assertIsNone(allocation_renewal_request.completion_time)
+
+        # No emails should have been sent.
+        self.assertEqual(len(mail.outbox), 0)
+
+        # The 'CLUSTER_NAME Compute' Allocation's Service Units should not have
+        # increased.
+        expected_num_service_units = self.existing_service_units
+        self.service_units_attribute.refresh_from_db()
+        self.assertEqual(
+            expected_num_service_units,
+            Decimal(self.service_units_attribute.value))
+
     def test_post_approves_and_processes_request_for_started_period(self):
         """Test that a POST request for a renewal request under an
         AllocationPeriod that has already started is both approved and
