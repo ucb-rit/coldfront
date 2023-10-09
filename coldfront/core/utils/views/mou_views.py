@@ -15,9 +15,6 @@ from django.http import HttpResponse
 
 from flags.state import flag_enabled
 
-if flag_enabled('MOU_GENERATION_ENABLED'):
-    import mou_generator
-
 class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
 
     def test_func(self):
@@ -70,7 +67,7 @@ class MOUUploadView(BaseMOUView, FormView):
         context['mou_type_long'] = self.request_type_long
         return context
 
-class MOUDownloadView(BaseMOUView, View):
+class MOUDownloadViea(BaseMOUView, View):
     
     def get(self, request, *args, **kwargs):
         from django.http import FileResponse
@@ -118,6 +115,7 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
             last_name = self.request_obj.requester.last_name
             
         if flag_enabled('MOU_GENERATION_ENABLED'):
+            from mou_generator import generate_pdf
             pdf = mou_generator.generate_pdf(mou_type,
                                             first_name,
                                             last_name,
