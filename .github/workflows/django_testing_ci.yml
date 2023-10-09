@@ -87,4 +87,6 @@ jobs:
         export django_secret_key=`openssl rand -base64 64`
         python manage.py migrate
         python manage.py test
+      env:
+        GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE_CONTENTS: ${{ secrets.GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE_CONTENTS }}
 
