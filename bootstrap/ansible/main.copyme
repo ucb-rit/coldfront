@@ -164,14 +164,14 @@ sentry_dsn: ""
 
 # # Storage settings.
 # # TODO: fill these out
-# file_storage_backend: 'google_drive' # local_storage or google_drive
+# # Note: local_storage currently not implemented
+# file_storage_backend: 'google_drive'
+# google_drive_private_key_file_path: 'google-drive-key.json'
 # # for google_drive, provide only the bottom-level directory name
 # # with a slash at the end.
 # new_project_request_mou_path: 'New Project Request MOUs/'
 # secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
 # service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
-# # only if using google_drive
-# google_drive_private_key_file_path: 'google-drive-key.json'
 
 # # SSL settings.
 # ssl_enabled: false

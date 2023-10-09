@@ -70,12 +70,11 @@ ALLOW_ALL_JOBS = True
 #------------------------------------------------------------------------------
 
 # gdstorage (Django Google Drive Storage library) settings.
-# Can be ignored if using 'local_storage'
 # Path to google drive api key json file
 GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = '{{ google_drive_private_key_file_path }}'
 # Path to prepend to gdstorage file paths. Should be '/'
 GOOGLE_DRIVE_STORAGE_MEDIA_ROOT = '/'
-# Can be used to set permissions e.g "restrict to Berkeley users". Not needed as using directory-inherited permissions.
+# Can be used to set permissions e.g "restrict to Berkeley users".
 GOOGLE_DRIVE_PERMISSIONS = ()
 
 FILE_STORAGE = {
