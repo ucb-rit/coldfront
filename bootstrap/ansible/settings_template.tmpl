@@ -72,6 +72,9 @@ ALLOW_ALL_JOBS = True
 # gdstorage (Django Google Drive Storage library) settings.
 # Can be ignored if using 'local_storage'
 # Path to google drive api key json file
+{% if not google_drive_private_key_file_path %}
+GOOGLE_DRIVE_STORAGE_JSON_KEY_CONTENTS = ''
+{% endif %}
 GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = '{{ google_drive_private_key_file_path }}'
 # Path to prepend to gdstorage file paths. Should be '/'
 GOOGLE_DRIVE_STORAGE_MEDIA_ROOT = '/'

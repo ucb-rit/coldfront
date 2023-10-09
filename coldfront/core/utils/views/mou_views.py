@@ -67,7 +67,7 @@ class MOUUploadView(BaseMOUView, FormView):
         context['mou_type_long'] = self.request_type_long
         return context
 
-class MOUDownloadViea(BaseMOUView, View):
+class MOUDownloadView(BaseMOUView, View):
     
     def get(self, request, *args, **kwargs):
         from django.http import FileResponse
