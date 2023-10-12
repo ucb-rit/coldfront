@@ -562,7 +562,7 @@
               name: git+ssh://git@github.com/ucb-rit/mou-generator.git
               executable: "{{ git_prefix }}/venv/bin/pip3"
             become_user: "{{ djangooperator }}"
-        when: flag_mou_generation_enabled
+          when: flag_mou_generation_enabled
 
         # Install Django application dependencies
 
