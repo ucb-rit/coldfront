@@ -537,7 +537,7 @@
             state: reloaded
             enabled: true
 
-        block:
+        - block:
           # Allow pip installation of private git repo for mou generation.
 
           - name: Check if github in known_hosts
