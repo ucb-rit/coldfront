@@ -484,7 +484,7 @@ class SavioProjectAllocationRequest(TimeStampedModel):
     
     mou_file = models.FileField( \
         upload_to=upload_to_func,
-        storage=GoogleDriveStorage(permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS'))
+        storage=GoogleDriveStorage(permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS')),
         null=True)
 
     history = HistoricalRecords()
