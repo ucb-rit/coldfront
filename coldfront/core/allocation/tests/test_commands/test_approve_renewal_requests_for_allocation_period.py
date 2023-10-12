@@ -3,6 +3,7 @@ from decimal import Decimal
 from io import StringIO
 import iso8601
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
@@ -11,11 +12,19 @@ from django.core.management.base import CommandError
 
 from flags.state import flag_enabled
 
+from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
+from coldfront.core.allocation.models import AllocationStatusChoice
+from coldfront.core.allocation.utils import get_project_compute_resource_name
+from coldfront.core.billing.utils.billing_activity_managers import ProjectBillingActivityManager
+from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
+from coldfront.core.project.tests.utils import create_project_and_request
+from coldfront.core.project.utils_.new_project_utils import SavioProjectApprovalRunner
+from coldfront.core.project.utils_.new_project_utils import SavioProjectProcessingRunner
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.project.utils_.renewal_utils import get_next_allowance_year_period
 from coldfront.core.resource.models import Resource
@@ -25,6 +34,7 @@ from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAl
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 from coldfront.core.utils.tests.test_base import TestBase
 
 
@@ -68,19 +78,21 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
     def create_request_and_supporting_objects(self, allocation_period):
         """Create and return an AllocationRenewalRequest, a Project, a
         requester, and a PI, under the given AllocationPeriod."""
-        project_name = 'fc_project'
+        prefix = ComputingAllowanceInterface().code_from_name(
+            self.computing_allowance_name)
+        project_name = f'{prefix}project'
         active_project_status = ProjectStatusChoice.objects.get(name='Active')
         project = Project.objects.create(
             name=project_name,
             title=project_name,
             status=active_project_status)
         requester = User.objects.create(
-            email='requester@email.com',
+            email='requester@lbl.gov',
             first_name='Requester',
             last_name='User',
             username='requester')
         pi = User.objects.create(
-            email='pi@email.com',
+            email='pi@lbl.gov',
             first_name='PI',
             last_name='User',
             username='pi')
@@ -132,23 +144,33 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
 
     def test_requests_limited_by_conditions(self):
         """Test that a request is only considered if it meets the
-        following conditions: its status is 'Under Review', its
-        post_project is an FCA (BRC) or PCA (LRC), its allocation_period
-        is the given one, and its request_time is before the start_date
-        of the period."""
+        following conditions:
+            - Its status is 'Under Review',
+            - Its post_project is an FCA (BRC) or PCA (LRC),
+            - Its allocation_period is the given one,
+            - Its request_time is before the start_date of the period,
+            - It is either associated with no new project request, or a
+              request that is "Approved - Complete"."""
+
+        def assert_no_requests_processed():
+            self.assertFalse(any(self.call_command(_id, dry_run=True)))
+
+        def expected_message():
+            return (
+                f'Would automatically approve AllocationRenewalRequest '
+                f'{request.id} for PI {request.pi}, scheduling '
+                f'{self.num_service_units} to be granted to '
+                f'{request.post_project.name} on '
+                f'{allocation_period.start_date}, and emailing the requester '
+                f'and/or PI.')
+
         # A condition-meeting request should be included.
         allocation_period = get_next_allowance_year_period()
         _id = allocation_period.id
         request, _, _, _ = self.create_request_and_supporting_objects(
             allocation_period)
         output, error = self.call_command(_id, dry_run=True)
-        expected_message = (
-            f'Would automatically approve AllocationRenewalRequest '
-            f'{request.id} for PI {request.pi}, scheduling '
-            f'{self.num_service_units} to be granted to '
-            f'{request.post_project.name} on {allocation_period.start_date}, '
-            f'and emailing the requester and/or PI.')
-        self.assertIn(expected_message, output)
+        self.assertIn(expected_message(), output)
         self.assertFalse(error)
 
         # A request failing to meet all conditions should not be included.
@@ -159,12 +181,12 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
                 name='Under Review'):
             request.status = status
             request.save()
-            self.assertFalse(any(self.call_command(_id, dry_run=True)))
+            assert_no_requests_processed()
         request.status = tmp_status
         request.save()
 
         output, error = self.call_command(_id, dry_run=True)
-        self.assertIn(expected_message, output)
+        self.assertIn(expected_message(), output)
         self.assertFalse(error)
 
         # Non-FCA (BRC) or PCA (LRC) project
@@ -207,19 +229,19 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
         request.save()
 
         output, error = self.call_command(_id, dry_run=True)
-        self.assertIn(expected_message, output)
+        self.assertIn(expected_message(), output)
         self.assertFalse(error)
 
         # Different AllocationPeriod
         tmp_allocation_period = request.allocation_period
         request.allocation_period = get_current_allowance_year_period()
         request.save()
-        self.assertFalse(any(self.call_command(_id, dry_run=True)))
+        assert_no_requests_processed()
         request.allocation_period = tmp_allocation_period
         request.save()
 
         output, error = self.call_command(_id, dry_run=True)
-        self.assertIn(expected_message, output)
+        self.assertIn(expected_message(), output)
         self.assertFalse(error)
 
         # Late request time
@@ -227,12 +249,58 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
         request.request_time = display_time_zone_date_to_utc_datetime(
             allocation_period.start_date)
         request.save()
-        self.assertFalse(any(self.call_command(_id, dry_run=True)))
+        assert_no_requests_processed()
         request.request_time = tmp_request_time
         request.save()
 
+        # Non-'Approved - Complete' new project request
+        post_project_name = f'{tmp_project_name}_new'
+
+        # Simulate new project creation.
+        # TODO: Dedupe this logic, taken from SavioProjectRequestWizard.
+        new_project, new_project_request = create_project_and_request(
+            post_project_name, 'New',
+            request.computing_allowance, None, request.requester,
+            request.pi, 'Under Review')
+        allocation = Allocation.objects.create(
+            project=new_project,
+            status=AllocationStatusChoice.objects.get(name='New'))
+        resource = Resource.objects.get(
+            name=get_project_compute_resource_name(new_project))
+        allocation.resources.add(resource)
+        allocation.save()
+        if flag_enabled('LRC_ONLY'):
+            billing_activity = get_or_create_billing_activity_from_full_id(
+                '000000-000')
+            manager = ProjectBillingActivityManager(new_project)
+            manager.billing_activity = billing_activity
+            new_project.refresh_from_db()
+        request.post_project = new_project
+        request.new_project_request = new_project_request
+        request.save()
+
+        # Approve the new project request.
+        num_service_units = settings.ALLOCATION_MIN
+        approval_runner = SavioProjectApprovalRunner(
+            request.new_project_request, num_service_units,
+            email_strategy=DropEmailStrategy())
+        approval_runner.run()
+
+        assert_no_requests_processed()
+
+        # A renewal request with an 'Approved - Complete' new project request
+        # should be included.
+
+        # Process the new project request, changing it status to
+        # 'Approved - Complete'.
+        request.new_project_request.refresh_from_db()
+        processing_runner = SavioProjectProcessingRunner(
+            request.new_project_request, num_service_units,
+            email_strategy=DropEmailStrategy())
+        processing_runner.run()
+
         output, error = self.call_command(_id, dry_run=True)
-        self.assertIn(expected_message, output)
+        self.assertIn(expected_message(), output)
         self.assertFalse(error)
 
     def test_sends_emails(self):

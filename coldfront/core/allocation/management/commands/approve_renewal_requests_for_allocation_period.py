@@ -3,6 +3,7 @@ import logging
 
 from django.core.management.base import BaseCommand
 from django.core.management.base import CommandError
+from django.db.models import Q
 
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationRenewalRequest
@@ -85,10 +86,12 @@ class Command(BaseCommand):
         allocation_period_start_utc = display_time_zone_date_to_utc_datetime(
             allocation_period_start_date)
         requests = AllocationRenewalRequest.objects.filter(
-            allocation_period=allocation_period,
-            computing_allowance__in=yearly_allowances,
-            status__name='Under Review',
-            request_time__lt=allocation_period_start_utc)
+            Q(allocation_period=allocation_period) &
+            Q(computing_allowance__in=yearly_allowances) &
+            Q(status__name='Under Review') &
+            Q(request_time__lt=allocation_period_start_utc) &
+            (Q(new_project_request=None) |
+             Q(new_project_request__status__name='Approved - Complete')))
 
         message_template = (
             f'{{0}} AllocationRenewalRequest {{1}} for PI {{2}}, scheduling '
@@ -109,9 +112,9 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(message))
             else:
                 try:
-                    self.update_request_state(request)
+                    self._update_request_state(request)
                     request.refresh_from_db()
-                    self.approve_request(
+                    self._approve_request(
                         request, num_service_units, skip_emails=skip_emails)
                 except Exception as e:
                     message = (
@@ -126,17 +129,7 @@ class Command(BaseCommand):
                 self.logger.info(message)
 
     @staticmethod
-    def update_request_state(request):
-        """Fill in the 'Eligibility' field in the given request's
-        state."""
-        state = request.state
-        eligibility = state['eligibility']
-        eligibility['status'] = 'Approved'
-        eligibility['timestamp'] = utc_now_offset_aware().isoformat()
-        request.save()
-
-    @staticmethod
-    def approve_request(request, num_service_units, skip_emails=False):
+    def _approve_request(request, num_service_units, skip_emails=False):
         """Instantiate and run the approval runner for the given request
         and number of service units. Optionally skip sending email."""
         email_strategy = (
@@ -144,3 +137,13 @@ class Command(BaseCommand):
         approval_runner = AllocationRenewalApprovalRunner(
             request, num_service_units, email_strategy=email_strategy)
         approval_runner.run()
+
+    @staticmethod
+    def _update_request_state(request):
+        """Fill in the 'Eligibility' field in the given request's
+        state."""
+        state = request.state
+        eligibility = state['eligibility']
+        eligibility['status'] = 'Approved'
+        eligibility['timestamp'] = utc_now_offset_aware().isoformat()
+        request.save()
