@@ -43,14 +43,102 @@ from django.views.generic import DetailView
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 
-from flags.state import flag_enabled
-
 import iso8601
 import logging
 
 
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Common
+# =============================================================================
+
+
+class ProjectRequestDetailMixin(object):
+
+    error_message = 'Unexpected failure. Please contact an administrator.'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.request_obj = None
+        self.request = None
+
+    def _conditionally_redirect_post_request(self):
+        """Return a redirect from a POST request if some condition is
+        not met, else None."""
+        redirect = HttpResponseRedirect(self._get_bad_post_redirect_url())
+
+        if not self.request.user.is_superuser:
+            message = 'You do not have permission to access this page.'
+            messages.error(self.request, message)
+            return redirect
+
+        if not self._is_checklist_complete():
+            message = 'Please complete the checklist before final activation.'
+            messages.error(self.request, message)
+            return redirect
+
+        return None
+
+    def _get_bad_post_redirect_url(self):
+        """Return the URL a bad POST request should direct to."""
+        raise NotImplementedError
+
+    def _is_checklist_complete(self):
+        """Return whether the 'System Administrator Checklist' for the
+        request is complete."""
+        raise NotImplementedError
+
+    def _set_latest_update_timestamp_context(self, context):
+        """Set the timestamp at which the request was last updated in
+        the given context dict."""
+        try:
+            latest_update_timestamp = \
+                self.request_obj.latest_update_timestamp()
+            if not latest_update_timestamp:
+                latest_update_timestamp = 'No updates yet.'
+            else:
+                # TODO: Upgrade to Python 3.7+ to use this.
+                # latest_update_timestamp = datetime.datetime.fromisoformat(
+                #     latest_update_timestamp)
+                latest_update_timestamp = iso8601.parse_date(
+                    latest_update_timestamp)
+        except Exception as e:
+            logger.exception(e)
+            messages.error(self.request, self.error_message)
+            latest_update_timestamp = 'Failed to determine timestamp.'
+        context['latest_update_timestamp'] = latest_update_timestamp
+
+    def _set_denied_request_context(self, context):
+        """Set additional context about a denied request in the given
+        context dict."""
+        try:
+            denial_reason = self.request_obj.denial_reason()
+            category = denial_reason.category
+            justification = denial_reason.justification
+            timestamp = denial_reason.timestamp
+        except Exception as e:
+            logger.exception(e)
+            messages.error(self.request, self.error_message)
+            category = 'Unknown Category'
+            justification = (
+                'Failed to determine denial reason. Please contact an '
+                'administrator.')
+            timestamp = 'Unknown Timestamp'
+        context['denial_reason'] = {
+            'category': category,
+            'justification': justification,
+            'timestamp': timestamp,
+        }
+        context['support_email'] = settings.CENTER_HELP_EMAIL
+
+
 # =============================================================================
 # BRC: SAVIO
+# LRC: LAWRENCIUM
+# These views are used across both deployments, despite the naming, which
+# should be changed.
 # =============================================================================
 
 
@@ -229,13 +317,10 @@ class SavioProjectRequestMixin(object):
 
 
 class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
-                                    SavioProjectRequestMixin, DetailView):
+                                    SavioProjectRequestMixin,
+                                    ProjectRequestDetailMixin, DetailView):
     model = SavioProjectAllocationRequest
     template_name = 'project/project_request/savio/project_request_detail.html'
-
-    logger = logging.getLogger(__name__)
-
-    error_message = 'Unexpected failure. Please contact an administrator.'
 
     redirect = reverse_lazy('new-project-pending-request-list')
 
@@ -264,49 +349,16 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         context = super().get_context_data(**kwargs)
         self.set_common_context_data(context)
 
-        try:
-            latest_update_timestamp = \
-                self.request_obj.latest_update_timestamp()
-            if not latest_update_timestamp:
-                latest_update_timestamp = 'No updates yet.'
-            else:
-                # TODO: Upgrade to Python 3.7+ to use this.
-                # latest_update_timestamp = datetime.datetime.fromisoformat(
-                #     latest_update_timestamp)
-                latest_update_timestamp = iso8601.parse_date(
-                    latest_update_timestamp)
-        except Exception as e:
-            self.logger.exception(e)
-            messages.error(self.request, self.error_message)
-            latest_update_timestamp = 'Failed to determine timestamp.'
-        context['latest_update_timestamp'] = latest_update_timestamp
+        self._set_latest_update_timestamp_context(context)
 
         if self.request_obj.status.name == 'Denied':
-            try:
-                denial_reason = self.request_obj.denial_reason()
-                category = denial_reason.category
-                justification = denial_reason.justification
-                timestamp = denial_reason.timestamp
-            except Exception as e:
-                self.logger.exception(e)
-                messages.error(self.request, self.error_message)
-                category = 'Unknown Category'
-                justification = (
-                    'Failed to determine denial reason. Please contact an '
-                    'administrator.')
-                timestamp = 'Unknown Timestamp'
-            context['denial_reason'] = {
-                'category': category,
-                'justification': justification,
-                'timestamp': timestamp,
-            }
-            context['support_email'] = settings.CENTER_HELP_EMAIL
+            self._set_denied_request_context(context)
 
         context['has_allocation_period_started'] = \
-            self.has_request_allocation_period_started()
-        context['setup_status'] = self.get_setup_status()
-        context['checklist'] = self.get_checklist()
-        context['is_checklist_complete'] = self.is_checklist_complete()
+            self._has_request_allocation_period_started()
+        context['setup_status'] = self._get_setup_status()
+        context['checklist'] = self._get_checklist()
+        context['_is_checklist_complete'] = self._is_checklist_complete()
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
 
@@ -315,26 +367,15 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
     def post(self, request, *args, **kwargs):
         """Approve the request. Process it if its AllocationPeriod has
         already started."""
-        if not self.request.user.is_superuser:
-            message = 'You do not have permission to access this page.'
-            messages.error(request, message)
-            pk = self.request_obj.pk
-
-            return HttpResponseRedirect(
-                reverse('new-project-request-detail', kwargs={'pk': pk}))
-
-        if not self.is_checklist_complete():
-            message = 'Please complete the checklist before final activation.'
-            messages.error(request, message)
-            pk = self.request_obj.pk
-            return HttpResponseRedirect(
-                reverse('new-project-request-detail', kwargs={'pk': pk}))
+        redirect_or_none = self._conditionally_redirect_post_request()
+        if redirect_or_none:
+            return redirect_or_none
 
         email_strategy = EnqueueEmailStrategy()
         project = self.request_obj.project
         try:
             should_process_request = \
-                self.has_request_allocation_period_started()
+                self._has_request_allocation_period_started()
             num_service_units = self.get_service_units_to_allocate()
 
             with transaction.atomic():
@@ -357,7 +398,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                         email_strategy=email_strategy)
                     project, _ = processing_runner.run()
         except Exception as e:
-            self.logger.exception(e)
+            logger.exception(e)
             messages.error(self.request, self.error_message)
         else:
             if not should_process_request:
@@ -373,7 +414,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                     'automatically been made for the requester.')
             message = f'Project {project.name} and its Allocation {phrase}'
             messages.success(self.request, message)
-            self.logger.info(message)
+            logger.info(message)
 
         try:
             email_strategy.send_queued_emails()
@@ -382,7 +423,11 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
         return HttpResponseRedirect(self.redirect)
 
-    def get_checklist(self):
+    def _get_bad_post_redirect_url(self):
+        return reverse(
+            'new-project-request-detail', kwargs={'pk': self.request_obj.pk})
+
+    def _get_checklist(self):
         """Return a nested list, where each row contains the details of
         one item on the checklist.
 
@@ -444,7 +489,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         setup = state['setup']
         checklist.append([
             'Perform project setup on the cluster.',
-            self.get_setup_status(),
+            self._get_setup_status(),
             setup['timestamp'],
             is_eligible and is_ready and is_memorandum_signed,
             reverse('new-project-request-review-setup', kwargs={'pk': pk})
@@ -452,7 +497,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
         return checklist
 
-    def get_setup_status(self):
+    def _get_setup_status(self):
         """Return one of the following statuses for the 'setup' step of
         the request: 'N/A', 'Pending', 'Complete'."""
         state = self.request_obj.state
@@ -467,7 +512,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                     return pending
         return state['setup']['status']
 
-    def has_request_allocation_period_started(self):
+    def _has_request_allocation_period_started(self):
         """Return whether the request's AllocationPeriod has started. If
         the request has no period, return True."""
         allocation_period = self.request_obj.allocation_period
@@ -475,7 +520,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
             return True
         return allocation_period.start_date <= display_time_zone_current_date()
 
-    def is_checklist_complete(self):
+    def _is_checklist_complete(self):
         status_choice = savio_request_state_status(self.request_obj)
         return (status_choice.name == 'Approved - Processing' and
                 self.request_obj.state['setup']['status'] == 'Complete')
@@ -483,7 +528,8 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
 class SavioProjectReviewEligibilityView(LoginRequiredMixin,
                                         UserPassesTestMixin,
-                                        SavioProjectRequestMixin, FormView):
+                                        SavioProjectRequestMixin,
+                                        FormView):
     form_class = ReviewStatusForm
     template_name = (
         'project/project_request/savio/project_review_eligibility.html')
@@ -555,8 +601,6 @@ class SavioProjectReviewReadinessView(LoginRequiredMixin, UserPassesTestMixin,
     template_name = (
         'project/project_request/savio/project_review_readiness.html')
 
-    logger = logging.getLogger(__name__)
-
     def test_func(self):
         """UserPassesTestMixin tests."""
         if self.request.user.is_superuser:
@@ -590,9 +634,9 @@ class SavioProjectReviewReadinessView(LoginRequiredMixin, UserPassesTestMixin,
                 try:
                     send_project_request_pooling_email(self.request_obj)
                 except Exception as e:
-                    self.logger.error(
+                    logger.error(
                         'Failed to send notification email. Details:\n')
-                    self.logger.exception(e)
+                    logger.exception(e)
         elif status == 'Denied':
             runner = ProjectDenialRunner(self.request_obj)
             runner.run()
@@ -631,8 +675,6 @@ class SavioProjectReviewMemorandumSignedView(LoginRequiredMixin,
     form_class = MemorandumSignedForm
     template_name = (
         'project/project_request/savio/project_review_memorandum_signed.html')
-
-    logger = logging.getLogger(__name__)
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -987,15 +1029,12 @@ class VectorProjectRequestMixin(object):
 
 
 class VectorProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
-                                     VectorProjectRequestMixin, DetailView):
+                                     VectorProjectRequestMixin,
+                                     ProjectRequestDetailMixin, DetailView):
     model = VectorProjectAllocationRequest
     template_name = (
         'project/project_request/vector/project_request_detail.html')
     context_object_name = 'vector_request'
-
-    logger = logging.getLogger(__name__)
-
-    error_message = 'Unexpected failure. Please contact an administrator.'
 
     redirect = reverse_lazy('vector-project-pending-request-list')
 
@@ -1023,45 +1062,12 @@ class VectorProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        try:
-            latest_update_timestamp = \
-                self.request_obj.latest_update_timestamp()
-            if not latest_update_timestamp:
-                latest_update_timestamp = 'No updates yet.'
-            else:
-                # TODO: Upgrade to Python 3.7+ to use this.
-                # latest_update_timestamp = datetime.datetime.fromisoformat(
-                #     latest_update_timestamp)
-                latest_update_timestamp = iso8601.parse_date(
-                    latest_update_timestamp)
-        except Exception as e:
-            self.logger.exception(e)
-            messages.error(self.request, self.error_message)
-            latest_update_timestamp = 'Failed to determine timestamp.'
-        context['latest_update_timestamp'] = latest_update_timestamp
+        self._set_latest_update_timestamp_context(context)
 
         if self.request_obj.status.name == 'Denied':
-            try:
-                denial_reason = self.request_obj.denial_reason()
-                category = denial_reason.category
-                justification = denial_reason.justification
-                timestamp = denial_reason.timestamp
-            except Exception as e:
-                self.logger.exception(e)
-                messages.error(self.request, self.error_message)
-                category = 'Unknown Category'
-                justification = (
-                    'Failed to determine denial reason. Please contact an '
-                    'administrator.')
-                timestamp = 'Unknown Timestamp'
-            context['denial_reason'] = {
-                'category': category,
-                'justification': justification,
-                'timestamp': timestamp,
-            }
-            context['support_email'] = settings.CENTER_HELP_EMAIL
+            self._set_denied_request_context(context)
 
-        context['is_checklist_complete'] = self.is_checklist_complete()
+        context['_is_checklist_complete'] = self._is_checklist_complete()
 
         context['is_allowed_to_manage_request'] = (
             self.request.user.is_superuser)
@@ -1069,27 +1075,16 @@ class VectorProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         return context
 
     def post(self, request, *args, **kwargs):
-        if not self.request.user.is_superuser:
-            message = 'You do not have permission to view the this page.'
-            messages.error(request, message)
-            pk = self.request_obj.pk
-
-            return HttpResponseRedirect(
-                reverse('vector-project-request-detail', kwargs={'pk': pk}))
-
-        if not self.is_checklist_complete():
-            message = 'Please complete the checklist before final activation.'
-            messages.error(request, message)
-            pk = self.request_obj.pk
-            return HttpResponseRedirect(
-                reverse('vector-project-request-detail', kwargs={'pk': pk}))
+        redirect_or_none = self._conditionally_redirect_post_request()
+        if redirect_or_none:
+            return redirect_or_none
 
         runner = None
         try:
             runner = VectorProjectProcessingRunner(self.request_obj)
             project, allocation = runner.run()
         except Exception as e:
-            self.logger.exception(e)
+            logger.exception(e)
             messages.error(self.request, self.error_message)
         else:
             message = (
@@ -1108,7 +1103,11 @@ class VectorProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
         return HttpResponseRedirect(self.redirect)
 
-    def is_checklist_complete(self):
+    def _get_bad_post_redirect_url(self):
+        return reverse(
+            'vector-project-request-detail', kwargs={'pk': self.request_obj.pk})
+
+    def _is_checklist_complete(self):
         status_choice = vector_request_state_status(self.request_obj)
         return (status_choice.name == 'Approved - Processing' and
                 self.request_obj.state['setup']['status'] == 'Complete')
@@ -1116,7 +1115,8 @@ class VectorProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
 class VectorProjectReviewEligibilityView(LoginRequiredMixin,
                                          UserPassesTestMixin,
-                                         VectorProjectRequestMixin, FormView):
+                                         VectorProjectRequestMixin,
+                                         FormView):
     form_class = ReviewStatusForm
     template_name = (
         'project/project_request/vector/project_review_eligibility.html')
@@ -1181,7 +1181,8 @@ class VectorProjectReviewEligibilityView(LoginRequiredMixin,
 
 
 class VectorProjectReviewSetupView(LoginRequiredMixin, UserPassesTestMixin,
-                                   VectorProjectRequestMixin, FormView):
+                                   VectorProjectRequestMixin,
+                                   FormView):
     form_class = VectorProjectReviewSetupForm
     template_name = 'project/project_request/vector/project_review_setup.html'
 
@@ -1264,7 +1265,7 @@ class VectorProjectReviewSetupView(LoginRequiredMixin, UserPassesTestMixin,
 
 
 class VectorProjectUndenyRequestView(LoginRequiredMixin, UserPassesTestMixin,
-                                     VectorProjectRequestMixin, View):
+                                     View):
 
     def test_func(self):
         """UserPassesTestMixin tests."""
