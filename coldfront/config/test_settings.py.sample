@@ -63,6 +63,8 @@ REQUEST_APPROVAL_CC_LIST = ['test@test.test']
 # File Storage Settings
 #------------------------------------------------------------------------------
 
+GOOGLE_DRIVE_PERMISSIONS = ()
+
 FILE_STORAGE = {
     'backend': 'local_storage',
     'details': {
