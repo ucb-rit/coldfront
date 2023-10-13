@@ -362,6 +362,8 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
 
+        self._conditionally_set_renewal_request_context(context)
+
         return context
 
     def post(self, request, *args, **kwargs):
@@ -422,6 +424,34 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
             pass
 
         return HttpResponseRedirect(self.redirect)
+
+    def _conditionally_set_renewal_request_context(self, context):
+        """If the new project request is associated with a renewal
+        request, set additional context about it in the given context
+        dict."""
+        try:
+            renewal_request_obj = AllocationRenewalRequest.objects.get(
+                new_project_request=self.request_obj)
+        except AllocationRenewalRequest.DoesNotExist:
+            return
+        except AllocationRenewalRequest.MultipleObjectsReturned:
+            message = (
+                f'Unexpectedly found multiple AllocationRenewalRequests that '
+                f'reference SavioProjectAllocationRequest '
+                f'{self.request_obj.id}.')
+            logger.error(message)
+            return
+        context['is_associated_with_renewal_request'] = True
+        context['associated_renewal_request_id'] = renewal_request_obj.id
+        context['associated_renewal_request_allocation_period_name'] = \
+            renewal_request_obj.allocation_period.name
+        context['associated_renewal_request_pi_name'] = (
+            f'{renewal_request_obj.pi.first_name} '
+            f'{renewal_request_obj.pi.last_name}')
+        context['associated_renewal_request_pre_project_name'] = \
+            renewal_request_obj.pre_project.name
+        context['associated_renewal_request_post_project_name'] = \
+            renewal_request_obj.post_project.name
 
     def _get_bad_post_redirect_url(self):
         return reverse(
