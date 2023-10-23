@@ -12,10 +12,22 @@ from coldfront.core.utils.forms.file_upload_forms import PDFUploadForm
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.http import HttpResponse
+from django.http import FileResponse
 
 from flags.state import flag_enabled
+import datetime
 
 class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
+    
+    def get_filename(self):
+        type_ = {'new-project': 'NewProject_MOU',
+                 'secure-dir': 'SecureDirectory_MOU',
+                 'service-units-purchase': 'ServiceUnitsPurchase_RUA'} \
+                [self.request_type]
+        project_name = self.request_obj.project.name
+        last_name = self.request_obj.requester.last_name
+        filename = f'{project_name}_{last_name}_{type_}.pdf'
+        return filename
 
     def test_func(self):
         """UserPassesTestMixin Tests"""
@@ -39,7 +51,7 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
                             SavioProjectAllocationRequest),
              'secure-dir': ('Secure Directory Request',
                             SecureDirRequest),
-             'service-units-purchase': ('Service Unit Purchase Request',
+             'service-units-purchase': ('Service Units Purchase Request',
                             AllocationAdditionRequest)}[self.request_type]
         self.request_obj = get_object_or_404(
             self.request_class, pk=pk)
@@ -70,10 +82,10 @@ class MOUUploadView(BaseMOUView, FormView):
 class MOUDownloadView(BaseMOUView, View):
     
     def get(self, request, *args, **kwargs):
-        from django.http import FileResponse
+        filename = self.get_filename()
         response = FileResponse(self.request_obj.mou_file)
         response['Content-Type'] = 'application/pdf'
-        response['Content-Disposition'] = 'attachment;filename="mou.pdf"'
+        response['Content-Disposition'] = f'attachment;filename="{filename}"'
         return response
 
 class UnsignedMOUDownloadView(BaseMOUView, View):
@@ -113,18 +125,20 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
         else:
             first_name = self.request_obj.requester.first_name
             last_name = self.request_obj.requester.last_name
-            
+        
         if flag_enabled('MOU_GENERATION_ENABLED'):
             from mou_generator import generate_pdf
-            pdf = mou_generator.generate_pdf(mou_type,
-                                            first_name,
-                                            last_name,
-                                            self.request_obj.project.name,
-                                            **mou_kwargs)
+            project_name = self.request_obj.project.name
+            pdf = generate_pdf(mou_type,
+                               first_name,
+                               last_name,
+                               project_name,
+                               **mou_kwargs)
         else:
             pdf = b''
 
+        filename = self.get_filename()
         response = HttpResponse(pdf,
                                 content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="mou.pdf"'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response

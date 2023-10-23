@@ -116,9 +116,9 @@
       <strong>Survey Responses: </strong>
       <button id="view-survey" class="btn btn-primary" role="button">View</button>
     </p>
-    <p class="card-text text-justify">
-      <strong>Extra Request Details:</strong>
-      {% if allowance_has_extra_fields %}
+    {% if allowance_has_extra_fields %}
+      <p class="card-text text-justify">
+        <strong>Extra Request Details:</strong>
         <button id="view-extra-fields" class="btn btn-primary" role="button">
           Details
         </button>
@@ -128,8 +128,8 @@
             Edit
           </a>
         {% endif %}
-      {% endif %}
     </p>
+    {% endif %}
     {% if can_download_mou %}
       <p class="card-text text-justify">
         <strong>Unsigned Memorandum of Understanding: </strong>

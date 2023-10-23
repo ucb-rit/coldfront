@@ -464,13 +464,14 @@
 
         - name: Add dev QOL lines to .bashrc
           blockinfile:
-            path: /home/{{ djangooperator }}/.bashrc
+            path: {{ ansible_env.HOME }}/.bashrc
             block: |
               # Upon login, navigate to the ColdFront directory and source the virtual environment.
               cd {{ git_prefix }}/{{ reponame }}
               source ../venv/bin/activate
               # Restart Apache with a keyword.
               alias reload="sudo service httpd reload"
+          become_user: "{{ djangooperator }}"
 
       when: provisioning_tasks == true and deployment == "dev"
       tags: provisioning
@@ -544,18 +545,21 @@
             shell: ssh-keygen -F github.com
             register: github_known_hosts
             changed_when: false
+            failed_when: false
 
           - name: Add github.com to known_hosts
-            shell: ssh-keyscan github.com >> /home/{{ djangooperator }}/.ssh/known_hosts
+            shell: ssh-keyscan github.com >> {{ ansible_env.HOME }}/.ssh/known_hosts
             changed_when: github_known_hosts.rc != 0
+            become_user: "{{ djangooperator }}"
 
           - name: Copy deploy key to root user's .ssh directory
             copy:
               src: "{{ git_prefix }}/{{ reponame }}/bootstrap/development/id_coldfront"
-              dest: /home/{{ djangooperator }}/.ssh/id_rsa
+              dest: {{ ansible_env.HOME }}/.ssh/id_rsa
               owner: "{{ djangooperator }}"
               group: "{{ djangooperator }}"
               mode: 0600
+            become_user: "{{ djangooperator }}"
 
           - name: Install mou generation package
             pip:

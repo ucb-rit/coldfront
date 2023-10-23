@@ -29,7 +29,8 @@ from coldfront.core.resource.utils_.allowance_utils.computing_allowance import \
 from coldfront.core.utils.common import display_time_zone_current_date
 
 class Command(BaseCommand):
-    help = 'Audit data to ensure that certain invariants hold.'
+    help = 'Update the state and extra fields for Project Allocation Requests' \
+           ', Secure Directory Requests, and Allocation Addition Requests.'
 
     def add_arguments(self, parser):
         parser.add_argument('--all', action='store_true',
@@ -64,7 +65,7 @@ class Command(BaseCommand):
                     print(f'Added empty "{field}" to extra_fields for {request}')
         if save and not dry_run:
             request.save()
-
+    
     def handle(self, *args, **options):
         if options['all'] or not any((options['state'], options['extra_fields'])):
             options['state'] = True
