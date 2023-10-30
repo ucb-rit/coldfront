@@ -53,21 +53,22 @@ class MOUTestBase(TestBase):
 
     @staticmethod
     def download_unsigned_mou_url(pk, request_type):
-        return reverse(f'{request_type}-request-download-unsigned-mou', kwargs={'pk': pk, 'mou_type': request_type})
+        return reverse(f'{request_type}-request-download-unsigned-mou', kwargs={'pk': pk, 'request_type': request_type})
 
     @staticmethod
     def upload_mou_url(pk, request_type):
-        return reverse(f'{request_type}-request-upload-mou', kwargs={'pk': pk, 'mou_type': request_type})
+        return reverse(f'{request_type}-request-upload-mou', kwargs={'pk': pk, 'request_type': request_type})
 
     @staticmethod
     def download_mou_url(pk, request_type):
-        return reverse(f'{request_type}-request-download-mou', kwargs={'pk': pk, 'mou_type': request_type})
+        return reverse(f'{request_type}-request-download-mou', kwargs={'pk': pk, 'request_type': request_type})
     
     def _test_download_upload_download(self, request_type):
         url = self.download_unsigned_mou_url(self.request.pk, request_type)
         response = self.client.get(url)
+        filename = get_filename(self.request)
         self.assertEqual(response.get('Content-Disposition'),
-                         'attachment; filename="mou.pdf"')
+                         f'attachment; filename="{filename}"')
 
         url = self.upload_mou_url(self.request.pk, request_type)
         self.assert_has_access(url, self.user)

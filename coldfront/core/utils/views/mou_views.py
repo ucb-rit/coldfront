@@ -8,6 +8,7 @@ from coldfront.core.allocation.models import SecureDirRequest
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.utils.forms.file_upload_forms import PDFUploadForm
+from coldfront.core.utils.mou import get_mou_filename
 
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -19,16 +20,6 @@ import datetime
 
 class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
     
-    def get_filename(self):
-        type_ = {'new-project': 'NewProject_MOU',
-                 'secure-dir': 'SecureDirectory_MOU',
-                 'service-units-purchase': 'ServiceUnitsPurchase_RUA'} \
-                [self.request_type]
-        project_name = self.request_obj.project.name
-        last_name = self.request_obj.requester.last_name
-        filename = f'{project_name}_{last_name}_{type_}.pdf'
-        return filename
-
     def test_func(self):
         """UserPassesTestMixin Tests"""
         if self.request.user.is_superuser:
@@ -45,14 +36,17 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
     def set_attributes(self, pk):
         """Set this instance's request_obj to be the
         SavioProjectAllocationRequest with the given primary key."""
-        self.request_type = self.kwargs['mou_type']
-        self.request_type_long, self.request_class = \
+        self.request_type = self.kwargs['request_type']
+        self.request_type_long, self.request_class, self.mou_type = \
             {'new-project': ('New Project Request',
-                            SavioProjectAllocationRequest),
+                            SavioProjectAllocationRequest,
+                            'Memorandum of Understanding'),
              'secure-dir': ('Secure Directory Request',
-                            SecureDirRequest),
+                            SecureDirRequest,
+                            'Researcher Use Agreement'),
              'service-units-purchase': ('Service Units Purchase Request',
-                            AllocationAdditionRequest)}[self.request_type]
+                            AllocationAdditionRequest,
+                            'Memorandum of Understanding')}[self.request_type]
         self.request_obj = get_object_or_404(
             self.request_class, pk=pk)
 
@@ -74,15 +68,16 @@ class MOUUploadView(BaseMOUView, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['request_obj'] = self.request_obj
-        context['mou_type'] = self.request_type
-        context['mou_type_long'] = self.request_type_long
+        context['mou_type'] = self.mou_type
+        context['request_type'] = self.request_type
+        context['request_type_long'] = self.request_type_long
+        context['return_url'] = self.get_success_url()
         return context
 
 class MOUDownloadView(BaseMOUView, View):
     
     def get(self, request, *args, **kwargs):
-        filename = self.get_filename()
+        filename = get_mou_filename(self.request_obj)
         response = FileResponse(self.request_obj.mou_file)
         response['Content-Type'] = 'application/pdf'
         response['Content-Disposition'] = f'attachment;filename="{filename}"'
@@ -91,24 +86,20 @@ class MOUDownloadView(BaseMOUView, View):
 class UnsignedMOUDownloadView(BaseMOUView, View):
     
     def get(self, request, *args, **kwargs):
-        mou_type = ''
+        request_type = ''
         mou_kwargs = {}
         if self.request_type == 'new-project' and ComputingAllowance(
                        self.request_obj.computing_allowance).is_instructional():
-            mou_type = 'instructional'
+            request_type = 'instructional'
             mou_kwargs['service_units'] = int(float(self.request_obj \
                         .computing_allowance.get_attribute('Service Units')))
             mou_kwargs['extra_fields'] = self.request_obj.extra_fields
             allowance_end = self.request_obj.allocation_period.end_date
             mou_kwargs['allowance_end'] = allowance_end
-            mou_kwargs['allowance_year'] = AllocationPeriod.objects.get(
-                     name__startswith='Allowance Year',
-                     start_date__lte=allowance_end,
-                     end_date__gte=allowance_end).name
         elif self.request_type == 'service-units-purchase' or \
                     (self.request_type == 'new-project' and ComputingAllowance(
                         self.request_obj.computing_allowance).is_recharge()):
-            mou_type = 'recharge'
+            request_type = 'recharge'
             mou_kwargs['extra_fields'] = self.request_obj.extra_fields
             if self.request_type == 'service-units-purchase':
                 mou_kwargs['service_units'] = int(self.request_obj.num_service_units)
@@ -116,7 +107,7 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
                 mou_kwargs['service_units'] = int(self.request_obj \
                                             .extra_fields['num_service_units'])
         elif self.request_type == 'secure-dir':
-            mou_type = 'secure-dir'
+            request_type = 'secure-dir'
             mou_kwargs['department'] = self.request_obj.department
         
         if self.request_type == 'new-project':
@@ -129,7 +120,7 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
         if flag_enabled('MOU_GENERATION_ENABLED'):
             from mou_generator import generate_pdf
             project_name = self.request_obj.project.name
-            pdf = generate_pdf(mou_type,
+            pdf = generate_pdf(request_type,
                                first_name,
                                last_name,
                                project_name,
@@ -137,7 +128,7 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
         else:
             pdf = b''
 
-        filename = self.get_filename()
+        filename = get_mou_filename(self.request_obj)
         response = HttpResponse(pdf,
                                 content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'

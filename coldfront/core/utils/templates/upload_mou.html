@@ -14,12 +14,12 @@ MOU Upload
 
 {% block content %}
 
-<h1>{{ mou_type_long }} MOU Upload</h1>
+<h1>{{ request_type_long }} {{ mou_type }} Upload</h1>
 <hr>
 
 <script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
 
-<p>Upload a signed Memorandum of Understanding to be reviewed by our Administrators.</p>
+<p>Upload a signed {{ mou_type | lower }} to be reviewed by our Administrators.</p>
 
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
@@ -28,11 +28,7 @@ MOU Upload
   </table>
   <br>
   <input class="btn btn-primary" type="submit" value="Submit" />
-  <a href=
-  {% if mou_type == "new-project" %}"{% url 'new-project-request-detail' request_obj.pk %}"
-  {% elif mou_type == "secure-dir" %}"{% url 'secure-dir-request-detail' request_obj.pk %}"
-  {% elif mou_type == "service-units" %}"{% url 'service-units-purchase-request-detail' request_obj.pk %}"
-  {% endif %} class="btn btn-secondary">
+  <a href="{{ return_url }}" class="btn btn-secondary">
     Cancel
   </a>
 </form>

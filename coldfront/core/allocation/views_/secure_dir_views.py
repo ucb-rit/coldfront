@@ -987,7 +987,7 @@ class SecureDirRequestWizard(LoginRequiredMixin,
 
     def __get_department(self, form_data):
         """Return the department that the user submitted."""
-        step_number = self.step_numbers_by_form_name['ata_description']
+        step_number = self.step_numbers_by_form_name['data_description']
         data = form_data[step_number]
         return data.get('department')
 
@@ -1775,7 +1775,7 @@ class SecureDirRequestNotifyPIView(SecureDirRequestEditDepartmentView):
                                 'request_mou_email.html',
                                 {'to_name': self.request_obj.requester.get_full_name(),
                                  'savio_request': self.request_obj,
-                                 'mou_type': 'RUA',
+                                 'mou_type': 'Researcher Use Agreement',
                                  'mou_for': f'{self.request_obj.project.name} secure directory request',
                                  'base_url': settings.CENTER_BASE_URL,
                                  'signature': 'MyBRC User Portal team', },

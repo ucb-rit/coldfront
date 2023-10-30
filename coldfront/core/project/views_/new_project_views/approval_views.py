@@ -297,7 +297,7 @@ class SavioProjectRequestNotifyPIView(SavioProjectRequestEditExtraFieldsView):
                                 'request_mou_email.html',
                                 {'pi_name': self.request_obj.pi.get_full_name(),
                                  'savio_request': self.request_obj,
-                                 'mou_type': 'MOU',
+                                 'mou_type': 'Memorandum of Understanding',
                                  'mou_for': f'{self.request_obj.project.name} project request',
                                  'base_url': settings.CENTER_BASE_URL,
                                  'signature': 'MyBRC User Portal team', },

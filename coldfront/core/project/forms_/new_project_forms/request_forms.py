@@ -434,6 +434,7 @@ class SavioProjectRechargeExtraFieldsForm(SavioProjectExtraFieldsForm):
                 'min': '100',
                 'max': str(settings.ALLOCATION_MAX),
                 'step': '100'}))
+
     # The minimum and maximum lengths are loose bounds.
     campus_chartstring = forms.CharField(
         help_text=mark_safe(

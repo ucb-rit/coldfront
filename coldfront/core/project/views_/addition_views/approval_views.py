@@ -501,7 +501,7 @@ class AllocationAdditionNotifyPIView(AllocationAdditionEditExtraFieldsView):
                                 'request_mou_email.html',
                                 {'to_name': self.request_obj.requester.get_full_name(),
                                  'savio_request': self.request_obj,
-                                 'mou_type': 'MOU',
+                                 'mou_type': 'Memorandum of Understanding',
                                  'mou_for': f'{self.request_obj.project.name} service units purchase request',
                                  'base_url': settings.CENTER_BASE_URL,
                                  'signature': 'MyBRC User Portal team', },
