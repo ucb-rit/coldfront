@@ -110,6 +110,7 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
         view_name = 'secure_dir_request_wizard'
         current_step_key = f'{view_name}-current_step'
         data_description_form_data = {
+            '0-department': 'Dept. of Testing',
             '0-data_description': 'a' * 20,
             '0-rdm_consultation': True,
             current_step_key: '0',

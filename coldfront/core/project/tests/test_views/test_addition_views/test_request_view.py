@@ -179,7 +179,7 @@ class TestAllocationAdditionRequestView(TestBase):
             request.num_service_units, Decimal(data['num_service_units']))
         self.assertTrue(pre_time <= request.request_time <= post_time)
         extra_fields = request.extra_fields
-        self.assertEqual(len(extra_fields) + 1, len(data))
+        self.assertEqual(len(extra_fields), len(data))
         for field in data:
             if field == 'num_service_units':
                 self.assertNotIn(field, extra_fields)
