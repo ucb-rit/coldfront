@@ -4,16 +4,17 @@ LABEL description="coldfront"
 
 USER root
 
-# TODO: comment out these lines if flag_mou_generation_enabled=False
+# TODO: comment out these 4 lines if flag_mou_generation_enabled=False
 RUN mkdir /root/.ssh && ssh-keyscan github.com > /root/.ssh/known_hosts
 COPY --chmod=0600 bootstrap/development/id_coldfront /root/.ssh/id_rsa
 RUN pip install git+ssh://git@github.com/ucb-rit/mou-generator.git
+# For generating MOU PDFs from HTML
+RUN yum -y install https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos7.x86_64.rpm
 
 WORKDIR /root
 COPY requirements.txt ./
 RUN pip install -r requirements.txt && rm requirements.txt
 RUN pip install jinja2 pyyaml
-RUN yum -y install https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos7.x86_64.rpm
 
 # mybrc or mylrc
 ARG PORTAL="mybrc"

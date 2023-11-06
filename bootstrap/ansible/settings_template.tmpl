@@ -74,21 +74,23 @@ ALLOW_ALL_JOBS = True
 GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = '{{ google_drive_private_key_file_path }}'
 # Path to prepend to gdstorage file paths. Should be '/'
 GOOGLE_DRIVE_STORAGE_MEDIA_ROOT = '/'
-# Can be used to set permissions e.g "restrict to Berkeley users".
 GOOGLE_DRIVE_PERMISSIONS = ()
 
 FILE_STORAGE = {
     'backend': '{{ file_storage_backend }}',
     'details': {
         'NEW_PROJECT_REQUEST_MOU': {
-            'location': '{{ new_project_request_mou_path }}'
-        },
-        'SECURE_DIRECTORY_REQUEST_MOU': {
-            'location': '{{ secure_directory_request_mou_path }}'
+            'location': '{{ new_project_request_mou_path }}',
+            'filename_type': 'NewProject_MOU',
         },
         'SERVICE_UNITS_PURCHASE_REQUEST_MOU': {
-            'location': '{{ service_units_purchase_request_mou_path }}'
-        }
+            'location': '{{ service_units_purchase_request_mou_path }}',
+            'filename_type': 'AllowancePurchase_MOU',
+        },
+        'SECURE_DIRECTORY_REQUEST_MOU': {
+            'location': '{{ secure_directory_request_mou_path }}',
+            'filename_type': 'SecureDirectory_RUA',
+        },
     },
 }
 
