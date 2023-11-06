@@ -181,10 +181,7 @@ class TestAllocationAdditionRequestView(TestBase):
         extra_fields = request.extra_fields
         self.assertEqual(len(extra_fields), len(data))
         for field in data:
-            if field == 'num_service_units':
-                self.assertNotIn(field, extra_fields)
-            else:
-                self.assertEqual(data[field], extra_fields[field])
+            self.assertEqual(data[field], extra_fields[field])
 
         # A notification email should have been sent to admins.
         self.assertEqual(len(mail.outbox), 1)
