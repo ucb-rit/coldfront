@@ -29,6 +29,6 @@ main.yml
 .vagrant
 .coverage
 htmlcov
-id_coldfront
+id_*
 fetch_database_backup.sh
 google-drive-key.json
