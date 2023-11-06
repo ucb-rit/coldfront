@@ -100,9 +100,9 @@ flag_lrc_enabled: False
 flag_next_period_renewal_requestable_month: 5
 flag_multiple_email_addresses_allowed: False
 # Whether to install and enable the MOU generation package.
-# TODO: For Production and Staging, enable and set deploy key path.
+# TODO: For Production and Staging, enable and set deploy key path to the absolute path.
 flag_mou_generation_enabled: false
-deploy_key_path: "bootstrap/development/id_coldfront"
+deploy_key_path: "/vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator"
 
 
 # Portal settings.

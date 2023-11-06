@@ -465,10 +465,15 @@
           yum:
             name: vim
             state: present
+        
+        - name: Register user home directory
+          user:
+            name: "{{ djangooperator }}"
+          register: user
 
         - name: Add dev QOL lines to .bashrc
           blockinfile:
-            path: {{ ansible_env.HOME }}/.bashrc
+            path: "{{ user.home }}/.bashrc"
             block: |
               # Upon login, navigate to the ColdFront directory and source the virtual environment.
               cd {{ git_prefix }}/{{ reponame }}
@@ -545,25 +550,39 @@
         - block:
           # Allow pip installation of private git repo for mou generation.
 
+          - name: Register user home directory
+            user:
+              name: "{{ djangooperator }}"
+            register: user
+
           - name: Check if github in known_hosts
             shell: ssh-keygen -F github.com
             register: github_known_hosts
+            become_user: "{{ djangooperator }}"
             changed_when: false
             failed_when: false
 
           - name: Add github.com to known_hosts
-            shell: ssh-keyscan github.com >> {{ ansible_env.HOME }}/.ssh/known_hosts
-            changed_when: github_known_hosts.rc != 0
+            shell: "ssh-keyscan github.com >> {{ user.home }}/.ssh/known_hosts"
             become_user: "{{ djangooperator }}"
+            when: github_known_hosts.rc != 0
 
-          - name: Copy deploy key to root user's .ssh directory
+          - name: Copy deploy key to user's .ssh directory
             copy:
               src: "{{ mou_generator_deploy_key_path }}"
-              dest: {{ ansible_env.HOME }}/.ssh/id_mou_generator
+              dest: "{{ user.home }}/.ssh/id_mou_generator"
               owner: "{{ djangooperator }}"
               group: "{{ djangooperator }}"
               mode: 0600
             become_user: "{{ djangooperator }}"
+          
+          - name: Add id_mou_generator to ssh config
+            blockinfile:
+              path: "{{ user.home }}/.ssh/config"
+              block: |
+                Host github.com
+                  IdentityFile ~/.ssh/id_mou_generator
+              create: true
 
           - name: Install mou generation package
             pip:
@@ -571,7 +590,7 @@
               executable: "{{ git_prefix }}/venv/bin/pip3"
             become_user: "{{ djangooperator }}"
             environment:
-              GIT_SSH_COMMAND: "{{ mou_generator_deploy_key_path }}"
+              GIT_SSH_COMMAND: "ssh -o BatchMode=yes"
 
           when: flag_mou_generation_enabled
 

@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 from coldfront.core.allocation.models import AllocationAdditionRequest
 from coldfront.core.project.forms import MemorandumSignedForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectRechargeExtraFieldsForm
@@ -23,6 +21,8 @@ from django.views.generic import DetailView
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
 
+from copy import deepcopy
+from decimal import Decimal
 import iso8601
 import logging
 import os
@@ -473,7 +473,7 @@ class AllocationAdditionEditExtraFieldsView(LoginRequiredMixin,
         """Save the form."""
         self.request_obj.extra_fields = form.cleaned_data
         if form.cleaned_data['num_service_units'] != str(self.request_obj.num_service_units):
-            self.request_obj.num_service_units = float(form.cleaned_data['num_service_units'])
+            self.request_obj.num_service_units = Decimal(form.cleaned_data['num_service_units'])
         self.request_obj.save()
         message = 'The request has been updated.'
         messages.success(self.request, message)
@@ -504,7 +504,7 @@ class AllocationAdditionNotifyPIView(AllocationAdditionEditExtraFieldsView):
                                  'mou_type': 'Memorandum of Understanding',
                                  'mou_for': f'{self.request_obj.project.name} service units purchase request',
                                  'base_url': settings.CENTER_BASE_URL,
-                                 'signature': 'MyBRC User Portal team', },
+                                 'signature': settings.EMAIL_SIGNATURE, },
                                 settings.DEFAULT_FROM_EMAIL,
                                 [self.request_obj.requester.email])
         except Exception as e:

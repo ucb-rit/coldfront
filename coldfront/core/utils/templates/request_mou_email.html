@@ -2,8 +2,8 @@ Dear {{ to_name }},
 
 The {{ mou_type | lower }} for the {{ mou_for }} has been created and is ready to be signed.
 
-Please click <a href="{{ base_url }}{% url 'new-project-request-detail' savio_request.pk %}">here</a> to be able to download the MOU.
-Once you have downloaded the MOU, please sign it and upload it on the same page.
+Please click <a href="{{ base_url }}{% url 'new-project-request-detail' savio_request.pk %}">here</a> to be able to download the {% if mou_type == 'Memorandum of Understanding' %}MOU{% else %}RUA{% endif %}.
+Once you have downloaded the {% if mou_type == 'Memorandum of Understanding' %}MOU{% else %}RUA{% endif %}, please sign it and upload it on the same page.
 
 Thank you,
 {{ signature }}

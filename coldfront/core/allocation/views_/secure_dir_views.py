@@ -1778,7 +1778,7 @@ class SecureDirRequestNotifyPIView(SecureDirRequestEditDepartmentView):
                                  'mou_type': 'Researcher Use Agreement',
                                  'mou_for': f'{self.request_obj.project.name} secure directory request',
                                  'base_url': settings.CENTER_BASE_URL,
-                                 'signature': 'MyBRC User Portal team', },
+                                 'signature': settings.EMAIL_SIGNATURE, },
                                 settings.DEFAULT_FROM_EMAIL,
                                 [self.request_obj.requester.email])
         except Exception as e:

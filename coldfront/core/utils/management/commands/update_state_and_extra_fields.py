@@ -27,6 +27,7 @@ from coldfront.core.project.utils_.renewal_utils import \
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import \
     ComputingAllowance
 from coldfront.core.utils.common import display_time_zone_current_date
+from coldfront.core.utils.common import add_argparse_dry_run_argument
 
 class Command(BaseCommand):
     help = 'Update the state and extra fields for Project Allocation Requests' \
@@ -39,15 +40,16 @@ class Command(BaseCommand):
             help='Update state')
         parser.add_argument('--extra-fields', action='store_true',
             help='Update extra fields')
-        parser.add_argument('--dry-run', action='store_true',
-            help='Update extra fields')
+        add_argparse_dry_run_argument(parser)
 
     @staticmethod
     def add_notified_to_state(request, dry_run=False):
         if 'notified' not in request.state:
+            status = 'Pending' if request.status == 'Under Review' \
+                               else 'Complete'
             request.state['notified'] = {
-            'status': 'Pending',
-            'timestamp': '',
+                'status': status,
+                'timestamp': '',
             }
             if dry_run:
                 print(f'Added "notified" to state for {request}')

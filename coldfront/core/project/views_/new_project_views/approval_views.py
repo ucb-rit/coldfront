@@ -300,7 +300,7 @@ class SavioProjectRequestNotifyPIView(SavioProjectRequestEditExtraFieldsView):
                                  'mou_type': 'Memorandum of Understanding',
                                  'mou_for': f'{self.request_obj.project.name} project request',
                                  'base_url': settings.CENTER_BASE_URL,
-                                 'signature': 'MyBRC User Portal team', },
+                                 'signature': settings.EMAIL_SIGNATURE, },
                                 settings.DEFAULT_FROM_EMAIL,
                                 [self.request_obj.pi.email])
         except Exception as e:
