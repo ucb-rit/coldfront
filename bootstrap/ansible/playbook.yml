@@ -558,8 +558,8 @@
 
           - name: Copy deploy key to root user's .ssh directory
             copy:
-              src: "{{ git_prefix }}/{{ reponame }}/bootstrap/development/id_coldfront"
-              dest: {{ ansible_env.HOME }}/.ssh/id_rsa
+              src: "{{ mou_generator_deploy_key_path }}"
+              dest: {{ ansible_env.HOME }}/.ssh/id_mou_generator
               owner: "{{ djangooperator }}"
               group: "{{ djangooperator }}"
               mode: 0600
@@ -570,6 +570,9 @@
               name: git+ssh://git@github.com/ucb-rit/mou-generator.git
               executable: "{{ git_prefix }}/venv/bin/pip3"
             become_user: "{{ djangooperator }}"
+            environment:
+              GIT_SSH_COMMAND: "{{ mou_generator_deploy_key_path }}"
+
           when: flag_mou_generation_enabled
 
         # Install Django application dependencies

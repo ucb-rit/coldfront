@@ -135,6 +135,12 @@ emails will be outputted here for inspection.
   python -m smtpd -n -c DebuggingServer localhost:1025
   ```
 
+#### MOU Generation
+- By default, an empty pdf is generated. To install the MOU Generation library, 
+set `flag_mou_generation_enabled` to `true` in `main.yml`, and point 
+`mou_generator_deploy_key_path` to the path of a deploy key for
+`https://github.com/ucb-rit/mou-generator`
+
 #### pylint
 
 - [pylint](https://pylint.pycqa.org/en/latest/) is a python module that tests 
