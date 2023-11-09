@@ -10,6 +10,7 @@ from django.views.decorators.cache import cache_page
 # Begin Test code
 from django.core.exceptions import BadRequest
 from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
 # End Test code
 
 from coldfront.core.allocation.models import (Allocation,
@@ -30,12 +31,8 @@ from coldfront.core.project.models import ProjectUserRemovalRequest
 # from coldfront.core.research_output.models import ResearchOutput
 
 
-#Begin test code for bad requests
-#def test_400_bad_request_view(request):
-#    raise BadRequest("This is a bad request , 400")
 
 
-#End test code for bad requests
 
 def home(request):
 
@@ -218,3 +215,14 @@ def allocation_summary(request):
     context['resources_chart_data'] = resources_chart_data
 
     return render(request, 'portal/allocation_summary.html', context)
+
+
+#def custom_handler400(request, exception):
+#    return render(request, 'portal/error_lrc_400.html', status=400)
+
+def custom_handler400(request, exception):
+    print("Custom 400 handler called")
+    return HttpResponseBadRequest("Custom 400 bad request handler")
+#Begin test code for bad requests
+def test_400_bad_request_view(request):
+    raise HttpResponseBadRequest("This is a bad request y'all")
