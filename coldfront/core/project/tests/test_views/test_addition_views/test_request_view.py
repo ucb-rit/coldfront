@@ -154,7 +154,7 @@ class TestAllocationAdditionRequestView(TestBase):
         pre_time = utc_now_offset_aware()
 
         data = {
-            'num_service_units': '100',
+            'num_service_units': 100,
             'campus_chartstring': 'Campus Chartstring',
             'chartstring_account_type': 'Chartstring Account Type',
             'chartstring_contact_name': 'Chartstring Account Name',

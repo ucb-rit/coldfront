@@ -5,6 +5,7 @@ from coldfront.core.resource.models import ResourceAttribute
 from coldfront.core.resource.models import ResourceAttributeType
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.utils.mou import get_mou_filename
 from coldfront.core.utils.tests.test_base import TestBase
 from coldfront.core.utils.tests.test_base import enable_deployment
 from coldfront.core.allocation.models import AllocationAdditionRequest, AllocationAdditionRequestStatusChoice, AllocationRenewalRequest, SecureDirRequest, SecureDirRequestStatusChoice
@@ -66,7 +67,7 @@ class MOUTestBase(TestBase):
     def _test_download_upload_download(self, request_type):
         url = self.download_unsigned_mou_url(self.request.pk, request_type)
         response = self.client.get(url)
-        filename = get_filename(self.request)
+        filename = get_mou_filename(self.request)
         self.assertEqual(response.get('Content-Disposition'),
                          f'attachment; filename="{filename}"')
 
