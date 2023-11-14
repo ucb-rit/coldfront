@@ -8,7 +8,7 @@ from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import transaction
 from django.db.models import Case, CharField, Q, Value, When
 from django.forms import formset_factory
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
@@ -1430,3 +1430,7 @@ class ProjectReivewEmailView(LoginRequiredMixin, UserPassesTestMixin, FormView):
 
     def get_success_url(self):
         return reverse('project-review-list')
+
+
+def custom_400_error(request,exception):
+    return HttpResponseBadRequest('Custom error page content') 
