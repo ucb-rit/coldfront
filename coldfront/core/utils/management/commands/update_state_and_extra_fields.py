@@ -38,7 +38,7 @@ class Command(BaseCommand):
             help='Update both state and extra fields')
         parser.add_argument('--state', action='store_true',
             help='Update state')
-        parser.add_argument('--extra-fields', action='store_true',
+        parser.add_argument('--extra_fields', action='store_true',
             help='Update extra fields')
         add_argparse_dry_run_argument(parser)
 
