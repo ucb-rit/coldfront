@@ -1,3 +1,5 @@
+from coldfront.core.project.views import custom_400_error
+handler400 = custom_400_error
 from django.urls import path
 from django.views.generic import TemplateView
 
@@ -16,7 +18,7 @@ import coldfront.core.project.views_.renewal_views.request_views as renewal_requ
 import coldfront.core.allocation.views_.secure_dir_views as secure_dir_views
 
 urlpatterns = [
-    path('test-400', project_views.custom_400_error, name='test-400'),
+    path('test-400', custom_400_error, name='test-400'),
     path('<int:pk>/', project_views.ProjectDetailView.as_view(), name='project-detail'),
     path('<int:pk>/archive', project_views.ProjectArchiveProjectView.as_view(), name='project-archive'),
     path('', project_views.ProjectListView.as_view(), name='project-list'),
