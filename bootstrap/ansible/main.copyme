@@ -177,7 +177,7 @@ sentry_dsn: ""
 # service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
 
 # # MOU generator settings.
-# mou_generator_deploy_key_path: "/vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator"
+# mou_generator_deploy_key_path: /vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator
 
 # # SSL settings.
 # ssl_enabled: false
