@@ -569,7 +569,7 @@
 
           - name: Copy deploy key to user's .ssh directory
             copy:
-              src: "{{ mou_generator_deploy_key_path }}"
+              src: "{{ git_prefix }}/{{ mou_generator_deploy_key_path }}"
               dest: "{{ user.home }}/.ssh/id_mou_generator"
               owner: "{{ djangooperator }}"
               group: "{{ djangooperator }}"
@@ -584,6 +584,7 @@
                   IdentityFile ~/.ssh/id_mou_generator
               create: true
 
+          # Note: only updates if the version set in mou-generator/setup.py increases.
           - name: Install mou generation package
             pip:
               name: git+ssh://git@github.com/ucb-rit/mou-generator.git

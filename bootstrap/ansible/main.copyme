@@ -167,7 +167,6 @@ sentry_dsn: ""
 # # TODO: fill these out
 # # Note: local_storage currently not implemented
 # file_storage_backend: 'google_drive'
-# # TODO: Change to absolute path
 # google_drive_private_key_file_path: 'google-drive-key.json'
 # # for google_drive, provide only the bottom-level directory name
 # # with a slash at the end. If someone shares a new folder with the same name
@@ -177,8 +176,8 @@ sentry_dsn: ""
 # service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
 
 # # MOU generator settings.
-# # Set to the absolute path. Only needed if flag_mou_generation_enabled=True
-# mou_generator_deploy_key_path: /vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator
+# # Only needed if flag_mou_generation_enabled=True
+# mou_generator_deploy_key_path: bootstrap/development/id_mou_generator
 
 # # SSL settings.
 # ssl_enabled: false
@@ -240,7 +239,6 @@ sentry_dsn: ""
 # # TODO: fill these out
 # # Note: local_storage currently not implemented
 # file_storage_backend: 'google_drive'
-# # TODO: Change to absolute path
 # google_drive_private_key_file_path: 'google-drive-key.json'
 # # for google_drive, provide only the bottom-level directory name
 # # with a slash at the end. If someone shares a new folder with the same name
@@ -250,7 +248,8 @@ sentry_dsn: ""
 # service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
 
 # # MOU generator settings.
-# mou_generator_deploy_key_path: "/vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator"
+# # Only needed if flag_mou_generation_enabled=True
+# mou_generator_deploy_key_path: bootstrap/development/id_mou_generator
 
 # # SSL settings.
 # ssl_enabled: true
@@ -312,7 +311,6 @@ sentry_dsn: ""
 # # TODO: fill these out
 # # Note: local_storage currently not implemented
 # file_storage_backend: 'google_drive'
-# # TODO: Change to absolute path
 # google_drive_private_key_file_path: 'google-drive-key.json'
 # # for google_drive, provide only the bottom-level directory name
 # # with a slash at the end. If someone shares a new folder with the same name
@@ -322,7 +320,8 @@ sentry_dsn: ""
 # service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
 
 # # MOU generator settings.
-# mou_generator_deploy_key_path: "/vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator"
+# # Only needed if flag_mou_generation_enabled=True
+# mou_generator_deploy_key_path: bootstrap/development/id_mou_generator
 
 # # SSL settings.
 # ssl_enabled: false
