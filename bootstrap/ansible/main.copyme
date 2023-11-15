@@ -100,7 +100,7 @@ flag_lrc_enabled: False
 flag_next_period_renewal_requestable_month: 5
 flag_multiple_email_addresses_allowed: False
 # Whether to install and enable the MOU generation package.
-# TODO: For Production and Staging, enable and set deploy key path to the absolute path.
+# TODO: For Production and Staging, enable this
 flag_mou_generation_enabled: false
 
 
@@ -177,6 +177,7 @@ sentry_dsn: ""
 # service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
 
 # # MOU generator settings.
+# # Set to the absolute path. Only needed if flag_mou_generation_enabled=True
 # mou_generator_deploy_key_path: /vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator
 
 # # SSL settings.
