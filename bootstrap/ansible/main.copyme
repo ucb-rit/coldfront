@@ -102,7 +102,6 @@ flag_multiple_email_addresses_allowed: False
 # Whether to install and enable the MOU generation package.
 # TODO: For Production and Staging, enable and set deploy key path to the absolute path.
 flag_mou_generation_enabled: false
-mou_generator_deploy_key_path: "/vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator"
 
 
 # Portal settings.
@@ -177,6 +176,9 @@ sentry_dsn: ""
 # secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
 # service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
 
+# # MOU generator settings.
+# mou_generator_deploy_key_path: "/vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator"
+
 # # SSL settings.
 # ssl_enabled: false
 # ssl_certificate_file: /etc/ssl/ssl_certificate.file
@@ -246,6 +248,9 @@ sentry_dsn: ""
 # secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
 # service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
 
+# # MOU generator settings.
+# mou_generator_deploy_key_path: "/vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator"
+
 # # SSL settings.
 # ssl_enabled: true
 # ssl_certificate_file: /etc/ssl/ssl_certificate.file
@@ -314,6 +319,9 @@ sentry_dsn: ""
 # new_project_request_mou_path: 'New Project Request MOUs/'
 # secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
 # service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
+
+# # MOU generator settings.
+# mou_generator_deploy_key_path: "/vagrant/coldfront_app/coldfront/bootstrap/development/id_mou_generator"
 
 # # SSL settings.
 # ssl_enabled: false
