@@ -26,7 +26,10 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
             return True
         if self.request.user.has_perm('project.can_view_all_projects'):
             return True
-        return True
+        if self.request.user == self.request_obj.pi or \
+                                self.request.user == self.request_obj.requester:
+            return True
+        return False
 
     def dispatch(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
