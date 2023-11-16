@@ -1716,9 +1716,10 @@ class SecureDirRequestUndenyRequestView(LoginRequiredMixin,
                 'secure-dir-request-detail',
                 kwargs={'pk': kwargs.get('pk')}))
 
-class SecureDirRequestEditDepartmentView(FormView, LoginRequiredMixin,
+class SecureDirRequestEditDepartmentView(LoginRequiredMixin,
                                          UserPassesTestMixin,
-                                         SecureDirRequestMixin):
+                                         SecureDirRequestMixin,
+                                         FormView):
     template_name = 'secure_dir/secure_dir_request/secure_dir_request_edit_department.html'
     form_class = SecureDirRequestEditDepartmentForm
 
