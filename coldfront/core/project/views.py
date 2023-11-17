@@ -1433,4 +1433,12 @@ class ProjectReivewEmailView(LoginRequiredMixin, UserPassesTestMixin, FormView):
 
 
 def custom_400_error(request,exception):
-    return HttpResponseBadRequest('Custom error page content') 
+    return HttpResponseBadRequest("""
+    <html>
+        <head><title>400 Bad Request</title></head>
+        <body>
+            <h1>Bad Request (400)</h1>
+            <p>Sorry, your request cannot be processed.</p>
+        </body>
+    </html>
+    """)

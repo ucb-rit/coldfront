@@ -18,7 +18,7 @@ import coldfront.core.project.views_.renewal_views.request_views as renewal_requ
 import coldfront.core.allocation.views_.secure_dir_views as secure_dir_views
 
 urlpatterns = [
-    path('test-400', custom_400_error, name='test-400'),
+    path('test-400/', custom_400_error, name='test-400'),
     path('<int:pk>/', project_views.ProjectDetailView.as_view(), name='project-detail'),
     path('<int:pk>/archive', project_views.ProjectArchiveProjectView.as_view(), name='project-archive'),
     path('', project_views.ProjectListView.as_view(), name='project-list'),
@@ -235,5 +235,4 @@ with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
              ),
              name='secure-dir-request'),
     ]
-handler400 = custom_400_error
 urlpatterns = urlpatterns + flagged_url_patterns
