@@ -9,6 +9,7 @@ from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.utils.forms.file_upload_forms import PDFUploadForm
 from coldfront.core.utils.mou import get_mou_filename
+from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
 
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -26,8 +27,13 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
             return True
         if self.request.user.has_perm('project.can_view_all_projects'):
             return True
-        if self.request.user == self.request_obj.pi or \
-           self.request.user == self.request_obj.requester:
+        if self.request.user == self.request_obj.requester:
+            return True
+        if self.request_type == 'service-units-purchase' and is_user_manager_or_pi_of_project(self.request.user, self.request_obj.project):
+            return True
+        if self.request_type == 'secure-dir' and self.request.user in self.request_obj.project.pis():
+            return True
+        if self.request_type == 'new-project' and self.request.user == self.request_obj.pi:
             return True
         return False
 

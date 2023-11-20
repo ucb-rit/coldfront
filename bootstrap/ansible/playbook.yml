@@ -569,7 +569,7 @@
 
           - name: Copy deploy key to user's .ssh directory
             copy:
-              src: "{{ git_prefix }}/{{ mou_generator_deploy_key_path }}"
+              src: "{{ git_prefix }}/{{ reponame }}/{{ mou_generator_deploy_key_path }}"
               dest: "{{ user.home }}/.ssh/id_mou_generator"
               owner: "{{ djangooperator }}"
               group: "{{ djangooperator }}"

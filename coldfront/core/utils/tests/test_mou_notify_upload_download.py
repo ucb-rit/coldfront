@@ -32,6 +32,13 @@ class MOUTestBase(TestBase):
         """Setup test data"""
         super().setUp()
         self.create_test_user()
+        self.other_user = User.objects.create(
+            email='other_user@email.com',
+            first_name='Other',
+            last_name='User',
+            username='other_user')
+        self.other_user.set_password(self.password)
+        self.other_user.save()
         self.sign_user_access_agreement(self.user)
         self.client.login(username=self.user.username, password=self.password)
         
@@ -42,10 +49,10 @@ class MOUTestBase(TestBase):
             username='admin',
             is_superuser=True,
             is_staff=True,)
-        self.admin_user.set_password('admin')
+        self.admin_user.set_password(self.password)
         self.admin_user.save()
         self.admin_client = Client()
-        self.admin_client.login(username='admin', password='admin')
+        self.admin_client.login(username='admin', password=self.password)
         self.request = None
 
     @staticmethod
@@ -66,6 +73,10 @@ class MOUTestBase(TestBase):
     
     def _test_download_upload_download(self, request_type):
         url = self.download_unsigned_mou_url(self.request.pk, request_type)
+        self.assert_has_access(url, self.user)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.other_user, False)
+        self.client.login(username=self.user.username, password=self.password)
         response = self.client.get(url)
         filename = get_mou_filename(self.request)
         self.assertEqual(response.get('Content-Disposition'),
@@ -73,12 +84,18 @@ class MOUTestBase(TestBase):
 
         url = self.upload_mou_url(self.request.pk, request_type)
         self.assert_has_access(url, self.user)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.other_user, False)
         self.client.login(username=self.user.username, password=self.password)
         self.request.mou_file = File(BytesIO(b'abc'), 'mou.pdf')
         self.request.save()
         self.request.refresh_from_db()
 
         url = self.download_mou_url(self.request.pk, request_type)
+        self.assert_has_access(url, self.user)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.other_user, False)
+        self.client.login(username=self.user.username, password=self.password)
         response = self.client.get(url)
         self.assertEqual(next(response.streaming_content), b'abc')
 
@@ -146,6 +163,10 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
     def readiness_url(pk):
         return reverse(f'new-project-request-review-readiness', kwargs={'pk': pk})
     
+    @staticmethod
+    def edit_extra_fields_url(pk):
+        return reverse(f'new-project-request-edit-extra-fields', kwargs={'pk': pk})
+        
     @enable_deployment('BRC')
     def test_new_project(self):
         """Test that the MOU notification task, MOU upload, and MOU download
@@ -167,11 +188,28 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
         request_type = 'new-project'
 
         url = self.eligibility_url(self.request.pk)
-        response = self.admin_client.post(url, data=eligibility)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.user, False)
+        self.assert_has_access(url, self.other_user, False)
+        self.admin_client.post(url, data=eligibility)
         url = self.readiness_url(self.request.pk)
-        response = self.admin_client.post(url, data=readiness)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.user, False)
+        self.assert_has_access(url, self.other_user, False)
+        self.admin_client.post(url, data=readiness)
         url = self.review_notify_url(self.request.pk, request_type)
-        response = self.admin_client.post(url, data=extra_fields)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.user, False)
+        self.assert_has_access(url, self.other_user, False)
+        self.admin_client.post(url, data=extra_fields)
+        extra_fields['num_gsis'] = 12
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.extra_fields['num_gsis'], 10)
+        url = self.edit_extra_fields_url(self.request.pk)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.user, False)
+        self.assert_has_access(url, self.other_user, False)
+        self.admin_client.post(url, data=extra_fields)
 
         self.request.refresh_from_db()
         self.assertEqual(self.request.state['eligibility']['status'], 'Approved')
@@ -180,6 +218,8 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
         self.assertEqual(self.request.extra_fields['course_name'], 'TEST 101')
         self.assertEqual(self.request.extra_fields['course_department'], 'Dept. of Testing')
         self.assertEqual(self.request.extra_fields['point_of_contact'], 'Test User')
+        self.assertEqual(self.request.extra_fields['num_students'], 10)
+        self.assertEqual(self.request.extra_fields['num_gsis'], 12)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, '[MyBRC-User-Portal] Savio Project Request Ready To Be Signed')
 
@@ -206,6 +246,10 @@ class TestAllocationAdditionMOUNotifyUploadDownload(MOUTestBase):
                 name='Under Review'),
             num_service_units=Decimal('1000.00'))
 
+    @staticmethod
+    def edit_extra_fields_url(pk):
+        return reverse(f'service-units-purchase-request-edit-extra-fields', kwargs={'pk': pk})
+
     @enable_deployment('BRC')
     def test_allocation_addition(self):
         """Test that the MOU notification task, MOU upload, and MOU download
@@ -221,11 +265,22 @@ class TestAllocationAdditionMOUNotifyUploadDownload(MOUTestBase):
             'chartstring_contact_email': 'test@email.com',
         }
         url = self.review_notify_url(self.request.pk, request_type)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.user, False)
+        self.assert_has_access(url, self.other_user, False)
+        self.admin_client.post(url, data=extra_fields)
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.extra_fields['num_service_units'], 100000)
+        extra_fields['num_service_units'] = 200000
+        url = self.edit_extra_fields_url(self.request.pk)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.user, False)
+        self.assert_has_access(url, self.other_user, False)
         self.admin_client.post(url, data=extra_fields)
 
         self.request.refresh_from_db()
         self.assertEqual(self.request.state['notified']['status'], 'Complete')
-        self.assertEqual(self.request.extra_fields['num_service_units'], 100000)
+        self.assertEqual(self.request.extra_fields['num_service_units'], 200000)
         self.assertEqual(self.request.extra_fields['chartstring_contact_name'], 'Test User')
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, '[MyBRC-User-Portal] Service Units Purchase Request Ready To Be Signed')
@@ -257,6 +312,10 @@ class SecureDirMOUNotifyUploadDownload(MOUTestBase):
     def rdm_consultation_url(pk):
         return reverse('secure-dir-request-review-rdm-consultation', kwargs={'pk': pk})
 
+    @staticmethod
+    def edit_department_url(pk):
+        return reverse(f'secure-dir-request-edit-department', kwargs={'pk': pk})
+
     @enable_deployment('BRC')
     def test_allocation_addition(self):
         """Test that the MOU notification task, MOU upload, and MOU download
@@ -266,13 +325,28 @@ class SecureDirMOUNotifyUploadDownload(MOUTestBase):
         department = { 'department': 'Dept. of Testing', }
 
         url = self.rdm_consultation_url(pk=self.request.pk)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.user, False)
+        self.assert_has_access(url, self.other_user, False)
         self.admin_client.post(url, data=rdm_consultation)
         url = self.review_notify_url(self.request.pk, request_type)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.user, False)
+        self.assert_has_access(url, self.other_user, False)
         self.admin_client.post(url, data=department)
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.department, 'Dept. of Testing')
+        department['department'] = 'Dept. of Testing 2'
+        url = self.edit_department_url(self.request.pk)
+        self.assert_has_access(url, self.admin_user)
+        self.assert_has_access(url, self.user, False)
+        self.assert_has_access(url, self.other_user, False)
+        self.admin_client.post(url, data=department)
+        
 
         self.request.refresh_from_db()
         self.assertEqual(self.request.state['notified']['status'], 'Complete')
-        self.assertEqual(self.request.department, 'Dept. of Testing')
+        self.assertEqual(self.request.department, 'Dept. of Testing 2')
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, '[MyBRC-User-Portal] Secure Directory Request Ready To Be Signed')
 

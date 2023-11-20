@@ -135,6 +135,11 @@ emails will be outputted here for inspection.
   python -m smtpd -n -c DebuggingServer localhost:1025
   ```
 
+#### Google Drive Storage
+- To obtain a JSON key for `google_drive_private_key_file_path`, follow the
+instructions at https://help.talend.com/r/en-US/8.0/google-drive/how-to-access-google-drive-using-service-account-json-file-a-google
+to create a google drive API service account and get a JSON key for it.
+
 #### MOU Generation
 - By default, an empty pdf is generated. To install the MOU Generation library, 
 set `flag_mou_generation_enabled` to `true` in `main.yml`, and point 
