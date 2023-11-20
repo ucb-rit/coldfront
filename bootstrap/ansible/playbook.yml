@@ -585,6 +585,7 @@
               create: true
 
           # Note: only updates if the version set in mou-generator/setup.py increases.
+          # Otherwise, force reinstall with pip and the --force-reinstall flag.
           - name: Install mou generation package
             pip:
               name: git+ssh://git@github.com/ucb-rit/mou-generator.git

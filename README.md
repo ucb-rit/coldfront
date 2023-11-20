@@ -141,6 +141,10 @@ set `flag_mou_generation_enabled` to `true` in `main.yml`, and point
 `mou_generator_deploy_key_path` to the path of a deploy key for
 `https://github.com/ucb-rit/mou-generator`
 
+- To create a deploy key, run `ssh-keygen`, specifiying no password when 
+prompted. Then, navigate to `https://github.com/ucb-rit/mou-generator/settings/keys`
+and add the public ssh key.
+
 #### pylint
 
 - [pylint](https://pylint.pycqa.org/en/latest/) is a python module that tests 
