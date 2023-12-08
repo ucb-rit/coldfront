@@ -65,15 +65,37 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
                'service-units-purchase': 'service-units-purchase-request-detail'}[self.request_type]
         return reverse(ret, kwargs={'pk': self.kwargs.get('pk')})
 
-class MOUUploadView(BaseMOUView, FormView):
+
+
+
+# TODO: Note that this has been made specific to SavioProjectAllocationRequest,
+#  and needs to be re-generalized.
+
+
+from coldfront.core.utils.forms.file_upload_forms import SModelForm
+from django.views.generic.edit import UpdateView
+
+class MOUUploadView(BaseMOUView, UpdateView):
     template_name = 'upload_mou.html'
-    form_class = PDFUploadForm
+    # form_class = PDFUploadForm
+    # TODO
+    model = SavioProjectAllocationRequest
+    form_class = SModelForm
+    context_object_name = 'object'
 
     def form_valid(self, form):
         """set request's MOU to the uploaded file"""
-        self.request_obj.mou_file = form.cleaned_data['file']
-        self.request_obj.save()
+        # self.request_obj.mou_file = form.cleaned_data['file']
+        # self.request_obj.save()
+
+        instance = form.save()
+
         return super().form_valid(form)
+
+
+    def get_object(self, queryset=None):
+        # TODO
+        return SavioProjectAllocationRequest.objects.get(pk=self.kwargs['pk'])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -82,6 +104,11 @@ class MOUUploadView(BaseMOUView, FormView):
         context['request_type_long'] = self.request_type_long
         context['return_url'] = self.get_success_url()
         return context
+
+    # TODO
+    # def get_form_class(self):
+    #     from coldfront.core.utils.forms.file_upload_forms import model_pdf_upload_form_factory
+    #     return model_pdf_upload_form_factory(self.request_class)
 
 class MOUDownloadView(BaseMOUView, View):
     
