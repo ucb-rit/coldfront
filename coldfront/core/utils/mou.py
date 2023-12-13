@@ -1,14 +1,20 @@
-from coldfront.core.utils.common import import_from_settings
-from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from django.template.loader import render_to_string
 import datetime
+
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
+from django.core.files.storage import FileSystemStorage
+from django.db import models
+from django.db.models.fields.files import FieldFile
+
+from gdstorage.storage import GoogleDriveStorage
 
 
 def upload_to_func(instance, filename):
-    from coldfront.core.allocation.models import (AllocationAdditionRequest,
-                                                  SecureDirRequest)
+    from coldfront.core.allocation.models import AllocationAdditionRequest
+    from coldfront.core.allocation.models import SecureDirRequest
     from coldfront.core.project.models import SavioProjectAllocationRequest
-    fs = import_from_settings('FILE_STORAGE') or {}
+
+    fs = settings.FILE_STORAGE
     path = ''
     if isinstance(instance, SavioProjectAllocationRequest):
         path += fs['details']['NEW_PROJECT_REQUEST_MOU']['location']
@@ -22,16 +28,19 @@ def upload_to_func(instance, filename):
     path += filename
     return path
 
+
 def get_mou_filename(request_obj):
-    from coldfront.core.allocation.models import (AllocationAdditionRequest,
-                                                  SecureDirRequest)
+    from coldfront.core.allocation.models import AllocationAdditionRequest
+    from coldfront.core.allocation.models import SecureDirRequest
     from coldfront.core.project.models import SavioProjectAllocationRequest
-    fs = import_from_settings('FILE_STORAGE') or {}
+
+    fs = settings.FILE_STORAGE
     type_ = ''
     if isinstance(request_obj, SavioProjectAllocationRequest):
         type_ += fs['details']['NEW_PROJECT_REQUEST_MOU']['filename_type']
     elif isinstance(request_obj, AllocationAdditionRequest):
-        type_ += fs['details']['SERVICE_UNITS_PURCHASE_REQUEST_MOU']['filename_type']
+        type_ += fs[
+            'details']['SERVICE_UNITS_PURCHASE_REQUEST_MOU']['filename_type']
     elif isinstance(request_obj, SecureDirRequest):
         type_ += fs['details']['SECURE_DIRECTORY_REQUEST_MOU']['filename_type']
     project_name = request_obj.project.name
@@ -40,40 +49,34 @@ def get_mou_filename(request_obj):
     return filename
 
 
-
-
-
-# TODO: Note:
-#  For FILE_STORAGE['backend'] == 'file_system', files get written to MEDIA_ROOT
-#   + upload_to_func path.
-#  MEDIA_ROOT must be set in settings to something appropriate.
-
-from django.core.exceptions import ImproperlyConfigured
-from django.core.files.storage import FileSystemStorage
-
-from gdstorage.storage import GoogleDriveStorage
-
-from django.db import models
-
-
-
-from django.db.models.fields.files import FieldFile
-
 class DynamicFieldFile(FieldFile):
+    """A FieldFile whose file storage backend is determined by
+    application settings."""
 
     def __init__(self, instance, field, name):
         super().__init__(instance, field, name)
-        fs = import_from_settings('FILE_STORAGE') or {}
+        self.storage = self._get_storage_backend()
+
+    @staticmethod
+    def _get_storage_backend():
+        fs = settings.FILE_STORAGE
         backend = fs['backend']
         if backend == 'file_system':
-            self.storage = FileSystemStorage()
+            # Files are written to the concatenation of MEDIA_ROOT and the path
+            # designated by upload_to in the model field.
+            return FileSystemStorage()
         elif backend == 'google_drive':
-            self.storage = GoogleDriveStorage(
-                permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS'))
+            return GoogleDriveStorage(
+                permissions=settings.GOOGLE_DRIVE_PERMISSIONS)
         else:
             raise ImproperlyConfigured(
                 f'Unexpected FILE_STORAGE backend: {backend}.')
 
 
 class DynamicFileField(models.FileField):
+    """A FieldFile that stores files in the file storage backend
+    determined by application settings.
+
+    Settings may be changed at runtime without a database migration."""
+
     attr_class = DynamicFieldFile
