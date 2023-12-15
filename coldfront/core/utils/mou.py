@@ -6,8 +6,6 @@ from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.db.models.fields.files import FieldFile
 
-from gdstorage.storage import GoogleDriveStorage
-
 
 def upload_to_func(instance, filename):
     from coldfront.core.allocation.models import AllocationAdditionRequest
@@ -66,8 +64,11 @@ class DynamicFieldFile(FieldFile):
             # designated by upload_to in the model field.
             return FileSystemStorage()
         elif backend == 'google_drive':
-            return GoogleDriveStorage(
-                permissions=settings.GOOGLE_DRIVE_PERMISSIONS)
+            from gdstorage.storage import GoogleDriveStorage
+            # If necessary, permissions may be added to restrict access.
+            # https://django-googledrive-storage.readthedocs.io/en/latest/#file-permissions
+            permissions = ()
+            return GoogleDriveStorage(permissions=permissions)
         else:
             raise ImproperlyConfigured(
                 f'Unexpected FILE_STORAGE backend: {backend}.')

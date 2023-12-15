@@ -27,7 +27,6 @@ from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.mou import DynamicFileField
 from coldfront.core.utils.mou import upload_to_func
 
-from gdstorage.storage import GoogleDriveStorage
 
 logger = logging.getLogger(__name__)
 

@@ -239,6 +239,31 @@
             owner: "{{ djangooperator }}"
             group: apache
 
+        # Create the Django MEDIA_ROOT directory and subdirectories for file
+        # storage if required.
+
+        - name: Create Django MEDIA_ROOT directory if required
+          file:
+            path: "{{ django_media_root }}"
+            state: directory
+            mode: 0775
+            owner: "{{ djangooperator }}"
+            group: apache
+          when: django_media_root is defined
+
+        - name: Create directories for MOUs if required
+          file:
+            path: "{{ django_media_root }}/{{ item }}"
+            state: directory
+            mode: 0775
+            owner: "{{ djangooperator }}"
+            group: apache
+          loop:
+            - "{{ new_project_request_mou_path }}"
+            - "{{ secure_directory_request_mou_path }}"
+            - "{{ service_units_purchase_request_mou_path }}"
+          when: django_media_root is defined and item is defined and file_storage_backend == "file_system"
+
         # Prepare the Python virtual environment for the Django application.
 
         - name: Create Python virtual environment directory
@@ -569,7 +594,7 @@
 
           - name: Copy deploy key to user's .ssh directory
             copy:
-              src: "{{ git_prefix }}/{{ reponame }}/{{ mou_generator_deploy_key_path }}"
+              src: "{{ mou_generator_deploy_key_path }}"
               dest: "{{ user.home }}/.ssh/id_mou_generator"
               owner: "{{ djangooperator }}"
               group: "{{ djangooperator }}"

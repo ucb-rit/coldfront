@@ -16,7 +16,6 @@ from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.mou import DynamicFileField
 from coldfront.core.utils.mou import upload_to_func
 
-from gdstorage.storage import GoogleDriveStorage
 
 PROJECT_ENABLE_PROJECT_REVIEW = import_from_settings(
     'PROJECT_ENABLE_PROJECT_REVIEW', False)

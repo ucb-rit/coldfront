@@ -135,20 +135,99 @@ emails will be outputted here for inspection.
   python -m smtpd -n -c DebuggingServer localhost:1025
   ```
 
-#### Google Drive Storage
-- To obtain a JSON key for `google_drive_private_key_file_path`, follow the
-instructions at https://help.talend.com/r/en-US/8.0/google-drive/how-to-access-google-drive-using-service-account-json-file-a-google
-to create a google drive API service account and get a JSON key for it.
+#### User-uploaded file storage
 
-#### MOU Generation
-- By default, an empty pdf is generated. To install the MOU Generation library, 
-set `flag_mou_generation_enabled` to `true` in `main.yml`, and point 
-`mou_generator_deploy_key_path` to the path of a deploy key for
-`https://github.com/ucb-rit/mou-generator`
+Users may upload files to the service. Below are some examples:
 
-- To create a deploy key, run `ssh-keygen`, specifiying no password when 
-prompted. Then, navigate to `https://github.com/ucb-rit/mou-generator/settings/keys`
-and add the public ssh key.
+- MyBRC
+    - Memorandums of Understanding (MOUs) for new instructional and recharge
+    project requests
+    - Memorandums of Understanding (MOUs) for requests to purchase additional
+    service units for recharge projects
+    - Researcher Use Agreement (RUAs) for new secure directory requests
+
+##### Backends
+
+Uploaded files are stored in a configurable backend (via the custom
+`FILE_STORAGE` Django setting). The following backends are currently supported:
+
+###### File System
+
+Uploaded files are stored on the application server's local filesystem. This is
+meant for use in development environments.
+
+To use this backend:
+
+1. In the Ansible `main.yml` file, set:
+    - `file_storage_backend` to `'file_system'`
+    - `django_media_root` to a directory on disk (e.g., `'/vagrant/coldfront_app/media/'`)
+        - This directory will be created and made accessible to the application
+        and Apache.
+    - The three `*mou_path` settings to filesystem paths relative to
+    `django_media_root`, without leading slashes.
+        - These directories will be created and made accessible to the
+        application and Apache.
+        - Example: 'Folder/'
+
+2. Re-run the Ansible playbook.
+
+###### Google Drive
+
+Uploaded files are stored in a Google Drive folder accessible to a configured
+service account. This is meant for use in staging and production environments.
+
+To use this backend:
+
+1. In the Google Cloud console:
+    - Enable the Google Drive API.
+    - Create a [service account](https://cloud.google.com/iam/docs/service-accounts-create).
+    - Create a corresponding [service account key](https://cloud.google.com/iam/docs/keys-create-delete)
+    and download the private key file in JSON format to your environment.
+
+2. In Google Drive:
+    - Create folders to store the different types of files.
+    - Share "Editor" access with the service account.
+
+3. In the Ansible `main.yml` file, set:
+    - `file_storage_backend` to `'google_drive'`
+    - `google_drive_private_key_file_path` to an absolute path to the downloaded
+    private key file in JSON format.
+    - `google_drive_storage_media_root` to `'/'`.
+        - Paths are relative to this root directory.
+        - Because the folders are shared with the service account, they are
+        stored directly in the root directory.
+    - The three `*mou_path` settings to the names of the folders shared with the
+    service account, without leading slashes, and with trailing slashes.
+        - Example: `'Shared Folder/'`
+        - Caveat: If a different folder with the same name is shared with the
+        service account, uploaded files will be directed there. Be careful to
+        share the correct folder.
+
+4. Re-run the Ansible playbook.
+
+#### Memorandum of Understanding (MOU) Generation
+
+Some user requests on MyBRC require that a Memorandum of Understanding be signed
+by the requesting PI. The generation of this PDF document is handled by a
+separate Python package hosted in a private [GitHub repository](https://github.com/ucb-rit/mou-generator).
+
+When the functionality is disabled (default), an empty PDF is generated.
+
+To enable the functionality:
+
+1. Request and gain access to the repository.
+
+2. Create a deploy key. Run `ssh-keygen -f /path/to/id_mou_generator -N ""` in
+your environment.
+    - Specify and make note of the path to the created private key.
+    - `-N ""` instructs the command to create the key without a passphrase.
+
+3. In the GitHub repository for the package, under Settings > Deploy keys > Add
+deploy key, create a key, pasting in the contents of the created public key
+(`.pub`).
+
+4. In `main.yml`, set `mou_generator_deploy_key_path` to the path to the private
+key.
 
 #### pylint
 

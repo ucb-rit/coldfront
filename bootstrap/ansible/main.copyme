@@ -12,7 +12,9 @@ common_tasks: true
 
 domain: localhost
 reponame: coldfront
-djangoprojname: coldfront 
+djangoprojname: coldfront
+
+enable_django_debug_toolbar: false
 
 ###############################################################################
 # BRC/LRC Config
@@ -100,9 +102,8 @@ flag_lrc_enabled: False
 flag_next_period_renewal_requestable_month: 5
 flag_multiple_email_addresses_allowed: False
 # Whether to install and enable the MOU generation package.
-# TODO: For Production and Staging, enable this
+# TODO: For BRC, enable MOU generation (requires access to the package).
 flag_mou_generation_enabled: false
-
 
 # Portal settings.
 # TODO: For LRC, use "MyLRC", "Laboratory Research Computing", "LRC", and
@@ -117,6 +118,30 @@ center_user_guide: "https://docs-research-it.berkeley.edu/services/high-performa
 center_login_guide: "https://docs-research-it.berkeley.edu/services/high-performance-computing/user-guide/logging-brc-clusters/#Logging-in"
 # TODO: For MyLRC, use "hpcshelp@lbl.gov".
 center_help_email: "brc-hpc-help@berkeley.edu"
+
+# # Storage settings.
+# # For more information, refer to the README.
+# file_storage_backend: 'file_system'
+# new_project_request_mou_path: 'New Project Request MOUs/'
+# secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
+# service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
+
+# # TODO: Uncomment only the section relevant to the specified file_system_backend.
+
+# # Storage settings: 'file_system' backend.
+# django_media_root: '/vagrant/coldfront_app/media/'
+
+# # Storage settings: 'google_drive' backend.
+# # TODO: If using this backend, set the absolute path to the private key file.
+# google_drive_private_key_file_path: '/path/to/google-drive-private-key.json'
+# google_drive_storage_media_root: '/'
+
+# # MOU generator settings.
+# # For more information, refer to the README.
+# # TODO: For BRC deployments with access to the package for generating MOUs
+# # TODO: (e.g., production and staging), set the absolute path to the deploy
+# # TODO: key.
+# mou_generator_deploy_key_path: '/path/to/id_mou_generator'
 
 # LRC billing validation package settings (for Pip installation).
 # TODO: For LRC deployments with access to the package for billing validation
@@ -162,22 +187,6 @@ sentry_dsn: ""
 # host_ip: 131.243.130.236
 # app_port: 8000
 # full_host_path: http://scgup-dev.lbl.gov:8000
-
-# # Storage settings.
-# # TODO: fill these out
-# # Note: local_storage currently not implemented
-# file_storage_backend: 'google_drive'
-# google_drive_private_key_file_path: 'google-drive-key.json'
-# # for google_drive, provide only the bottom-level directory name
-# # with a slash at the end. If someone shares a new folder with the same name
-# # to the same service account, new MOUs may go there.
-# new_project_request_mou_path: 'New Project Request MOUs/'
-# secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
-# service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
-
-# # MOU generator settings.
-# # Only needed if flag_mou_generation_enabled=True
-# mou_generator_deploy_key_path: bootstrap/development/id_mou_generator
 
 # # SSL settings.
 # ssl_enabled: false
@@ -235,22 +244,6 @@ sentry_dsn: ""
 # # TODO: For LRC, use https://mylrc.lbl.gov.
 # full_host_path: https://mybrc.brc.berkeley.edu
 
-# # Storage settings.
-# # TODO: fill these out
-# # Note: local_storage currently not implemented
-# file_storage_backend: 'google_drive'
-# google_drive_private_key_file_path: 'google-drive-key.json'
-# # for google_drive, provide only the bottom-level directory name
-# # with a slash at the end. If someone shares a new folder with the same name
-# # to the same service account, new MOUs may go there.
-# new_project_request_mou_path: 'New Project Request MOUs/'
-# secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
-# service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
-
-# # MOU generator settings.
-# # Only needed if flag_mou_generation_enabled=True
-# mou_generator_deploy_key_path: bootstrap/development/id_mou_generator
-
 # # SSL settings.
 # ssl_enabled: true
 # ssl_certificate_file: /etc/ssl/ssl_certificate.file
@@ -306,22 +299,6 @@ sentry_dsn: ""
 # host_ip: localhost
 # app_port: 80
 # full_host_path: http://localhost:8880
-
-# # Storage settings.
-# # TODO: fill these out
-# # Note: local_storage currently not implemented
-# file_storage_backend: 'google_drive'
-# google_drive_private_key_file_path: 'google-drive-key.json'
-# # for google_drive, provide only the bottom-level directory name
-# # with a slash at the end. If someone shares a new folder with the same name
-# # to the same service account, new MOUs may go there.
-# new_project_request_mou_path: 'New Project Request MOUs/'
-# secure_directory_request_mou_path: 'Secure Directory Request MOUs/'
-# service_units_purchase_request_mou_path: 'Service Units Purchase Request MOUs/'
-
-# # MOU generator settings.
-# # Only needed if flag_mou_generation_enabled=True
-# mou_generator_deploy_key_path: bootstrap/development/id_mou_generator
 
 # # SSL settings.
 # ssl_enabled: false
