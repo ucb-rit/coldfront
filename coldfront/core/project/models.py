@@ -13,9 +13,9 @@ from simple_history.models import HistoricalRecords
 
 from coldfront.core.field_of_science.models import FieldOfScience
 from coldfront.core.utils.common import import_from_settings
+from coldfront.core.utils.mou import DynamicFileField
 from coldfront.core.utils.mou import upload_to_func
 
-from gdstorage.storage import GoogleDriveStorage
 
 PROJECT_ENABLE_PROJECT_REVIEW = import_from_settings(
     'PROJECT_ENABLE_PROJECT_REVIEW', False)
@@ -481,11 +481,8 @@ class SavioProjectAllocationRequest(TimeStampedModel):
     billing_activity = models.ForeignKey(
         'billing.BillingActivity', blank=True, null=True,
         on_delete=models.SET_NULL, related_name='billing_activity')
-    
-    mou_file = models.FileField( \
-        upload_to=upload_to_func,
-        storage=GoogleDriveStorage(permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS')),
-        null=True)
+
+    mou_file = DynamicFileField(upload_to=upload_to_func, null=True)
 
     history = HistoricalRecords()
 

@@ -24,9 +24,9 @@ from coldfront.core.project.models import ProjectUser
 from coldfront.core.resource.models import Resource
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import display_time_zone_current_date
+from coldfront.core.utils.mou import DynamicFileField
 from coldfront.core.utils.mou import upload_to_func
 
-from gdstorage.storage import GoogleDriveStorage
 
 logger = logging.getLogger(__name__)
 
@@ -594,10 +594,7 @@ class AllocationAdditionRequest(TimeStampedModel):
     state = models.JSONField(default=allocation_addition_request_state_schema)
     extra_fields = models.JSONField(default=dict)
 
-    mou_file = models.FileField( \
-        upload_to=upload_to_func,
-        storage=GoogleDriveStorage(permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS')),
-        null=True)
+    mou_file = DynamicFileField(upload_to=upload_to_func, null=True)
 
     def __str__(self):
         project_name = self.project.name
@@ -744,10 +741,7 @@ class SecureDirRequest(TimeStampedModel):
 
     state = models.JSONField(default=secure_dir_request_state_schema)
 
-    mou_file = models.FileField( \
-        upload_to=upload_to_func,
-        storage=GoogleDriveStorage(permissions=import_from_settings('GOOGLE_DRIVE_PERMISSIONS')),
-        null=True)
+    mou_file = DynamicFileField(upload_to=upload_to_func, null=True)
 
     def __str__(self):
         return f'{self.directory_name} ({self.project.name})'
