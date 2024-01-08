@@ -82,9 +82,9 @@ jobs:
         cp coldfront/config/test_settings.py.sample coldfront/config/test_settings.py
 
         # Create MOU directories
-        mkdir -p "/media/New Project Request MOUs/"
-        mkdir "/media/Service Units Purchase Request MOUs/"
-        mkdir "/media/Secure Directory Request MOUs/"
+        sudo mkdir -p "/media/New Project Request MOUs/"
+        sudo mkdir "/media/Service Units Purchase Request MOUs/"
+        sudo mkdir "/media/Secure Directory Request MOUs/"
 
     - name: Run Tests
       run: |
