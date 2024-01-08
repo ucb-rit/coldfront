@@ -9,6 +9,8 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views import View
 from django.views.generic.edit import UpdateView
+from django.conf import settings
+from coldfront.core.utils.common import utc_now_offset_aware
 
 from flags.state import flag_enabled
 
@@ -19,6 +21,7 @@ from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_p
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.utils.forms.file_upload_forms import model_pdf_upload_form_factory
 from coldfront.core.utils.mou import get_mou_filename
+from coldfront.core.utils.mail import send_email_template
 
 
 logger = logging.getLogger(__name__)

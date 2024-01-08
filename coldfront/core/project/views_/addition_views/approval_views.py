@@ -8,7 +8,6 @@ from coldfront.core.project.utils_.addition_utils import AllocationAdditionProce
 from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.utils.mail import send_email_template
 
 from django.conf import settings
 from django.contrib import messages
@@ -20,11 +19,11 @@ from django.urls import reverse
 from django.views.generic import DetailView
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
-from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 
 from copy import deepcopy
 from decimal import Decimal
-import iso8601
+from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
+
 import logging
 import os
 
@@ -487,7 +486,6 @@ class AllocationAdditionEditExtraFieldsView(LoginRequiredMixin,
         messages.error(self.request, message)
         return self.render_to_response(
             self.get_context_data(form=form))
-
 
 class AllocationAdditionNotifyPIView(MOURequestNotifyPIViewMixIn,
                                      AllocationAdditionEditExtraFieldsView):

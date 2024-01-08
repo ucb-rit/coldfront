@@ -26,7 +26,6 @@ from coldfront.core.utils.common import format_date_month_name_day_year
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
-from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 
 from decimal import Decimal
 
@@ -44,8 +43,7 @@ from django.views import View
 from django.views.generic import DetailView
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
-from coldfront.core.utils.mail import send_email_template
-
+from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 from flags.state import flag_enabled
 
 import iso8601
@@ -283,9 +281,9 @@ class SavioProjectRequestEditExtraFieldsView(LoginRequiredMixin,
         messages.error(self.request, message)
         return self.render_to_response(
             self.get_context_data(form=form))
-
+                                      
 class SavioProjectRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
-                                      SavioProjectRequestEditExtraFieldsView):
+                                    SavioProjectRequestEditExtraFieldsView):
     def email_pi(self):
         super()._email_pi('Savio Project Request Ready To Be Signed',
                          self.request_obj.pi.get_full_name(),
@@ -332,7 +330,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         try:
             context['allocation_amount'] = self.get_service_units_to_allocate()
         except Exception as e:
-            self.logger.exception(e)
+            melf.logger.exception(e)
             messages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
 

@@ -51,7 +51,7 @@ class DynamicFieldFile(FieldFile):
     """A FieldFile whose file storage backend is determined by
     application settings."""
 
-    def __init__(self, instance, field, name, backend):
+    def __init__(self, instance, field, name):
         super().__init__(instance, field, name)
         self.storage = self._get_storage_backend()
 
