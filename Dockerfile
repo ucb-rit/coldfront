@@ -16,12 +16,19 @@ COPY requirements.txt ./
 RUN pip install -r requirements.txt && rm requirements.txt
 RUN pip install jinja2 pyyaml
 
+COPY main.yml ./
+
 # mybrc or mylrc
 ARG PORTAL="mybrc"
 RUN mkdir -p /var/log/user_portals/cf_${PORTAL} \
  && touch /var/log/user_portals/cf_${PORTAL}/cf_${PORTAL}_{portal,api}.log \
  && chmod 775 /var/log/user_portals/cf_${PORTAL} \
- && chmod 664 /var/log/user_portals/cf_${PORTAL}/cf_${PORTAL}_{portal,api}.log
+ && chmod 664 /var/log/user_portals/cf_${PORTAL}/cf_${PORTAL}_{portal,api}.log \
+ && media_root=$(python -c 'import yaml; print(yaml.safe_load(open("main.yml"))["django_media_root"])') \
+ && mkdir -p "${media_root}/$(python -c 'import yaml; print(yaml.safe_load(open("main.yml"))["new_project_request_mou_path"])')" \
+ && mkdir "${media_root}/$(python -c 'import yaml; print(yaml.safe_load(open("main.yml"))["secure_directory_request_mou_path"])')"\
+ && mkdir "${media_root}/$(python -c 'import yaml; print(yaml.safe_load(open("main.yml"))["service_units_purchase_request_mou_path"])')" \
+ && chmod -R 775 ${media_root}
 
 WORKDIR /vagrant/coldfront_app/coldfront/
 
