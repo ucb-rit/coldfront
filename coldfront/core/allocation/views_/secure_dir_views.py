@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, FormView, DetailView
 from django.views.generic.base import TemplateView, View
+from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 from formtools.wizard.views import SessionWizardView
 from iso8601 import iso8601
 
@@ -1762,42 +1763,11 @@ class SecureDirRequestEditDepartmentView(LoginRequiredMixin,
         return self.render_to_response(
             self.get_context_data(form=form))
 
-class SecureDirRequestNotifyPIView(SecureDirRequestEditDepartmentView):
-    def get_context_data(self, *args, **kwargs):
-        context = super().get_context_data(*args, **kwargs)
-        context['notify_pi'] = True
-        return context
-
+class SecureDirRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
+                                   SecureDirRequestEditDepartmentView):
     def email_pi(self):
-        """Send an email to the PI."""
-        subject = 'Secure Directory Request Ready To Be Signed'
-        try:
-            send_email_template(subject,
-                                'request_mou_email.html',
-                                {'to_name': self.request_obj.requester.get_full_name(),
-                                 'savio_request': self.request_obj,
-                                 'mou_type': 'Researcher Use Agreement',
-                                 'mou_for': f'{self.request_obj.project.name} secure directory request',
-                                 'base_url': settings.CENTER_BASE_URL,
-                                 'signature': settings.EMAIL_SIGNATURE, },
-                                settings.DEFAULT_FROM_EMAIL,
-                                [self.request_obj.requester.email])
-        except Exception as e:
-            self.logger.error(
-                f'Failed to send email to PI {self.request_obj.requester.email} for request '
-                f'{self.request_obj.pk}: {e}')
-            message = 'Failed to send email to PI.'
-            messages.error(self.request, message)
-
-    def form_valid(self, form):
-        """Save the form."""
-        #TODO
-        #email_pi()
-        self.email_pi()
-        timestamp = utc_now_offset_aware().isoformat()
-        self.request_obj.state['notified'] = {
-            'status': 'Complete',
-            'timestamp': timestamp,
-        }
-        self.request_obj.save()
-        return super().form_valid(form)
+        super()._email_pi('Secure Directory Request Ready To Be Signed',
+                         self.request_obj.requester.get_full_name(),
+                         'Researcher User Agreement',
+                         f'{self.request_obj.project.name} secure directory request',
+                         self.request_obj.requester.email)

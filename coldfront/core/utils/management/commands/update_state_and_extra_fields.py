@@ -45,7 +45,7 @@ class Command(BaseCommand):
     @staticmethod
     def add_notified_to_state(request, dry_run=False):
         if 'notified' not in request.state:
-            status = 'Pending' if request.status == 'Under Review' \
+            status = 'Pending' if request.status.name == 'Under Review' \
                                else 'Complete'
             request.state['notified'] = {
                 'status': status,

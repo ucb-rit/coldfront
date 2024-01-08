@@ -26,6 +26,22 @@ logger = logging.getLogger(__name__)
 
 class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
 
+    REQUEST_TYPES = \
+        {'new-project': ('New Project Request',
+                         SavioProjectAllocationRequest,
+                         'Memorandum of Understanding',
+                         'new-project-request-detail'),
+
+         'secure-dir': ('Secure Directory Request',
+                        SecureDirRequest,
+                        'Researcher Use Agreement',
+                        'secure-dir-request-detail'),
+
+         'service-units-purchase': ('Service Units Purchase Request',
+                                    AllocationAdditionRequest,
+                                    'Memorandum of Understanding',
+                                    'service-units-purchase-request-detail')}
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.request_type = None
@@ -61,22 +77,14 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
         """Set this instance's request_obj to be the
         SavioProjectAllocationRequest with the given primary key."""
         self.request_type = self.kwargs['request_type']
+
         self.request_type_long, self.request_class, self.mou_type = \
-            {'new-project': ('New Project Request',
-                            SavioProjectAllocationRequest,
-                            'Memorandum of Understanding'),
-             'secure-dir': ('Secure Directory Request',
-                            SecureDirRequest,
-                            'Researcher Use Agreement'),
-             'service-units-purchase': ('Service Units Purchase Request',
-                            AllocationAdditionRequest,
-                            'Memorandum of Understanding')}[self.request_type]
+            self.REQUEST_TYPES[self.request_type][:3]
+
         self.request_obj = get_object_or_404(self.request_class, pk=pk)
 
     def get_success_url(self, **kwargs):
-        ret = {'new-project': 'new-project-request-detail',
-               'secure-dir': 'secure-dir-request-detail',
-               'service-units-purchase': 'service-units-purchase-request-detail'}[self.request_type]
+        ret = self.REQUEST_TYPES[self.request_type][3]
         return reverse(ret, kwargs={'pk': self.kwargs.get('pk')})
 
 
@@ -173,3 +181,42 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
         response = HttpResponse(pdf, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
+
+class MOURequestNotifyPIViewMixIn:
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context['notify_pi'] = True
+        return context
+    
+    def _email_pi(self, subject, to_name, mou_type, mou_for, email):
+        """Send an email to the PI."""
+        try:
+            send_email_template(subject,
+                                'request_mou_email.html',
+                                {'to_name': to_name,
+                                 'savio_request': self.request_obj,
+                                 'mou_type': mou_type,
+                                 'mou_for': mou_for,
+                                 'base_url': settings.CENTER_BASE_URL,
+                                 'signature': settings.EMAIL_SIGNATURE, },
+                                settings.DEFAULT_FROM_EMAIL,
+                                [email])
+        except Exception as e:
+            self.logger.error(
+                f'Failed to send email to PI {email} for request '
+                f'{self.request_obj.pk}: {e}')
+            message = 'Failed to send email to PI.'
+            messages.error(self.request, message)
+
+    def form_valid(self, form):
+        """Save the form."""
+        #TODO
+        #email_pi()
+        self.email_pi()
+        timestamp = utc_now_offset_aware().isoformat()
+        self.request_obj.state['notified'] = {
+            'status': 'Complete',
+            'timestamp': timestamp,
+        }
+        self.request_obj.save()
+        return super().form_valid(form)

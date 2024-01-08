@@ -21,8 +21,8 @@ def upload_to_func(instance, filename):
     elif isinstance(instance, SecureDirRequest):
         path += fs['details']['SECURE_DIRECTORY_REQUEST_MOU']['location']
     date = datetime.datetime.now().replace(microsecond=0).isoformat()
-    type_ = get_mou_filename(instance)
-    filename = f'{date}_{type_}'
+    filename_suffix = get_mou_filename(instance)
+    filename = f'{date}_{filename_suffix}'
     path += filename
     return path
 
@@ -51,7 +51,7 @@ class DynamicFieldFile(FieldFile):
     """A FieldFile whose file storage backend is determined by
     application settings."""
 
-    def __init__(self, instance, field, name):
+    def __init__(self, instance, field, name, backend):
         super().__init__(instance, field, name)
         self.storage = self._get_storage_backend()
 

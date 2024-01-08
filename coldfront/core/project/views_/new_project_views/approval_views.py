@@ -26,6 +26,7 @@ from coldfront.core.utils.common import format_date_month_name_day_year
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
+from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 
 from decimal import Decimal
 
@@ -283,45 +284,14 @@ class SavioProjectRequestEditExtraFieldsView(LoginRequiredMixin,
         return self.render_to_response(
             self.get_context_data(form=form))
 
-class SavioProjectRequestNotifyPIView(SavioProjectRequestEditExtraFieldsView):
-    def get_context_data(self, *args, **kwargs):
-        context = super().get_context_data(*args, **kwargs)
-        context['notify_pi'] = True
-        return context
-    
+class SavioProjectRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
+                                      SavioProjectRequestEditExtraFieldsView):
     def email_pi(self):
-        """Send an email to the PI."""
-        subject = 'Savio Project Request Ready To Be Signed'
-        try:
-            send_email_template(subject,
-                                'request_mou_email.html',
-                                {'pi_name': self.request_obj.pi.get_full_name(),
-                                 'savio_request': self.request_obj,
-                                 'mou_type': 'Memorandum of Understanding',
-                                 'mou_for': f'{self.request_obj.project.name} project request',
-                                 'base_url': settings.CENTER_BASE_URL,
-                                 'signature': settings.EMAIL_SIGNATURE, },
-                                settings.DEFAULT_FROM_EMAIL,
-                                [self.request_obj.pi.email])
-        except Exception as e:
-            self.logger.error(
-                f'Failed to send email to PI {self.request_obj.pi.email} for request '
-                f'{self.request_obj.pk}: {e}')
-            message = 'Failed to send email to PI.'
-            messages.error(self.request, message)
-
-    def form_valid(self, form):
-        """Save the form."""
-        #TODO
-        #email_pi()
-        self.email_pi()
-        timestamp = utc_now_offset_aware().isoformat()
-        self.request_obj.state['notified'] = {
-            'status': 'Complete',
-            'timestamp': timestamp,
-        }
-        self.request_obj.save()
-        return super().form_valid(form)
+        super()._email_pi('Savio Project Request Ready To Be Signed',
+                         self.request_obj.pi.get_full_name(),
+                         'Memorandum of Understanding',
+                         f'{self.request_obj.project.name} project request',
+                         self.request_obj.pi.email)
 
 class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                                     SavioProjectRequestMixin, DetailView):
@@ -363,7 +333,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
             context['allocation_amount'] = self.get_service_units_to_allocate()
         except Exception as e:
             self.logger.exception(e)
-            eessages.error(self.request, self.error_message)
+            messages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
 
         try:
