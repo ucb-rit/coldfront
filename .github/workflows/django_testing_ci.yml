@@ -85,7 +85,10 @@ jobs:
         sudo mkdir -p "/media/New Project Request MOUs/"
         sudo mkdir "/media/Service Units Purchase Request MOUs/"
         sudo mkdir "/media/Secure Directory Request MOUs/"
-        sudo chmod -R 777 "/media/"
+        sudo chmod 777 "/media/"
+        sudo chmod 777 "/media/New Project Request MOUs/"
+        sudo chmod 777 "/media/Service Units Purchase Request MOUs/"
+        sudo chmod 777 "/media/Secure Directory Request MOUs/"
 
     - name: Run Tests
       run: |
