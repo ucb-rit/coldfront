@@ -263,6 +263,7 @@
             - "{{ secure_directory_request_mou_path }}"
             - "{{ service_units_purchase_request_mou_path }}"
           when: django_media_root is defined and item is defined and file_storage_backend == "file_system"
+
         - name: Configure logrotate to rotate the Django API and portal logs
           template:
             src: "{{ git_prefix }}/{{ reponame }}/bootstrap/ansible/logrotate.tmpl"

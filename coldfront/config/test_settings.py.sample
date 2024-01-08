@@ -68,7 +68,7 @@ EXTRA_EXTRA_MIDDLEWARE = []
 # File Storage Settings
 #------------------------------------------------------------------------------
 
-MEDIA_ROOT = '/vagrant/coldfront_app/media/'
+MEDIA_ROOT = '/media/'
 
 FILE_STORAGE = {
     'backend': 'file_system',
