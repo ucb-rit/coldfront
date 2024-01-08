@@ -59,12 +59,19 @@ API_LOG_PATH = '/var/log/user_portals/cf_mybrc/cf_mybrc_api.log'
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = ['test@test.test']
 
+# Extra apps to be included.
+EXTRA_EXTRA_APPS = []
+# Extra middleware to be included.
+EXTRA_EXTRA_MIDDLEWARE = []
+
 #------------------------------------------------------------------------------
 # File Storage Settings
 #------------------------------------------------------------------------------
 
+MEDIA_ROOT = '/vagrant/coldfront_app/media/'
+
 FILE_STORAGE = {
-    'backend': 'google_drive',
+    'backend': 'file_system',
     'details': {
         'NEW_PROJECT_REQUEST_MOU': {
             'location': 'New Project Request MOUs/',
