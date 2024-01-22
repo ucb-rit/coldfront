@@ -79,7 +79,6 @@ if EMAIL_ENABLED:
 
 logger = logging.getLogger(__name__)
 
-
 class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Project
     template_name = 'project/project_detail.html'

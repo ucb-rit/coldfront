@@ -67,6 +67,41 @@ REQUEST_APPROVAL_CC_LIST = {{ request_approval_cc_list }}
 ALLOW_ALL_JOBS = True
 {% endif %}
 
+# Extra apps to be included.
+EXTRA_EXTRA_APPS = []
+# Extra middleware to be included.
+EXTRA_EXTRA_MIDDLEWARE = []
+
+#------------------------------------------------------------------------------
+# File Storage Settings
+#------------------------------------------------------------------------------
+
+{% if django_media_root %}
+# An absolute path to the local filesystem directory holding user-uploaded
+# files.
+MEDIA_ROOT = '{{ django_media_root }}'
+{% endif %}
+
+# A dict denoting where and how user-uploaded files (currently only MOUs) should
+# be stored.
+FILE_STORAGE = {
+    'backend': '{{ file_storage_backend }}',
+    'details': {
+        'NEW_PROJECT_REQUEST_MOU': {
+            'location': '{{ new_project_request_mou_path }}',
+            'filename_type': 'NewProject_MOU',
+        },
+        'SERVICE_UNITS_PURCHASE_REQUEST_MOU': {
+            'location': '{{ service_units_purchase_request_mou_path }}',
+            'filename_type': 'AllowancePurchase_MOU',
+        },
+        'SECURE_DIRECTORY_REQUEST_MOU': {
+            'location': '{{ secure_directory_request_mou_path }}',
+            'filename_type': 'SecureDirectory_RUA',
+        },
+    },
+}
+
 #------------------------------------------------------------------------------
 # Billing settings
 #------------------------------------------------------------------------------
@@ -147,12 +182,22 @@ CONSTANCE_REDIS_CONNECTION = {
     'password': '{{ redis_passwd }}',
 }
 
+{% if enable_django_debug_toolbar %}
 #------------------------------------------------------------------------------
-# django debug toolbar settings
+# django-debug-toolbar settings
 #------------------------------------------------------------------------------
 
-# IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-EXTRA_INTERNAL_IPS = [
+EXTRA_EXTRA_APPS += [
+    'debug_toolbar'
+]
+
+EXTRA_EXTRA_MIDDLEWARE += [
+    'debug_toolbar.middleware.DebugToolbarMiddleware'
+]
+
+# IP addresses that can view the django debug toolbar.
+INTERNAL_IPS = [
+    '127.0.0.1',
 {% for ip in debug_toolbar_ips %}
     '{{ ip }}',
 {% endfor %}
@@ -179,6 +224,7 @@ DISABLE_PANELS = {
     'debug_toolbar.panels.redirects.RedirectsPanel',
     'debug_toolbar.panels.profiling.ProfilingPanel',
 }
+{% endif %}
 
 #------------------------------------------------------------------------------
 # django-flags settings
@@ -197,6 +243,7 @@ FLAGS = {
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': {{ flag_sso_enabled }}}],
     'USER_DEPARTMENTS_ENABLED': [{'condition': 'boolean', 'value': {{ flag_user_departments_enabled }}}],
+    'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': {{ flag_mou_generation_enabled }}}],
 }
 
 # Enforce that boolean flags are consistent with each other.
@@ -214,6 +261,27 @@ if (not FLAGS['SSO_ENABLED'][0]['value'] and
     raise ImproperlyConfigured(
         'LINK_LOGIN_ENABLED should only be enabled when SSO_ENABLED is '
         'enabled.')
+
+{% if file_storage_backend == 'google_drive' %}
+#------------------------------------------------------------------------------
+# django-googledrive-storage settings
+#------------------------------------------------------------------------------
+
+# Note: This section appears because FILE_STORAGE['backend'] == 'google_drive'.
+
+EXTRA_EXTRA_APPS += [
+    'gdstorage',
+]
+
+# An absolute path to a private JSON key file for a Google service account.
+GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = '{{ google_drive_private_key_file_path }}'
+
+# The base path files will be uploaded to in Google Drive. (E.g., if the root is
+# '/a/b/', and the specified upload path is 'c/file.txt', the file will be
+# uploaded to '/a/b/c/file.txt'. The base path is ignored if the specified
+# upload path is absolute.
+GOOGLE_DRIVE_STORAGE_MEDIA_ROOT = '{{ google_drive_storage_media_root }}'
+{% endif %}
 
 #------------------------------------------------------------------------------
 # django-q settings

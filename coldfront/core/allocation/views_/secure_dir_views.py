@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, FormView, DetailView
 from django.views.generic.base import TemplateView, View
+from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 from formtools.wizard.views import SessionWizardView
 from iso8601 import iso8601
 
@@ -23,7 +24,8 @@ from coldfront.core.allocation.forms_.secure_dir_forms import (
     SecureDirManageUsersRequestUpdateStatusForm,
     SecureDirManageUsersRequestCompletionForm, SecureDirDataDescriptionForm,
     SecureDirRDMConsultationForm, SecureDirDirectoryNamesForm,
-    SecureDirSetupForm, SecureDirRDMConsultationReviewForm)
+    SecureDirSetupForm, SecureDirRDMConsultationReviewForm,
+    SecureDirRequestEditDepartmentForm)
 from coldfront.core.allocation.models import (Allocation,
                                               SecureDirAddUserRequest,
                                               SecureDirRemoveUserRequest,
@@ -910,12 +912,14 @@ class SecureDirRequestWizard(LoginRequiredMixin,
                 'requester': self.request.user,
             }
 
+            department = self.__get_department(form_data)
             data_description = self.__get_data_description(form_data)
             rdm_consultation = self.__get_rdm_consultation(form_data)
             existing_project = self.project
             directory_name = self.__get_directory_name(form_data)
 
             # Store transformed form data in a request.
+            request_kwargs['department'] = department
             request_kwargs['data_description'] = data_description
             request_kwargs['rdm_consultation'] = rdm_consultation
             request_kwargs['project'] = existing_project
@@ -984,6 +988,12 @@ class SecureDirRequestWizard(LoginRequiredMixin,
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         return cleaned_data.get('rdm_consultation', False)
+
+    def __get_department(self, form_data):
+        """Return the department that the user submitted."""
+        step_number = self.step_numbers_by_form_name['data_description']
+        data = form_data[step_number]
+        return data.get('department')
 
     def __get_data_description(self, form_data):
         """Return the data description the user submitted."""
@@ -1244,6 +1254,12 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
 
+        context['secure_dir_request'] = self.request_obj
+
+        context['can_upload_mou'] = \
+            self.request_obj.status.name == 'Under Review'
+        context['mou_uploaded'] = bool(self.request_obj.mou_file)
+
         set_sec_dir_context(context, self.request_obj)
 
         return context
@@ -1268,13 +1284,27 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
                 'secure-dir-request-review-rdm-consultation', kwargs={'pk': pk})
         ])
         rdm_consulted = rdm['status'] == 'Approved'
+        
+        notified = state['notified']
+        task_text = (
+            'Confirm or edit allowance details, and '
+            'enable/notify the PI to sign the Memorandum of Understanding.')
+        checklist.append([
+            task_text,
+            notified['status'],
+            notified['timestamp'],
+            True,
+            reverse('secure-dir-request-notify-pi',
+                    kwargs={'pk': pk})
+        ])
+        is_notified = notified['status'] == 'Complete'
 
         mou = state['mou']
         checklist.append([
             'Confirm that the PI has signed the Memorandum of Understanding.',
             mou['status'],
             mou['timestamp'],
-            True,
+            is_notified,
             reverse(
                 'secure-dir-request-review-mou', kwargs={'pk': pk})
         ])
@@ -1285,7 +1315,7 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
             'Perform secure directory setup on the cluster.',
             self.get_setup_status(),
             setup['timestamp'],
-            rdm_consulted and mou_signed,
+            rdm_consulted and is_notified and mou_signed,
             reverse('secure-dir-request-review-setup', kwargs={'pk': pk})
         ])
 
@@ -1689,3 +1719,58 @@ class SecureDirRequestUndenyRequestView(LoginRequiredMixin,
             reverse(
                 'secure-dir-request-detail',
                 kwargs={'pk': kwargs.get('pk')}))
+
+class SecureDirRequestEditDepartmentView(LoginRequiredMixin,
+                                         UserPassesTestMixin,
+                                         SecureDirRequestMixin,
+                                         FormView):
+    template_name = 'secure_dir/secure_dir_request/secure_dir_request_edit_department.html'
+    form_class = SecureDirRequestEditDepartmentForm
+
+    logger = logging.getLogger(__name__)
+
+    error_message = 'Unexpected failure. Please contact an administrator.'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user.is_superuser:
+            return True
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        pk = self.kwargs.get('pk')
+        self.set_request_obj(pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['secure_dir_request'] = self.request_obj
+        context['notify_pi'] = False
+        return context
+
+    def form_valid(self, form):
+        """Save the form."""
+        self.request_obj.department = form.cleaned_data.get('department')
+        self.request_obj.save()
+        message = 'The request has been updated.'
+        messages.success(self.request, message)
+        return HttpResponseRedirect(reverse('secure-dir-request-detail',
+                                            kwargs={'pk':self.request_obj.pk}))
+
+    def form_invalid(self, form):
+        """Handle invalid forms."""
+        message = 'Please correct the errors below.'
+        messages.error(self.request, message)
+        return self.render_to_response(
+            self.get_context_data(form=form))
+
+class SecureDirRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
+                                   SecureDirRequestEditDepartmentView):
+    def email_pi(self):
+        super()._email_pi('Secure Directory Request Ready To Be Signed',
+                         self.request_obj.requester.get_full_name(),
+                         'Researcher User Agreement',
+                         f'{self.request_obj.project.name} secure directory request',
+                         self.request_obj.requester.email)

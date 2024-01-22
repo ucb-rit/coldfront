@@ -29,3 +29,6 @@ main.yml
 .vagrant
 .coverage
 htmlcov
+id_*
+fetch_database_backup.sh
+google-drive-key.json

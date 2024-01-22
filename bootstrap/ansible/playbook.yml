@@ -55,6 +55,11 @@
               - libffi-devel
             state: present
 
+        - name: Install remote wkhtmltopdf RPM
+          yum:
+            name: https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos7.x86_64.rpm
+            state: present
+
         # The SCL role runs many tasks when it's included, so having it do
         # everything in one run would be ideal to not have redundant tasks.
 
@@ -232,6 +237,31 @@
             mode: 0660
             owner: "{{ djangooperator }}"
             group: apache
+
+        # Create the Django MEDIA_ROOT directory and subdirectories for file
+        # storage if required.
+
+        - name: Create Django MEDIA_ROOT directory if required
+          file:
+            path: "{{ django_media_root }}"
+            state: directory
+            mode: 0775
+            owner: "{{ djangooperator }}"
+            group: apache
+          when: django_media_root is defined
+
+        - name: Create directories for MOUs if required
+          file:
+            path: "{{ django_media_root }}/{{ item }}"
+            state: directory
+            mode: 0775
+            owner: "{{ djangooperator }}"
+            group: apache
+          loop:
+            - "{{ new_project_request_mou_path }}"
+            - "{{ secure_directory_request_mou_path }}"
+            - "{{ service_units_purchase_request_mou_path }}"
+          when: django_media_root is defined and item is defined and file_storage_backend == "file_system"
 
         - name: Configure logrotate to rotate the Django API and portal logs
           template:
@@ -480,10 +510,15 @@
           yum:
             name: vim
             state: present
+        
+        - name: Register user home directory
+          user:
+            name: "{{ djangooperator }}"
+          register: user
 
         - name: Add dev QOL lines to .bashrc
           blockinfile:
-            path: /home/{{ djangooperator }}/.bashrc
+            path: "{{ user.home }}/.bashrc"
             block: |
               # Add the SCL-installed Python 3 to PATH by default
               source scl_source enable rh-python{{ python_version_dotless }}
@@ -492,6 +527,7 @@
               source ../venv/bin/activate
               # Restart Apache with a keyword.
               alias reload="sudo service httpd reload"
+          become_user: "{{ djangooperator }}"
 
       when: provisioning_tasks == true and deployment == "dev"
       tags: provisioning
@@ -557,6 +593,55 @@
             name: postgresql-{{ postgres_version }}
             state: reloaded
             enabled: true
+
+        - block:
+          # Allow pip installation of private git repo for mou generation.
+
+          - name: Register user home directory
+            user:
+              name: "{{ djangooperator }}"
+            register: user
+
+          - name: Check if github in known_hosts
+            shell: ssh-keygen -F github.com
+            register: github_known_hosts
+            become_user: "{{ djangooperator }}"
+            changed_when: false
+            failed_when: false
+
+          - name: Add github.com to known_hosts
+            shell: "ssh-keyscan github.com >> {{ user.home }}/.ssh/known_hosts"
+            become_user: "{{ djangooperator }}"
+            when: github_known_hosts.rc != 0
+
+          - name: Copy deploy key to user's .ssh directory
+            copy:
+              src: "{{ mou_generator_deploy_key_path }}"
+              dest: "{{ user.home }}/.ssh/id_mou_generator"
+              owner: "{{ djangooperator }}"
+              group: "{{ djangooperator }}"
+              mode: 0600
+            become_user: "{{ djangooperator }}"
+          
+          - name: Add id_mou_generator to ssh config
+            blockinfile:
+              path: "{{ user.home }}/.ssh/config"
+              block: |
+                Host github.com
+                  IdentityFile ~/.ssh/id_mou_generator
+              create: true
+
+          # Note: only updates if the version set in mou-generator/setup.py increases.
+          # Otherwise, force reinstall with pip and the --force-reinstall flag.
+          - name: Install mou generation package
+            pip:
+              name: git+ssh://git@github.com/ucb-rit/mou-generator.git
+              executable: "{{ git_prefix }}/venv/bin/pip3"
+            become_user: "{{ djangooperator }}"
+            environment:
+              GIT_SSH_COMMAND: "ssh -o BatchMode=yes"
+
+          when: flag_mou_generation_enabled
 
         # Install Django application dependencies
 

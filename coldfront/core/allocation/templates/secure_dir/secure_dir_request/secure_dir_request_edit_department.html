@@ -1,0 +1,42 @@
+{% extends "common/base.html" %}
+{% load feature_flags %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Update Allowance Details
+{% endblock %}
+
+{% block head %}
+{{ wizard.form.media }}
+{% endblock %}
+
+{% block content %}
+
+<h1>Review and Update Allowance Details</h1>
+<hr>
+
+<script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
+<script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
+<link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
+
+<p>Review allowance details, updating as needed. These are used to generate the Researcher Use Agreement (RUA).{% if notify_pi %}
+  Clicking "Submit and Notify" will generate the MOU and send an email notification to the PI.{% endif %}
+</p>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form action="" method="post">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <input class="btn btn-primary" type="submit" value="Submit{% if notify_pi %} and Notify{% endif %}" />
+      <a href="{% url 'secure-dir-request-detail' secure_dir_request.pk %}" class="btn btn-secondary">
+        Cancel
+      </a>
+    </form>
+  </div>
+</div>
+
+
+{% endblock %}

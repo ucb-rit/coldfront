@@ -45,6 +45,38 @@
       <button id="view-purchase-details" class="btn btn-primary" role="button">
         View
       </button>
+      {% if is_superuser %}
+        <a href="{% url 'service-units-purchase-request-edit-extra-fields' addition_request.pk %}" class="btn btn-secondary">
+          <i class="fas fa-edit" aria-hidden="true"></i>
+          Edit
+        </a>
+      {% endif %}
     </p>
+    <p class="card-text text-justify">
+      <strong>Unsigned Memorandum of Understanding: </strong>
+      <a href="{% url 'service-units-purchase-request-download-unsigned-mou' addition_request.pk 'service-units-purchase' %}" class="btn btn-primary">
+        <i class="fas fa-download" aria-hidden="true"></i>
+        Download
+      </a>
+    </p>
+    {% if can_upload_mou or mou_uploaded %}
+      <p class="card-text text-justify">
+        <strong>Signed Memorandum of Understanding: </strong>
+        {% if mou_uploaded %}
+          <a href="{% url 'service-units-purchase-request-download-mou' addition_request.pk 'service-units-purchase' %}" class="btn btn-primary">
+            <i class="fas fa-download" aria-hidden="true"></i>
+            Download
+          </a>
+        {% endif %}
+        {% if can_upload_mou %}
+          <a href="{% url 'service-units-purchase-request-upload-mou' addition_request.pk 'service-units-purchase' %}"
+          class="btn {% if mou_uploaded %} btn-secondary {% else %} btn-primary {% endif %}">
+            <i class="fas fa-upload" aria-hidden="true"></i>
+            Upload {% if mou_uploaded %} new {% endif %}
+          </a>
+          {% if not mou_uploaded %} <span style="color: red; font-weight: bold;">*</span> {% endif %}
+        {% endif %}
+      </p>
+    {% endif %}
   </div>
 </div>

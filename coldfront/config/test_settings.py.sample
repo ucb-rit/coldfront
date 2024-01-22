@@ -61,6 +61,35 @@ API_LOG_PATH = '/var/log/user_portals/cf_mybrc/cf_mybrc_api.log'
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = ['test@test.test']
 
+# Extra apps to be included.
+EXTRA_EXTRA_APPS = []
+# Extra middleware to be included.
+EXTRA_EXTRA_MIDDLEWARE = []
+
+#------------------------------------------------------------------------------
+# File Storage Settings
+#------------------------------------------------------------------------------
+
+MEDIA_ROOT = '/media/'
+
+FILE_STORAGE = {
+    'backend': 'file_system',
+    'details': {
+        'NEW_PROJECT_REQUEST_MOU': {
+            'location': 'New Project Request MOUs/',
+            'filename_type': 'NewProject_MOU',
+        },
+        'SERVICE_UNITS_PURCHASE_REQUEST_MOU': {
+            'location': 'Service Units Purchase Request MOUs/',
+            'filename_type': 'AllowancePurchase_MOU',
+        },
+        'SECURE_DIRECTORY_REQUEST_MOU': {
+            'location': 'Secure Directory Request MOUs/',
+            'filename_type': 'SecureDirectory_RUA',
+        },
+    },
+}
+
 #------------------------------------------------------------------------------
 # SSL settings
 #------------------------------------------------------------------------------
@@ -99,4 +128,5 @@ FLAGS = {
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': True}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': False}],
     'USER_DEPARTMENTS_ENABLED': [{'condition': 'boolean', 'value': True}],
+    'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': False}],
 }

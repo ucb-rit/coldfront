@@ -13,10 +13,12 @@ from simple_history.models import HistoricalRecords
 
 from coldfront.core.field_of_science.models import FieldOfScience
 from coldfront.core.utils.common import import_from_settings
+from coldfront.core.utils.mou import DynamicFileField
+from coldfront.core.utils.mou import upload_to_func
+
 
 PROJECT_ENABLE_PROJECT_REVIEW = import_from_settings(
     'PROJECT_ENABLE_PROJECT_REVIEW', False)
-
 
 class ProjectStatusChoice(TimeStampedModel):
     name = models.CharField(max_length=64)
@@ -370,6 +372,9 @@ def savio_project_request_ica_extra_fields_schema():
     SavioProjectAllocationRequest.extra_fields for Instructional Compute
     Allowance (ICA) projects."""
     return {
+        'course_name': '',
+        'course_department': '',
+        'point_of_contact': '',
         'num_students': 0,
         'num_gsis': 0,
         'manager_experience_description': '',
@@ -383,6 +388,10 @@ def savio_project_request_ica_state_schema():
     """Return the schema for the SavioProjectAllocationRequest.state
     field for Instructional Computing Allowance (ICA) projects."""
     schema = savio_project_request_state_schema()
+    schema['notified'] = {
+        'status': 'Pending',
+        'timestamp': ''
+    }
     schema['memorandum_signed'] = {
         'status': 'Pending',
         'timestamp': '',
@@ -394,6 +403,10 @@ def savio_project_request_recharge_state_schema():
     """Return the schema for the SavioProjectAllocationRequest.state
     field for Recharge projects."""
     schema = savio_project_request_state_schema()
+    schema['notified'] = {
+        'status': 'Pending',
+        'timestamp': ''
+    }
     schema['memorandum_signed'] = {
         'status': 'Pending',
         'timestamp': '',
@@ -468,6 +481,8 @@ class SavioProjectAllocationRequest(TimeStampedModel):
     billing_activity = models.ForeignKey(
         'billing.BillingActivity', blank=True, null=True,
         on_delete=models.SET_NULL, related_name='billing_activity')
+
+    mou_file = DynamicFileField(upload_to=upload_to_func, null=True)
 
     history = HistoricalRecords()
 
