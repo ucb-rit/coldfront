@@ -222,8 +222,16 @@ multiple files or directories to omit.
    ```
 3. Build images. In the base directory, run:
    ```bash
-   docker build . -t coldfront
+   # Build an image to serve the website. Run ONE of the following, based on the deployment.
+   # MyBRC
+   docker build --build-arg PORTAL=mybrc . -t coldfront
+   # MyLRC
+   docker build --build-arg PORTAL=mylrc . -t coldfront
+
+   # Build an image to host the database.
    docker build . -f Dockerfile.db -t coldfront_db
+
+   # Build an image to serve an outgoing email server.
    docker build . -f Dockerfile.email -t coldfront_email
    ```
    Note: The above commands build images meant for a MyBRC instance. To build MyLRC images, include `--build-arg PORTAL=mylrc`.
@@ -242,7 +250,7 @@ multiple files or directories to omit.
    ```
 7. To load a database backup, run:
    ```bash
-   sh bootstrap/development/docker_load_database_backup.sh ${DB_NAME} ${PATH_TO_DUMP}
+   sh bootstrap/development/docker_load_database_backup.sh -k ${DB_NAME} ${PATH_TO_DUMP}
    ```
 8. To start from scratch, deleting created volumes, run:
    ```bash

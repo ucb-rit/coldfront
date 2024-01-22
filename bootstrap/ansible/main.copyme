@@ -43,6 +43,9 @@ redis_host: localhost
 log_path: /var/log/user_portals/cf_mybrc
 portal_log_file: cf_mybrc_portal.log
 api_log_file: cf_mybrc_api.log
+logrotate_entry_name: cf_mybrc
+# TODO: Logs are only backed up if a path to an existent directory is given.
+log_backup_dir_path:
 
 # Apache settings.
 # The name of the copy of the generated WSGI template in the Apache directory.
@@ -266,6 +269,9 @@ sentry_dsn: ""
 
 # # The path to the parent directory containing the Git repository.
 # git_prefix: /vagrant/coldfront_app
+
+# # The name of the Systemd unit responsible for mounting the codebase.
+# codebase_mount_systemd_unit: vagrant-coldfront_app-coldfront.mount
 
 # # Host settings.
 # hostname: localhost

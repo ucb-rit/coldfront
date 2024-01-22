@@ -16,14 +16,20 @@ if [[ "$1" == "-k" || "$1" == "--kill-connections" ]] ; then
     WHERE pid <> pg_backend_pid() AND datname = '$DB_NAME';" $DB_NAME
 fi
 
+echo DROPPING DATABASE...
 docker exec -i coldfront-db-1 \
 psql -U $DB_OWNER -c "DROP DATABASE $DB_NAME;" postgres
 
+echo CREATING DATABASE...
 docker exec -i coldfront-db-1 \
 psql -U $DB_OWNER -c "CREATE DATABASE $DB_NAME OWNER $DB_OWNER;" postgres
 
+echo LOADING DATABASE...
 docker exec -i coldfront-db-1 \
 pg_restore -U $DB_OWNER -d $DB_NAME < $DUMP_FILE
 
+echo MODIFYING PERMISSIONS...
 docker exec -i coldfront-db-1 \
 psql -U $DB_OWNER -c "ALTER SCHEMA public OWNER TO $DB_OWNER;" $DB_NAME
+
+echo DONE.
