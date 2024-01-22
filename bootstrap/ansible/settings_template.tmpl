@@ -76,7 +76,7 @@ EXTRA_EXTRA_MIDDLEWARE = []
 # File Storage Settings
 #------------------------------------------------------------------------------
 
-{% if django_media_root %}
+{% if django_media_root is defined and django_media_root %}
 # An absolute path to the local filesystem directory holding user-uploaded
 # files.
 MEDIA_ROOT = '{{ django_media_root }}'
