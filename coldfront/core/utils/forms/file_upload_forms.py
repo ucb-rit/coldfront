@@ -18,9 +18,9 @@ def model_pdf_upload_form_factory(model_class):
     class ModelPDFUploadForm(forms.ModelForm):
         class Meta:
             model = model_class
-            fields = ['mou_file']
+            fields = ['file']
 
-        mou_file = forms.FileField(
+        file = forms.FileField(
             validators=[
                 MinLengthValidator(1),
                 FileExtensionValidator(['pdf']),
