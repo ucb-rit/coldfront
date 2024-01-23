@@ -1256,6 +1256,8 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
 
         context['secure_dir_request'] = self.request_obj
 
+        context['can_download_mou'] = self.request_obj \
+                                    .state['notified']['status'] == 'Complete'
         context['can_upload_mou'] = \
             self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
@@ -1746,6 +1748,7 @@ class SecureDirRequestEditDepartmentView(LoginRequiredMixin,
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['form'].initial['department'] = self.request_obj.department
         context['secure_dir_request'] = self.request_obj
         context['notify_pi'] = False
         return context
@@ -1771,6 +1774,8 @@ class SecureDirRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
     def email_pi(self):
         super()._email_pi('Secure Directory Request Ready To Be Signed',
                          self.request_obj.requester.get_full_name(),
+                         reverse('secure-dir-request-detail',
+                                 kwargs={'pk': self.request_obj.pk}),
                          'Researcher User Agreement',
                          f'{self.request_obj.project.name} secure directory request',
                          self.request_obj.requester.email)

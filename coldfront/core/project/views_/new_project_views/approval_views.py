@@ -287,6 +287,8 @@ class SavioProjectRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
     def email_pi(self):
         super()._email_pi('Savio Project Request Ready To Be Signed',
                          self.request_obj.pi.get_full_name(),
+                         reverse('new-project-request-detail',
+                                 kwargs={'pk': self.request_obj.pk}),
                          'Memorandum of Understanding',
                          f'{self.request_obj.project.name} project request',
                          self.request_obj.pi.email)

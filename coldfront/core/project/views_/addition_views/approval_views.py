@@ -151,6 +151,8 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
         context['addition_request'] = self.request_obj
 
         context['is_superuser'] = self.request.user.is_superuser
+        context['can_download_mou'] = self.request_obj \
+                                    .state['notified']['status'] == 'Complete'
         context['can_upload_mou'] = \
             self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
@@ -492,6 +494,8 @@ class AllocationAdditionNotifyPIView(MOURequestNotifyPIViewMixIn,
     def email_pi(self):
         super()._email_pi('Service Units Purchase Request Ready To Be Signed',
                          self.request_obj.requester.get_full_name(),
+                         reverse('service-units-purchase-request-detail',
+                                 kwargs={'pk': self.request_obj.pk}),
                          'Memorandum of Understanding',
                          f'{self.request_obj.project.name} service units purchase request',
                          self.request_obj.requester.email)
