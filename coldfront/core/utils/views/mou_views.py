@@ -104,7 +104,7 @@ class MOUUploadView(BaseMOUView, UpdateView):
         messages.success(self.request, message)
 
         log_message = (
-            f'User {self.request.user} uploaded signed file {file_name} '
+            f'User {self.request.user} uploaded signed MOU file {file_name} '
             f'for {self.request_class.__name__} {self.kwargs["pk"]}.')
         logger.info(log_message)
 
