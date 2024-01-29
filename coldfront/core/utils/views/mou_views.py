@@ -191,13 +191,14 @@ class MOURequestNotifyPIViewMixIn:
         context['notify_pi'] = True
         return context
     
-    def _email_pi(self, subject, to_name, mou_type, mou_for, email):
+    def _email_pi(self, subject, to_name, request_url, mou_type, mou_for, email):
         """Send an email to the PI."""
         try:
             send_email_template(subject,
                                 'request_mou_email.html',
                                 {'to_name': to_name,
                                  'savio_request': self.request_obj,
+                                 'request_url': request_url,
                                  'mou_type': mou_type,
                                  'mou_for': mou_for,
                                  'base_url': settings.CENTER_BASE_URL,
@@ -213,8 +214,6 @@ class MOURequestNotifyPIViewMixIn:
 
     def form_valid(self, form):
         """Save the form."""
-        #TODO
-        #email_pi()
         self.email_pi()
         timestamp = utc_now_offset_aware().isoformat()
         self.request_obj.state['notified'] = {
