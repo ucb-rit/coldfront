@@ -12,6 +12,8 @@ from coldfront.core.allocation.models import AllocationAttributeType, \
 from coldfront.core.statistics.models import Job
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
+from django.contrib.auth.models import User
+from coldfront.core.department.models import UserDepartment
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
@@ -100,6 +102,17 @@ class Command(BaseCommand):
             '--partition',
             help='Filter jobs by the partition they requested.',
             type=str)
+        
+        user_subparser = subparsers.add_parser('users',
+                                                  help='Export users data')
+        user_subparser.add_argument('--format',
+                                       choices=['csv', 'json'],
+                                       required=True,
+                                       help='Export results in the given format.',
+                                       type=str)
+        user_subparser.add_argument('--pi_only',
+                                    help = 'Only return PI users',
+                                    action='store_true')
 
         project_subparser = subparsers.add_parser('projects',
                                                   help='Export projects data')
@@ -285,6 +298,50 @@ class Command(BaseCommand):
         time_str = '{}hrs {}mins {}secs'.format(hours, minutes, seconds)
 
         self.stdout.write(self.style.SUCCESS(time_str))
+
+    def handle_users(self, *args, **kwargs):
+        # return list of PI's and their departments
+        format = kwargs['format']
+        pi_only = kwargs['pi_only']
+
+        users = User.objects.all()
+        if pi_only:
+            users = users.filter(userprofile__is_pi=True)
+
+        department_table = []
+        for user in users:
+            departments = list(UserDepartment.objects.select_related('department') \
+                                    .filter(userprofile=user.userprofile) \
+                                    .order_by('department__name') \
+                                    .values_list('department__name', flat=True))
+            department_table.append(departments)
+        
+        header = ['id', 'is_active', 'username', 'first_name', 'last_name', 'email']
+        query_set_ = users.values_list(*header)
+
+        query_set = []
+        for index, user in enumerate(query_set_):
+            user = list(user)
+            user.append(department_table[index])
+            query_set.append(user)
+            
+        header.append('department')
+        if format == 'csv':
+            self.to_csv(query_set,
+                        header=header,
+                        output=kwargs.get('stdout', stdout),
+                        error=kwargs.get('stderr', stderr))
+
+        elif format == 'json':
+            query_set_ = query_set
+            query_set = []
+            for user in query_set_:
+                user = dict(zip(header, user))
+                query_set.append(user)
+            self.to_json(query_set,
+                         output=kwargs.get('stdout', stdout),
+                         error=kwargs.get('stderr', stderr))
+            
 
     def handle_projects(self, *args, **kwargs):
         format = kwargs['format']

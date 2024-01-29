@@ -46,6 +46,8 @@ def get_L4_code_from_department_code(code):
     conn.search(DEPARTMENT_OU,
                 f'(&(objectClass=organizationalUnit)(ou={code}))',
                 attributes=['berkeleyEduOrgUnitHierarchyString'])
+    if not conn.entries:
+        return None
     hierarchy = conn.entries[0].berkeleyEduOrgUnitHierarchyString.value
     return hierarchy.split('-')[3]
 
@@ -84,6 +86,9 @@ def fetch_and_set_user_departments(user, userprofile, dry_run=False):
     ldap_departments = user_entry.departmentNumber.values if user_entry else []
     for department_code in ldap_departments:
         department_code = get_L4_code_from_department_code(department_code)
+        if department_code is None:
+            logger.warning(f'Could not find L4 code for department {department_code}')
+            continue
         # If a Department doesn't exist, create it.
         name = None if Department.objects.filter(code=department_code).exists()\
             else get_department_name_from_code(department_code)
