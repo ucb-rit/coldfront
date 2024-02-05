@@ -26,7 +26,3 @@
     </p>
     {% endif %}
 {% endif %}
-    {% include 'request_card_mou_buttons.html' with addition_request=addition_request
-      unsigned_download_url={% url 'service-units-purchase-request-download-unsigned-mou' addition_request.pk 'service-units-purchase' %}
-      signed_download_url={% url 'service-units-purchase-request-download-mou' addition_request.pk 'service-units-purchase' %}
-      signed_upload_url={% url 'service-units-purchase-request-upload-mou' addition_request.pk 'service-units-purchase' %} %}

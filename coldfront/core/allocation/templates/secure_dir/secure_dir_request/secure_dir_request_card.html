@@ -74,33 +74,6 @@
       <strong>Proposed Scratch Path: </strong>
       {{ proposed_scratch_path }}
     </p>
-    {% if can_download_mou %}
-      <p class="card-text text-justify">
-        <strong>Unsigned Researcher Use Agreement: </strong>
-        <a href="{% url 'secure-dir-request-download-unsigned-mou' secure_dir_request.pk 'secure-dir' %}" class="btn btn-primary">
-          <i class="fas fa-download" aria-hidden="true"></i>
-          Download
-        </a>
-      </p>
-      {% if can_upload_mou or mou_uploaded %}
-        <p class="card-text text-justify">
-          <strong>Signed Researcher Use Agreement: </strong>
-          {% if mou_uploaded %}
-            <a href="{% url 'secure-dir-request-download-mou' secure_dir_request.pk 'secure-dir' %}" class="btn btn-primary">
-              <i class="fas fa-download" aria-hidden="true"></i>
-              Download
-            </a>
-          {% endif %}
-          {% if can_upload_mou %}
-            <a href="{% url 'secure-dir-request-upload-mou' secure_dir_request.pk 'secure-dir' %}"
-            class="btn {% if mou_uploaded %} btn-secondary {% else %} btn-primary {% endif %}">
-              <i class="fas fa-upload" aria-hidden="true"></i>
-              Upload {% if mou_uploaded %} new {% endif %}
-            </a>
-            {% if not mou_uploaded %} <span style="color: red; font-weight: bold;">*</span> {% endif %}
-          {% endif %}
-        </p>
-      {% endif %}
-    {% endif %}
+    {% include 'request_card_mou_buttons.html' %}
   </div>
 </div>
