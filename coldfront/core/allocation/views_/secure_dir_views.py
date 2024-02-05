@@ -1290,7 +1290,7 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
         notified = state['notified']
         task_text = (
             'Confirm or edit allowance details, and '
-            'enable/notify the PI to sign the Memorandum of Understanding.')
+            'enable/notify the PI to sign the Researcher Use Agreement.')
         checklist.append([
             task_text,
             notified['status'],
@@ -1303,7 +1303,7 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
 
         mou = state['mou']
         checklist.append([
-            'Confirm that the PI has signed the Memorandum of Understanding.',
+            'Confirm that the PI has signed the Researcher Use Agreement.',
             mou['status'],
             mou['timestamp'],
             is_notified,
