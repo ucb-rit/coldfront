@@ -391,6 +391,16 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
             context['can_upload_mou'] = \
                 self.request_obj.status.name == 'Under Review'
             context['mou_uploaded'] = bool(self.request_obj.mou_file)
+
+            context['unsigned_download_url'] = reverse('new-project-request-download-unsigned-mou',
+                                                        kwargs={'pk': self.request_obj.pk,
+                                                                'request_type': 'service-units-purchase'})
+            context['signed_download_url'] = reverse('new-project-request-download-mou',
+                                                        kwargs={'pk': self.request_obj.pk,
+                                                                'request_type': 'service-units-purchase'})
+            context['signed_upload_url'] = reverse('new-project-request-upload-mou',
+                                                        kwargs={'pk': self.request_obj.pk,
+                                                                'request_type': 'service-units-purchase'})
         context['is_recharge'] = \
             ComputingAllowance(self.request_obj.computing_allowance) \
                 .is_recharge()

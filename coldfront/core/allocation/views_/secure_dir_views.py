@@ -1262,6 +1262,16 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
             self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
 
+        context['unsigned_download_url'] = reverse('secure-dir-request-download-unsigned-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+        context['signed_download_url'] = reverse('secure-dir-request-download-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+        context['signed_upload_url'] = reverse('secure-dir-request-upload-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+
         set_sec_dir_context(context, self.request_obj)
 
         return context

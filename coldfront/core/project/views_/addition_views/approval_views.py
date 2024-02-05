@@ -157,6 +157,16 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
             self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
 
+        context['unsigned_download_url'] = reverse('service-units-purchase-request-download-unsigned-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+        context['signed_download_url'] = reverse('service-units-purchase-request-download-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+        context['signed_upload_url'] = reverse('service-units-purchase-request-upload-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+
         return context
 
     def is_checklist_complete(self):

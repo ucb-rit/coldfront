@@ -1,0 +1,32 @@
+{% if can_download_mou %}
+    <p class="card-text text-justify">
+    <strong>Unsigned Memorandum of Understanding: </strong>
+    <a href="{{ unsigned_download_url }}" class="btn btn-primary">
+        <i class="fas fa-download" aria-hidden="true"></i>
+        Download
+    </a>
+    </p>
+    {% if can_upload_mou or mou_uploaded %}
+    <p class="card-text text-justify">
+        <strong>Signed Memorandum of Understanding: </strong>
+        {% if mou_uploaded %}
+        <a href="{{ signed_download_url }}" class="btn btn-primary">
+            <i class="fas fa-download" aria-hidden="true"></i>
+            Download
+        </a>
+        {% endif %}
+        {% if can_upload_mou %}
+        <a href="{{ signed_upload_url }}"
+        class="btn {% if mou_uploaded %} btn-secondary {% else %} btn-primary {% endif %}">
+            <i class="fas fa-upload" aria-hidden="true"></i>
+            Upload {% if mou_uploaded %} new {% endif %}
+        </a>
+        {% if not mou_uploaded %} <span style="color: red; font-weight: bold;">*</span> {% endif %}
+        {% endif %}
+    </p>
+    {% endif %}
+{% endif %}
+    {% include 'request_card_mou_buttons.html' with addition_request=addition_request
+      unsigned_download_url={% url 'service-units-purchase-request-download-unsigned-mou' addition_request.pk 'service-units-purchase' %}
+      signed_download_url={% url 'service-units-purchase-request-download-mou' addition_request.pk 'service-units-purchase' %}
+      signed_upload_url={% url 'service-units-purchase-request-upload-mou' addition_request.pk 'service-units-purchase' %} %}

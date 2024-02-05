@@ -52,7 +52,8 @@
         </a>
       {% endif %}
     </p>
-    {% if can_download_mou %}
+    {% include 'request_card_mou_buttons.html' with addition_request=addition_request %}
+    {% comment %} {% if can_download_mou %}
       <p class="card-text text-justify">
         <strong>Unsigned Memorandum of Understanding: </strong>
         <a href="{% url 'service-units-purchase-request-download-unsigned-mou' addition_request.pk 'service-units-purchase' %}" class="btn btn-primary">
@@ -79,6 +80,6 @@
           {% endif %}
         </p>
       {% endif %}
-    {% endif %}
+    {% endif %} {% endcomment %}
   </div>
 </div>
