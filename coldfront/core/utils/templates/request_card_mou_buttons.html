@@ -1,6 +1,6 @@
 {% if can_download_mou %}
     <p class="card-text text-justify">
-    <strong>Unsigned Memorandum of Understanding: </strong>
+    <strong>Unsigned {{ mou_type }}: </strong>
     <a href="{{ unsigned_download_url }}" class="btn btn-primary">
         <i class="fas fa-download" aria-hidden="true"></i>
         Download
@@ -8,7 +8,7 @@
     </p>
     {% if can_upload_mou or mou_uploaded %}
     <p class="card-text text-justify">
-        <strong>Signed Memorandum of Understanding: </strong>
+        <strong>Signed {{ mou_type }}: </strong>
         {% if mou_uploaded %}
         <a href="{{ signed_download_url }}" class="btn btn-primary">
             <i class="fas fa-download" aria-hidden="true"></i>

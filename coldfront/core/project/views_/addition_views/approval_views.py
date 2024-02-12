@@ -166,6 +166,7 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
         context['signed_upload_url'] = reverse('service-units-purchase-request-upload-mou',
                                                     kwargs={'pk': self.request_obj.pk,
                                                             'request_type': 'service-units-purchase'})
+        context['mou_type'] = 'Memorandum of Understanding'
 
         return context
 

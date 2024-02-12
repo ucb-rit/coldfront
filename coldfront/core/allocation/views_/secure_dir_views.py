@@ -1271,6 +1271,7 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
         context['signed_upload_url'] = reverse('secure-dir-request-upload-mou',
                                                     kwargs={'pk': self.request_obj.pk,
                                                             'request_type': 'service-units-purchase'})
+        context['mou_type'] = 'Researcher Use Agreement'
 
         set_sec_dir_context(context, self.request_obj)
 

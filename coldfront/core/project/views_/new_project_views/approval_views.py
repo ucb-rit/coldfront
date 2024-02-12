@@ -401,6 +401,8 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
             context['signed_upload_url'] = reverse('new-project-request-upload-mou',
                                                         kwargs={'pk': self.request_obj.pk,
                                                                 'request_type': 'service-units-purchase'})
+            context['mou_type'] = 'Memorandum of Understanding'
+
         context['is_recharge'] = \
             ComputingAllowance(self.request_obj.computing_allowance) \
                 .is_recharge()
