@@ -42,6 +42,7 @@ class Command(BaseCommand):
                 ('ETNA Compute', 'ETNA cluster compute access'),
                 ('EXPLORER Compute', 'EXPLORER cluster compute access'),
                 ('HBAR Compute', 'HBAR cluster compute access'),
+                ('HEP Compute', 'HEP cluster compute access'),
                 ('JBEI Compute', 'JBEI cluster compute access'),
                 ('JCAP Compute', 'JCAP cluster compute access'),
                 ('JGI Compute', 'JGI cluster compute access'),
