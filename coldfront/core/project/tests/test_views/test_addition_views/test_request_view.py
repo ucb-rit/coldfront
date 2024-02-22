@@ -154,7 +154,7 @@ class TestAllocationAdditionRequestView(TestBase):
         pre_time = utc_now_offset_aware()
 
         data = {
-            'num_service_units': '100',
+            'num_service_units': 100,
             'campus_chartstring': 'Campus Chartstring',
             'chartstring_account_type': 'Chartstring Account Type',
             'chartstring_contact_name': 'Chartstring Account Name',
@@ -179,12 +179,9 @@ class TestAllocationAdditionRequestView(TestBase):
             request.num_service_units, Decimal(data['num_service_units']))
         self.assertTrue(pre_time <= request.request_time <= post_time)
         extra_fields = request.extra_fields
-        self.assertEqual(len(extra_fields) + 1, len(data))
+        self.assertEqual(len(extra_fields), len(data))
         for field in data:
-            if field == 'num_service_units':
-                self.assertNotIn(field, extra_fields)
-            else:
-                self.assertEqual(data[field], extra_fields[field])
+            self.assertEqual(data[field], extra_fields[field])
 
         # A notification email should have been sent to admins.
         self.assertEqual(len(mail.outbox), 1)

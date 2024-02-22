@@ -73,6 +73,13 @@ class SecureDirManageUsersRequestCompletionForm(forms.Form):
 
 
 class SecureDirDataDescriptionForm(forms.Form):
+    department = forms.CharField(
+        label=('Specify the full name of the department that this directory ' 
+            'will belong to (e.g "Dept. of Chemistry", "Dept. of Economics").'),
+        validators=[MinLengthValidator(5)],
+        required=True,
+        widget=forms.Textarea(attrs={'rows': 3}))
+
     data_description = forms.CharField(
         label='Please explain the kind of P2/P3 data you are planning to '
               'work with on Savio. Please include: (1) Dataset description '
@@ -208,4 +215,13 @@ class SecureDirRDMConsultationReviewForm(forms.Form):
         label='Justification',
         validators=[MinLengthValidator(10)],
         required=False,
+        widget=forms.Textarea(attrs={'rows': 3}))
+
+class SecureDirRequestEditDepartmentForm(forms.Form):
+
+    department = forms.CharField(
+        label=('Specify the full name of the department that this directory ' 
+            'will belong to (e.g "Dept. of Chemistry", "Dept. of Economics").'),
+        validators=[MinLengthValidator(5)],
+        required=True,
         widget=forms.Textarea(attrs={'rows': 3}))
