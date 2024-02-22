@@ -45,6 +45,13 @@
       <button id="view-purchase-details" class="btn btn-primary" role="button">
         View
       </button>
+      {% if is_superuser %}
+        <a href="{% url 'service-units-purchase-request-edit-extra-fields' addition_request.pk %}" class="btn btn-secondary">
+          <i class="fas fa-edit" aria-hidden="true"></i>
+          Edit
+        </a>
+      {% endif %}
     </p>
+    {% include 'request_card_mou_buttons.html' %}
   </div>
 </div>

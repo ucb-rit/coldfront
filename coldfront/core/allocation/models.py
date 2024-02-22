@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.core.files.storage import FileSystemStorage
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -23,6 +24,9 @@ from coldfront.core.project.models import ProjectUser
 from coldfront.core.resource.models import Resource
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import display_time_zone_current_date
+from coldfront.core.utils.mou import DynamicFileField
+from coldfront.core.utils.mou import upload_to_func
+
 
 logger = logging.getLogger(__name__)
 
@@ -547,6 +551,10 @@ def allocation_addition_request_state_schema():
     """Return the schema for the AllocationAdditionRequest.state
     field."""
     return {
+        'notified': {
+            'status': 'Pending',
+            'timestamp': ''
+        },
         'memorandum_signed': {
             'status': 'Pending',
             'timestamp': '',
@@ -585,6 +593,8 @@ class AllocationAdditionRequest(TimeStampedModel):
 
     state = models.JSONField(default=allocation_addition_request_state_schema)
     extra_fields = models.JSONField(default=dict)
+
+    mou_file = DynamicFileField(upload_to=upload_to_func, null=True)
 
     def __str__(self):
         project_name = self.project.name
@@ -695,6 +705,10 @@ def secure_dir_request_state_schema():
             'justification': '',
             'timestamp': ''
         },
+        'notified': {
+            'status': 'Pending',
+            'timestamp': ''
+        },
         'mou': {
             'status': 'Pending',
             'justification': '',
@@ -715,6 +729,7 @@ def secure_dir_request_state_schema():
 class SecureDirRequest(TimeStampedModel):
     requester = models.ForeignKey(User, on_delete=models.CASCADE)
     directory_name = models.TextField()
+    department = models.TextField(null=True)
     data_description = models.TextField()
     rdm_consultation = models.TextField(null=True)
     project = models.ForeignKey(Project, null=True, on_delete=models.CASCADE)
@@ -725,6 +740,8 @@ class SecureDirRequest(TimeStampedModel):
     completion_time = models.DateTimeField(null=True, blank=True)
 
     state = models.JSONField(default=secure_dir_request_state_schema)
+
+    mou_file = DynamicFileField(upload_to=upload_to_func, null=True)
 
     def __str__(self):
         return f'{self.directory_name} ({self.project.name})'

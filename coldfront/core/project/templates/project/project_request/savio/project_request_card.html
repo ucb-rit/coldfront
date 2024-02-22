@@ -85,11 +85,6 @@
     <p class="card-text text-justify">
       <strong>Allowance: </strong>
       {{ computing_allowance_name }}
-      {% if allowance_has_extra_fields %}
-        <button id="view-extra-fields" class="btn btn-info" role="button">
-          Details
-        </button>
-      {% endif %}
     </p>
     <p class="card-text text-justify">
       <strong>Initial Allocation Period: </strong>
@@ -121,5 +116,20 @@
       <strong>Survey Responses: </strong>
       <button id="view-survey" class="btn btn-primary" role="button">View</button>
     </p>
+    {% if allowance_has_extra_fields %}
+      <p class="card-text text-justify">
+        <strong>Extra Request Details:</strong>
+        <button id="view-extra-fields" class="btn btn-primary" role="button">
+          Details
+        </button>
+        {% if is_allowed_to_manage_request %}
+          <a href="{% url 'new-project-request-edit-extra-fields' savio_request.pk %}" class="btn btn-secondary">
+            <i class="fas fa-edit" aria-hidden="true"></i>
+            Edit
+          </a>
+        {% endif %}
+    </p>
+    {% endif %}
+    {% include 'request_card_mou_buttons.html' %}
   </div>
 </div>
