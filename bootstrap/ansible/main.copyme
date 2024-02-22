@@ -106,7 +106,7 @@ flag_next_period_renewal_requestable_month: 5
 flag_multiple_email_addresses_allowed: False
 # Whether to install and enable the MOU generation package.
 # TODO: For BRC, enable MOU generation (requires access to the package).
-flag_mou_generation_enabled: false
+flag_mou_generation_enabled: False
 
 # Portal settings.
 # TODO: For LRC, use "MyLRC", "Laboratory Research Computing", "LRC", and
