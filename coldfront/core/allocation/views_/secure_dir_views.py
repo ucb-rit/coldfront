@@ -1,5 +1,6 @@
+import iso8601
 import logging
-import os
+
 from urllib.parse import urljoin
 
 from django.conf import settings
@@ -16,7 +17,6 @@ from django.views.generic import ListView, FormView, DetailView
 from django.views.generic.base import TemplateView, View
 from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 from formtools.wizard.views import SessionWizardView
-from iso8601 import iso8601
 
 from coldfront.core.allocation.forms_.secure_dir_forms import (
     SecureDirManageUsersForm,
