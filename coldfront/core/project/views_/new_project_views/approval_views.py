@@ -332,7 +332,7 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         try:
             context['allocation_amount'] = self.get_service_units_to_allocate()
         except Exception as e:
-            melf.logger.exception(e)
+            self.logger.exception(e)
             messages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
 
@@ -394,13 +394,13 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
             context['unsigned_download_url'] = reverse('new-project-request-download-unsigned-mou',
                                                         kwargs={'pk': self.request_obj.pk,
-                                                                'request_type': 'service-units-purchase'})
+                                                                'request_type': 'new-project'})
             context['signed_download_url'] = reverse('new-project-request-download-mou',
                                                         kwargs={'pk': self.request_obj.pk,
-                                                                'request_type': 'service-units-purchase'})
+                                                                'request_type': 'new-project'})
             context['signed_upload_url'] = reverse('new-project-request-upload-mou',
                                                         kwargs={'pk': self.request_obj.pk,
-                                                                'request_type': 'service-units-purchase'})
+                                                                'request_type': 'new-project'})
             context['mou_type'] = 'Memorandum of Understanding'
 
         context['is_recharge'] = \
