@@ -7,7 +7,7 @@ if [ "$DEPLOYMENT" != "BRC" ] && [ "$DEPLOYMENT" != "LRC" ]; then
 fi
 
 os=$(uname -o)
-
+# On Git Bash, convert "/c/Users/..." to "/C:/Users/..." 
 if [ "$os" = "Msys" ]; then
     wd=$(pwd | sed 's/^../\U&:/')
 else
