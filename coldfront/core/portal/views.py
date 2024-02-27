@@ -220,9 +220,25 @@ def allocation_summary(request):
 #def custom_handler400(request, exception):
 #    return render(request, 'portal/error_lrc_400.html', status=400)
 
-def custom_handler400(request, exception):
-    print("Custom 400 handler called")
-    return HttpResponseBadRequest("Custom 400 bad request handler")
-#Begin test code for bad requests
+#def custom_handler400(request, exception):
+#    print("Custom 400 handler called")
+#    return HttpResponseBadRequest("Custom 400 bad request handler")
+##Begin test code for bad requests
+#def test_400_bad_request_view(request):
+#    raise HttpResponseBadRequest("This is a bad request y'all")
+
+
+def custom_handler400(request, exception, template_name='400.html'):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info('hello, world')
+    from django.template import loader
+    template = loader.get_template(template_name)
+    return HttpResponseBadRequest(template.render(context={'PORTAL_NAME': 'MyBRC User Portal'}))
+    # print("Custom 400 handler called")
+    # return HttpResponseBadRequest("Custom 400 bad request handler")
+
 def test_400_bad_request_view(request):
-    raise HttpResponseBadRequest("This is a bad request y'all")
+    from django.core.exceptions import SuspiciousOperation
+    raise SuspiciousOperation('no')
+    return HttpResponseBadRequest("This is a bad request y'all")
