@@ -24,9 +24,9 @@ class DepartmentSelectionForm(forms.Form):
                                                 userprofile=self.userprofile)
 
     def exclude_department_choices(self):
-        # exclude departments with userdepartment associations that are authoritative
-        department_pks = UserDepartment.objects \
-                .exclude(userprofile=self.userprofile, is_authoritative=True) \
-                .values_list('department', flat=True)
-        self.fields['departments'].queryset = Department.objects.filter(
-                                        pk__in=department_pks).order_by('name')
+        department_pks = UserDepartment.objects.filter(
+                userprofile=self.userprofile,
+                is_authoritative=True).values_list('department__pk', flat=True)
+
+        self.fields['departments'].queryset = Department.objects.exclude( \
+            pk__in=department_pks)
