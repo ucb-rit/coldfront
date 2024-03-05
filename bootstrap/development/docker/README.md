@@ -46,7 +46,7 @@ Note that these steps must be run from the root directory of the repo.
      - The port must be one of the above because the CILogon application client is only configured for one of those four ports.
      - The port may be customized so that multiple instances may run at the same time, without port clashes.
 
-6. Start the application stack. Specify a unique Docker project name so that resources are placed within a Docker namespace. Examples: "brc-dev", "lrc-dev".
+6. Start the application stack. Specify a unique Docker [project name](https://docs.docker.com/compose/project-name/) so that resources are placed within a Docker namespace. Examples: "brc-dev", "lrc-dev".
 
    ```bash
    export DOCKER_PROJECT_NAME=brc-dev
