@@ -21,9 +21,12 @@ class DepartmentSelectionForm(forms.Form):
         fetch_and_set_user_departments(self.user, self.userprofile)
         self.exclude_department_choices()
         self.fields['departments'].initial = Department.objects.filter(
-           userprofile=self.userprofile, userdepartment__is_authoritative=False)
+                                                userprofile=self.userprofile)
 
     def exclude_department_choices(self):
         # exclude departments with userdepartment associations that are authoritative
-        self.fields['departments'].queryset = Department.objects.exclude(
-            userprofile=self.userprofile, userdepartment__is_authoritative=True)
+        department_pks = UserDepartment.objects \
+                .exclude(userprofile=self.userprofile, is_authoritative=True) \
+                .values_list('department', flat=True)
+        self.fields['departments'].queryset = Department.objects.filter(
+                                        pk__in=department_pks).order_by('name')
