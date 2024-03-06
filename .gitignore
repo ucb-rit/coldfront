@@ -33,3 +33,6 @@ cilogon.yml
 htmlcov
 secrets
 redis.conf
+id_*
+fetch_database_backup.sh
+google-drive-key.json
