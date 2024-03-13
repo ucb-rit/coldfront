@@ -193,54 +193,66 @@ class ProjectRenewalProjectSelectionForm(forms.Form):
             **_filter).exclude(**exclude).order_by('name')
 
 class ProjectRenewalSurveyForm(forms.Form):
-
-    if flag_enabled('BRC_ONLY'):
-        q1 = forms.CharField(
-            label='BRC Question 1',
-            required=True,
-            widget=forms.Textarea(attrs={'rows': 3}))
-        q2 = forms.CharField(
-            label='BRC Question 2',
-            required=True,
-            widget=forms.Textarea(attrs={'rows': 3}))
-        q3 = forms.MultipleChoiceField(
-            choices=(
-                ('1', (
-                    '1')),
-                ('2', (
-                    '2')),
-                ('3', (
-                    '3')),
-            ),
-            label=(
-                'BRC Choose an option:'),
-            required=False,
-            widget=forms.CheckboxSelectMultiple())
-    elif flag_enabled('LRC_ONLY'):
-        q1 = forms.CharField(
-            label='LRC Question 1',
-            required=True,
-            widget=forms.Textarea(attrs={'rows': 3}))
-        q2 = forms.CharField(
-            label='LRC Question 2',
-            required=True,
-            widget=forms.Textarea(attrs={'rows': 3}))
-        q3 = forms.MultipleChoiceField(
-            choices=(
-                ('1', (
-                    '1')),
-                ('2', (
-                    '2')),
-                ('3', (
-                    '3')),
-            ),
-            label=(
-                'LRC Choose an option:'),
-            required=False,
-            widget=forms.CheckboxSelectMultiple())
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._update_field_attributes()
+
+    def _update_field_attributes(self):
+        """Update field attributes with deployment-specific content."""
+        if flag_enabled('BRC_ONLY'):
+            #TODO: Replace placeholders with BRC Survey Questions
+            self.fields['question_1'] = forms.CharField(
+                label='Question 1',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 3})
+                )
+
+            self.fields['question_2'] = forms.CharField(
+                    label='Question 2',
+                    required=True,
+                    widget=forms.Textarea(attrs={'rows': 3}))
+            
+            self.fields['question_3'] = forms.MultipleChoiceField(
+                choices=(
+                    ('1', (
+                        '1')),
+                    ('2', (
+                        '2')),
+                    ('3', (
+                        '3')),
+                ),
+                label=(
+                    'BRC Choose an option:'),
+                required=False,
+                widget=forms.CheckboxSelectMultiple())
+        elif flag_enabled('LRC_ONLY'):
+            # TODO: Replace placeholders with LRC Survey Questions
+            self.fields['question_1'] = forms.CharField(
+                label='Question 1',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 3})
+                )
+
+            self.fields['question_2'] = forms.CharField(
+                    label='Question 2',
+                    required=True,
+                    widget=forms.Textarea(attrs={'rows': 3}))
+            
+            self.fields['question_3'] = forms.MultipleChoiceField(
+                choices=(
+                    ('1', (
+                        '1')),
+                    ('2', (
+                        '2')),
+                    ('3', (
+                        '3')),
+                ),
+                label=(
+                    'LRC Choose an option:'),
+                required=False,
+                widget=forms.CheckboxSelectMultiple())
+
 
 class ProjectRenewalReviewAndSubmitForm(forms.Form):
 
