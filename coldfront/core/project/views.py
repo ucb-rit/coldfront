@@ -712,12 +712,19 @@ class ProjectAddUsersSearchView(LoginRequiredMixin, UserPassesTestMixin, Templat
 
     def dispatch(self, request, *args, **kwargs):
         project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
-        if project_obj.status.name not in ['Active', 'Inactive', 'New', ]:
+        if project_obj.status.name == 'Archived':
             messages.error(
                 request, 'You cannot add users to an archived project.')
-            return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': project_obj.pk}))
+        elif project_obj.status.name == 'New':
+            messages.error(
+                request, 'You cannot add users to a new project.')
+        elif project_obj.status.name == 'Inactive':
+            messages.error(
+                request, 'You cannot add users to an inactive project.')
         else:
             return super().dispatch(request, *args, **kwargs)
+        return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': project_obj.pk}))
+
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
