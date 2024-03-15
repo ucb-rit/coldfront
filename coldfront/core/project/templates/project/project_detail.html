@@ -59,8 +59,21 @@ Project Detail
     <div class="card-body">
       {% if project.status.name != 'Archived' %}
           {% if is_allowed_to_update_project %}
-        <a class="btn btn-success" href="{% url 'project-add-users-search' project.pk %}" role="button"><i class="fas fa-user-plus" aria-hidden="true"></i> Add Users</a>
+              {% if project.status.name == 'Active' %}
+                <a 
+                  class="btn btn-success" 
+                  href="{% url 'project-add-users-search' project.pk %}" 
+                  role="button">
+                    <i class="fas fa-user-plus" aria-hidden="true"></i> 
+                  Add Users
+                </a>
+              {% else %}
+                <button type="button" class="btn btn-success" disabled>
+                  <i class="fas fa-user-plus" aria-hidden="true"></i>
+                  Add Users
+                </button>
               {% endif %}
+           {% endif %}
           <a class="btn btn-success" href="{% url 'project-review-join-requests' project.pk %}" role="button">
             <i class="fas fa-user-plus" aria-hidden="true"></i>
             Review Join Requests
