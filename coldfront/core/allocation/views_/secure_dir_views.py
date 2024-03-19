@@ -1,5 +1,6 @@
+import iso8601
 import logging
-import os
+
 from urllib.parse import urljoin
 
 from django.conf import settings
@@ -16,7 +17,6 @@ from django.views.generic import ListView, FormView, DetailView
 from django.views.generic.base import TemplateView, View
 from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 from formtools.wizard.views import SessionWizardView
-from iso8601 import iso8601
 
 from coldfront.core.allocation.forms_.secure_dir_forms import (
     SecureDirManageUsersForm,
@@ -1262,6 +1262,17 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
             self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
 
+        context['unsigned_download_url'] = reverse('secure-dir-request-download-unsigned-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'secure-dir'})
+        context['signed_download_url'] = reverse('secure-dir-request-download-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'secure-dir'})
+        context['signed_upload_url'] = reverse('secure-dir-request-upload-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'secure-dir'})
+        context['mou_type'] = 'Researcher Use Agreement'
+
         set_sec_dir_context(context, self.request_obj)
 
         return context
@@ -1290,7 +1301,7 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
         notified = state['notified']
         task_text = (
             'Confirm or edit allowance details, and '
-            'enable/notify the PI to sign the Memorandum of Understanding.')
+            'enable/notify the PI to sign the Researcher Use Agreement.')
         checklist.append([
             task_text,
             notified['status'],
@@ -1303,7 +1314,7 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
 
         mou = state['mou']
         checklist.append([
-            'Confirm that the PI has signed the Memorandum of Understanding.',
+            'Confirm that the PI has signed the Researcher Use Agreement.',
             mou['status'],
             mou['timestamp'],
             is_notified,

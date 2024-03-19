@@ -24,6 +24,7 @@ from copy import deepcopy
 from decimal import Decimal
 from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 
+import iso8601
 import logging
 import os
 
@@ -156,6 +157,17 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
         context['can_upload_mou'] = \
             self.request_obj.status.name == 'Under Review'
         context['mou_uploaded'] = bool(self.request_obj.mou_file)
+
+        context['unsigned_download_url'] = reverse('service-units-purchase-request-download-unsigned-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+        context['signed_download_url'] = reverse('service-units-purchase-request-download-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+        context['signed_upload_url'] = reverse('service-units-purchase-request-upload-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+        context['mou_type'] = 'Memorandum of Understanding'
 
         return context
 
