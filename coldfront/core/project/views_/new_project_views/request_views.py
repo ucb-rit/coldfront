@@ -258,6 +258,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 if pooling_requested:
                     project = self.__handle_pool_with_existing_project(
                         form_data)
+                    # This would be where we change the form data to give an exception to pooling
+                    # Call a function to alter max_length
                 else:
                     project = self.__handle_create_new_project(form_data)
                     if self.__billing_id_required():

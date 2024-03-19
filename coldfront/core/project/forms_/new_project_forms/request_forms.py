@@ -503,7 +503,7 @@ class SavioProjectPooledProjectSelectionForm(forms.Form):
 
 
 class SavioProjectDetailsForm(forms.Form):
-
+    # Move the name into the __init__ so that it can be conditional based on pooled==True
     name = forms.CharField(
         help_text=(
             'A unique name for the project, which must contain only lowercase '

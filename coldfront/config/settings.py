@@ -11,7 +11,8 @@ from django.contrib.messages import constants as messages
 # ------------------------------------------------------------------------------
 # Django config for ColdFront
 # ------------------------------------------------------------------------------
-
+# Test setting
+# x = 1
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ALLOWED_HOSTS = ['*']
