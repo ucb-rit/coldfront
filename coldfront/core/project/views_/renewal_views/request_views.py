@@ -129,8 +129,8 @@ class AllocationRenewalMixin(object):
 
     @staticmethod
     def create_allocation_renewal_request(requester, pi, computing_allowance,
-                                          allocation_period, renewal_survey_answers, pre_project,
-                                          post_project,
+                                          allocation_period, pre_project,
+                                          post_project, renewal_survey_answers, 
                                           new_project_request=None):
         """Create a new AllocationRenewalRequest."""
         request_kwargs = dict()
@@ -358,7 +358,8 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
 
             request = self.create_allocation_renewal_request(
                 self.request.user, pi, self.computing_allowance,
-                allocation_period, tmp['renewal_survey_answers'], tmp['current_project'], requested_project,
+                allocation_period, tmp['current_project'], requested_project,
+                tmp['renewal_survey_answers'], 
                 new_project_request=new_project_request)
 
             self.send_emails(request)
@@ -623,7 +624,8 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
 
             request = self.create_allocation_renewal_request(
                 self.request.user, pi, self.computing_allowance,
-                allocation_period, tmp['renewal_survey_answers'], self.project_obj, self.project_obj)
+                allocation_period, self.project_obj, self.project_obj, 
+                tmp['renewal_survey_answers'])
 
             self.send_emails(request)
         except Exception as e:
