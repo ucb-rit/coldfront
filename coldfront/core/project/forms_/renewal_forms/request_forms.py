@@ -195,8 +195,12 @@ class ProjectRenewalProjectSelectionForm(forms.Form):
 class ProjectRenewalSurveyForm(forms.Form):
     
     def __init__(self, *args, **kwargs):
+        disable_fields = kwargs.pop('disable_fields', False)
         super().__init__(*args, **kwargs)
         self._update_field_attributes()
+        if disable_fields:
+            for field in self.fields:
+                self.fields[field].disabled = True
 
     def _update_field_attributes(self):
         """Update field attributes with deployment-specific content."""
