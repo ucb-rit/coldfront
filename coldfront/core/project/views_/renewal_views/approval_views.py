@@ -4,6 +4,7 @@ from coldfront.core.allocation.utils import prorated_allocation_amount
 from coldfront.core.project.forms import ReviewDenyForm
 from coldfront.core.project.forms import ReviewStatusForm
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
+from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalSurveyForm
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalApprovalRunner
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalDenialRunner
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcessingRunner
@@ -124,6 +125,8 @@ class AllocationRenewalRequestMixin(object):
         context['renewal_request'] = self.request_obj
         context['computing_allowance_name'] = \
             self.computing_allowance_obj.get_name()
+        context['survey_form'] = ProjectRenewalSurveyForm(
+            initial=self.request_obj.renewal_survey_answers)
 
     def set_objs(self, pk):
         self.request_obj = get_object_or_404(
