@@ -25,10 +25,10 @@ services:
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf
 
   email-server:
-    image: coldfront-email-server
+    image: coldfront-email-server:${IMAGE_TAG:-latest}
 
   db-postgres-shell:
-    image: coldfront-db-postgres-shell
+    image: coldfront-db-postgres-shell:${IMAGE_TAG:-latest}
     environment:
       POSTGRES_HOST: db-postgres
       POSTGRES_DB: ${DB_NAME}
@@ -42,12 +42,12 @@ services:
       - ../../..:/var/www/coldfront_app/coldfront
 
   app-shell:
-    image: coldfront-app-shell
+    image: coldfront-app-shell:${IMAGE_TAG:-latest}
     volumes:
       - ../../..:/var/www/coldfront_app/coldfront
 
   web:
-    image: coldfront-web
+    image: coldfront-web:${IMAGE_TAG:-latest}
     ports:
       - ${WEB_PORT}:80
     volumes:

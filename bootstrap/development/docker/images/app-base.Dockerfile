@@ -1,7 +1,11 @@
-FROM ubuntu:latest
+FROM ubuntu:focal
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y python3 python3-dev python3-pip && \
+    apt update && \
+    apt -y install python3.8 && \
+    apt-get install -y python3.8-dev python3-pip && \
     # Necessary for mod-wsgi requirement
     apt-get install -y apache2-dev
 

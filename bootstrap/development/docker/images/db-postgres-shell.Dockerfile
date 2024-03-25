@@ -1,4 +1,5 @@
-FROM ubuntu:latest
+ARG BASE_IMAGE_TAG=latest
+FROM coldfront-app-base:${BASE_IMAGE_TAG}
 
 RUN apt-get update && \
     apt-get install -y gnupg lsb-release wget
