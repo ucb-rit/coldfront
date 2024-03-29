@@ -22,6 +22,7 @@ class SavioProjectReviewSetupForm(forms.Form):
         help_text='If you are unsure, leave the status as "Pending".',
         label='Status',
         required=True)
+    # Move this into the __init__ definition at L51 
     final_name = forms.CharField(
         help_text=(
             'Update the name of the project, in case it needed to be '
