@@ -204,7 +204,7 @@ class ProjectRenewalSurveyForm(forms.Form):
 
     def _update_field_attributes(self):
         """Update field attributes with deployment-specific content."""
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled('LRC_ONLY'):
             #TODO: Replace placeholders with BRC Survey Questions
             self.fields['brc_services'] = forms.MultipleChoiceField(
                 choices=(
@@ -426,6 +426,112 @@ class ProjectRenewalSurveyForm(forms.Form):
                     'BRC is planning an in-person training session within the next 2-3 months and would like input on what topics would be most useful to you personally.'
                 )
             )
+
+            self.fields['12a'] = forms.MultipleChoiceField(
+                choices=(
+                    ('1', (
+                        '1 - Not useful')),
+                    ('2', (
+                        '2')),
+                    ('3', (
+                        '3')),
+                    ('4', (
+                        '4')),
+                    ('5', (
+                        '5 - Very useful')),
+                ),
+                label=(
+                    'Selecting computational platforms that fit your research and '
+                    'budget (Savio, HPC@UC, XSEDE, commercial cloud providers, AEoD) '
+                    'System overview (how to access Savio via condo contribution '
+                    'or faculty compute allowance, system capabilities)'),
+                required=False,
+                widget=forms.RadioSelect())
+            
+            self.fields['12b'] = forms.MultipleChoiceField(
+                choices=(
+                    ('1', (
+                        '1 - Not useful')),
+                    ('2', (
+                        '2')),
+                    ('3', (
+                        '3')),
+                    ('4', (
+                        '4')),
+                    ('5', (
+                        '5 - Very useful')),
+                ),
+                label=(
+                    'Basic usage of the Savio cluster (logging on, data transfer, accessing '
+                    'software, using the scheduler; limited discussion of access models and '
+                    'capabilities)'),
+                required=False,
+                widget=forms.RadioSelect())
+            
+            self.fields['12c'] = forms.MultipleChoiceField(
+                choices=(
+                    ('1', (
+                        '1 - Not useful')),
+                    ('2', (
+                        '2')),
+                    ('3', (
+                        '3')),
+                    ('4', (
+                        '4')),
+                    ('5', (
+                        '5 - Very useful')),
+                ),
+                label=(
+                    'Advanced usage of the Savio cluster (e.g. installing your own software, '
+                    'parallelization strategies, effective use of specific system resources '
+                    'such as GPUs and Hadoop/Spark -- please indicate specific interests '
+                    'below)'),
+                required=False,
+                widget=forms.RadioSelect())
+            
+            self.fields['12d'] = forms.MultipleChoiceField(
+                choices=(
+                    ('1', (
+                        '1 - Not useful')),
+                    ('2', (
+                        '2')),
+                    ('3', (
+                        '3')),
+                    ('4', (
+                        '4')),
+                    ('5', (
+                        '5 - Very useful')),
+                ),
+                label=(
+                    'Use of Singularity on Savio (containerized applications, including Docker '
+                    'containers packaged for Savio deployment)'),
+                required=False,
+                widget=forms.RadioSelect())
+            
+            self.fields['12e'] = forms.MultipleChoiceField(
+                choices=(
+                    ('1', (
+                        '1 - Not useful')),
+                    ('2', (
+                        '2')),
+                    ('3', (
+                        '3')),
+                    ('4', (
+                        '4')),
+                    ('5', (
+                        '5 - Very useful')),
+                ),
+                label=(
+                    'Use of ing Analytic Environments on Demand (virtualized, scalable Windows '
+                    'environments provisioned with licensed or open-source software '
+                    'applications applicable to research projects)'),
+                required=False,
+                widget=forms.RadioSelect())
+
+            self.fields['12f'] = forms.MultipleChoiceField(
+                label=('Any other or specific topics of interest?'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2}))
 
         elif flag_enabled('LRC_ONLY'):
             # TODO: Replace placeholders with LRC Survey Questions
