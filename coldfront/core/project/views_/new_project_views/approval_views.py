@@ -721,6 +721,8 @@ class SavioProjectReviewSetupView(LoginRequiredMixin, UserPassesTestMixin,
         status = form_data['status']
         requested_name = (
             self.request_obj.state['setup']['name_change']['requested_name'])
+        # This seems to be the place where the final_name constraints get altered. 
+        # How do I find out what the "pooled" form data indicator is?? 
         final_name = form_data['final_name']
         justification = form_data['justification']
         timestamp = utc_now_offset_aware().isoformat()
