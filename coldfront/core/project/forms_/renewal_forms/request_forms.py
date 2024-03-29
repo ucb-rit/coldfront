@@ -206,30 +206,227 @@ class ProjectRenewalSurveyForm(forms.Form):
         """Update field attributes with deployment-specific content."""
         if flag_enabled('BRC_ONLY'):
             #TODO: Replace placeholders with BRC Survey Questions
-            self.fields['question_1'] = forms.CharField(
-                label='Question 1',
+            self.fields['brc_services'] = forms.MultipleChoiceField(
+                choices=(
+                    ('savio_hpc', (
+                        'Savio High Performance Computing and consulting')),
+                    ('condo_storage', (
+                        'Condo storage on Savio')),
+                    ('srdc', (
+                        'Secure Research Data & Computing (SRDC)')),
+                    ('aeod', (
+                        'Analytic Environments on Demand')),
+                    ('cloud_consulting', (
+                        'Cloud consulting (e.g., Amazon, Google, Microsoft, ' 
+                        'XSEDE, UCB\'s Cloud Working Group)')),
+                    ('other', (
+                        'Other BRC consulting (e.g. assessing the '
+                        'computation platform or resources appropriate '
+                        'for your research workflow)')),
+                    ('none', (
+                        'None of the above')),
+                ),
+                label='Which Berkeley Research Computing services have you'
+                 ' used? (Check all that apply.)',
                 required=True,
-                widget=forms.Textarea(attrs={'rows': 3})
-                )
-
-            self.fields['question_2'] = forms.CharField(
-                    label='Question 2',
-                    required=True,
-                    widget=forms.Textarea(attrs={'rows': 3}))
+                widget=forms.CheckboxSelectMultiple())
             
-            self.fields['question_3'] = forms.MultipleChoiceField(
+            self.fields['publications'] = forms.CharField(
+                label='Please list any publications (including papers, books, '
+                'dissertations, theses, and public presentations) that you '
+                'authored or co-authored, that have been supported by '
+                'Berkeley Research Computing resources and/or consulting. '
+                'Please provide a bibliographic reference, URL or DOI for '
+                'each publication/presentation.',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 3}))
+
+            self.fields['grants'] = forms.CharField(
+                label='Please list any grant(s) or other competitively-'
+                'awarded funding that has been or will be supported by '
+                'Berkeley Research Computing resources and/or consulting. '
+                'Please provide the name of the funding agency, the award '
+                'number or other identifier, and the amount of funding awarded.',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 3}))
+            
+            self.fields['recruitment_or_retention'] = forms.CharField(
+                label='Please list any recruitment or retention cases you '
+                'are aware of in which the availability of the Savio '
+                'high-performance computing cluster or other Berkeley '
+                'Research Computing services -- such as Condo Storage, '
+                'Analytic Environments on Demand (AEoD), or Cloud Computing '
+                'Support  -- played a role? Please indicate the recruitment / '
+                'retention case role (faculty, postdoc, or graduate student), '
+                'department, sponsoring faculty member, and outcome. This '
+                'information will not be shared publicly, except as a '
+                'component of aggregated statistics.',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 3}))
+            
+            self.fields['classes'] = forms.CharField(
+                label='Please list any classes (course number and semester) '
+                'for which you were/will be an instructor, and that were or '
+                'will be supported by the Berkeley Research Computing Program. '
+                'Please indicate whether an Instructional Computing Allowance '
+                '(ICA) was, is, or will be an element of support for the '
+                'listed classes. (More on ICAs here: '
+                'http://research-it.berkeley.edu/blog/ica-pilot .)',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 3}))
+
+            self.fields['recommendation_rating'] = forms.MultipleChoiceField(
                 choices=(
                     ('1', (
-                        '1')),
+                        '1 - Not at all likely')),
                     ('2', (
                         '2')),
                     ('3', (
                         '3')),
+                    ('4', (
+                        '4')),
+                    ('5', (
+                        '5')),
+                    ('6', (
+                        '6')),
+                    ('7', (
+                        '7')),
+                    ('8', (
+                        '8')),
+                    ('9', (
+                        '9')),
+                    ('10', (
+                        '10 - Very likely')),
                 ),
                 label=(
-                    'BRC Choose an option:'),
+                    'Based upon your overall experience using BRC services, '
+                    'how likely are you to recommend Berkeley Research '
+                    'Computing to others?'),
+                required=False,
+                widget=forms.RadioSelect())
+            
+            self.fields['rating_reason'] = forms.CharField(
+                label='What is the reason for your rating above?',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 2}))
+            
+            self.fields['rating_reason'] = forms.CharField(
+                label='If you are new to computational methods '
+                '(broadly, or in a specific application), please '
+                'let us know how BRC services and/or resources have '
+                'helped you bootstrap the application of computational '
+                'methods to your research.',
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 3}))
+            
+            self.fields['important_to_research'] = forms.MultipleChoiceField(
+                choices=(
+                    ('1', (
+                        'Not at all important')),
+                    ('2', (
+                        'Somewhat important')),
+                    ('3', (
+                        'Important')),
+                    ('4', (
+                        'Very important')),
+                    ('5', (
+                        'Essential')),
+                    ('6', (
+                        'Not applicable')),
+                ),
+                label=(
+                    'How important is the Berkeley Research Computing '
+                    'Program to your research?'),
+                required=False,
+                widget=forms.RadioSelect())
+            
+            self.fields['mybrc'] = forms.MultipleChoiceField(
+                choices=(
+                    ('yes', (
+                        'Yes')),
+                    ('no', (
+                        'No')),
+                ),
+                label=(
+                    'Do you use the Savio Account Management portal '
+                    'MyBRC? Any comments?'),
+                required=False,
+                widget=forms.RadioSelect())
+            
+            self.fields['mybrc_comments'] = forms.MultipleChoiceField(
+                label=('If yes, what feedback do you have for MyBRC?'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2}))
+            
+            self.fields['open_ondemand'] = forms.MultipleChoiceField(
+                choices=(
+                    ('desktop', (
+                        'Desktop')),
+                    ('matlab', (
+                        'MatLab')),
+                    ('jupyter_notebook', (
+                        'Jupyter Notebook/Lab')),
+                    ('vscode_server', (
+                        'VS Code Server')),
+                    ('none', (
+                        'None of the above')),
+                    ('other', (
+                        'Other')),
+                ),
+                label=(
+                    'Do you use Open Ondemand? Which '
+                    'application(s) do you use? (Check all that apply.)'),
+                required=True,
+                widget=forms.RadioSelect())
+            
+            self.fields['brc_feedback'] = forms.MultipleChoiceField(
+                label=(
+                    'How could the Berkeley Research Computing '
+                    'Program be more useful to your research or teaching?'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2}))
+            
+            self.fields['colleague_suggestions'] = forms.MultipleChoiceField(
+                label=(
+                    'Please suggest colleagues who might benefit from the '
+                    'Berkeley Research Computing Program, with whom we '
+                    'should follow up. Names, e-mail addresses, and roles '
+                    '(faculty, postdoc, graduate student, etc.) would be '
+                    'most helpful.'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 3}))
+            
+            self.fields['topic_interests'] = forms.MultipleChoiceField(
+                choices=(
+                    ('website', (
+                        'I have visited the Research Data Management '
+                        'Program web site.')),
+                    ('event_or_consultation', (
+                        'I have participated in a Research Data Management '
+                        'Program event or consultation (http://researchdata.berkeley.edu/).')),
+                    ('learn_more_rdm_consult', (
+                        'I am interested in the Research Data Management Program; '
+                        'please have an RDM consultant follow up with me.')),
+                    ('security_rdm_consult', (
+                        'I am interested in learning more about securing research '
+                        'data and/or secure computation; please have an RDM consultant '
+                        'follow up with me.')),
+                    ('visualization_services', (
+                        'I am interested in resources or services that support '
+                        'visualization of research data.')),
+                ),
+                label=(
+                    'Please indicate your engagement with or '
+                    'interest in the following topics. (Check all that apply.)'),
                 required=False,
                 widget=forms.CheckboxSelectMultiple())
+            
+            self.fields['training_session'] = forms.MultipleChoiceField(
+                label=(
+                    'BRC is planning an in-person training session within the next 2-3 months and would like input on what topics would be most useful to you personally.'
+                )
+            )
+
         elif flag_enabled('LRC_ONLY'):
             # TODO: Replace placeholders with LRC Survey Questions
             self.fields['question_1'] = forms.CharField(
