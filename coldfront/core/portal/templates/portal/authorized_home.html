@@ -142,6 +142,9 @@
                 <th scope="col" class="text-nowrap">
                   Access to Project on Cluster
                 </th>
+                <th scope="col" class="text-nowrap">
+                  Service Units
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -172,6 +175,7 @@
                         <span class="badge badge-danger">No Access</span>
                     {% endif %}
                   </td>
+                  <td>{{ project.compute_allocation_information }}</td>
                 </tr>
               {% endfor %}
             </tbody>

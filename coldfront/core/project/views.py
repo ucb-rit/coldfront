@@ -447,6 +447,7 @@ class ProjectListView(LoginRequiredMixin, ListView):
         for project in project_list:
             try:
                 information = get_project_compute_allocation(project).get_information
+                information = information[len('Service Units: '):-len(' <br>')]
                 compute_allocation_information.append(information if information else 'N/A')
             except Allocation.DoesNotExist:
                 compute_allocation_information.append('N/A')
