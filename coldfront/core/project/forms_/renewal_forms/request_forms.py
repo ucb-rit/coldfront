@@ -6,6 +6,7 @@ from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice
+from django.utils.safestring import mark_safe
 from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses
 from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
 from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_request_statuses
@@ -270,8 +271,9 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'will be supported by the Berkeley Research Computing Program. '
                 'Please indicate whether an Instructional Computing Allowance '
                 '(ICA) was, is, or will be an element of support for the '
-                'listed classes. (More on ICAs here: '
-                'http://research-it.berkeley.edu/blog/ica-pilot .)',
+                'listed classes. More on ICAs '
+                '<a href="http://research-it.berkeley.edu/blog/ica-pilot">'
+                'here</a>.',
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
 
@@ -302,21 +304,21 @@ class ProjectRenewalSurveyForm(forms.Form):
                     'Based upon your overall experience using BRC services, '
                     'how likely are you to recommend Berkeley Research '
                     'Computing to others?'),
-                required=False,
+                required=True,
                 widget=forms.RadioSelect())
             
             self.fields['rating_reason'] = forms.CharField(
                 label='What is the reason for your rating above?',
-                required=True,
+                required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
             
-            self.fields['rating_reason'] = forms.CharField(
+            self.fields['compuational_methods'] = forms.CharField(
                 label='If you are new to computational methods '
                 '(broadly, or in a specific application), please '
                 'let us know how BRC services and/or resources have '
                 'helped you bootstrap the application of computational '
                 'methods to your research.',
-                required=False,
+                required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
             
             self.fields['important_to_research'] = forms.MultipleChoiceField(
@@ -337,7 +339,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 label=(
                     'How important is the Berkeley Research Computing '
                     'Program to your research?'),
-                required=False,
+                required=True,
                 widget=forms.RadioSelect())
             
             self.fields['mybrc'] = forms.MultipleChoiceField(
@@ -350,7 +352,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 label=(
                     'Do you use the Savio Account Management portal '
                     'MyBRC? Any comments?'),
-                required=False,
+                required=True,
                 widget=forms.RadioSelect())
             
             self.fields['mybrc_comments'] = forms.MultipleChoiceField(
@@ -402,8 +404,11 @@ class ProjectRenewalSurveyForm(forms.Form):
                         'I have visited the Research Data Management '
                         'Program web site.')),
                     ('event_or_consultation', (
-                        'I have participated in a Research Data Management '
-                        'Program event or consultation (http://researchdata.berkeley.edu/).')),
+                        mark_safe('I have participated in a '
+                        '<a href="http://researchdata.berkeley.edu/">'
+                        'Research Data Management Program</a>'
+                        ' event or consultation.'
+                        ))),
                     ('learn_more_rdm_consult', (
                         'I am interested in the Research Data Management Program; '
                         'please have an RDM consultant follow up with me.')),
@@ -418,14 +423,8 @@ class ProjectRenewalSurveyForm(forms.Form):
                 label=(
                     'Please indicate your engagement with or '
                     'interest in the following topics. (Check all that apply.)'),
-                required=False,
+                required=True,
                 widget=forms.CheckboxSelectMultiple())
-            
-            self.fields['training_session'] = forms.MultipleChoiceField(
-                label=(
-                    'BRC is planning an in-person training session within the next 2-3 months and would like input on what topics would be most useful to you personally.'
-                )
-            )
 
             self.fields['12a'] = forms.MultipleChoiceField(
                 choices=(
@@ -441,10 +440,14 @@ class ProjectRenewalSurveyForm(forms.Form):
                         '5 - Very useful')),
                 ),
                 label=(
+                    mark_safe('<h4>BRC is planning an in-person training session within'
+                    ' the next 2-3 months and would like input on what topics would be '
+                    'most useful to you personally. Please rate the following topics on '
+                    ' how useful they would be to you.</h4>'
                     'Selecting computational platforms that fit your research and '
                     'budget (Savio, HPC@UC, XSEDE, commercial cloud providers, AEoD) '
                     'System overview (how to access Savio via condo contribution '
-                    'or faculty compute allowance, system capabilities)'),
+                    'or faculty compute allowance, system capabilities)')),
                 required=False,
                 widget=forms.RadioSelect())
             
@@ -522,7 +525,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                         '5 - Very useful')),
                 ),
                 label=(
-                    'Use of ing Analytic Environments on Demand (virtualized, scalable Windows '
+                    'Use of Analytic Environments on Demand (virtualized, scalable Windows '
                     'environments provisioned with licensed or open-source software '
                     'applications applicable to research projects)'),
                 required=False,
