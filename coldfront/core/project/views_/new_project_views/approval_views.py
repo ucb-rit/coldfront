@@ -761,6 +761,9 @@ class SavioProjectReviewSetupView(LoginRequiredMixin, UserPassesTestMixin,
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
+        allocation_request = SavioProjectAllocationRequest.objects.get(project=self.request_obj.project)
+        kwargs['pooling'] = allocation_request.pool
+
         kwargs['project_pk'] = self.request_obj.project.pk
         kwargs['requested_name'] = (
             self.request_obj.state['setup']['name_change']['requested_name'])

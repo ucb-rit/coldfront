@@ -53,10 +53,11 @@ class SavioProjectReviewSetupForm(forms.Form):
         self.requested_name = kwargs.pop('requested_name')
         self.computing_allowance = kwargs.pop('computing_allowance')
         # get the pooling variable
-        # switch if not pooling 
-            # final_name has a length limit
-        # Otherwise final_name has no length limit 
+        self.pooling = kwargs.pop('pooling')
         super().__init__(*args, **kwargs)
+       # switch if pooling, otherweise max_length still 13
+        if self.pooling:
+            self.fields['final_name]'].max_length=1000
         self.fields['final_name'].initial = self.requested_name
 
     def clean(self):
