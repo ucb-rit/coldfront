@@ -277,7 +277,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
 
-            self.fields['recommendation_rating'] = forms.MultipleChoiceField(
+            self.fields['recommendation_rating'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not at all likely')),
@@ -321,7 +321,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
             
-            self.fields['important_to_research'] = forms.MultipleChoiceField(
+            self.fields['important_to_research'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         'Not at all important')),
@@ -342,7 +342,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.RadioSelect())
             
-            self.fields['mybrc'] = forms.MultipleChoiceField(
+            self.fields['mybrc'] = forms.ChoiceField(
                 choices=(
                     ('yes', (
                         'Yes')),
@@ -351,11 +351,11 @@ class ProjectRenewalSurveyForm(forms.Form):
                 ),
                 label=(
                     'Do you use the Savio Account Management portal '
-                    'MyBRC? Any comments?'),
+                    'MyBRC?'),
                 required=True,
                 widget=forms.RadioSelect())
             
-            self.fields['mybrc_comments'] = forms.MultipleChoiceField(
+            self.fields['mybrc_comments'] = forms.CharField(
                 label=('If yes, what feedback do you have for MyBRC?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
@@ -379,16 +379,16 @@ class ProjectRenewalSurveyForm(forms.Form):
                     'Do you use Open Ondemand? Which '
                     'application(s) do you use? (Check all that apply.)'),
                 required=True,
-                widget=forms.RadioSelect())
+                widget=forms.CheckboxSelectMultiple())
             
-            self.fields['brc_feedback'] = forms.MultipleChoiceField(
+            self.fields['brc_feedback'] = forms.CharField(
                 label=(
                     'How could the Berkeley Research Computing '
                     'Program be more useful to your research or teaching?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
             
-            self.fields['colleague_suggestions'] = forms.MultipleChoiceField(
+            self.fields['colleague_suggestions'] = forms.CharField(
                 label=(
                     'Please suggest colleagues who might benefit from the '
                     'Berkeley Research Computing Program, with whom we '
@@ -426,7 +426,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
 
-            self.fields['12a'] = forms.MultipleChoiceField(
+            self.fields['12a'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -451,7 +451,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['12b'] = forms.MultipleChoiceField(
+            self.fields['12b'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -471,7 +471,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['12c'] = forms.MultipleChoiceField(
+            self.fields['12c'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -492,7 +492,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['12d'] = forms.MultipleChoiceField(
+            self.fields['12d'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -511,7 +511,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['12e'] = forms.MultipleChoiceField(
+            self.fields['12e'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -531,7 +531,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
 
-            self.fields['12f'] = forms.MultipleChoiceField(
+            self.fields['12f'] = forms.CharField(
                 label=('Any other or specific topics of interest?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
