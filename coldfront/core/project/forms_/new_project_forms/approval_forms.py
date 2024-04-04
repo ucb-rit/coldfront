@@ -22,22 +22,6 @@ class SavioProjectReviewSetupForm(forms.Form):
         help_text='If you are unsure, leave the status as "Pending".',
         label='Status',
         required=True)
-    #final_name = forms.CharField(
-    #    help_text=(
-    #        'Update the name of the project, in case it needed to be '
-    #        'changed. It must begin with the correct prefix.'),
-    #    label='Final Name',
-    #    # TODO: Project prefix names are assumed to have 3 characters.
-    #    max_length=3 + 12,
-    #    required=True,
-    #    validators=[
-    #        MinLengthValidator(3 + 4),
-    #        RegexValidator(
-    #            r'^[0-9a-z_]+$',
-    #            message=(
-    #                'Name must contain only lowercase letters, numbers, and '
-    #                'underscores.'))
-    #    ])
     justification = forms.CharField(
         help_text=(
             'Provide reasoning for your decision. This field is only required '
