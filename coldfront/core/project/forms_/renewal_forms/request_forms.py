@@ -207,7 +207,7 @@ class ProjectRenewalSurveyForm(forms.Form):
         """Update field attributes with deployment-specific content."""
         if flag_enabled('LRC_ONLY'):
             #TODO: Replace placeholders with BRC Survey Questions
-            self.fields['brc_services'] = forms.MultipleChoiceField(
+            self.fields['which_brc_services_used'] = forms.MultipleChoiceField(
                 choices=(
                     ('savio_hpc', (
                         'Savio High Performance Computing and consulting')),
@@ -232,7 +232,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
             
-            self.fields['publications'] = forms.CharField(
+            self.fields['publications_supported_by_brc'] = forms.CharField(
                 label='Please list any publications (including papers, books, '
                 'dissertations, theses, and public presentations) that you '
                 'authored or co-authored, that have been supported by '
@@ -242,7 +242,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
 
-            self.fields['grants'] = forms.CharField(
+            self.fields['grants_supported_by_brc'] = forms.CharField(
                 label='Please list any grant(s) or other competitively-'
                 'awarded funding that has been or will be supported by '
                 'Berkeley Research Computing resources and/or consulting. '
@@ -251,7 +251,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
             
-            self.fields['recruitment_or_retention'] = forms.CharField(
+            self.fields['recruitment_or_retention_cases'] = forms.CharField(
                 label='Please list any recruitment or retention cases you '
                 'are aware of in which the availability of the Savio '
                 'high-performance computing cluster or other Berkeley '
@@ -265,7 +265,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
             
-            self.fields['classes'] = forms.CharField(
+            self.fields['classes_being_taught'] = forms.CharField(
                 label='Please list any classes (course number and semester) '
                 'for which you were/will be an instructor, and that were or '
                 'will be supported by the Berkeley Research Computing Program. '
@@ -277,7 +277,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
 
-            self.fields['recommendation_rating'] = forms.ChoiceField(
+            self.fields['brc_recommendation_rating'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not at all likely')),
@@ -307,12 +307,12 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.RadioSelect())
             
-            self.fields['rating_reason'] = forms.CharField(
+            self.fields['brc_recommendation_rating_reason'] = forms.CharField(
                 label='What is the reason for your rating above?',
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
             
-            self.fields['compuational_methods'] = forms.CharField(
+            self.fields['how_brc_helped_bootstrap_compuational_methods'] = forms.CharField(
                 label='If you are new to computational methods '
                 '(broadly, or in a specific application), please '
                 'let us know how BRC services and/or resources have '
@@ -321,7 +321,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
             
-            self.fields['important_to_research'] = forms.ChoiceField(
+            self.fields['how_important_to_research_is_brc'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         'Not at all important')),
@@ -342,7 +342,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.RadioSelect())
             
-            self.fields['mybrc'] = forms.ChoiceField(
+            self.fields['do_you_use_mybrc'] = forms.ChoiceField(
                 choices=(
                     ('yes', (
                         'Yes')),
@@ -360,7 +360,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
             
-            self.fields['open_ondemand'] = forms.MultipleChoiceField(
+            self.fields['which_open_ondemand_apps_used'] = forms.MultipleChoiceField(
                 choices=(
                     ('desktop', (
                         'Desktop')),
@@ -398,25 +398,25 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 3}))
             
-            self.fields['topic_interests'] = forms.MultipleChoiceField(
+            self.fields['indicate_topic_interests'] = forms.MultipleChoiceField(
                 choices=(
-                    ('website', (
+                    ('have_visited_rdmp_website', (
                         'I have visited the Research Data Management '
                         'Program web site.')),
-                    ('event_or_consultation', (
+                    ('have_had_rdmp_event_or_consultation', (
                         mark_safe('I have participated in a '
                         '<a href="http://researchdata.berkeley.edu/">'
                         'Research Data Management Program</a>'
                         ' event or consultation.'
                         ))),
-                    ('learn_more_rdm_consult', (
+                    ('want_to_learn_more_and_have_rdm_consult', (
                         'I am interested in the Research Data Management Program; '
                         'please have an RDM consultant follow up with me.')),
-                    ('security_rdm_consult', (
+                    ('want_to_learn_security_and_have_rdm_consult', (
                         'I am interested in learning more about securing research '
                         'data and/or secure computation; please have an RDM consultant '
                         'follow up with me.')),
-                    ('visualization_services', (
+                    ('interested_in_visualization_services', (
                         'I am interested in resources or services that support '
                         'visualization of research data.')),
                 ),
@@ -426,7 +426,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
 
-            self.fields['12a'] = forms.ChoiceField(
+            self.fields['training_session_usefulness_of_computational_platforms_training'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -451,7 +451,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['12b'] = forms.ChoiceField(
+            self.fields['training_session_usefulness_of_basic_savio_cluster'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -471,7 +471,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['12c'] = forms.ChoiceField(
+            self.fields['training_session_usefulness_of_advanced_savio_cluster'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -492,7 +492,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['12d'] = forms.ChoiceField(
+            self.fields['training_session_usefulness_of_singularity_on_savio'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -511,7 +511,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['12e'] = forms.ChoiceField(
+            self.fields['training_session_usefulness_of_analytic_envs_on_demand'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -531,7 +531,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
 
-            self.fields['12f'] = forms.CharField(
+            self.fields['training_session_other_topics_of_interest'] = forms.CharField(
                 label=('Any other or specific topics of interest?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
