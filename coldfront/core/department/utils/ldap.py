@@ -30,7 +30,6 @@ def ldap_search_user(email, first_name, last_name):
         return conn.entries[0]
     return None
 
-
 def get_L4_code_from_department_code(code):
     """Return the L4 code for a department from a L4+ code.
     L4 are departments like "Integrative Biology (IBIBI)"
@@ -68,7 +67,7 @@ def get_department_name_from_code(code):
     return conn.entries[0].description.value
 
 
-def fetch_and_set_user_departments(user, userprofile, dry_run=False):
+def fetch_and_set_user_departments(user, userprofile, dry_run=False, l4_department_code_cache={}):
     """Fetch a user's departments from LDAP and set them in the
     database.
 
@@ -85,7 +84,11 @@ def fetch_and_set_user_departments(user, userprofile, dry_run=False):
     user_entry = ldap_search_user(user.email, user.first_name, user.last_name)
     ldap_departments = user_entry.departmentNumber.values if user_entry else []
     for department_code in ldap_departments:
-        department_code = get_L4_code_from_department_code(department_code)
+        if department_code not in l4_department_code_cache:
+            l4_department_code_cache[department_code] = \
+                get_L4_code_from_department_code(department_code)
+        department_code = l4_department_code_cache[department_code]
+
         if department_code is None:
             logger.warning(f'Could not find L4 code for department {department_code}')
             continue
@@ -115,4 +118,5 @@ def fetch_and_set_user_departments(user, userprofile, dry_run=False):
                 UserDepartment.objects.update_or_create(userprofile=userprofile,
                                         department=department,
                                         defaults={'is_authoritative': True})
+    return l4_department_code_cache
 
