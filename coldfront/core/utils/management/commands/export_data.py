@@ -33,6 +33,7 @@ class Command(BaseCommand):
             self.allowance_prefixes.append(
                 self.computing_allowance_interface.code_from_name(
                     allowance.name))
+        self.allocation_periods = ['2', '3']
 
     def add_arguments(self, parser):
         """Define subcommands with different functions."""
@@ -149,6 +150,11 @@ class Command(BaseCommand):
                                                 help='Dump responses for Projects with given prefix',
                                                 type=str, required=False, default='',
                                                 choices=self.allowance_prefixes)
+        renewal_survey_responses_subparser.add_argument('--allocation_period',
+                                                help='Dump responses for Projects in given allocation period',
+                                                type=str, required=False, default='',
+                                                choices=self.allocation_periods)
+
 
     def handle(self, *args, **options):
         """Call the handler for the provided subcommand."""
@@ -474,10 +480,15 @@ class Command(BaseCommand):
         format = kwargs['format']
         allowance_type = kwargs['allowance_type']
         allocation_requests = AllocationRenewalRequest.objects.all()
+        allocation_period = kwargs['allocation_period']
 
         if allowance_type:
             allocation_requests = allocation_requests.filter(
-                project__name__istartswith=allowance_type)
+                post_project__name__istartswith=allowance_type)
+            
+        if allocation_period:
+             allocation_requests = allocation_requests.filter(
+                 allocation_period__id=allocation_period)
 
         _surveys = list(allocation_requests.values_list('renewal_survey_answers', flat=True))
         surveys = []
