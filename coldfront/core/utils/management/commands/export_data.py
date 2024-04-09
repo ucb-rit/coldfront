@@ -480,16 +480,15 @@ class Command(BaseCommand):
                 project__name__istartswith=allowance_type)
 
         _surveys = list(allocation_requests.values_list('renewal_survey_answers', flat=True))
-        projects = User.objects.filter(
-            pk__in=allocation_requests.values_list('pi', flat=True))
         surveys = []
 
         if format == 'csv':
-            for project, survey in zip(projects, _surveys):
+            for allocation_request, survey in zip(allocation_requests, _surveys):
                 surveys.append({
-                    'project_name': project.name,
-                    'project_title': project.title,
-                    **survey
+                    'project_name': allocation_request.post_project.name,
+                    'project_title': allocation_request.post_project.title,
+                    'project_pi': allocation_request.pi.username,
+                    'renewal_survey_responses': survey
                 })
 
             surveys = list(sorted(surveys, key=lambda x: x['project_name'], reverse=True))
@@ -504,11 +503,12 @@ class Command(BaseCommand):
                 kwargs.get('stderr', stderr).write(str(e))
 
         elif format == 'json':
-            for project, survey in zip(projects, _surveys):
+            for allocation_request, survey in zip(allocation_requests, _surveys):
                 surveys.append({
-                    'project_name': project.username,
-                    #'project_title': project.title,
-                    'renewal_survey_responses': _surveys
+                    'project_name': allocation_request.post_project.name,
+                    'project_title': allocation_request.post_project.title,
+                    'project_pi': allocation_request.pi.username,
+                    'renewal_survey_responses': survey
                 })
 
             surveys = list(sorted(surveys, key=lambda x: x['project_name'], reverse=True))

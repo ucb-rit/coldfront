@@ -312,7 +312,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
             
-            self.fields['how_brc_helped_bootstrap_compuational_methods'] = forms.CharField(
+            self.fields['how_brc_helped_bootstrap_computational_methods'] = forms.CharField(
                 label='If you are new to computational methods '
                 '(broadly, or in a specific application), please '
                 'let us know how BRC services and/or resources have '
