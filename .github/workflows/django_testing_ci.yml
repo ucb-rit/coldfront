@@ -52,7 +52,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/venv
-        key: ${{ runner.os }}-python-packages-${{ hashFiles('requirements.txt') }}
+        key: ${{ runner.os }}-python-38-packages-${{ hashFiles('requirements.txt') }}
 
     - if: ${{ steps.cache-python.outputs.cache-hit != 'true' }} # If a cache is not found
       name: Install Python packages

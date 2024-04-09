@@ -1,5 +1,6 @@
 from coldfront.core.allocation.forms import AllocationPeriodChoiceField
 from coldfront.core.allocation.models import AllocationPeriod
+from coldfront.core.department.models import Department
 from coldfront.core.project.forms import DisabledChoicesSelectWidget
 from coldfront.core.project.models import Project
 from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses
@@ -24,6 +25,7 @@ from django.core.validators import MinLengthValidator
 from django.core.validators import MinValueValidator
 from django.core.validators import RegexValidator
 from django.db.models import Q
+from django.db.models import QuerySet
 from django.forms.widgets import TextInput
 from django.utils.safestring import mark_safe
 
@@ -243,6 +245,16 @@ class SavioProjectNewPIForm(forms.Form):
 
         return email
 
+class SavioProjectPIDepartmentForm(forms.Form):
+    '''Form prompting for the departments of a new PI if one is not found
+    through LDAP. Has user select one or more from the dozens of departments
+    present in Department.objects.all()'''
+
+    departments = forms.ModelMultipleChoiceField(
+        label='Departments',
+        queryset=Department.objects.order_by('name').all(),
+        required=True
+    )
 
 class SavioProjectExtraFieldsForm(forms.Form):
     """A base form for retrieving additional information for the
