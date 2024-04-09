@@ -6,9 +6,10 @@ from sys import stdout, stderr
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Value, F, CharField, Func, \
     DurationField, ExpressionWrapper
+from django.contrib.auth.models import User
 
 from coldfront.core.allocation.models import AllocationAttributeType, \
-    AllocationUserAttribute
+    AllocationUserAttribute, AllocationRenewalRequest
 from coldfront.core.statistics.models import Job
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
@@ -131,11 +132,20 @@ class Command(BaseCommand):
                                                     help='Export results in the given format.',
                                                     type=str)
 
-        survey_responses_subparser = subparsers.add_parser('survey_responses',
-                                                           help='Export survey responses')
-        survey_responses_subparser.add_argument('--format', help='Format to dump survey responses in',
+        new_project_survey_responses_subparser = subparsers.add_parser('new_project_survey_responses',
+                                                           help='Export survey responses for new projects')
+        new_project_survey_responses_subparser.add_argument('--format', help='Format to dump new project survey responses in',
                                                 type=str, required=True, choices=['json', 'csv'])
-        survey_responses_subparser.add_argument('--allowance_type',
+        new_project_survey_responses_subparser.add_argument('--allowance_type',
+                                                help='Dump responses for Projects with given prefix',
+                                                type=str, required=False, default='',
+                                                choices=self.allowance_prefixes)
+        
+        renewal_survey_responses_subparser = subparsers.add_parser('renewal_survey_responses',
+                                                           help='Export survey responses for project renewals')
+        renewal_survey_responses_subparser.add_argument('--format', help='Format to dump renewal survey responses in',
+                                                type=str, required=True, choices=['json', 'csv'])
+        renewal_survey_responses_subparser.add_argument('--allowance_type',
                                                 help='Dump responses for Projects with given prefix',
                                                 type=str, required=False, default='',
                                                 choices=self.allowance_prefixes)
@@ -414,7 +424,7 @@ class Command(BaseCommand):
                          output=kwargs.get('stdout', stdout),
                          error=kwargs.get('stderr', stderr))
 
-    def handle_survey_responses(self, *args, **kwargs):
+    def handle_new_project_survey_responses(self, *args, **kwargs):
         format = kwargs['format']
         allowance_type = kwargs['allowance_type']
         allocation_requests = SavioProjectAllocationRequest.objects.all()
@@ -452,7 +462,53 @@ class Command(BaseCommand):
                 surveys.append({
                     'project_name': project.name,
                     'project_title': project.title,
-                    'survey_responses': survey
+                    'new_project_survey_responses': survey
+                })
+
+            surveys = list(sorted(surveys, key=lambda x: x['project_name'], reverse=True))
+            self.to_json(surveys,
+                         output=kwargs.get('stdout', stdout),
+                         error=kwargs.get('stderr', stderr))
+    
+    def handle_renewal_survey_responses(self, *args, **kwargs):
+        format = kwargs['format']
+        allowance_type = kwargs['allowance_type']
+        allocation_requests = AllocationRenewalRequest.objects.all()
+
+        if allowance_type:
+            allocation_requests = allocation_requests.filter(
+                project__name__istartswith=allowance_type)
+
+        _surveys = list(allocation_requests.values_list('renewal_survey_answers', flat=True))
+        projects = User.objects.filter(
+            pk__in=allocation_requests.values_list('pi', flat=True))
+        surveys = []
+
+        if format == 'csv':
+            for project, survey in zip(projects, _surveys):
+                surveys.append({
+                    'project_name': project.name,
+                    'project_title': project.title,
+                    **survey
+                })
+
+            surveys = list(sorted(surveys, key=lambda x: x['project_name'], reverse=True))
+            try:
+                writer = csv.DictWriter(kwargs.get('stdout', stdout), surveys[0].keys())
+                writer.writeheader()
+
+                for survey in surveys:
+                    writer.writerow(survey)
+
+            except Exception as e:
+                kwargs.get('stderr', stderr).write(str(e))
+
+        elif format == 'json':
+            for project, survey in zip(projects, _surveys):
+                surveys.append({
+                    'project_name': project.username,
+                    #'project_title': project.title,
+                    'renewal_survey_responses': _surveys
                 })
 
             surveys = list(sorted(surveys, key=lambda x: x['project_name'], reverse=True))
