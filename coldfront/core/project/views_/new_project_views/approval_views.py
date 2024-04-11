@@ -48,6 +48,19 @@ from flags.state import flag_enabled
 import iso8601
 import logging
 
+from coldfront.core.project.forms_.new_project_forms.approval_forms import SavioProjectRequestForm
+from coldfront.core.project.models import SavioProjectAllocationRequest
+
+from coldfront.core.user.utils_.host_user_utils import host_user_lbl_email
+from flags.state import flag_enabled
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+
+from django.utils.dateparse import parse_date
+from django.db.models import DateField
+from datetime import datetime
+from django.utils.timezone import make_aware
+from django.utils import timezone
+
 
 # =============================================================================
 # BRC: SAVIO
@@ -58,6 +71,8 @@ class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
     template_name = 'project/project_request/savio/project_request_list.html'
     # Show completed requests if True; else, show pending requests.
     completed = False
+    paginate_by = 30
+    context_object_name = "project_request_list"
 
     def get_queryset(self):
         order_by = self.request.GET.get('order_by')
@@ -71,8 +86,42 @@ class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
         else:
             order_by = '-request_time'
 
-        return annotate_queryset_with_allocation_period_not_started_bool(
-            SavioProjectAllocationRequest.objects.order_by(order_by))
+        project_request_form = SavioProjectRequestForm(self.request.GET)
+        project_request_list = SavioProjectAllocationRequest.objects.all()
+
+        if project_request_form.is_valid():
+            data = project_request_form.cleaned_data
+
+            if data.get('pi'):
+                project_request_list = project_request_list.filter(
+                    pi__username__icontains=data.get('pi')
+                )
+
+            request_time_input = data.get('request_time')
+            if request_time_input:
+                try:
+                    request_time_date = datetime.strptime(request_time_input, '%b. %d, %Y')
+                    request_time_date = make_aware(request_time_date)
+                    project_request_list = project_request_list.filter(
+                        request_time__date=request_time_date.date()
+                    )
+                except ValueError as e:
+                    print(f"Incorrect date format: {e}")
+
+            if data.get('requester'):
+                project_request_list = project_request_list.filter(
+                    requester__email__icontains=data.get('requester')
+                )
+
+            if data.get('project'):
+                project_request_list = project_request_list.filter(
+                    pre_project__name__icontains=data.get('project') 
+                )
+
+            if not data.get('show_all_requests'):
+                pass
+
+        return project_request_list.order_by(order_by)
 
     def get_context_data(self, **kwargs):
         """Include either pending or completed requests. If the user is
@@ -80,6 +129,39 @@ class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
         for which the user is a requester or PI."""
         context = super().get_context_data(**kwargs)
         args, kwargs = [], {}
+
+        project_request_form = SavioProjectRequestForm(self.request.GET)
+        if project_request_form.is_valid():
+            context['project_request_form'] = project_request_form
+            data = project_request_form.cleaned_data
+            filter_parameters = ''
+            for key, value in data.items():
+                if value:
+                    if isinstance(value, list):
+                        for ele in value:
+                            filter_parameters += '{}={}&'.format(key, ele)
+                    else:
+                        filter_parameters += '{}={}&'.format(key, value)
+            context['project_request_form'] = project_request_form
+
+        else:
+            filter_parameters = None
+            context['project_request_form'] = SavioProjectRequestForm()
+
+        order_by = self.request.GET.get('order_by')
+        if order_by:
+            direction = self.request.GET.get('direction')
+            filter_parameters_with_order_by = filter_parameters + \
+                                            'order_by=%s&direction=%s&' % \
+                                            (order_by, direction)
+        else:
+            filter_parameters_with_order_by = filter_parameters
+
+        context['expand_accordion'] = 'show'
+        
+        context['filter_parameters'] = filter_parameters
+        context['filter_parameters_with_order_by'] = filter_parameters_with_order_by
+
 
         request_list = self.get_queryset()
         user = self.request.user
@@ -96,6 +178,25 @@ class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
             *args, **kwargs)
         context['request_filter'] = (
             'completed' if self.completed else 'pending')
+        
+        paginator = Paginator(request_list, self.paginate_by)
+        page = self.request.GET.get('page')
+        try:
+            project_requests = paginator.page(page)
+        except PageNotAnInteger:
+            project_requests = paginator.page(1)
+        except EmptyPage:
+            project_requests = paginator.page(paginator.num_pages)
+
+        context['project_request_list'] = project_requests
+
+        if flag_enabled('LRC_ONLY'):
+            for project_request in project_requests:
+                project_request.host_user_lbl_email = \
+                    host_user_lbl_email(
+                        project_request.pi)
+
+        context['actions_visible'] = not self.completed
 
         return context
 

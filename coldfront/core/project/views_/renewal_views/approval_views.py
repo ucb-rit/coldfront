@@ -37,6 +37,16 @@ from django.views.generic.edit import FormView
 import iso8601
 import logging
 
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from coldfront.core.project.forms_.renewal_forms.approval_forms  import AllocationRenewalRequestForm
+from coldfront.core.user.utils_.host_user_utils import host_user_lbl_email
+from flags.state import flag_enabled
+
+from django.utils.dateparse import parse_date
+from django.db.models import DateField
+from datetime import datetime
+from django.utils.timezone import make_aware
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +54,8 @@ logger = logging.getLogger(__name__)
 class AllocationRenewalRequestListView(LoginRequiredMixin, TemplateView):
     template_name = 'project/project_renewal/project_renewal_request_list.html'
     completed = False
+    paginate_by = 30
+    context_object_name = "renewal_request_list"
 
     def get_queryset(self):
         order_by = self.request.GET.get('order_by')
@@ -57,30 +69,99 @@ class AllocationRenewalRequestListView(LoginRequiredMixin, TemplateView):
         else:
             order_by = '-request_time'
 
-        return annotate_queryset_with_allocation_period_not_started_bool(
-            AllocationRenewalRequest.objects.order_by(order_by))
+        renewal_request_form = AllocationRenewalRequestForm(self.request.GET)
+        renewal_request_list = AllocationRenewalRequest.objects.all()
+
+        if renewal_request_form.is_valid():
+            data = renewal_request_form.cleaned_data
+
+            if data.get('pi'):
+                renewal_request_list = renewal_request_list.filter(
+                    pi__username__icontains=data.get('pi')
+                )
+
+            request_time_input = data.get('request_time')
+            if request_time_input:
+                try:
+                    request_time_date = datetime.strptime(request_time_input, '%b. %d, %Y')
+                    request_time_date = make_aware(request_time_date)
+                    renewal_request_list = renewal_request_list.filter(
+                        request_time__date=request_time_date.date()
+                    )
+                except ValueError as e:
+                    print(f"Incorrect date format: {e}")
+
+            if data.get('requester'):
+                renewal_request_list = renewal_request_list.filter(
+                    requester__email__icontains=data.get('requester')
+                )
+
+            if data.get('project'):
+                renewal_request_list = renewal_request_list.filter(
+                    pre_project__name__icontains=data.get('project') 
+                )
+
+            if not data.get('show_all_requests'):
+                pass
+
+
+        return renewal_request_list.order_by(order_by)
 
     def get_context_data(self, **kwargs):
-        """Include either pending or completed requests. If the user is
-        a superuser, show all such requests. Otherwise, show only those
-        for which the user is a requester or PI."""
         context = super().get_context_data(**kwargs)
 
-        args, kwargs = [], {}
+        renewal_request_form = AllocationRenewalRequestForm(self.request.GET)
+        if renewal_request_form.is_valid():
+            context['renewal_request_form'] = renewal_request_form
+            data = renewal_request_form.cleaned_data
+            filter_parameters = ''
+            for key, value in data.items():
+                if value:
+                    if isinstance(value, list):
+                        for ele in value:
+                            filter_parameters += '{}={}&'.format(key, ele)
+                    else:
+                        filter_parameters += '{}={}&'.format(key, value)
+            context['renewal_request_form'] = renewal_request_form
+
+        else:
+            filter_parameters = None
+            context['renewal_request_form'] = AllocationRenewalRequestForm()
+
+        order_by = self.request.GET.get('order_by')
+        if order_by:
+            direction = self.request.GET.get('direction')
+            filter_parameters_with_order_by = filter_parameters + \
+                                            'order_by=%s&direction=%s&' % \
+                                            (order_by, direction)
+        else:
+            filter_parameters_with_order_by = filter_parameters
+
+        context['expand_accordion'] = 'show'
+        
+        context['filter_parameters'] = filter_parameters
+        context['filter_parameters_with_order_by'] = filter_parameters_with_order_by
 
         request_list = self.get_queryset()
-        user = self.request.user
-        permission = 'allocation.view_allocationrenewalrequest'
-        if not (user.is_superuser or user.has_perm(permission)):
-            args.append(Q(requester=user) | Q(pi=user))
-        if self.completed:
-            status__name__in = ['Approved', 'Complete', 'Denied']
-        else:
-            status__name__in = ['Under Review']
-        kwargs['status__name__in'] = status__name__in
-        context['renewal_request_list'] = request_list.filter(*args, **kwargs)
-        context['request_filter'] = (
-            'completed' if self.completed else 'pending')
+
+        paginator = Paginator(request_list, self.paginate_by)
+        page = self.request.GET.get('page')
+        try:
+            renewal_requests = paginator.page(page)
+        except PageNotAnInteger:
+            renewal_requests = paginator.page(1)
+        except EmptyPage:
+            renewal_requests = paginator.page(paginator.num_pages)
+
+        context['renewal_request_list'] = renewal_requests
+
+        if flag_enabled('LRC_ONLY'):
+            for renewal_request in renewal_requests:
+                renewal_request.host_user_lbl_email = \
+                    host_user_lbl_email(
+                        renewal_request.pi)
+
+        context['actions_visible'] = not self.completed
 
         return context
 
