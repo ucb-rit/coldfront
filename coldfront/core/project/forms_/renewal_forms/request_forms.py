@@ -276,8 +276,9 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'Please indicate whether an Instructional Computing Allowance '
                 '(ICA) was, is, or will be an element of support for the '
                 'listed classes. More on ICAs '
-                '<a href="http://research-it.berkeley.edu/blog/ica-pilot">'
-                'here</a>.',
+                '<a href="https://docs-research-it.berkeley.edu/services/high'
+                '-performance-computing/getting-account/instructional-computing-allowance/"'
+                'target="_blank" rel="noopener noreferrer">here</a>.',
                 required=True,
                 validators=[MinLengthValidator(10)],
                 widget=forms.Textarea(attrs={'rows': 3}))
