@@ -147,7 +147,8 @@ class Command(BaseCommand):
         renewal_survey_responses_subparser.add_argument('--format', help='Format to dump renewal survey responses in',
                                                 type=str, required=True, choices=['json', 'csv'])
         renewal_survey_responses_subparser.add_argument('--allocation_period',
-                                                help='Dump responses for Projects in given allocation period',
+                                                help='Dump responses for Projects in given allocation period. 1: \
+                                                2021-2022 2: 2022-2023 3: 2023-2024 4: 2024-2025',
                                                 type=str, required=True, default='',
                                                 choices=self.allocation_periods)
         renewal_survey_responses_subparser.add_argument('--allowance_type',
