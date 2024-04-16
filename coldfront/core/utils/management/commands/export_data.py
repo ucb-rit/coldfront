@@ -13,9 +13,11 @@ from coldfront.core.allocation.models import AllocationAttributeType, \
 from coldfront.core.statistics.models import Job
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
+from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalSurveyForm
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
+from django import forms
 
 """An admin command that exports the results of useful database queries
 in user-friendly formats."""
@@ -33,7 +35,7 @@ class Command(BaseCommand):
             self.allowance_prefixes.append(
                 self.computing_allowance_interface.code_from_name(
                     allowance.name))
-        self.allocation_periods = [str(period) for period in AllocationPeriod.objects.values_list('id', flat=True)]
+        self.allocation_periods = [period for period in AllocationPeriod.objects.values_list('name', flat=True)]
 
     def add_arguments(self, parser):
         """Define subcommands with different functions."""
@@ -147,8 +149,8 @@ class Command(BaseCommand):
         renewal_survey_responses_subparser.add_argument('--format', help='Format to dump renewal survey responses in',
                                                 type=str, required=True, choices=['json', 'csv'])
         renewal_survey_responses_subparser.add_argument('--allocation_period',
-                                                help='Dump responses for Projects in given allocation period. 1: \
-                                                2021-2022 2: 2022-2023 3: 2023-2024 4: 2024-2025',
+                                                help='Dump responses for Projects in given allocation period. i.e. \
+                                                \'Allowance Year 2024 - 2025\'',
                                                 type=str, required=True, default='',
                                                 choices=self.allocation_periods)
         renewal_survey_responses_subparser.add_argument('--allowance_type',
@@ -483,21 +485,38 @@ class Command(BaseCommand):
         allocation_requests = AllocationRenewalRequest.objects.all()
         allocation_period = kwargs['allocation_period']
 
+
         if allowance_type:
             allocation_requests = allocation_requests.filter(
                 post_project__name__istartswith=allowance_type)
             
         if allocation_period:
              allocation_requests = allocation_requests.filter(
-                 allocation_period__id=allocation_period)
+                 allocation_period__name=allocation_period)
 
         _surveys = list(allocation_requests.values_list('renewal_survey_answers', flat=True))
         if {} in _surveys:
             raise Exception("This allocation period does not have an associated survey.")
         surveys = []
+        # Create dict of multiple choice fields to replace field IDs with text. ID : text
+        multiple_choice_fields = {}
+        form = ProjectRenewalSurveyForm()
+        for k, v in form.fields.items():
+            # Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices 
+            if (isinstance(v, forms.MultipleChoiceField)) or (isinstance(v, forms.ChoiceField)):
+                multiple_choice_fields[k] = {k: v for k, v in form.fields[k].choices}
 
         if format == 'csv':
             for allocation_request, survey in zip(allocation_requests, _surveys):
+                for question, answer in survey.items():
+                    if question in multiple_choice_fields.keys():
+                        sub_map = multiple_choice_fields[question]
+                        if (isinstance(answer, list)):
+                            # Multiple choice, array
+                            survey[question] = [sub_map.get(i,i) for i in answer]
+                        else:
+                            # Single choice replacement
+                            survey[question] = sub_map[answer]
                 surveys.append({
                     'project_name': allocation_request.post_project.name,
                     'project_title': allocation_request.post_project.title,
@@ -507,8 +526,14 @@ class Command(BaseCommand):
 
             surveys = list(sorted(surveys, key=lambda x: x['project_name'], reverse=True))
             try:
-                writer = csv.DictWriter(kwargs.get('stdout', stdout), surveys[0].keys())
-                writer.writeheader()
+                headers = {}
+                for field in surveys[0].keys():
+                    if field in form.fields:
+                        headers[field] = form.fields[field].label
+                    else:
+                        headers[field] = field
+                writer = csv.DictWriter(kwargs.get('stdout', stdout), headers, extrasaction="ignore")
+                writer.writerow(headers)
 
                 for survey in surveys:
                     writer.writerow(survey)
@@ -518,6 +543,18 @@ class Command(BaseCommand):
 
         elif format == 'json':
             for allocation_request, survey in zip(allocation_requests, _surveys):
+                for question, answer in survey.items():
+                    if question in multiple_choice_fields.keys():
+                        sub_map = multiple_choice_fields[question]
+                        if (isinstance(answer, list)):
+                            # Multiple choice, array
+                            survey[question] = [sub_map.get(i,i) for i in answer]
+                        else:
+                            # Single choice replacement
+                            survey[question] = sub_map[answer]
+                # Change keys of survey to be the human-readable text
+                for id, text in form.fields.items():
+                    survey[text.label] = survey.pop(id)
                 surveys.append({
                     'project_name': allocation_request.post_project.name,
                     'project_title': allocation_request.post_project.title,
