@@ -9,7 +9,7 @@ from django.db.models import Value, F, CharField, Func, \
 from django.contrib.auth.models import User
 
 from coldfront.core.allocation.models import AllocationAttributeType, \
-    AllocationUserAttribute, AllocationRenewalRequest
+    AllocationUserAttribute, AllocationRenewalRequest, AllocationPeriod
 from coldfront.core.statistics.models import Job
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
@@ -33,7 +33,7 @@ class Command(BaseCommand):
             self.allowance_prefixes.append(
                 self.computing_allowance_interface.code_from_name(
                     allowance.name))
-        self.allocation_periods = ['2', '3']
+        self.allocation_periods = [str(period) for period in AllocationPeriod.objects.values_list('id', flat=True)]
 
     def add_arguments(self, parser):
         """Define subcommands with different functions."""
@@ -146,14 +146,14 @@ class Command(BaseCommand):
                                                            help='Export survey responses for project renewals')
         renewal_survey_responses_subparser.add_argument('--format', help='Format to dump renewal survey responses in',
                                                 type=str, required=True, choices=['json', 'csv'])
+        renewal_survey_responses_subparser.add_argument('--allocation_period',
+                                                help='Dump responses for Projects in given allocation period',
+                                                type=str, required=True, default='',
+                                                choices=self.allocation_periods)
         renewal_survey_responses_subparser.add_argument('--allowance_type',
                                                 help='Dump responses for Projects with given prefix',
                                                 type=str, required=False, default='',
                                                 choices=self.allowance_prefixes)
-        renewal_survey_responses_subparser.add_argument('--allocation_period',
-                                                help='Dump responses for Projects in given allocation period',
-                                                type=str, required=False, default='',
-                                                choices=self.allocation_periods)
 
 
     def handle(self, *args, **options):
@@ -491,6 +491,8 @@ class Command(BaseCommand):
                  allocation_period__id=allocation_period)
 
         _surveys = list(allocation_requests.values_list('renewal_survey_answers', flat=True))
+        if {} in _surveys:
+            raise Exception("This allocation period does not have an associated survey.")
         surveys = []
 
         if format == 'csv':
@@ -499,7 +501,7 @@ class Command(BaseCommand):
                     'project_name': allocation_request.post_project.name,
                     'project_title': allocation_request.post_project.title,
                     'project_pi': allocation_request.pi.username,
-                    'renewal_survey_responses': survey
+                    **survey
                 })
 
             surveys = list(sorted(surveys, key=lambda x: x['project_name'], reverse=True))
