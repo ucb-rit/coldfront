@@ -206,7 +206,7 @@ class ProjectRenewalSurveyForm(forms.Form):
 
     def _update_field_attributes(self):
         """Update field attributes with deployment-specific content."""
-        if flag_enabled('LRC_ONLY'):
+        if flag_enabled('BRC_ONLY'):
             #TODO: Replace placeholders with BRC Survey Questions
             self.fields['which_brc_services_used'] = forms.MultipleChoiceField(
                 choices=(
