@@ -615,7 +615,7 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
         if redirect is not None:
             return redirect
         return super().dispatch(request, *args, **kwargs)
-
+    
     def form_valid(self, form):
         form_data = form.cleaned_data
         status = form_data['status']
@@ -631,7 +631,8 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
         if status == 'Denied':
             runner = ProjectDenialRunner(self.request_obj)
             runner.run()
-
+        
+        self.request_obj.pi = form_data['pi']
         self.request_obj.save()
 
         message = (
@@ -651,6 +652,7 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
     def get_initial(self):
         initial = super().get_initial()
         eligibility = self.request_obj.state['eligibility']
+        initial['pi'] = self.request_obj.pi
         initial['status'] = eligibility['status']
         initial['justification'] = eligibility['justification']
         return initial

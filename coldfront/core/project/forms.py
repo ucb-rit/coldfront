@@ -7,6 +7,8 @@ from django.db.models import Q
 
 from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectUserRoleChoice)
+from coldfront.core.user.models import UserProfile
+from django.contrib.auth.models import User 
 from coldfront.core.user.utils_.host_user_utils import eligible_host_project_users
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.resource.utils import get_compute_resource_names
@@ -211,6 +213,11 @@ class ReviewDenyForm(forms.Form):
 
 class ReviewStatusForm(forms.Form):
 
+    pi = forms.ModelChoiceField(
+        queryset=User.objects.filter(userprofile__is_pi=True).order_by('first_name', 'last_name'),
+        label='Principal Investigator',
+        required=False)
+
     status = forms.ChoiceField(
         choices=(
             ('', 'Select one.'),
@@ -230,6 +237,14 @@ class ReviewStatusForm(forms.Form):
         validators=[MinLengthValidator(10)],
         required=False,
         widget=forms.Textarea(attrs={'rows': 3}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['pi'].label_from_instance = self.label_from_instance
+
+    @staticmethod
+    def label_from_instance(obj):
+        return f'{obj.first_name} {obj.last_name} ({obj.email})'
 
     def clean(self):
         cleaned_data = super().clean()
