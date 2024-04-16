@@ -7,6 +7,7 @@ from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice
 from django.utils.safestring import mark_safe
+from django.core.validators import MinLengthValidator
 from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses
 from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
 from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_request_statuses
@@ -240,6 +241,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'Please provide a bibliographic reference, URL or DOI for '
                 'each publication/presentation.',
                 required=True,
+                validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
 
             self.fields['grants_supported_by_brc'] = forms.CharField(
@@ -249,6 +251,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'Please provide the name of the funding agency, the award '
                 'number or other identifier, and the amount of funding awarded.',
                 required=True,
+                validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
             
             self.fields['recruitment_or_retention_cases'] = forms.CharField(
@@ -263,6 +266,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'information will not be shared publicly, except as a '
                 'component of aggregated statistics.',
                 required=True,
+                validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
             
             self.fields['classes_being_taught'] = forms.CharField(
@@ -275,6 +279,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 '<a href="http://research-it.berkeley.edu/blog/ica-pilot">'
                 'here</a>.',
                 required=True,
+                validators=[MinLengthValidator(10)],
                 widget=forms.Textarea(attrs={'rows': 3}))
 
             self.fields['brc_recommendation_rating'] = forms.ChoiceField(
@@ -319,6 +324,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'helped you bootstrap the application of computational '
                 'methods to your research.',
                 required=True,
+                validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
             
             self.fields['how_important_to_research_is_brc'] = forms.ChoiceField(
