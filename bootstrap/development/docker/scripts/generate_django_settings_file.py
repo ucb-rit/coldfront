@@ -19,6 +19,7 @@ YAML_FILE_NAMES = [
     'cilogon.yml',
 ]
 
+YAML_OVERRIDES_FILE_NAME = 'overrides.yml'
 
 def build_context(yaml_file_paths):
     context = {}
@@ -56,6 +57,8 @@ def main():
 
     deployment_yaml_file_name = f'{args.deployment.lower()}_defaults.yml'
     yaml_file_names.append(deployment_yaml_file_name)
+    if os.path.exists(os.path.join(YAML_DIRECTORY_PATH, YAML_OVERRIDES_FILE_NAME)):
+        yaml_file_names.append(YAML_OVERRIDES_FILE_NAME)
     yaml_file_paths = [
         os.path.join(YAML_DIRECTORY_PATH, file_name)
         for file_name in yaml_file_names]

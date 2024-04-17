@@ -37,6 +37,16 @@
       {{ secure_dir_request.project.name }}
     </p>
     <p class="card-text text-justify">
+      <strong>Department: </strong>
+      {{ secure_dir_request.department }}
+      {% if is_allowed_to_manage_request %}
+        <a href="{% url 'secure-dir-request-edit-department' secure_dir_request.pk %}" class="btn btn-secondary">
+          <i class="fas fa-edit" aria-hidden="true"></i>
+          Edit
+        </a>
+      {% endif %}
+    </p>
+    <p class="card-text text-justify">
       <strong>Data Description: </strong>
       {{ secure_dir_request.data_description }}
     </p>
@@ -64,5 +74,6 @@
       <strong>Proposed Scratch Path: </strong>
       {{ proposed_scratch_path }}
     </p>
+    {% include 'request_card_mou_buttons.html' %}
   </div>
 </div>
