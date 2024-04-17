@@ -25,6 +25,8 @@ coldfront.db*
 db.json
 coldfront.db.self.broken
 main.yml
+secrets.yml
+cilogon.yml
 *.dump
 .vagrant
 .coverage
@@ -32,3 +34,5 @@ htmlcov
 id_*
 fetch_database_backup.sh
 google-drive-key.json
+secrets
+redis.conf
