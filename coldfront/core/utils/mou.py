@@ -6,6 +6,7 @@ from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.db.models.fields.files import FieldFile
 
+import os
 
 def upload_to_func(instance, filename):
     from coldfront.core.allocation.models import AllocationAdditionRequest
@@ -20,6 +21,7 @@ def upload_to_func(instance, filename):
         path += fs['details']['SERVICE_UNITS_PURCHASE_REQUEST_MOU']['location']
     elif isinstance(instance, SecureDirRequest):
         path += fs['details']['SECURE_DIRECTORY_REQUEST_MOU']['location']
+
     date = datetime.datetime.now().replace(microsecond=0).isoformat()
     filename_suffix = get_mou_filename(instance)
     filename = f'{date}_{filename_suffix}'
@@ -62,6 +64,7 @@ class DynamicFieldFile(FieldFile):
         if backend == 'file_system':
             # Files are written to the concatenation of MEDIA_ROOT and the path
             # designated by upload_to in the model field.
+            
             return FileSystemStorage()
         elif backend == 'google_drive':
             from gdstorage.storage import GoogleDriveStorage
