@@ -884,7 +884,7 @@ class TestNewProjectRequests(TestBase):
         self.assertEqual(len(query_set), count)
 
 
-class TestSurveyResponses(TestBase):
+class TestNewProjectSurveyResponses(TestBase):
     """ Test class to test export data subcommand new_project_survey_responses runs correctly """
 
     @enable_deployment('BRC')
