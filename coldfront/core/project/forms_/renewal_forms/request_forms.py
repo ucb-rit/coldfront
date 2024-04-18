@@ -6,8 +6,6 @@ from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice
-from django.utils.safestring import mark_safe
-from django.core.validators import MinLengthValidator
 from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses
 from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
 from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_request_statuses
@@ -17,6 +15,8 @@ from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAl
 
 from flags.state import flag_enabled
 from django import forms
+from django.utils.safestring import mark_safe
+from django.core.validators import MinLengthValidator
 
 
 class ProjectRenewalPIChoiceField(forms.ModelChoiceField):
@@ -207,8 +207,13 @@ class ProjectRenewalSurveyForm(forms.Form):
     def _update_field_attributes(self):
         """Update field attributes with deployment-specific content."""
         if flag_enabled('BRC_ONLY'):
-            #TODO: Replace placeholders with BRC Survey Questions
-            self.fields['which_brc_services_used'] = forms.MultipleChoiceField(
+            self._update_brc_survey_fields()
+
+        elif flag_enabled('LRC_ONLY'):
+            self._update_lrc_survey_fields()
+
+    def _update_brc_survey_fields(self):
+        self.fields['which_brc_services_used'] = forms.MultipleChoiceField(
                 choices=(
                     ('savio_hpc', (
                         'Savio High Performance Computing and consulting')),
@@ -228,13 +233,13 @@ class ProjectRenewalSurveyForm(forms.Form):
                     ('none', (
                         'None of the above')),
                 ),
-                label='Which Berkeley Research Computing services have you'
+                label='1. Which Berkeley Research Computing services have you'
                  ' used? (Check all that apply.)',
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
             
-            self.fields['publications_supported_by_brc'] = forms.CharField(
-                label='Please list any publications (including papers, books, '
+        self.fields['publications_supported_by_brc'] = forms.CharField(
+                label='2. Please list any publications (including papers, books, '
                 'dissertations, theses, and public presentations) that you '
                 'authored or co-authored, that have been supported by '
                 'Berkeley Research Computing resources and/or consulting. '
@@ -244,8 +249,8 @@ class ProjectRenewalSurveyForm(forms.Form):
                 validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
 
-            self.fields['grants_supported_by_brc'] = forms.CharField(
-                label='Please list any grant(s) or other competitively-'
+        self.fields['grants_supported_by_brc'] = forms.CharField(
+                label='3. Please list any grant(s) or other competitively-'
                 'awarded funding that has been or will be supported by '
                 'Berkeley Research Computing resources and/or consulting. '
                 'Please provide the name of the funding agency, the award '
@@ -254,8 +259,8 @@ class ProjectRenewalSurveyForm(forms.Form):
                 validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
             
-            self.fields['recruitment_or_retention_cases'] = forms.CharField(
-                label='Please list any recruitment or retention cases you '
+        self.fields['recruitment_or_retention_cases'] = forms.CharField(
+                label='4. Please list any recruitment or retention cases you '
                 'are aware of in which the availability of the Savio '
                 'high-performance computing cluster or other Berkeley '
                 'Research Computing services -- such as Condo Storage, '
@@ -269,8 +274,8 @@ class ProjectRenewalSurveyForm(forms.Form):
                 validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
             
-            self.fields['classes_being_taught'] = forms.CharField(
-                label='Please list any classes (course number and semester) '
+        self.fields['classes_being_taught'] = forms.CharField(
+                label='5. Please list any classes (course number and semester) '
                 'for which you were/will be an instructor, and that were or '
                 'will be supported by the Berkeley Research Computing Program. '
                 'Please indicate whether an Instructional Computing Allowance '
@@ -283,7 +288,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 validators=[MinLengthValidator(10)],
                 widget=forms.Textarea(attrs={'rows': 3}))
 
-            self.fields['brc_recommendation_rating'] = forms.ChoiceField(
+        self.fields['brc_recommendation_rating'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not at all likely')),
@@ -307,19 +312,19 @@ class ProjectRenewalSurveyForm(forms.Form):
                         '10 - Very likely')),
                 ),
                 label=(
-                    'Based upon your overall experience using BRC services, '
+                    '6. Based upon your overall experience using BRC services, '
                     'how likely are you to recommend Berkeley Research '
                     'Computing to others?'),
                 required=True,
                 widget=forms.RadioSelect())
             
-            self.fields['brc_recommendation_rating_reason'] = forms.CharField(
-                label='What is the reason for your rating above?',
+        self.fields['brc_recommendation_rating_reason'] = forms.CharField(
+                label='6a. What is the reason for your rating above?',
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
             
-            self.fields['how_brc_helped_bootstrap_computational_methods'] = forms.CharField(
-                label='If you are new to computational methods '
+        self.fields['how_brc_helped_bootstrap_computational_methods'] = forms.CharField(
+                label='7. If you are new to computational methods '
                 '(broadly, or in a specific application), please '
                 'let us know how BRC services and/or resources have '
                 'helped you bootstrap the application of computational '
@@ -328,7 +333,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
             
-            self.fields['how_important_to_research_is_brc'] = forms.ChoiceField(
+        self.fields['how_important_to_research_is_brc'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         'Not at all important')),
@@ -344,12 +349,12 @@ class ProjectRenewalSurveyForm(forms.Form):
                         'Not applicable')),
                 ),
                 label=(
-                    'How important is the Berkeley Research Computing '
+                    '8. How important is the Berkeley Research Computing '
                     'Program to your research?'),
                 required=True,
                 widget=forms.RadioSelect())
             
-            self.fields['do_you_use_mybrc'] = forms.ChoiceField(
+        self.fields['do_you_use_mybrc'] = forms.ChoiceField(
                 choices=(
                     ('yes', (
                         'Yes')),
@@ -357,17 +362,17 @@ class ProjectRenewalSurveyForm(forms.Form):
                         'No')),
                 ),
                 label=(
-                    'Do you use the Savio Account Management portal '
+                    '9. Do you use the Savio Account Management portal '
                     'MyBRC?'),
                 required=True,
                 widget=forms.RadioSelect())
             
-            self.fields['mybrc_comments'] = forms.CharField(
-                label=('If yes, what feedback do you have for MyBRC?'),
+        self.fields['mybrc_comments'] = forms.CharField(
+                label=('9a.If yes, what feedback do you have for MyBRC?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
             
-            self.fields['which_open_ondemand_apps_used'] = forms.MultipleChoiceField(
+        self.fields['which_open_ondemand_apps_used'] = forms.MultipleChoiceField(
                 choices=(
                     ('desktop', (
                         'Desktop')),
@@ -388,14 +393,14 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
             
-            self.fields['brc_feedback'] = forms.CharField(
+        self.fields['brc_feedback'] = forms.CharField(
                 label=(
                     'How could the Berkeley Research Computing '
                     'Program be more useful to your research or teaching?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
             
-            self.fields['colleague_suggestions'] = forms.CharField(
+        self.fields['colleague_suggestions'] = forms.CharField(
                 label=(
                     'Please suggest colleagues who might benefit from the '
                     'Berkeley Research Computing Program, with whom we '
@@ -405,7 +410,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 3}))
             
-            self.fields['indicate_topic_interests'] = forms.MultipleChoiceField(
+        self.fields['indicate_topic_interests'] = forms.MultipleChoiceField(
                 choices=(
                     ('have_visited_rdmp_website', (
                         'I have visited the Research Data Management '
@@ -433,7 +438,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
 
-            self.fields['training_session_usefulness_of_computational_platforms_training'] = forms.ChoiceField(
+        self.fields['training_session_usefulness_of_computational_platforms_training'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -458,7 +463,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['training_session_usefulness_of_basic_savio_cluster'] = forms.ChoiceField(
+        self.fields['training_session_usefulness_of_basic_savio_cluster'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -478,7 +483,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['training_session_usefulness_of_advanced_savio_cluster'] = forms.ChoiceField(
+        self.fields['training_session_usefulness_of_advanced_savio_cluster'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -499,7 +504,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['training_session_usefulness_of_singularity_on_savio'] = forms.ChoiceField(
+        self.fields['training_session_usefulness_of_singularity_on_savio'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -518,7 +523,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
             
-            self.fields['training_session_usefulness_of_analytic_envs_on_demand'] = forms.ChoiceField(
+        self.fields['training_session_usefulness_of_analytic_envs_on_demand'] = forms.ChoiceField(
                 choices=(
                     ('1', (
                         '1 - Not useful')),
@@ -538,37 +543,36 @@ class ProjectRenewalSurveyForm(forms.Form):
                 required=False,
                 widget=forms.RadioSelect())
 
-            self.fields['training_session_other_topics_of_interest'] = forms.CharField(
+        self.fields['training_session_other_topics_of_interest'] = forms.CharField(
                 label=('Any other or specific topics of interest?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
-
-        elif flag_enabled('LRC_ONLY'):
-            # TODO: Replace placeholders with LRC Survey Questions
-            self.fields['question_1'] = forms.CharField(
+    def _update_lrc_survey_fields(self):
+        # TODO: Replace placeholders with LRC Survey Questions
+        self.fields['question_1'] = forms.CharField(
                 label='Question 1',
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3})
                 )
 
-            self.fields['question_2'] = forms.CharField(
-                    label='Question 2',
-                    required=True,
-                    widget=forms.Textarea(attrs={'rows': 3}))
-            
-            self.fields['question_3'] = forms.MultipleChoiceField(
-                choices=(
-                    ('1', (
-                        '1')),
-                    ('2', (
-                        '2')),
-                    ('3', (
-                        '3')),
-                ),
-                label=(
-                    'LRC Choose an option:'),
-                required=False,
-                widget=forms.CheckboxSelectMultiple())
+        self.fields['question_2'] = forms.CharField(
+                label='Question 2',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 3}))
+        
+        self.fields['question_3'] = forms.MultipleChoiceField(
+            choices=(
+                ('1', (
+                    '1')),
+                ('2', (
+                    '2')),
+                ('3', (
+                    '3')),
+            ),
+            label=(
+                'LRC Choose an option:'),
+            required=False,
+            widget=forms.CheckboxSelectMultiple())
 
 
 class ProjectRenewalReviewAndSubmitForm(forms.Form):
