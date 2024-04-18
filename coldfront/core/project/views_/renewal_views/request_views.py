@@ -101,8 +101,6 @@ class AllocationRenewalLandingView(LoginRequiredMixin, UserPassesTestMixin,
             renewal_supported_allowance_names
         context['renewal_not_supported_allowance_names'] = \
             renewal_not_supported_allowance_names
-        
-        context['survey_answers'] = 'hi'
 
         return context
 
