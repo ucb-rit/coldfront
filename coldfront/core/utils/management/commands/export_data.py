@@ -504,7 +504,7 @@ class Command(BaseCommand):
         for k, v in form.fields.items():
             # Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices 
             if (isinstance(v, forms.MultipleChoiceField)) or (isinstance(v, forms.ChoiceField)):
-                multiple_choice_fields[k] = {k: v for k, v in form.fields[k].choices}
+                multiple_choice_fields[k] = {_k: _v for _k, _v in form.fields[k].choices}
 
         if format == 'csv':
             for allocation_request, survey in zip(allocation_requests, _surveys):
