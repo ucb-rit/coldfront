@@ -431,6 +431,9 @@ class ProjectRenewalSurveyForm(forms.Form):
                     ('interested_in_visualization_services', (
                         'I am interested in resources or services that support '
                         'visualization of research data.')),
+                    ('none_of_the_above', (
+                        'None of the above.'
+                    ))
                 ),
                 label=(
                     'Please indicate your engagement with or '
