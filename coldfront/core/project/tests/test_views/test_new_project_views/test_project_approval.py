@@ -35,7 +35,7 @@ from decimal import Decimal
 
 class TestSavioProjectReviewSetupViewNoPooling(TestBase,  
                                              FormView):
-    """A class for testing SavioProjectReviewSetupView with and without pooling"""
+    """A class for testing SavioProjectReviewSetupView without pooling"""
 
     #def create_test_superuser(self):
     #    self.user = User.objects.create_superuser(username='testuser', 
