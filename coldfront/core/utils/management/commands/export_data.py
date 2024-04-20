@@ -508,15 +508,7 @@ class Command(BaseCommand):
 
         if format == 'csv':
             for allocation_request, survey in zip(allocation_requests, _surveys):
-                for question, answer in survey.items():
-                    if question in multiple_choice_fields.keys():
-                        sub_map = multiple_choice_fields[question]
-                        if (isinstance(answer, list)):
-                            # Multiple choice, array
-                            survey[question] = [sub_map.get(i,i) for i in answer]
-                        else:
-                            # Single choice replacement
-                            survey[question] = sub_map[answer]
+                survey = _swap_form_answer_id_for_text(survey, multiple_choice_fields)
                 surveys.append({
                     'project_name': allocation_request.post_project.name,
                     'project_title': allocation_request.post_project.title,
@@ -543,18 +535,7 @@ class Command(BaseCommand):
 
         elif format == 'json':
             for allocation_request, survey in zip(allocation_requests, _surveys):
-                for question, answer in survey.items():
-                    if question in multiple_choice_fields.keys():
-                        sub_map = multiple_choice_fields[question]
-                        if (isinstance(answer, list)):
-                            # Multiple choice, array
-                            survey[question] = [sub_map.get(i,i) for i in answer]
-                        else:
-                            # Single choice replacement
-                            survey[question] = sub_map[answer]
-                # Change keys of survey to be the human-readable text
-                for id, text in form.fields.items():
-                    survey[text.label] = survey.pop(id)
+                survey = _swap_form_answer_id_for_text(survey, multiple_choice_fields)
                 surveys.append({
                     'project_name': allocation_request.post_project.name,
                     'project_title': allocation_request.post_project.title,
@@ -566,6 +547,32 @@ class Command(BaseCommand):
             self.to_json(surveys,
                          output=kwargs.get('stdout', stdout),
                          error=kwargs.get('stderr', stderr))
+            
+        def _swap_form_answer_id_for_text(_survey, _multiple_choice_fields):
+            '''
+            Takes a survey, a dict mapping survey question IDs to answer IDs.
+            Uses multiple_choice_fields to swap answer IDs for answer text, then 
+            question IDs for question text.
+            Returns the modified survey.
+
+            Parameters
+            ----------
+            _survey : survey to modify
+            _multiple_choice_fields : mapping of {question ID : {answer ID : answer text}}
+            '''
+            for question, answer in _survey.items():
+                if question in _multiple_choice_fields.keys():
+                    sub_map = _multiple_choice_fields[question]
+                    if (isinstance(answer, list)):
+                        # Multiple choice, array
+                        _survey[question] = [sub_map.get(i,i) for i in answer]
+                    elif answer != None:
+                        # Single choice replacement 
+                        _survey[question] = sub_map[answer]
+            # Change keys of survey (question IDs) to be the human-readable text
+            for id, text in form.fields.items():
+                _survey[text.label] = _survey.pop(id)
+            return _survey
 
     @staticmethod
     def to_csv(query_set, header=None, output=stdout, error=stderr):
