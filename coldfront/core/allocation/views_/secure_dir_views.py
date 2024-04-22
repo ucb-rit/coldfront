@@ -38,10 +38,11 @@ from coldfront.core.allocation.utils_.secure_dir_utils import \
     get_secure_dir_manage_user_request_objects, secure_dir_request_state_status, \
     SecureDirRequestDenialRunner, SecureDirRequestApprovalRunner, \
     get_secure_dir_allocations, get_default_secure_dir_paths, \
-    pi_eligible_to_request_secure_dir, SECURE_DIRECTORY_NAME_PREFIX, \
+    is_project_eligible_for_secure_dirs, SECURE_DIRECTORY_NAME_PREFIX, \
     set_sec_dir_context
 from coldfront.core.project.forms import ReviewStatusForm, ReviewDenyForm
 from coldfront.core.project.models import ProjectUser, Project
+from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import utc_now_offset_aware, \
     session_wizard_all_form_data
@@ -57,16 +58,17 @@ class SecureDirManageUsersView(LoginRequiredMixin,
     template_name = 'secure_dir/secure_dir_manage_users.html'
 
     def test_func(self):
-        """ UserPassesTestMixin Tests"""
+        """Allow the following users to manage users of a secure
+        directory:
+            - Superusers
+            - Active PIs and Managers of the project
+        """
         if self.request.user.is_superuser:
             return True
 
         alloc_obj = get_object_or_404(Allocation, pk=self.kwargs.get('pk'))
-
-        if alloc_obj.project.projectuser_set.filter(
-                user=self.request.user,
-                role__name='Principal Investigator',
-                status__name='Active').exists():
+        if is_user_manager_or_pi_of_project(
+                self.request.user, alloc_obj.project):
             return True
 
     def dispatch(self, request, *args, **kwargs):
@@ -779,45 +781,80 @@ class SecureDirManageUsersDenyRequestView(LoginRequiredMixin,
                     kwargs={'action': self.action, 'status': 'pending'}))
 
 
+class NewSecureDirRequestViewAccessibilityMixin(UserPassesTestMixin):
+    """A mixin for determining whether views related to requesting new
+    secure directories is accessible.
+
+    Inheriting views must take a Project primary key via a "pk" URL
+    argument."""
+
+    def test_func(self):
+        """Allow access to:
+            - Superusers
+            - Active PIs and Managers of the project who have signed the
+              access agreement
+
+        Disallow access if the project is ineligible to request
+        secure directories.
+        """
+        project_obj = get_object_or_404(Project, pk=self.kwargs['pk'])
+        user = self.request.user
+        is_user_authorized = (
+            user.is_superuser or
+            is_user_manager_or_pi_of_project(user, project_obj))
+
+        if not is_user_authorized:
+            return False
+
+        if not is_project_eligible_for_secure_dirs(project_obj):
+            message = (
+                f'Project {project_obj.name} is ineligible for secure '
+                f'directories.')
+            messages.error(self.request, message)
+            return False
+
+        if user.is_superuser:
+            return True
+
+        if not access_agreement_signed(user):
+            message = (
+                'Please sign the User Access Agreement before requesting a new '
+                'secure directory.')
+            messages.error(message)
+            return False
+
+        return True
+
+
 class SecureDirRequestLandingView(LoginRequiredMixin,
-                                  UserPassesTestMixin,
+                                  NewSecureDirRequestViewAccessibilityMixin,
                                   TemplateView):
     """A view for the secure directory request landing page."""
 
     template_name = \
         'secure_dir/secure_dir_request/secure_dir_request_landing.html'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._project_obj = None
+
+    def dispatch(self, request, *args, **kwargs):
+        self._project_obj = get_object_or_404(Project, pk=kwargs['pk'])
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['project_pk'] = kwargs.get('pk', None)
+        context['project'] = self._project_obj
         return context
-
-    def test_func(self):
-        if self.request.user.is_superuser:
-            return True
-
-        access_agreement = access_agreement_signed(self.request.user)
-
-        eligible_pi = pi_eligible_to_request_secure_dir(self.request.user)
-
-        if eligible_pi and access_agreement:
-            return True
-
-        message = (
-            'You must be an eligible PI and sign the User Access Agreement '
-            'before you can request a new secure directory.')
-        messages.error(self.request, message)
 
 
 class SecureDirRequestWizard(LoginRequiredMixin,
-                             UserPassesTestMixin,
+                             NewSecureDirRequestViewAccessibilityMixin,
                              SessionWizardView):
 
     FORMS = [
         ('data_description', SecureDirDataDescriptionForm),
         ('rdm_consultation', SecureDirRDMConsultationForm),
-        # ('existing_pi', SecureDirExistingPIForm),
-        # ('existing_project', SecureDirExistingProjectForm),
         ('directory_name', SecureDirDirectoryNamesForm)
     ]
 
@@ -826,19 +863,12 @@ class SecureDirRequestWizard(LoginRequiredMixin,
             'secure_dir/secure_dir_request/data_description.html',
         'rdm_consultation':
             'secure_dir/secure_dir_request/rdm_consultation.html',
-        # 'existing_pi':
-        #     'secure_dir/secure_dir_request/existing_pi.html',
-        # 'existing_project':
-        #     'secure_dir/secure_dir_request/existing_project.html',
-        'directory_name':
-            'secure_dir/secure_dir_request/directory_name.html'
+        'directory_name': 'secure_dir/secure_dir_request/directory_name.html'
     }
 
     form_list = [
         SecureDirDataDescriptionForm,
         SecureDirRDMConsultationForm,
-        # SecureDirExistingPIForm,
-        # SecureDirExistingProjectForm,
         SecureDirDirectoryNamesForm
     ]
 
@@ -850,22 +880,6 @@ class SecureDirRequestWizard(LoginRequiredMixin,
         self.step_numbers_by_form_name = {
             name: i for i, (name, _) in enumerate(self.FORMS)}
         self.project = None
-
-    def test_func(self):
-        if self.request.user.is_superuser:
-            return True
-
-        access_agreement = access_agreement_signed(self.request.user)
-
-        eligible_pi = pi_eligible_to_request_secure_dir(self.request.user)
-
-        if eligible_pi and access_agreement:
-            return True
-
-        message = (
-            'You must be an eligible PI and sign the User Access Agreement '
-            'before you can request a new secure directory.')
-        messages.error(self.request, message)
 
     def dispatch(self, request, *args, **kwargs):
         self.project = Project.objects.get(pk=kwargs.get('pk', None))
@@ -1186,17 +1200,27 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
     redirect = reverse_lazy('secure-dir-pending-request-list')
 
     def test_func(self):
-        """UserPassesTestMixin tests."""
-        if self.request.user.is_superuser:
+        """Allow access to:
+            - Superusers
+            - Users with access to view SecureDirRequests
+            - Active PIs of the project
+            - The user who made the request
+        """
+        user = self.request.user
+
+        if user.is_superuser:
             return True
 
-        if self.request.user.has_perm('allocation.view_securedirrequest'):
+        if user.has_perm('allocation.view_securedirrequest'):
             return True
 
         pis = self.request_obj.project.projectuser_set.filter(
             role__name='Principal Investigator',
             status__name='Active').values_list('user__pk', flat=True)
-        if self.request.user.pk in pis:
+        if user.pk in pis:
+            return True
+
+        if user == self.request_obj.requester:
             return True
 
         message = 'You do not have permission to view the previous page.'

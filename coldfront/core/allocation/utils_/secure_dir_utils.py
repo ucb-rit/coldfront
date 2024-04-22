@@ -11,8 +11,13 @@ from coldfront.core.allocation.models import Allocation, AllocationStatusChoice,
     SecureDirRemoveUserRequest, SecureDirAddUserRequestStatusChoice, \
     SecureDirRemoveUserRequestStatusChoice, SecureDirRequest, \
     SecureDirRequestStatusChoice, AllocationUser, AllocationUserStatusChoice
-from coldfront.core.project.models import Project, ProjectUser
+from coldfront.core.project.models import Project
+from coldfront.core.project.models import ProjectStatusChoice
+from coldfront.core.project.models import ProjectUser
 from coldfront.core.resource.models import Resource, ResourceAttribute
+from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterfaceError
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.mail import send_email_template
 
@@ -326,16 +331,21 @@ class SecureDirRequestApprovalRunner(object):
                     logger.exception(e)
 
 
-def get_secure_dir_allocations():
-    """Returns a queryset of all active secure directory allocations."""
+def get_secure_dir_allocations(project=None):
+    """Returns a queryset of all active secure directory allocations.
+    Optionally, return those for a specific project."""
     scratch_directory = Resource.objects.get(name='Scratch P2/P3 Directory')
     groups_directory = Resource.objects.get(name='Groups P2/P3 Directory')
 
-    queryset = Allocation.objects.filter(
-        resources__in=[scratch_directory, groups_directory],
-        status__name='Active')
+    kwargs = {
+        'resources__in': [scratch_directory, groups_directory],
+        'status__name': 'Active',
+    }
+    if project is not None:
+        assert isinstance(project, Project)
+        kwargs['project'] = project
 
-    return queryset
+    return Allocation.objects.filter(**kwargs)
 
 
 def get_default_secure_dir_paths():
@@ -353,40 +363,56 @@ def get_default_secure_dir_paths():
     return groups_path, scratch_path
 
 
-def pi_eligible_to_request_secure_dir(user):
-    """Returns True if the user is eligible to request a secure directory.
-
-    Parameters:
-    - user (User): the user to check if they are eligible
-
-    Returns:
-        - bool: True if the user is eligible to request a secure directory,
-                False otherwise
-
-    Raises:
-    - TypeError, if 'user' is not a User object
+def is_project_eligible_for_secure_dirs(project):
+    """Return whether the given Project is eligible to request a secure
+    directory. The following criteria are considered:
+        - Is active;
+        - Has a Condo, FCA, or ICA computing allowance;
+        - Does not already have secure directories;
+        - Does not have a non-"Denied" request for secure directories.
     """
+    assert isinstance(project, Project)
 
-    if not isinstance(user, User):
-        raise TypeError(f'Invalid User {user}.')
+    # Is active
+    active_project_status = ProjectStatusChoice.objects.get(name='Active')
+    if project.status != active_project_status:
+        return False
 
-    projects_with_existing_requests = \
-        set(SecureDirRequest.objects.exclude(
-            status__name='Denied').values_list('project__pk', flat=True))
+    # Has a Condo, FCA, or ICA computing allowance
+    eligible_computing_allowance_names = {
+        BRCAllowances.CO,
+        BRCAllowances.FCA,
+        BRCAllowances.ICA,
+    }
+    computing_allowance_interface = ComputingAllowanceInterface()
+    try:
+        computing_allowance = \
+            computing_allowance_interface.allowance_from_project(project)
+    except ComputingAllowanceInterfaceError:
+        # Non-primary-cluster projects (ineligible) raise this error.
+        return False
+    if computing_allowance.name not in eligible_computing_allowance_names:
+        return False
 
-    eligible_project = Q(project__name__startswith='fc_') | \
-                       Q(project__name__startswith='ic_') | \
-                       Q(project__name__startswith='co_') & \
-                       Q(project__status__name='Active')
+    eligible_project_prefixes = tuple(
+        computing_allowance_interface.code_from_name(computing_allowance_name)
+        for computing_allowance_name in eligible_computing_allowance_names)
+    if not project.name.startswith(eligible_project_prefixes):
+        return False
 
-    eligible_pi = ProjectUser.objects.filter(
-        eligible_project,
-        user=user,
-        role__name='Principal Investigator',
-        status__name='Active',
-    ).exclude(project__pk__in=projects_with_existing_requests)
+    # Does not already have secure directories
+    if get_secure_dir_allocations(project=project).exists():
+        return False
 
-    return eligible_pi.exists()
+    # Does not have a non-"Denied" request for secure directories
+    denied_request_status = SecureDirRequestStatusChoice.objects.get(
+        name='Denied')
+    non_denied_requests = SecureDirRequest.objects.filter(
+        Q(project=project) & ~Q(status=denied_request_status))
+    if non_denied_requests.exists():
+        return False
+
+    return True
 
 
 def get_all_secure_dir_paths():
