@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('allocation', '0012_cluster_access_request_remove_host_user_and_billing_activity'),
+        ('allocation', '0014_add_mou_file_to_requests'),
     ]
 
     operations = [
