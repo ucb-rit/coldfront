@@ -244,7 +244,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'authored or co-authored, that have been supported by '
                 'Berkeley Research Computing resources and/or consulting. '
                 'Please provide a bibliographic reference, URL or DOI for '
-                'each publication/presentation.',
+                'each publication/presentation. Please write \'N/A\' if this does not apply.',
                 required=True,
                 validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
@@ -254,9 +254,9 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'awarded funding that has been or will be supported by '
                 'Berkeley Research Computing resources and/or consulting. '
                 'Please provide the name of the funding agency, the award '
-                'number or other identifier, and the amount of funding awarded.',
+                'number or other identifier, and the amount of funding awarded. '
+                'Please write \'N/A\' if this does not apply.',
                 required=True,
-                validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
             
         self.fields['recruitment_or_retention_cases'] = forms.CharField(
@@ -269,9 +269,9 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'retention case role (faculty, postdoc, or graduate student), '
                 'department, sponsoring faculty member, and outcome. This '
                 'information will not be shared publicly, except as a '
-                'component of aggregated statistics.',
+                'component of aggregated statistics. '
+                'Please write \'N/A\' if this does not apply.',
                 required=True,
-                validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
             
         self.fields['classes_being_taught'] = forms.CharField(
@@ -283,9 +283,9 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'listed classes. More on ICAs '
                 '<a href="https://docs-research-it.berkeley.edu/services/high'
                 '-performance-computing/getting-account/instructional-computing-allowance/"'
-                'target="_blank" rel="noopener noreferrer">here</a>.',
+                'target="_blank" rel="noopener noreferrer">here</a>. '
+                'Please write \'N/A\' if this does not apply.',
                 required=True,
-                validators=[MinLengthValidator(10)],
                 widget=forms.Textarea(attrs={'rows': 3}))
 
         self.fields['brc_recommendation_rating'] = forms.ChoiceField(
@@ -328,9 +328,8 @@ class ProjectRenewalSurveyForm(forms.Form):
                 '(broadly, or in a specific application), please '
                 'let us know how BRC services and/or resources have '
                 'helped you bootstrap the application of computational '
-                'methods to your research.',
+                'methods to your research. Please write \'N/A\' if this does not apply.',
                 required=True,
-                validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
             
         self.fields['how_important_to_research_is_brc'] = forms.ChoiceField(
@@ -388,21 +387,21 @@ class ProjectRenewalSurveyForm(forms.Form):
                         'Other')),
                 ),
                 label=(
-                    'Do you use Open Ondemand? Which '
+                    '10. Do you use Open Ondemand? Which '
                     'application(s) do you use? (Check all that apply.)'),
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
             
         self.fields['brc_feedback'] = forms.CharField(
                 label=(
-                    'How could the Berkeley Research Computing '
+                    '11. How could the Berkeley Research Computing '
                     'Program be more useful to your research or teaching?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
             
         self.fields['colleague_suggestions'] = forms.CharField(
                 label=(
-                    'Please suggest colleagues who might benefit from the '
+                    '12. Please suggest colleagues who might benefit from the '
                     'Berkeley Research Computing Program, with whom we '
                     'should follow up. Names, e-mail addresses, and roles '
                     '(faculty, postdoc, graduate student, etc.) would be '
@@ -436,7 +435,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                     ))
                 ),
                 label=(
-                    'Please indicate your engagement with or '
+                    '13. Please indicate your engagement with or '
                     'interest in the following topics. (Check all that apply.)'),
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
@@ -459,7 +458,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                     ' the next 2-3 months and would like input on what topics would be '
                     'most useful to you personally. Please rate the following topics on '
                     ' how useful they would be to you.</h4>'
-                    'Selecting computational platforms that fit your research and '
+                    '14a. Selecting computational platforms that fit your research and '
                     'budget (Savio, HPC@UC, XSEDE, commercial cloud providers, AEoD) '
                     'System overview (how to access Savio via condo contribution '
                     'or faculty compute allowance, system capabilities)')),
@@ -480,7 +479,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                         '5 - Very useful')),
                 ),
                 label=(
-                    'Basic usage of the Savio cluster (logging on, data transfer, accessing '
+                    '14b. Basic usage of the Savio cluster (logging on, data transfer, accessing '
                     'software, using the scheduler; limited discussion of access models and '
                     'capabilities)'),
                 required=False,
@@ -500,7 +499,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                         '5 - Very useful')),
                 ),
                 label=(
-                    'Advanced usage of the Savio cluster (e.g. installing your own software, '
+                    '14c. Advanced usage of the Savio cluster (e.g. installing your own software, '
                     'parallelization strategies, effective use of specific system resources '
                     'such as GPUs and Hadoop/Spark -- please indicate specific interests '
                     'below)'),
@@ -521,7 +520,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                         '5 - Very useful')),
                 ),
                 label=(
-                    'Use of Singularity on Savio (containerized applications, including Docker '
+                    '14d. Use of Singularity on Savio (containerized applications, including Docker '
                     'containers packaged for Savio deployment)'),
                 required=False,
                 widget=forms.RadioSelect())
@@ -540,14 +539,14 @@ class ProjectRenewalSurveyForm(forms.Form):
                         '5 - Very useful')),
                 ),
                 label=(
-                    'Use of Analytic Environments on Demand (virtualized, scalable Windows '
+                    '14e. Use of Analytic Environments on Demand (virtualized, scalable Windows '
                     'environments provisioned with licensed or open-source software '
                     'applications applicable to research projects)'),
                 required=False,
                 widget=forms.RadioSelect())
 
         self.fields['training_session_other_topics_of_interest'] = forms.CharField(
-                label=('Any other or specific topics of interest?'),
+                label=('15. Any other or specific topics of interest?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
     def _update_lrc_survey_fields(self):
