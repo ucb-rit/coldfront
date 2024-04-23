@@ -19,6 +19,7 @@ from coldfront.core.project.utils_.new_project_utils import savio_request_state_
 from coldfront.core.project.utils_.new_project_utils import send_project_request_pooling_email
 from coldfront.core.project.utils_.new_project_utils import VectorProjectProcessingRunner
 from coldfront.core.project.utils_.new_project_utils import vector_request_state_status
+from django.contrib.auth.models import User
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_current_date
@@ -33,7 +34,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import UserPassesTestMixin
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
@@ -600,6 +601,8 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
     template_name = (
         'project/project_request/savio/project_review_eligibility.html')
 
+    logger = logging.getLogger(__name__)
+
     def test_func(self):
         """UserPassesTestMixin tests."""
         if self.request.user.is_superuser:
@@ -632,8 +635,29 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
             runner = ProjectDenialRunner(self.request_obj)
             runner.run()
         
-        self.request_obj.pi = form_data['pi']
-        self.request_obj.save()
+        if form_data['PI'] != self.request_obj.pi:
+            if form_data['PI'] is not None:
+                self.request_obj.pi = form_data['PI']
+                self.request_obj.save()
+            elif all([form_data['first_name'],
+                      form_data['last_name'],
+                      form_data['email']]):
+                try:
+                    self.request_obj.pi = User.objects.create(
+                        username=form_data['email'],
+                        first_name=form_data['first_name'],
+                        last_name=form_data['last_name'],
+                        email=form_data['email'],
+                        is_active=True)
+                    self.request_obj.pi.save()
+                    self.request_obj.save()
+                except IntegrityError as e:
+                    self.logger.error(f'User {form_data["email"]} unexpectedly exists.')
+                    raise e
+            else:
+                message = 'PI information is incomplete.'
+                messages.error(self.request, message)
+                return self.form_invalid(form)
 
         message = (
             f'Eligibility status for request {self.request_obj.pk} has been '
@@ -652,7 +676,7 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
     def get_initial(self):
         initial = super().get_initial()
         eligibility = self.request_obj.state['eligibility']
-        initial['pi'] = self.request_obj.pi
+        initial['PI'] = self.request_obj.pi
         initial['status'] = eligibility['status']
         initial['justification'] = eligibility['justification']
         return initial
