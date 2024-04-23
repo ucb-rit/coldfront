@@ -727,7 +727,12 @@ def secure_dir_request_state_schema():
 
 
 class SecureDirRequest(TimeStampedModel):
-    requester = models.ForeignKey(User, on_delete=models.CASCADE)
+    requester = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='secure_dir_request_requester')
+    pi = models.ForeignKey(
+        User, null=True, on_delete=models.CASCADE,
+        related_name='secure_dir_request_pi')
     directory_name = models.TextField()
     department = models.TextField(null=True)
     data_description = models.TextField()
