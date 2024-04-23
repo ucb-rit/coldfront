@@ -3,6 +3,9 @@ from django.core.validators import MinLengthValidator
 
 from coldfront.core.allocation.utils_.secure_dir_utils import is_secure_directory_name_suffix_available
 from coldfront.core.allocation.utils_.secure_dir_utils import SECURE_DIRECTORY_NAME_PREFIX
+from coldfront.core.project.models import ProjectUser
+from coldfront.core.project.models import ProjectUserRoleChoice
+from coldfront.core.project.models import ProjectUserStatusChoice
 
 
 class SecureDirNameField(forms.CharField):
@@ -70,6 +73,32 @@ class SecureDirManageUsersRequestCompletionForm(forms.Form):
     status = forms.ChoiceField(
         label='Status', choices=STATUS_CHOICES, required=True,
         widget=forms.Select())
+
+
+class SecureDirPISelectionForm(forms.Form):
+
+    pi = forms.ModelChoiceField(
+        label='Principal Investigator',
+        queryset=ProjectUser.objects.none(),
+        required=True,
+        widget=forms.Select())
+
+    def __init__(self, *args, **kwargs):
+        self.project_pk = kwargs.pop('project_pk', None)
+        super().__init__(*args, **kwargs)
+
+        if not self.project_pk:
+            return
+
+        self._set_pi_queryset()
+
+    def _set_pi_queryset(self):
+        """Set the 'pi' choices to active PIs on the project."""
+        pi_role = ProjectUserRoleChoice.objects.get(
+            name='Principal Investigator')
+        active_status = ProjectUserStatusChoice.objects.get(name='Active')
+        self.fields['pi'].queryset = ProjectUser.objects.filter(
+            project__pk=self.project_pk, role=pi_role, status=active_status)
 
 
 class SecureDirDataDescriptionForm(forms.Form):

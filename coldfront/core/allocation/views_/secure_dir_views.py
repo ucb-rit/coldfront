@@ -25,7 +25,7 @@ from coldfront.core.allocation.forms_.secure_dir_forms import (
     SecureDirManageUsersRequestCompletionForm, SecureDirDataDescriptionForm,
     SecureDirRDMConsultationForm, SecureDirDirectoryNamesForm,
     SecureDirSetupForm, SecureDirRDMConsultationReviewForm,
-    SecureDirRequestEditDepartmentForm)
+    SecureDirRequestEditDepartmentForm, SecureDirPISelectionForm)
 from coldfront.core.allocation.models import (Allocation,
                                               SecureDirAddUserRequest,
                                               SecureDirRemoveUserRequest,
@@ -853,12 +853,14 @@ class SecureDirRequestWizard(LoginRequiredMixin,
                              SessionWizardView):
 
     FORMS = [
+        ('pi_selection', SecureDirPISelectionForm),
         ('data_description', SecureDirDataDescriptionForm),
         ('rdm_consultation', SecureDirRDMConsultationForm),
         ('directory_name', SecureDirDirectoryNamesForm)
     ]
 
     TEMPLATES = {
+        'pi_selection': 'secure_dir/secure_dir_request/pi_selection.html',
         'data_description':
             'secure_dir/secure_dir_request/data_description.html',
         'rdm_consultation':
@@ -867,6 +869,7 @@ class SecureDirRequestWizard(LoginRequiredMixin,
     }
 
     form_list = [
+        SecureDirPISelectionForm,
         SecureDirDataDescriptionForm,
         SecureDirRDMConsultationForm,
         SecureDirDirectoryNamesForm
@@ -1811,6 +1814,6 @@ class SecureDirRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
                          self.request_obj.requester.get_full_name(),
                          reverse('secure-dir-request-detail',
                                  kwargs={'pk': self.request_obj.pk}),
-                         'Researcher User Agreement',
+                         'Researcher Use Agreement',
                          f'{self.request_obj.project.name} secure directory request',
                          self.request_obj.requester.email)
