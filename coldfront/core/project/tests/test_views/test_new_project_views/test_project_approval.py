@@ -2,6 +2,10 @@ from flags.state import flag_enabled
 
 from coldfront.core.utils.tests.test_base import TestBase
 from coldfront.core.project.views_.new_project_views.approval_views import SavioProjectRequestMixin
+from coldfront.core.project.models import ProjectStatusChoice
+from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPooledProjectSelectionForm
+
+from coldfront.core.project.models import Project
 #from coldfront.core.project.views_.new_project_views import SavioProjectReviewSetupView
 #from django.contrib.auth.mixins import LoginRequiredMixin
 #from django.contrib.auth.mixins import UserPassesTestMixin
@@ -36,22 +40,10 @@ from decimal import Decimal
 class TestSavioProjectReviewSetupViewNoPooling(TestBase,  
                                              FormView):
     """A class for testing SavioProjectReviewSetupView without pooling"""
-
-    #def create_test_superuser(self):
-    #    self.user = User.objects.create_superuser(username='testuser', 
-    #                                         email='test@example.com', 
-    #                                         password='password123') 
-    #    return self.user
-    
-
     def setUp(self):
-        """Set up test data"""
         super().setUp()
-        # Create a user and set as super user
-        #self.create_test_superuser()
-        # Create project user
-        self.create_test_user()
-        self.user.is_superuser = True
+        self.user = self.create_test_user()
+        self.user.is_superuser=True
 
         if flag_enabled('LRC_ONLY'):
             self.user.email = 'test_user@lbl.gov'
@@ -78,25 +70,6 @@ class TestSavioProjectReviewSetupViewNoPooling(TestBase,
                     identifier='000000'),
                 identifier='000')
         self.new_project_request.save() 
-
-
-        ## setup object for mock data
-        #form_data = {} 
-    
-        ## Are there functions in TestBase to do this? 
-        ## Flag for pooling?
-        #allocation_request = True
-        #form_data['pooling'] = allocation_request
-        ## Requested name
-        #test_name = "name" * 20 
-        #form_data['requested_name'] = f'pc_{test_name}'
-        ## final_name
-        #form_data['final_name'] = f'pc_{test_name}'
-        ## justification
-        ## timestamp
-        ## Create a project so I can have a project pk
-        ## This may change
-        #form_data['project_pk'] = self.request_obj.project.pk
 
     @staticmethod
     def review_view_url(pk):
@@ -160,6 +133,72 @@ class TestSavioProjectReviewSetupViewNoPooling(TestBase,
                  'status':"Complete" }
         
         response = self.client.post(url,data)
+        import pdb; pdb.set_trace()
         self.assertFalse(response.context['form'].is_valid(), """Should not create
                          project because final_name exceeds max_length
                          """)
+        
+
+class TestSavioProjectReviewSetupViewWithPooling(TestBase,  
+                                             FormView):
+    """A class for testing SavioProjectReviewSetupView with pooling"""
+    def create_base_project(self):
+        """Creating a project to be pooled with"""
+        interface = ComputingAllowanceInterface()
+        if flag_enabled('BRC_ONLY'):
+            computing_allowance_name = BRCAllowances.FCA
+        elif flag_enabled('LRC_ONLY'):
+            computing_allowance_name = LRCAllowances.PCA
+        else:
+            raise ImproperlyConfigured
+        prefix = interface.code_from_name(computing_allowance_name)
+
+        active_name = f'{prefix}_active_project_with_ultra_long_name'
+        active_status = ProjectStatusChoice.objects.get(name='Active')
+        active_project = Project.objects.create(
+            name=active_name, title=active_name, status=active_status)
+        form = SavioProjectPooledProjectSelectionForm(
+            computing_allowance=Resource.objects.get(
+                name=computing_allowance_name))
+        project_field_choices = form.fields['project'].queryset
+        self.assertEqual(len(project_field_choices), 1)
+        self.assertEqual(project_field_choices[0], active_project)
+        return active_name
+        
+    
+    def create_pooled_project(self, existing_project_name, new_project_name):
+        """Creating a new pooled project, pooled with an existing project"""
+        
+        return 
+    
+    def setUp(self):
+        super.setUp()
+        # Create project user
+        self.create_test_user()
+        self.user.is_superuser = True
+
+        if flag_enabled('LRC_ONLY'):
+            self.user.email = 'test_user@lbl.gov'
+            self.user.save()
+
+        self.sign_user_access_agreement(self.user)
+        self.client.login(username=self.user.username, password=self.password)
+
+        self.interface = ComputingAllowanceInterface()
+
+        # Create a Project and a corresponding new project request.
+        computing_allowance = self.get_predominant_computing_allowance()
+        prefix = self.interface.code_from_name(computing_allowance.name)
+        allocation_period = get_current_allowance_year_period()
+        self.project, self.new_project_request = \
+            create_project_and_request(
+                f'{prefix}_project', 'New', computing_allowance,
+                allocation_period, self.user, self.user,
+                'Approved - Processing')
+
+        self.new_project_request.billing_activity = \
+            BillingActivity.objects.create(
+                billing_project=BillingProject.objects.create(
+                    identifier='000000'),
+                identifier='000')
+        self.new_project_request.save() 
