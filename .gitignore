@@ -24,7 +24,8 @@ coldfront.db*
 .vscode
 db.json
 coldfront.db.self.broken
-main.yml.*
+main.yml
+main.yml*
 
 secrets.yml
 cilogon.yml
