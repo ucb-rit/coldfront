@@ -480,6 +480,31 @@ class Command(BaseCommand):
                          error=kwargs.get('stderr', stderr))
     
     def handle_renewal_survey_responses(self, *args, **kwargs):
+        def _swap_form_answer_id_for_text(_survey, _multiple_choice_fields):
+            '''
+            Takes a survey, a dict mapping survey question IDs to answer IDs.
+            Uses multiple_choice_fields to swap answer IDs for answer text, then 
+            question IDs for question text.
+            Returns the modified survey.
+
+            Parameters
+            ----------
+            _survey : survey to modify
+            _multiple_choice_fields : mapping of {question ID : {answer ID : answer text}}
+            '''
+            for question, answer in _survey.items():
+                if question in _multiple_choice_fields.keys():
+                    sub_map = _multiple_choice_fields[question]
+                    if (isinstance(answer, list)):
+                        # Multiple choice, array
+                        _survey[question] = [sub_map.get(i,i) for i in answer]
+                    elif answer != "":
+                        # Single choice replacement 
+                        _survey[question] = sub_map[answer]
+            # Change keys of survey (question IDs) to be the human-readable text
+            for id, text in form.fields.items():
+                _survey[text.label] = _survey.pop(id)
+            return _survey
         format = kwargs['format']
         allowance_type = kwargs['allowance_type']
         allocation_requests = AllocationRenewalRequest.objects.all()
@@ -495,6 +520,8 @@ class Command(BaseCommand):
                  allocation_period__name=allocation_period)
 
         _surveys = list(allocation_requests.values_list('renewal_survey_answers', flat=True))
+        if len(_surveys) == 0:
+            raise Exception("There are no valid renewal requests in the specified allocation period.")
         if {} in _surveys:
             raise Exception("This allocation period does not have an associated survey.")
         surveys = []
@@ -548,31 +575,7 @@ class Command(BaseCommand):
                          output=kwargs.get('stdout', stdout),
                          error=kwargs.get('stderr', stderr))
             
-        def _swap_form_answer_id_for_text(_survey, _multiple_choice_fields):
-            '''
-            Takes a survey, a dict mapping survey question IDs to answer IDs.
-            Uses multiple_choice_fields to swap answer IDs for answer text, then 
-            question IDs for question text.
-            Returns the modified survey.
-
-            Parameters
-            ----------
-            _survey : survey to modify
-            _multiple_choice_fields : mapping of {question ID : {answer ID : answer text}}
-            '''
-            for question, answer in _survey.items():
-                if question in _multiple_choice_fields.keys():
-                    sub_map = _multiple_choice_fields[question]
-                    if (isinstance(answer, list)):
-                        # Multiple choice, array
-                        _survey[question] = [sub_map.get(i,i) for i in answer]
-                    elif answer != None:
-                        # Single choice replacement 
-                        _survey[question] = sub_map[answer]
-            # Change keys of survey (question IDs) to be the human-readable text
-            for id, text in form.fields.items():
-                _survey[text.label] = _survey.pop(id)
-            return _survey
+        
 
     @staticmethod
     def to_csv(query_set, header=None, output=stdout, error=stderr):
