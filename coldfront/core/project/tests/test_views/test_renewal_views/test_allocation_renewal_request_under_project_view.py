@@ -52,6 +52,7 @@ class TestAllocationRenewalRequestUnderProjectView(TestBase):
             role=pi_role,
             status=active_project_user_status,
             user=self.user)
+        renewal_survey = [{"which_brc_services_used":"srdc"},{"publications_supported_by_brc":"N/A"},{"grants_supported_by_brc":"N/A"},{"recruitment_or_retention_cases":"N/A"},{"classes_being_taught":"N/A"},{"brc_recommendation_rating":6},{"brc_recommendation_rating_reason":""},{"how_brc_helped_bootstrap_computational_methods":"N/A"},{"how_important_to_research_is_brc":2},{"do_you_use_mybrc":"no"},{"mybrc_comments":""},{"which_open_ondemand_apps_used":"jupyter_notebook"},{"which_open_ondemand_apps_used":"vscode_server"},{"brc_feedback":""},{"colleague_suggestions":""},{"indicate_topic_interests":"have_had_rdmp_event_or_consultation"},{"indicate_topic_interests":"want_to_learn_more_and_have_rdm_consult"},{"training_session_usefulness_of_computational_platforms_training":2},{"training_session_usefulness_of_basic_savio_cluster":4},{"training_session_other_topics_of_interest":""}]
 
         pre_time = utc_now_offset_aware()
 
@@ -68,13 +69,21 @@ class TestAllocationRenewalRequestUnderProjectView(TestBase):
             '1-PI': project_user.pk,
             current_step_key: '1',
         }
+
+        renewal_survey_form_data = {}
+        for data in renewal_survey:
+            for key, value in data.items():
+                renewal_survey_form_data[f"2-{key}"] = value
+        renewal_survey_form_data[current_step_key] = '2'
+        
         review_and_submit_form_data = {
-            '2-confirmation': True,
-            current_step_key: '2',
+            '3-confirmation': True,
+            current_step_key: '3',
         }
         form_data = [
             allocation_period_form_data,
             pi_selection_form_data,
+            renewal_survey_form_data,
             review_and_submit_form_data,
         ]
 
