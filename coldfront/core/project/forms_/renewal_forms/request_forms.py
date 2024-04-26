@@ -246,7 +246,6 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'Please provide a bibliographic reference, URL or DOI for '
                 'each publication/presentation. Please write \'N/A\' if this does not apply.',
                 required=True,
-                validators=[MinLengthValidator(20)],
                 widget=forms.Textarea(attrs={'rows': 3}))
 
         self.fields['grants_supported_by_brc'] = forms.CharField(
