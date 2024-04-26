@@ -80,7 +80,6 @@ class TestAllocationRenewalRequestView(TestBase):
             for key, value in data.items():
                 renewal_survey_form_data[f"6-{key}"] = value
         renewal_survey_form_data[current_step_key] = '6'
-        print(renewal_survey_form_data)
 
         review_and_submit_form_data = {
             '7-confirmation': True,
