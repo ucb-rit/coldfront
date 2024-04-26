@@ -1,4 +1,5 @@
 from coldfront.core.allocation.models import Allocation
+from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.allocation.models import AllocationStatusChoice
@@ -378,6 +379,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             '3': view.show_project_selection_form_condition,
             '4': view.show_new_project_forms_condition,
             '5': view.show_new_project_forms_condition,
+            '6': view.show_renewal_survey_form_condition,
         }
 
     def show_new_project_forms_condition(self):
@@ -404,6 +406,21 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             form_class.POOLED_TO_UNPOOLED_OLD,
         )
         return cleaned_data.get('preference', None) in preferences
+
+    def show_renewal_survey_form_condition(self):
+        """Only show the renewal survey form for a particular period.
+
+        TODO: This period has been hard-coded for the short-term. A
+         longer-term solution without hard-coding must be applied prior
+         to the start of the period following it.
+        """
+        step_name = 'allocation_period'
+        step = str(self.step_numbers_by_form_name[step_name])
+        cleaned_data = self.get_cleaned_data_for_step(step) or {}
+        allocation_period = cleaned_data.get('allocation_period', None)
+        expected_allocation_period = AllocationPeriod.objects.get(
+            name='Allowance Year 2024 - 2025')
+        return allocation_period == expected_allocation_period
 
     def __get_survey_data(self, form_data):
         """Return provided survey data."""
@@ -553,13 +570,12 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             if data:
                 dictionary.update(data)
                 dictionary['requested_project'] = data['name']
-                
-        renewal_survey_form_step = self.step_numbers_by_form_name['renewal_survey']
+
+        renewal_survey_form_step = self.step_numbers_by_form_name[
+            'renewal_survey']
         if step > renewal_survey_form_step:
             data = self.get_cleaned_data_for_step(str(renewal_survey_form_step))
-            if data:
-                dictionary.update(data)
-                dictionary['renewal_survey_answers'] = data
+            dictionary['renewal_survey_answers'] = data or {}
 
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
@@ -595,6 +611,13 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         # Define a lookup table from form name to step number.
         self.step_numbers_by_form_name = {
             name: i for i, (name, _) in enumerate(self.FORMS)}
+
+    @staticmethod
+    def condition_dict():
+        view = AllocationRenewalRequestUnderProjectView
+        return {
+            '2': view.show_renewal_survey_form_condition,
+        }
 
     def dispatch(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
@@ -659,6 +682,21 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
     def get_template_names(self):
         return [self.TEMPLATES[self.FORMS[int(self.steps.current)][0]]]
 
+    def show_renewal_survey_form_condition(self):
+        """Only show the renewal survey form for a particular period.
+
+        TODO: This period has been hard-coded for the short-term. A
+         longer-term solution without hard-coding must be applied prior
+         to the start of the period following it.
+        """
+        step_name = 'allocation_period'
+        step = str(self.step_numbers_by_form_name[step_name])
+        cleaned_data = self.get_cleaned_data_for_step(step) or {}
+        allocation_period = cleaned_data.get('allocation_period', None)
+        expected_allocation_period = AllocationPeriod.objects.get(
+            name='Allowance Year 2024 - 2025')
+        return allocation_period == expected_allocation_period
+
     def test_func(self):
         """Allow superusers and users who are active Managers or
         Principal Investigators on the Project and who have signed the
@@ -711,9 +749,8 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                     form_class.SHORT_DESCRIPTIONS.get(
                         pooling_preference, 'Unknown')
 
-        renewal_survey_form_step = self.step_numbers_by_form_name['renewal_survey']
+        renewal_survey_form_step = self.step_numbers_by_form_name[
+            'renewal_survey']
         if step > renewal_survey_form_step:
             data = self.get_cleaned_data_for_step(str(renewal_survey_form_step))
-            if data:
-                dictionary.update(data)
-                dictionary['renewal_survey_answers'] = data
+            dictionary['renewal_survey_answers'] = data or {}

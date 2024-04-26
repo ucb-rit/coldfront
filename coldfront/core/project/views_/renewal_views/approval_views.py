@@ -99,6 +99,8 @@ class AllocationRenewalRequestMixin(object):
             logger.exception(e)
             messages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
+        context['has_survey_answers'] = bool(
+            self.request_obj.renewal_survey_answers)
         return context
 
     @staticmethod
@@ -126,7 +128,10 @@ class AllocationRenewalRequestMixin(object):
         context['computing_allowance_name'] = \
             self.computing_allowance_obj.get_name()
         context['survey_form'] = ProjectRenewalSurveyForm(
-            initial=self.request_obj.renewal_survey_answers, disable_fields=True)
+            initial=self.request_obj.renewal_survey_answers,
+            disable_fields=True)
+        context['has_survey_answers'] = bool(
+            self.request_obj.renewal_survey_answers)
 
     def set_objs(self, pk):
         self.request_obj = get_object_or_404(
