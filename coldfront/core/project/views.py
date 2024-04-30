@@ -443,17 +443,17 @@ class ProjectListView(LoginRequiredMixin, ListView):
         context['user_agreement_signed'] = \
             access_agreement_signed(self.request.user)
 
-        compute_allocation_information = []
         for project in project_list:
+            resource_name = get_project_compute_resource_name(project)
+            project.cluster_name = resource_name.replace(' Compute', '')
             try:
                 information = get_project_compute_allocation(project).get_information
                 information = information[len('Service Units: '):-len(' <br>')]
-                compute_allocation_information.append(information if information else 'N/A')
+                project.compute_allocation_information = information if information else 'N/A'
             except Allocation.DoesNotExist:
-                compute_allocation_information.append('N/A')
+                project.compute_allocation_information = 'N/A'
+        context['project_list'] = project_list
 
-        context['compute_allocation_information'] = compute_allocation_information
-        context['zipped'] = zip(project_list, compute_allocation_information)
         return context
 
 
