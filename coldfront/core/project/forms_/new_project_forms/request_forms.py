@@ -496,6 +496,7 @@ class SavioProjectPooledProjectSelectionForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
+        import pdb; pdb.set_trace()
         project = self.cleaned_data['project']
         if project not in self.fields['project'].queryset:
             raise forms.ValidationError(f'Invalid selection {project.name}.')
