@@ -5,6 +5,31 @@ from coldfront.core.allocation.utils_.secure_dir_utils import is_secure_director
 from coldfront.core.allocation.utils_.secure_dir_utils import SECURE_DIRECTORY_NAME_PREFIX
 
 
+# =============================================================================
+# Secure Dir Requests
+# =============================================================================
+
+
+class SecureDirRequestForm(forms.Form):
+    request_time = forms.CharField(
+        label='Request Time',
+        max_length=100,
+        required=False  
+    )
+    requester = forms.CharField(
+        label='Requester',
+        max_length=100,
+        required=False 
+    )
+    project = forms.CharField(
+        label='Project',
+        max_length=100,
+        required=False  
+    )
+    show_all_requests = forms.BooleanField(initial=True, required=False)
+
+
+
 class SecureDirNameField(forms.CharField):
 
     def __init__(self, *args, **kwargs):

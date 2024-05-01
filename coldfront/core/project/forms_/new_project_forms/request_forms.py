@@ -34,8 +34,42 @@ from flags.state import flag_enabled
 import pytz
 
 
+
 # =============================================================================
-# BRC: SAVIO
+#   Service Units Purchase Requests
+# =============================================================================
+
+
+
+class ServiceUnitsPurchaseRequestForm(forms.Form):
+    request_time = forms.CharField(
+        label='Request Time',
+        max_length=100,
+        required=False  
+    )
+    requester = forms.CharField(
+        label='Requester',
+        max_length=100,
+        required=False 
+    )
+    project = forms.CharField(
+        label='Project',
+        max_length=100,
+        required=False  
+    )
+
+    num_service_units = forms.CharField(
+        label='Number of Service Units',
+        max_length=100,
+        required=False
+    )
+    show_all_requests = forms.BooleanField(initial=True, required=False)
+
+
+
+
+# =============================================================================
+# SAVIO
 # =============================================================================
 
 class SavioProjectAllocationPeriodForm(forms.Form):
