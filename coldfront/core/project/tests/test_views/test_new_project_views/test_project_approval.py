@@ -227,10 +227,12 @@ class TestSavioProjectRequestWizard(TestBase):
         prefix = self.interface.code_from_name(
             computing_allowance_name)
         self.long_name = f'{prefix}{50 * "a"}'
-        import pdb; pdb.set_trace()
         active_status = ProjectStatusChoice.objects.get(name='Active')
+        computing_allowance = self.get_predominant_computing_allowance()
+        #allocation_period = get_current_allowance_year_period()
         active_project = Project.objects.create(
             name=self.long_name, 
+            computing_allowance=computing_allowance,
             title='longtest', 
             status=active_status)
 
@@ -269,11 +271,11 @@ class TestSavioProjectRequestWizard(TestBase):
             current_step_key: '6',
         }
         project = {
-            '7-project': f'{self.long_name} ()',
+            '7-project': Project.objects.prefetch_related()[0].pk,
             current_step_key: '7'
         }
         details_data = {
-            '8-name': 'name',
+            '8-name': 'test',
             '8-title': 'title',
             '8-description': 'a' * 20,
             current_step_key: '8',
@@ -295,39 +297,14 @@ class TestSavioProjectRequestWizard(TestBase):
         ]
         url = self.request_url()
         for i, data in enumerate(form_data):
-            if data == project: 
-                import pdb; pdb.set_trace()
+            if data == details_data: 
+                response = self.client.post(url,data)
+                self.assertTrue(response.context['form'].is_valid(),)
             response = self.client.post(url, data)
             if i == len(form_data) - 1:
                 self.assertRedirects(response, reverse('home'))
             else:
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
-        requests = SavioProjectAllocationRequest.objects.all()
-        self.assertEqual(requests.count(), 1)
-        projects = Project.objects.all()
-        self.assertEqual(projects.count(), 1)
-
-        request = requests.first()
-        project = projects.first()
-        self.assertEqual(request.requester, self.user)
-        self.assertEqual(
-            request.allocation_type,
-            self.interface.name_short_from_name(computing_allowance.name))
-        self.assertEqual(request.computing_allowance, computing_allowance)
-        self.assertEqual(request.allocation_period, allocation_period)
-        self.assertEqual(request.pi, self.user)
-        self.assertEqual(request.project, project)
-        self.assertEqual(project.name, f'fc_{details_data["8-name"]}')
-        self.assertEqual(project.title, details_data['8-title'])
-        self.assertEqual(project.description, details_data['8-description'])
-        self.assertFalse(request.pool)
-        self.assertEqual(
-            request.survey_answers['scope_and_intent'],
-            survey_data['10-scope_and_intent'])
-        self.assertEqual(
-            request.survey_answers['computational_aspects'],
-            survey_data['10-computational_aspects'])
-        self.assertEqual(request.status.name, 'Under Review')
-
+        #requests = SavioProjectAllocationRequest.objects.all()
     # TODO

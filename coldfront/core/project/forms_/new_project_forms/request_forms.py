@@ -471,6 +471,8 @@ class PooledProjectChoiceField(forms.ModelChoiceField):
 
 class SavioProjectPooledProjectSelectionForm(forms.Form):
 
+    is_pooled = False 
+
     project = PooledProjectChoiceField(
         label='Project',
         queryset=Project.objects.none(),
@@ -483,7 +485,6 @@ class SavioProjectPooledProjectSelectionForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         f = Q(status__name__in=['Pending - Add', 'New', 'Active'])
-
         if self.computing_allowance is not None:
             self.computing_allowance = ComputingAllowance(
                 self.computing_allowance)
@@ -495,12 +496,12 @@ class SavioProjectPooledProjectSelectionForm(forms.Form):
             'projectuser_set__user').filter(f)
 
     def clean(self):
-        cleaned_data = super().clean()
-        import pdb; pdb.set_trace()
+        super().clean()
         project = self.cleaned_data['project']
         if project not in self.fields['project'].queryset:
             raise forms.ValidationError(f'Invalid selection {project.name}.')
-        return cleaned_data
+        SavioProjectPooledProjectSelectionForm.is_pooled= True
+        return 
 
 
 class SavioProjectDetailsForm(forms.Form):
@@ -539,12 +540,20 @@ class SavioProjectDetailsForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
+        self.pool = kwargs.pop('pool', None)
         self.interface = ComputingAllowanceInterface()
         super().__init__(*args, **kwargs)
         if self.computing_allowance is not None:
             self.computing_allowance = ComputingAllowance(
                 self.computing_allowance)
             self._update_field_attributes()
+
+    def is_valid(self):
+        if SavioProjectPooledProjectSelectionForm.is_pooled == True:
+            breakpoint()
+            self.fields['name'].max_length = 1000
+        return super().is_valid()
+        
 
     def clean_name(self):
         cleaned_data = super().clean()

@@ -566,6 +566,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         resource = get_primary_compute_resource()
         allocations = Allocation.objects.filter(
             project=project, resources__pk__exact=resource.pk)
+        breakpoint()
         try:
             assert allocations.count() == 1
         except AssertionError as e:

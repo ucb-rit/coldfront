@@ -63,6 +63,7 @@ class Resource(TimeStampedModel):
     is_available = models.BooleanField(default=True)
     is_public = models.BooleanField(default=True)
     is_allocatable = models.BooleanField(default=True)
+    #is_pooled = models.BooleanField(default=False)
     requires_payment = models.BooleanField(default=False)
     allowed_groups = models.ManyToManyField(Group, blank=True)
     allowed_users = models.ManyToManyField(User, blank=True)
@@ -71,6 +72,7 @@ class Resource(TimeStampedModel):
 
     # Each Project can only have one Allocation to this Resource.
     is_unique_per_project = models.BooleanField(default=False)
+
 
     def get_missing_resource_attributes(self, required=False):
         """

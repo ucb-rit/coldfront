@@ -92,7 +92,7 @@ class ComputingAllowance(object):
         elif flag_enabled('LRC_ONLY'):
             allowance_names.append(LRCAllowances.PCA)
         return self._name in allowance_names
-
+    
     def is_recharge(self):
         """Return whether the allowance is paid for."""
         allowance_names = []
