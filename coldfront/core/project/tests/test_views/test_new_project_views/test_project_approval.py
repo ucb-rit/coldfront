@@ -1,5 +1,6 @@
 from flags.state import flag_enabled
 
+from coldfront.api.statistics.utils import create_project_allocation
 from coldfront.core.utils.tests.test_base import TestBase
 from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPooledProjectSelectionForm
@@ -228,13 +229,13 @@ class TestSavioProjectRequestWizard(TestBase):
             computing_allowance_name)
         self.long_name = f'{prefix}{50 * "a"}'
         active_status = ProjectStatusChoice.objects.get(name='Active')
-        computing_allowance = self.get_predominant_computing_allowance()
-        #allocation_period = get_current_allowance_year_period()
+        #computing_allowance = self.get_predominant_computing_allowance()
         active_project = Project.objects.create(
             name=self.long_name, 
-            computing_allowance=computing_allowance,
             title='longtest', 
             status=active_status)
+        allocation = Decimal('1000.0')
+        self.alloc_obj = create_project_allocation(active_project, allocation)
 
     @staticmethod
     def request_url():
