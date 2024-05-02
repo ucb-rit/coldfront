@@ -543,16 +543,16 @@ class SavioProjectDetailsForm(forms.Form):
         self.pool = kwargs.pop('pool', None)
         self.interface = ComputingAllowanceInterface()
         super().__init__(*args, **kwargs)
+        if SavioProjectPooledProjectSelectionForm.is_pooled == True:
+            self.fields['name'].max_length = 1000
         if self.computing_allowance is not None:
             self.computing_allowance = ComputingAllowance(
                 self.computing_allowance)
             self._update_field_attributes()
 
     def is_valid(self):
-        if SavioProjectPooledProjectSelectionForm.is_pooled == True:
-            breakpoint()
-            self.fields['name'].max_length = 1000
-        return super().is_valid()
+        breakpoint()
+        return self.is_bound and not self.errors
         
 
     def clean_name(self):
