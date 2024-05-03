@@ -55,10 +55,12 @@ def home(request):
             resource_name = get_project_compute_resource_name(project)
             project.cluster_name = resource_name.replace(' Compute', '')
             try:
-                information = get_project_compute_allocation(project).get_information
+                allocation = project.allocation_set.get(
+                    resources__name=resource_name)
+                information = allocation.get_information
                 information = information[len('Service Units: '):-len(' <br>')]
-                project.compute_allocation_information = information if information else 'N/A'
-            except Allocation.DoesNotExist:
+                project.compute_allocation_information = information or 'N/A'
+            except Exception:
                 project.compute_allocation_information = 'N/A'
 
         allocation_list = Allocation.objects.filter(

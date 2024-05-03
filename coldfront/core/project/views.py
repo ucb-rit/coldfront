@@ -369,13 +369,13 @@ class ProjectListView(LoginRequiredMixin, ListView):
                 projects = projects.filter(cluster_name__icontains=data.get('cluster_name'))
 
         else:
-            projects = Project.objects.prefetch_related('field_of_science', 'status', 'allocation').filter(
+            projects = Project.objects.prefetch_related('field_of_science', 'status',).filter(
                 Q(status__name__in=['New', 'Active', 'Inactive', ]) &
                 Q(projectuser__user=self.request.user) &
                 Q(projectuser__status__name__in=['Active', 'Pending - Remove'])
             ).order_by(order_by)
             projects = annotate_queryset_with_cluster_name(projects)
-        
+
         return projects.distinct()
 
     def get_context_data(self, **kwargs):
@@ -444,13 +444,12 @@ class ProjectListView(LoginRequiredMixin, ListView):
             access_agreement_signed(self.request.user)
 
         for project in project_list:
-            resource_name = get_project_compute_resource_name(project)
-            project.cluster_name = resource_name.replace(' Compute', '')
             try:
-                information = get_project_compute_allocation(project).get_information
+                information = get_project_compute_allocation(
+                    project).get_information
                 information = information[len('Service Units: '):-len(' <br>')]
-                project.compute_allocation_information = information if information else 'N/A'
-            except Allocation.DoesNotExist:
+                project.compute_allocation_information = information or 'N/A'
+            except Exception:
                 project.compute_allocation_information = 'N/A'
         context['project_list'] = project_list
 
