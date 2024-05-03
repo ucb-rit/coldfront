@@ -884,8 +884,8 @@ class TestNewProjectRequests(TestBase):
         self.assertEqual(len(query_set), count)
 
 
-class TestSurveyResponses(TestBase):
-    """ Test class to test export data subcommand survey_responses runs correctly """
+class TestNewProjectSurveyResponses(TestBase):
+    """ Test class to test export data subcommand new_project_survey_responses runs correctly """
 
     @enable_deployment('BRC')
     def setUp(self):
@@ -944,9 +944,9 @@ class TestSurveyResponses(TestBase):
         self.filtered_fixtures = filtered_fixtures
 
     @enable_deployment('BRC')
-    def test_survey_responses_json(self):
+    def test_new_project_survey_responses_json(self):
         out, err = StringIO(''), StringIO('')
-        call_command('export_data', 'survey_responses',
+        call_command('export_data', 'new_project_survey_responses',
                      '--format=json', stdout=out, stderr=err)
         sys.stdout = sys.__stdout__
 
@@ -957,15 +957,15 @@ class TestSurveyResponses(TestBase):
             project_title = item.pop('project_title')
             self.assertEquals(project_name, self.fixtures[index].project.name)
             self.assertEquals(project_title, self.fixtures[index].project.title)
-            self.assertDictEqual(item['survey_responses'], self.fixtures[index].survey_answers)
+            self.assertDictEqual(item['new_project_survey_responses'], self.fixtures[index].survey_answers)
 
         err.seek(0)
         self.assertEqual(err.read(), '')
 
     @enable_deployment('BRC')
-    def test_get_survey_responses_csv(self):
+    def test_get_new_project_survey_responses_csv(self):
         out, err = StringIO(''), StringIO('')
-        call_command('export_data', 'survey_responses',
+        call_command('export_data', 'new_project_survey_responses',
                      '--format=csv', stdout=out, stderr=err)
         sys.stdout = sys.__stdout__
 
@@ -982,9 +982,9 @@ class TestSurveyResponses(TestBase):
         self.assertEqual(err.read(), '')
 
     @enable_deployment('BRC')
-    def test_get_survey_responses_allowance_type(self):
+    def test_get_new_project_survey_responses_allowance_type(self):
         out, err = StringIO(''), StringIO('')
-        call_command('export_data', 'survey_responses',
+        call_command('export_data', 'new_project_survey_responses',
                      '--format=csv', '--allowance_type=fc_', stdout=out, stderr=err)
         sys.stdout = sys.__stdout__
 
