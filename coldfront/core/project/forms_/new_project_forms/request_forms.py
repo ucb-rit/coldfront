@@ -551,7 +551,6 @@ class SavioProjectDetailsForm(forms.Form):
             self._update_field_attributes()
 
     def is_valid(self):
-        breakpoint()
         return self.is_bound and not self.errors
         
 
