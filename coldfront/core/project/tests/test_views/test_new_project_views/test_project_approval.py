@@ -60,45 +60,29 @@ class TestSavioProjectReviewSetupViewNoPooling(TestBase,
         SavioProjectReviewSetupView with the given primary key"""
         return reverse('new-project-request-review-setup', kwargs={'pk': pk})
 
-    def set_status(self, new_project_request):
-        """Set the request's state"""
-        new_project_request.state['eligibility']['status'] = 'Approved' 
-        new_project_request.state['readiness']['status'] = 'Approved'
-        new_project_request.state['setup']['status'] = 'Pending'
-        new_project_request.save()
-        return new_project_request
-
-    @staticmethod 
-    def post_approval_data(self, 
-                           url,
-                           requested_name,
-                           final_name,
-                           justification,):
-        data = {'requested_name': requested_name,
-                'final_name': final_name,
-                'justification': justification,
-                 'status':"Complete" }
-        response = self.client.post(url, data)
-        return response
 
     def test_approval_no_pooling_compliant_name(self):
         """Test approval when the name is under the maximum characters and no pooling"""
         self.user.is_superuser = True
         self.user.save()
+        new_project_request.state['eligibility']['status'] = 'Approved' 
+        new_project_request.state['readiness']['status'] = 'Approved'
+        new_project_request.state['setup']['status'] = 'Pending'
+        new_project_request.save()
         # Set the request's state
-        breakpoint()
         new_project_request = self.set_status(self.new_project_request)
         url = self.review_view_url(new_project_request.pk)
         compliant_name= "pc_hello"
         justification = 25 * 'lol'
-        response = self.post_approval_data(url=url,
-                                           requested_name=compliant_name,
-                                           final_name=compliant_name,
-                                           justification=justification)
+        data = {'requested_name': compliant_name,
+                'final_name': compliant_name,
+                'justification': justification,
+                 'status':"Complete" }
+        response = self.client.post(url, data)
         # Will pass this test with no message since expected response to correct name is 302. 
         self.assertEqual(response.status_code, 302)
 
-    def test_approval_no_pooling_long_name(self):
+    def test_no_approval_no_pooling_long_name(self):
         """Test that no approval happens when there is no pooling and the final name exceeds 15 chars"""
         self.user.is_superuser = True
         self.user.save()
@@ -108,31 +92,14 @@ class TestSavioProjectReviewSetupViewNoPooling(TestBase,
         justification = 'a' * 20
         url = self.review_view_url(new_project_request.pk)
         # Make request to approval
-        response = self.post_approval_data(url=url,
-                                           requested_name='test',
-                                           final_name=long_name,
-                                           justification=justification)
+        data = {'requested_name': 'test',
+                'final_name': long_name,
+                'justification': justification,
+                 'status':"Complete" }
+        response = self.client.post(url, data)
         
         self.assertFalse(response.context['form'].is_valid())
 
-    
-    def test_no_approval_no_pooling(self):
-        """Test non-approval after a name that exceeds max_length"""
-        self.user.is_superuser = True
-        self.user.save()
-        # Set the request's state
-        new_project_request = self.set_status()
-        url = self.review_view_url(new_project_request.pk)
-        long_name = 50*'name'
-        justification = 25 * 'lol'
-        response = self.post_approval_data(url=url,
-                                           requested_name='test',
-                                           final_name=long_name,
-                                           justification=justification) 
-        self.assertFalse(response.context['form'].is_valid(), """Should not create
-                         project because final_name exceeds max_length
-                         """)
-        
 
 class TestSavioProjectReviewSetupViewWithPooling(TestBase,  
                                              FormView):
@@ -241,18 +208,24 @@ class TestSavioProjectReviewSetupViewWithPooling(TestBase,
         # Set user to superuser to submit approval form
         self.user.is_superuser = True
         self.user.save()
+        if flag_enabled('LRC_ONLY'):
+            self.user.email = 'test_user@lbl.gov'
+            self.user.save()
         # Set the request's state
-        poolTool = TestSavioProjectReviewSetupViewNoPooling()
-        new_project_request = poolTool.set_status()
+        # Problem is there is no helper function, i.e. create_project_and_request
+        # coldfront.core.project.tests.utils.create_project_and request
+        # Does this have to be done with a call to SavioProjectAllocationRequest? 
+        # I thought we mocked this already with  the calls to request_url? How to set the state of the project in the request?
+
+
         review_url = self.review_view_url(new_project_request.pk)
         requested_name = 'test' 
         justification = 25 * 'lol'
-        response =poolTool.post_approval_data(\
-            requested_name=requested_name,
-            url=review_url,
-            final_name=requested_name,
-            justification=justification
-        )
+        data = {'requested_name': requested_name,
+                'final_name': requested_name,
+                'justification': justification,
+                 'status':"Complete" }
+        response = self.client.post(url, data)
         # Will pass this test with no message since expected response to correct name is 302. 
         self.assertEqual(response.status_code, 302)
         
