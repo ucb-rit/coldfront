@@ -1,10 +1,10 @@
-Dear PI of {{ project_name }},
+Dear {{ pi_str }},
 
-There is a new secure directory request for project {{ project_name }} requested by {{ requester_str }}.
+{{ requester_str }} has made a request to create a new secure directory under project {{ project_name }}, with you as the Principal Investigator (PI) via the {{ PORTAL_NAME }} User Portal.
 
 You may view the details of the request here: {{ review_url }}.
 
-If you have any questions or concerns, please contact us at {{ support_email }}.
+If you would like to prevent this, or have any questions, please contact us at {{ support_email }}.
 
 Thank you,
 {{ signature }}

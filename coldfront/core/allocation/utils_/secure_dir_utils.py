@@ -1,9 +1,12 @@
 import os
 import logging
 
-from django.contrib.auth.models import User
+from urllib.parse import urljoin
+
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Q
+from django.urls import reverse
 
 from coldfront.config import settings
 from coldfront.core.allocation.models import Allocation, AllocationStatusChoice, \
@@ -19,6 +22,7 @@ from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowanc
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterfaceError
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
 from coldfront.core.utils.mail import send_email_template
 
 logger = logging.getLogger(__name__)
@@ -154,6 +158,132 @@ def secure_dir_request_state_status(secure_dir_request):
     # The request has been approved and is processing.
     return SecureDirRequestStatusChoice.objects.get(
         name='Approved - Processing')
+
+
+class SecureDirRequestRunner(object):
+    """An object that performs necessary checks and updates, and sends
+     notifications, when a new secure directory is requested for a
+     project."""
+
+    def __init__(self, request_kwargs, email_strategy=None):
+        self._request_kwargs = request_kwargs
+        # Always create the request with 'Under Review' status.
+        self._request_kwargs['status'] = \
+            SecureDirRequestStatusChoice.objects.get(name='Under Review')
+        self._project_obj = self._request_kwargs['project']
+        self._request_obj = None
+
+        self._email_strategy = validate_email_strategy_or_get_default(
+            email_strategy=email_strategy)
+
+    def run(self):
+        """Perform checks and updates."""
+        is_project_eligible = is_project_eligible_for_secure_dirs(
+            self._project_obj)
+        if not is_project_eligible:
+            raise Exception(
+                f'Project {self._project_obj.name} is ineligible for a secure '
+                f'directory.')
+
+        with transaction.atomic():
+            self._request_obj = self._create_secure_dir_request_obj()
+
+        self._send_emails_safe()
+
+    def _create_secure_dir_request_obj(self):
+        """Create a SecureDirRequest object from provided arguments, and
+        return it."""
+        return SecureDirRequest.objects.create(**self._request_kwargs)
+
+    @staticmethod
+    def _get_request_detail_url(request_pk):
+        """Given the primary key of a SecureDirRequest, return a URL to
+        the detail page for it."""
+        domain = settings.CENTER_BASE_URL
+        view = reverse('secure-dir-request-detail', kwargs={'pk': request_pk})
+        return urljoin(domain, view)
+
+    def _send_email_to_admins(self, secure_dir_request_obj):
+        """Send an email notification to cluster admins, notifying them
+        of the newly-created request."""
+        requester = secure_dir_request_obj.requester
+        requester_str = (
+            f'{requester.first_name} {requester.last_name} ({requester.email})')
+
+        pi = secure_dir_request_obj.pi
+        pi_str = f'{pi.first_name} {pi.last_name} ({pi.email})'
+
+        review_url = self._get_request_detail_url(secure_dir_request_obj.pk)
+
+        context = {
+            'pi_str': pi_str,
+            'project_name': secure_dir_request_obj.project.name,
+            'requester_str': requester_str,
+            'review_url': review_url,
+        }
+
+        subject = 'New Secure Directory Request'
+        template_name = (
+            'email/secure_dir_request/secure_dir_new_request_admin.txt')
+        sender = settings.EMAIL_SENDER
+        recipients = settings.EMAIL_ADMIN_LIST
+
+        send_email_template(subject, template_name, context, sender, recipients)
+
+    def _send_email_to_pi(self, secure_dir_request_obj):
+        """Send an email notification to the selected PI, notifying them
+        that a request was made under their name."""
+        requester = secure_dir_request_obj.requester
+        requester_str = (
+            f'{requester.first_name} {requester.last_name} ({requester.email})')
+
+        pi = secure_dir_request_obj.pi
+        pi_str = f'{pi.first_name} {pi.last_name}'
+
+        review_url = self._get_request_detail_url(secure_dir_request_obj.pk)
+
+        context = {
+            'pi_str': pi_str,
+            'PORTAL_NAME': settings.PORTAL_NAME,
+            'project_name': secure_dir_request_obj.project.name,
+            'requester_str': requester_str,
+            'review_url': review_url,
+        }
+
+        subject = 'New Secure Directory Request'
+        template_name = (
+            'email/secure_dir_request/secure_dir_new_request_pi.txt')
+        sender = settings.EMAIL_SENDER
+        recipients = [pi.email]
+
+        send_email_template(subject, template_name, context, sender, recipients)
+
+    def _send_emails(self):
+        """Send email notifications."""
+        # To cluster admins
+        email_method = self._send_email_to_admins
+        email_args = (self._request_obj, )
+        self._email_strategy.process_email(email_method, *email_args)
+
+        # To the PI, if not the requester
+        if self._request_obj.pi != self._request_obj.requester:
+            email_method = self._send_email_to_pi
+            email_args = (self._request_obj, )
+            self._email_strategy.process_email(email_method, *email_args)
+
+    def _send_emails_safe(self):
+        """Send emails.
+
+        Catch all exceptions to prevent rolling back any enclosing
+        transaction.
+        """
+        try:
+            self._send_emails()
+        except Exception as e:
+            message = (
+                f'Encountered unexpected exception when sending notification '
+                f'emails. Details:\n{e}')
+            logger.exception(message)
 
 
 class SecureDirRequestDenialRunner(object):
