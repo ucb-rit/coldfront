@@ -19,13 +19,11 @@
   <h1>Secure Directory: Directory Name</h1><hr>
 
   <ol class="breadcrumb">
-    {% if breadcrumb_project %}
-      <li>{{ breadcrumb_project }}</li>
-      <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
-    {% endif %}
-    <li>Data Description: Submitted</li>
+    <li>{{ breadcrumb_project }}</li>
     <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
-    <li>RDM Consult: {{ breadcrumb_rdm_consultation }}</li>
+    <li>{{ breadcrumb_pi }}</li>
+    <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+    <li>{{ breadcrumb_rdm_consultation }}</li>
   </ol>
 
   <p>Please provide the name of the secure directory you are requesting.</p>

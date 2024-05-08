@@ -1,52 +1,72 @@
 import iso8601
 import logging
 
-from urllib.parse import urljoin
-
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import User
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.paginator import EmptyPage
+from django.core.paginator import PageNotAnInteger
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.forms import formset_factory
 from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render
-from django.urls import reverse, reverse_lazy
-from django.views.generic import ListView, FormView, DetailView
-from django.views.generic.base import TemplateView, View
-from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
+from django.shortcuts import get_object_or_404
+from django.shortcuts import render
+from django.urls import reverse
+from django.urls import reverse_lazy
+from django.views.generic import DetailView
+from django.views.generic import FormView
+from django.views.generic import ListView
+from django.views.generic.base import TemplateView
+from django.views.generic.base import View
+
 from formtools.wizard.views import SessionWizardView
 
-from coldfront.core.allocation.forms_.secure_dir_forms import (
-    SecureDirManageUsersForm,
-    SecureDirManageUsersSearchForm,
-    SecureDirManageUsersRequestUpdateStatusForm,
-    SecureDirManageUsersRequestCompletionForm, SecureDirDataDescriptionForm,
-    SecureDirRDMConsultationForm, SecureDirDirectoryNamesForm,
-    SecureDirSetupForm, SecureDirRDMConsultationReviewForm,
-    SecureDirRequestEditDepartmentForm, SecureDirPISelectionForm)
-from coldfront.core.allocation.models import (Allocation,
-                                              SecureDirAddUserRequest,
-                                              SecureDirRemoveUserRequest,
-                                              AllocationUserStatusChoice,
-                                              AllocationUser,
-                                              SecureDirRequestStatusChoice,
-                                              SecureDirRequest)
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirDataDescriptionForm
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirDirectoryNamesForm
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirManageUsersForm
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirManageUsersRequestCompletionForm
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirManageUsersRequestUpdateStatusForm
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirManageUsersSearchForm
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirPISelectionForm
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirRDMConsultationForm
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirRDMConsultationReviewForm
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirRequestEditDepartmentForm
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirSetupForm
+
+from coldfront.core.allocation.models import Allocation
+from coldfront.core.allocation.models import AllocationUser
+from coldfront.core.allocation.models import AllocationUserStatusChoice
+from coldfront.core.allocation.models import SecureDirAddUserRequest
+from coldfront.core.allocation.models import SecureDirRemoveUserRequest
+from coldfront.core.allocation.models import SecureDirRequest
+from coldfront.core.allocation.models import SecureDirRequestStatusChoice
+
 from coldfront.core.allocation.utils import has_cluster_access
-from coldfront.core.allocation.utils_.secure_dir_utils import \
-    get_secure_dir_manage_user_request_objects, secure_dir_request_state_status, \
-    SecureDirRequestDenialRunner, SecureDirRequestApprovalRunner, \
-    get_secure_dir_allocations, get_default_secure_dir_paths, \
-    is_project_eligible_for_secure_dirs, SECURE_DIRECTORY_NAME_PREFIX, \
-    set_sec_dir_context
+
+from coldfront.core.allocation.utils_.secure_dir_utils import get_default_secure_dir_paths
+from coldfront.core.allocation.utils_.secure_dir_utils import get_secure_dir_allocations
+from coldfront.core.allocation.utils_.secure_dir_utils import get_secure_dir_manage_user_request_objects
+from coldfront.core.allocation.utils_.secure_dir_utils import is_project_eligible_for_secure_dirs
+from coldfront.core.allocation.utils_.secure_dir_utils import secure_dir_request_state_status
+from coldfront.core.allocation.utils_.secure_dir_utils import SECURE_DIRECTORY_NAME_PREFIX
+from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirRequestApprovalRunner
+from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirRequestDenialRunner
+from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirRequestRunner
+from coldfront.core.allocation.utils_.secure_dir_utils import set_sec_dir_context
+
 from coldfront.core.project.forms import ReviewStatusForm, ReviewDenyForm
 from coldfront.core.project.models import ProjectUser, Project
 from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
+
 from coldfront.core.user.utils import access_agreement_signed
-from coldfront.core.utils.common import utc_now_offset_aware, \
-    session_wizard_all_form_data
+
+from coldfront.core.utils.common import session_wizard_all_form_data
+from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.mail import send_email_template
+from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 
 
 logger = logging.getLogger(__name__)
@@ -882,16 +902,19 @@ class SecureDirRequestWizard(LoginRequiredMixin,
         # Define a lookup table from form name to step number.
         self.step_numbers_by_form_name = {
             name: i for i, (name, _) in enumerate(self.FORMS)}
-        self.project = None
+        self._project = None
 
     def dispatch(self, request, *args, **kwargs):
-        self.project = Project.objects.get(pk=kwargs.get('pk', None))
+        self._project = get_object_or_404(Project, pk=kwargs.get('pk', None))
+        # The inherited NewSecureDirRequestViewAccessibilityMixin ensures that
+        # any Project with an existing secure directory or a request to create
+        # one is denied access to this page.
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, form, **kwargs):
         context = super().get_context_data(form=form, **kwargs)
         current_step = int(self.steps.current)
-        self.__set_data_from_previous_steps(current_step, context)
+        self._set_data_from_previous_steps(current_step, context)
 
         groups_path, scratch_path = get_default_secure_dir_paths()
         context['groups_path'] = groups_path
@@ -903,84 +926,21 @@ class SecureDirRequestWizard(LoginRequiredMixin,
     def get_form_kwargs(self, step=None):
         kwargs = {}
         step = int(step)
-        # The names of steps that require the past data.
-        step_names = [
-            'rdm_consultation'
-        ]
-        step_numbers = [
-            self.step_numbers_by_form_name[name] for name in step_names]
-        if step in step_numbers:
-            self.__set_data_from_previous_steps(step, kwargs)
-
+        if step == self.step_numbers_by_form_name['pi_selection']:
+            kwargs['project_pk'] = self._project.pk
         return kwargs
 
     def get_template_names(self):
         return [self.TEMPLATES[self.FORMS[int(self.steps.current)][0]]]
 
     def done(self, form_list, **kwargs):
-        """Perform processing and store information in a request
-        object."""
-        redirect_url = '/'
+        """Run the runner for handling a new request."""
         try:
             form_data = session_wizard_all_form_data(
                 form_list, kwargs['form_dict'], len(self.form_list))
-
-            request_kwargs = {
-                'requester': self.request.user,
-            }
-
-            department = self.__get_department(form_data)
-            data_description = self.__get_data_description(form_data)
-            rdm_consultation = self.__get_rdm_consultation(form_data)
-            existing_project = self.project
-            directory_name = self.__get_directory_name(form_data)
-
-            # Store transformed form data in a request.
-            request_kwargs['department'] = department
-            request_kwargs['data_description'] = data_description
-            request_kwargs['rdm_consultation'] = rdm_consultation
-            request_kwargs['project'] = existing_project
-            request_kwargs['directory_name'] = directory_name
-            request_kwargs['status'] = \
-                SecureDirRequestStatusChoice.objects.get(
-                    name='Under Review')
-            request_kwargs['request_time'] = utc_now_offset_aware()
-
-            # Check that the project does not have an existing Secure
-            # Directory or Secure Directory Request.
-            sec_dir_allocations = \
-                get_secure_dir_allocations().filter(project=existing_project)
-
-            sec_dir_requests = \
-                SecureDirRequest.objects.\
-                    filter(project=existing_project).\
-                    exclude(status__name='Denied')
-
-            if sec_dir_allocations.exists() or sec_dir_requests.exists():
-                message = f'The project {existing_project.name} already has ' \
-                          f'a secure directory associated with it.'
-                messages.error(self.request, message)
-                return HttpResponseRedirect(redirect_url)
-
-            request = SecureDirRequest.objects.create(
-                **request_kwargs)
-
-            # Send a notification email to admins.
-            if settings.EMAIL_ENABLED:
-                try:
-                    self.send_admin_notification_email(request)
-                except Exception as e:
-                    self.logger.error(
-                        'Failed to send notification email. Details:\n')
-                    self.logger.exception(e)
-                # Send a notification email to the PIs.
-                try:
-                    self.send_pi_notification_email(request)
-                except Exception as e:
-                    self.logger.error(
-                        'Failed to send notification email. Details:\n')
-                    self.logger.exception(e)
-
+            request_kwargs = self._get_secure_dir_request_kwargs(form_data)
+            secure_dir_request_runner = SecureDirRequestRunner(request_kwargs)
+            secure_dir_request_runner.run()
         except Exception as e:
             self.logger.exception(e)
             message = 'Unexpected failure. Please contact an administrator.'
@@ -990,14 +950,14 @@ class SecureDirRequestWizard(LoginRequiredMixin,
                 'Thank you for your submission. It will be reviewed and '
                 'processed by administrators.')
             messages.success(self.request, message)
-
+        redirect_url = '/'
         return HttpResponseRedirect(redirect_url)
 
     @staticmethod
     def condition_dict():
         view = SecureDirRequestWizard
         return {
-            '1': view.show_rdm_consultation_form_condition
+            '2': view.show_rdm_consultation_form_condition,
         }
 
     def show_rdm_consultation_form_condition(self):
@@ -1006,89 +966,75 @@ class SecureDirRequestWizard(LoginRequiredMixin,
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         return cleaned_data.get('rdm_consultation', False)
 
-    def __get_department(self, form_data):
+    def _get_secure_dir_request_kwargs(self, form_data):
+        """Return keyword arguments needed to create a SecureDirRequest
+        from the HttpRequest and provided form data.
+
+        Note that the status need not be given because it is set by the
+        runner.
+        """
+        return {
+            'requester': self.request.user,
+            'pi': self._get_pi_user(form_data),
+            'department': self._get_department(form_data),
+            'data_description': self._get_data_description(form_data),
+            'rdm_consultation': self._get_rdm_consultation(form_data),
+            'project': self._project,
+            'directory_name': self._get_directory_name(form_data),
+            'request_time': utc_now_offset_aware(),
+        }
+
+    def _get_department(self, form_data):
         """Return the department that the user submitted."""
         step_number = self.step_numbers_by_form_name['data_description']
         data = form_data[step_number]
         return data.get('department')
 
-    def __get_data_description(self, form_data):
+    def _get_data_description(self, form_data):
         """Return the data description the user submitted."""
         step_number = self.step_numbers_by_form_name['data_description']
         data = form_data[step_number]
         return data.get('data_description')
 
-    def __get_rdm_consultation(self, form_data):
+    def _get_rdm_consultation(self, form_data):
         """Return the consultants the user spoke to."""
         step_number = self.step_numbers_by_form_name['rdm_consultation']
         data = form_data[step_number]
         return data.get('rdm_consultants', None)
 
-    def __get_directory_name(self, form_data):
+    def _get_directory_name(self, form_data):
         """Return the name of the directory."""
         step_number = self.step_numbers_by_form_name['directory_name']
         data = form_data[step_number]
         return data.get('directory_name', None)
 
-    def __set_data_from_previous_steps(self, step, dictionary):
+    def _get_pi_user(self, form_data):
+        """Return the selected PI User object."""
+        step_number = self.step_numbers_by_form_name['pi_selection']
+        data = form_data[step_number]
+        pi_project_user = data['pi']
+        return pi_project_user.user
+
+    def _set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""
-        rdm_consultation_step = \
-            self.step_numbers_by_form_name['rdm_consultation']
+        dictionary['breadcrumb_project'] = f'Project: {self._project.name}'
+
+        pi_selection_step = self.step_numbers_by_form_name['pi_selection']
+        if step > pi_selection_step:
+            pi_selection_form_data = self.get_cleaned_data_for_step(
+                str(pi_selection_step))
+            dictionary['breadcrumb_pi'] = (
+                f'PI: {pi_selection_form_data["pi"].user.username}')
+
+        rdm_consultation_step = self.step_numbers_by_form_name[
+            'rdm_consultation']
         if step > rdm_consultation_step:
             rdm_consultation_form_data = self.get_cleaned_data_for_step(
                 str(rdm_consultation_step))
-            dictionary.update({'breadcrumb_rdm_consultation':
-                                   'Yes' if rdm_consultation_form_data
-                                   else 'No'})
-
-        dictionary.update({'breadcrumb_project': f'Project: {self.project.name}'})
-
-    def send_admin_notification_email(self, request):
-        requester = request.requester
-        requester_str = (
-            f'{requester.first_name} {requester.last_name} ({requester.email})')
-
-        review_url = urljoin(
-            settings.CENTER_BASE_URL,
-            reverse('secure-dir-request-detail', kwargs={'pk': request.pk}))
-
-        context = {
-            'project_name': request.project.name,
-            'requester_str': requester_str,
-            'review_url': review_url,
-        }
-
-        send_email_template(
-            f'New Secure Directory Request',
-            'email/secure_dir_request/secure_dir_new_request_admin.txt',
-            context,
-            settings.EMAIL_SENDER,
-            settings.EMAIL_ADMIN_LIST)
-
-    def send_pi_notification_email(self, request):
-        requester = request.requester
-        requester_str = (
-            f'{requester.first_name} {requester.last_name} ({requester.email})')
-
-        review_url = urljoin(
-            settings.CENTER_BASE_URL,
-            reverse('secure-dir-request-detail', kwargs={'pk': request.pk}))
-
-        pi_emails = request.project.pis_emails()
-        pi_emails.remove(requester.email)
-
-        context = {
-            'project_name': request.project.name,
-            'requester_str': requester_str,
-            'review_url': review_url,
-        }
-
-        send_email_template(
-            f'New Secure Directory Request',
-            'email/secure_dir_request/secure_dir_new_request_pi.txt',
-            context,
-            settings.EMAIL_SENDER,
-            pi_emails)
+            has_consulted_rdm = (
+                'Yes' if rdm_consultation_form_data else 'No')
+            dictionary['breadcrumb_rdm_consultation'] = (
+                f'Consulted RDM: {has_consulted_rdm}')
 
 
 class SecureDirRequestListView(LoginRequiredMixin,
@@ -1760,6 +1706,7 @@ class SecureDirRequestUndenyRequestView(LoginRequiredMixin,
                 'secure-dir-request-detail',
                 kwargs={'pk': kwargs.get('pk')}))
 
+
 class SecureDirRequestEditDepartmentView(LoginRequiredMixin,
                                          UserPassesTestMixin,
                                          SecureDirRequestMixin,
@@ -1806,6 +1753,7 @@ class SecureDirRequestEditDepartmentView(LoginRequiredMixin,
         messages.error(self.request, message)
         return self.render_to_response(
             self.get_context_data(form=form))
+
 
 class SecureDirRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
                                    SecureDirRequestEditDepartmentView):

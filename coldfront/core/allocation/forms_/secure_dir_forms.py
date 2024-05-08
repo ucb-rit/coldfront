@@ -84,12 +84,11 @@ class SecureDirPISelectionForm(forms.Form):
         widget=forms.Select())
 
     def __init__(self, *args, **kwargs):
-        self.project_pk = kwargs.pop('project_pk', None)
+        self._project_pk = kwargs.pop('project_pk', None)
         super().__init__(*args, **kwargs)
 
-        if not self.project_pk:
+        if not self._project_pk:
             return
-
         self._set_pi_queryset()
 
     def _set_pi_queryset(self):
@@ -98,7 +97,7 @@ class SecureDirPISelectionForm(forms.Form):
             name='Principal Investigator')
         active_status = ProjectUserStatusChoice.objects.get(name='Active')
         self.fields['pi'].queryset = ProjectUser.objects.filter(
-            project__pk=self.project_pk, role=pi_role, status=active_status)
+            project__pk=self._project_pk, role=pi_role, status=active_status)
 
 
 class SecureDirDataDescriptionForm(forms.Form):
@@ -125,10 +124,6 @@ class SecureDirDataDescriptionForm(forms.Form):
               'the Information Security and Policy team) about your data?',
         required=False)
 
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('breadcrumb_project', None)
-        super().__init__(*args, **kwargs)
-
 
 class SecureDirRDMConsultationForm(forms.Form):
     rdm_consultants = forms.CharField(
@@ -138,10 +133,6 @@ class SecureDirRDMConsultationForm(forms.Form):
         validators=[MinLengthValidator(3)],
         required=True,
         widget=forms.Textarea(attrs={'rows': 3}))
-
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('breadcrumb_project', None)
-        super().__init__(*args, **kwargs)
 
 
 class SecureDirDirectoryNamesForm(forms.Form):
@@ -153,11 +144,6 @@ class SecureDirDirectoryNamesForm(forms.Form):
         label='Subdirectory Name',
         required=True,
         widget=forms.Textarea(attrs={'rows': 1}))
-
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('breadcrumb_rdm_consultation', None)
-        kwargs.pop('breadcrumb_project', None)
-        super().__init__(*args, **kwargs)
 
 
 class SecureDirSetupForm(forms.Form):
