@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('allocation', '0014_add_mou_file_to_requests'),
+        ('allocation', '0015_allocationrenewalrequest_renewal_survey_answers'),
     ]
 
     operations = [

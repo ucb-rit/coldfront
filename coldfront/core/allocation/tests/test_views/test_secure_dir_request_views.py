@@ -57,6 +57,7 @@ class TestSecureDirRequestBase(TestBase):
         project_user_status = ProjectUserStatusChoice.objects.get(
             name='Active')
         user_role = ProjectUserRoleChoice.objects.get(name='User')
+        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
         pi_role = ProjectUserRoleChoice.objects.get(
             name='Principal Investigator')
         for i in range(2):
@@ -65,9 +66,10 @@ class TestSecureDirRequestBase(TestBase):
                 name=f'fc_project{i}', status=project_status)
             setattr(self, f'project{i}', project)
             for j in range(2):
+                non_pi_role = manager_role if j % 2 == 0 else user_role
                 ProjectUser.objects.create(
                     user=getattr(self, f'user{j}'), project=project,
-                    role=user_role, status=project_user_status)
+                    role=non_pi_role, status=project_user_status)
                 ProjectUser.objects.create(
                     user=getattr(self, f'pi{j}'), project=project, role=pi_role,
                     status=project_user_status)
@@ -105,25 +107,32 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
         super().setUp()
         self.url = 'secure-dir-request'
 
-    def get_form_data(self):
-        """Generates valid form data for SecureDirRequestWizard."""
+    @staticmethod
+    def get_form_data(pi_project_user_pk):
+        """Generates valid form data for SecureDirRequestWizard. Select
+        the PI ProjectUser with the given primary key."""
         view_name = 'secure_dir_request_wizard'
         current_step_key = f'{view_name}-current_step'
-        data_description_form_data = {
-            '0-department': 'Dept. of Testing',
-            '0-data_description': 'a' * 20,
-            '0-rdm_consultation': True,
+        pi_selection_form_data = {
+            '0-pi': pi_project_user_pk,
             current_step_key: '0',
         }
-        rdm_consultation_form_data = {
-            '1-rdm_consultants': 'Tom and Jerry',
+        data_description_form_data = {
+            '1-department': 'Dept. of Testing',
+            '1-data_description': 'a' * 20,
+            '1-rdm_consultation': True,
             current_step_key: '1',
         }
-        directory_name_data = {
-            '2-directory_name': 'test_dir',
+        rdm_consultation_form_data = {
+            '2-rdm_consultants': 'Tom and Jerry',
             current_step_key: '2',
         }
+        directory_name_data = {
+            '3-directory_name': 'test_dir',
+            current_step_key: '3',
+        }
         form_data = [
+            pi_selection_form_data,
             data_description_form_data,
             rdm_consultation_form_data,
             directory_name_data
@@ -136,14 +145,20 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
         self.assert_has_access(url, self.admin, True)
         self.assert_has_access(url, self.pi0, True)
         self.assert_has_access(url, self.pi1, True)
-        self.assert_has_access(url, self.user0, False)
+        # user0 is a manager of project1.
+        self.assert_has_access(url, self.user0, True)
+        # user1 is a regular user of project1.
+        self.assert_has_access(url, self.user1, False)
 
     def test_post_creates_request(self):
         """Test that a POST request creates a SecureDirRequest."""
         self.assertEqual(SecureDirRequest.objects.count(), 0)
 
         pre_time = utc_now_offset_aware()
-        form_data = self.get_form_data()
+
+        pi_project_user_pk = ProjectUser.objects.get(
+            project=self.project1, user=self.pi0).pk
+        form_data = self.get_form_data(pi_project_user_pk)
 
         self.client.login(username=self.pi0.username, password=self.password)
         url = reverse(self.url, kwargs={'pk': self.project1.pk})
@@ -161,15 +176,16 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
 
         request = requests.first()
         self.assertEqual(request.requester, self.pi0)
+        self.assertEqual(request.pi, self.pi0)
         self.assertEqual(
             request.data_description,
-            form_data[0]['0-data_description'])
+            form_data[1]['1-data_description'])
         self.assertEqual(
             request.rdm_consultation,
-            form_data[1]['1-rdm_consultants'])
+            form_data[2]['2-rdm_consultants'])
         self.assertEqual(
             request.directory_name,
-            f'pl1_{form_data[2]["2-directory_name"]}')
+            f'pl1_{form_data[3]["3-directory_name"]}')
         self.assertEqual(request.project, self.project1)
         self.assertTrue(
             pre_time < request.request_time < utc_now_offset_aware())
@@ -179,9 +195,11 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
     def test_emails_sent(self):
         """Test that a POST request sends the correct emails."""
 
-        form_data = self.get_form_data()
+        pi_project_user_pk = ProjectUser.objects.get(
+            project=self.project1, user=self.pi0).pk
+        form_data = self.get_form_data(pi_project_user_pk)
 
-        self.client.login(username=self.pi1.username, password=self.password)
+        self.client.login(username=self.user0.username, password=self.password)
         url = reverse(self.url, kwargs={'pk': self.project1.pk})
         for i, data in enumerate(form_data):
             response = self.client.post(url, data)
@@ -193,16 +211,22 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
         # Test that the correct emails are sent.
         admin_email = settings.EMAIL_ADMIN_LIST
         pi0_email = self.pi0.email
-        pi_email_body = [f'There is a new secure directory request for '
-                         f'project {self.project1.name} requested by '
-                         f'{self.pi1.first_name} {self.pi1.last_name}'
-                         f' ({self.pi1.email})',
-                         f'You may view the details of the request here:']
-        admin_email_body = [f'There is a new secure directory request for '
-                            f'project {self.project1.name} requested by '
-                            f'{self.pi1.first_name} {self.pi1.last_name}'
-                            f' ({self.pi1.email}).',
-                            'Please review the request here:']
+        pi_email_body = [
+            (f'{self.user0.first_name} {self.user0.last_name} '
+             f'({self.user0.email}) has made a request to create a new secure '
+             f'directory under project {self.project1.name}, with you as the '
+             f'Principal Investigator (PI)'),
+            'view the details of the request',
+            'would like to prevent this',
+        ]
+        admin_email_body = [
+            (f'There is a new secure directory request for project '
+             f'{self.project1.name} under PI {self.pi0.first_name} '
+             f'{self.pi0.last_name} ({self.pi0.email}) requested by '
+             f'{self.user0.first_name} {self.user0.last_name} '
+             f'({self.user0.email}).'),
+            'Please review the request here:',
+        ]
 
         self.assertEqual(2, len(mail.outbox))
         for email in mail.outbox:
