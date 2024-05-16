@@ -9,6 +9,7 @@ from io import StringIO
 from django.contrib.auth.models import User
 from django.core.management import call_command, CommandError
 from django.urls import reverse
+from django import forms
 from http import HTTPStatus
 
 from coldfront.api.statistics.utils import get_accounting_allocation_objects, \
@@ -27,6 +28,7 @@ from coldfront.core.project.models import Project, ProjectStatusChoice, \
     ProjectUser, ProjectUserStatusChoice, ProjectUserRoleChoice, \
     ProjectAllocationRequestStatusChoice, SavioProjectAllocationRequest, \
     VectorProjectAllocationRequest
+from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalSurveyForm
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
@@ -1007,146 +1009,86 @@ class TestNewProjectSurveyResponses(TestBase):
 
 class TestRenewalSurveyResponses(TestBase):
     """ Test class to test export data subcommand renewal_survey_responses runs correctly """
-
+    
     @enable_deployment('BRC')
     def setUp(self):
         super().setUp()
 
-        allocation_period = AllocationPeriod.objects.get(name__exact='Allowance Year 2024 - 2025')
+        fixtures = []
+        filtered_fixtures = []
 
-        renewal_survey = {
-            "brc_feedback": "N/A", 
-            "mybrc_comments": "", 
-            "do_you_use_mybrc": "no", 
-            "classes_being_taught": "N/A", 
-            "colleague_suggestions": "N/A", 
-            "grants_supported_by_brc": "Grant #1 etc. etc.\r\nGrant #2 etc. etc.", 
-            "which_brc_services_used": ["savio_hpc", "srdc"], 
-            "indicate_topic_interests": ["have_visited_rdmp_website", 
-                                         "have_had_rdmp_event_or_consultation", 
-                                         "want_to_learn_security_and_have_rdm_consult"], 
-            "brc_recommendation_rating": "6", 
-            "publications_supported_by_brc": "N/A", 
-            "which_open_ondemand_apps_used": ["desktop", "matlab", 
-                                              "jupyter_notebook", "vscode_server"], 
-            "recruitment_or_retention_cases": "N/A", 
-            "brc_recommendation_rating_reason": "Easy to use", 
-            "how_important_to_research_is_brc": "5", 
-            "training_session_other_topics_of_interest": "None", 
-            "how_brc_helped_bootstrap_computational_methods": "N/A", 
-            "training_session_usefulness_of_basic_savio_cluster": "4", 
-            "training_session_usefulness_of_singularity_on_savio": "4", 
-            "training_session_usefulness_of_advanced_savio_cluster": "2", 
-            "training_session_usefulness_of_analytic_envs_on_demand": "5", 
-            "training_session_usefulness_of_computational_platforms_training": "3"}
+        allocation_period = AllocationPeriod.objects.get(name__exact='Allowance Year 2024 - 2025')
         
-        project_name = 'fc_project'
-        active_project_status = ProjectStatusChoice.objects.get(name='Active')
-        project = Project.objects.create(
-            name=project_name,
-            title=project_name,
-            status=active_project_status)
-        requester = User.objects.create(
-            email='requester@email.com',
-            first_name='Requester',
-            last_name='User',
-            username='requester')
-        pi = User.objects.create(
-            email='pi@email.com',
-            first_name='PI',
-            last_name='User',
-            username='pi')
-        allocation_period_start_utc = display_time_zone_date_to_utc_datetime(
-            allocation_period.start_date)
-        request = AllocationRenewalRequest.objects.create(
-            requester=requester,
-            pi=pi,
-            computing_allowance=Resource.objects.get(
-                name=BRCAllowances.FCA),
-            allocation_period=allocation_period,
-            status=AllocationRenewalRequestStatusChoice.objects.get(
-                name='Under Review'),
-            renewal_survey_answers = renewal_survey, 
-            pre_project=project,
-            post_project=project,
-            request_time=allocation_period_start_utc - datetime.timedelta(days=1))
-        self.project_name = project_name
-        self.expected_survey_answers = {
-        '1. Which Berkeley Research Computing services have you used? (Check all that apply.)': [
-            'Savio High Performance Computing and consulting',
-            'Secure Research Data & Computing (SRDC)'
-        ],
-        "2. Please list any publications (including papers, books, dissertations, theses, and "
-        "public presentations) that you authored or co-authored, that have been supported by "
-        "Berkeley Research Computing resources and/or consulting. Please provide a bibliographic "
-        "reference, URL or DOI for each publication/presentation. Please write 'N/A' if this "
-        "does not apply.": 'N/A',
-        "3. Please list any grant(s) or other competitively-awarded funding that has been or will "
-        "be supported by Berkeley Research Computing resources and/or consulting. Please provide "
-        "the name of the funding agency, the award number or other identifier, and the amount of "
-        "funding awarded. Please write 'N/A' if this does not apply.": 'Grant #1 etc. etc.\r\n'
-        'Grant #2 etc. etc.',
-        "4. Please list any recruitment or retention cases you are aware of in which the "
-        "availability of the Savio high-performance computing cluster or other Berkeley Research "
-        "Computing services -- such as Condo Storage, Analytic Environments on Demand (AEoD), or "
-        "Cloud Computing Support  -- played a role? Please indicate the recruitment / retention "
-        "case role (faculty, postdoc, or graduate student), department, sponsoring faculty member, "
-        "and outcome. This information will not be shared publicly, except as a component of "
-        "aggregated statistics. Please write 'N/A' if this does not apply.": 'N/A',
-        '5. Please list any classes (course number and semester) for which you were/will be an '
-        'instructor, and that were or will be supported by the Berkeley Research Computing Program.'
-        ' Please indicate whether an Instructional Computing Allowance (ICA) was, is, or will be an'
-        ' element of support for the listed classes. More on ICAs '
-        '<a href="https://docs-research-it.berkeley.edu/services/high-performance-computing/getting'
-        '-account/instructional-computing-allowance/"target="_blank" rel="noopener noreferrer">here'
-        '</a>. Please write \'N/A\' if this does not apply.': 'N/A',
-        '6. Based upon your overall experience using BRC services, how likely are you to recommend '
-        'Berkeley Research Computing to others?': '6',
-        '6a. What is the reason for your rating above?': 'Easy to use',
-        "7. If you are new to computational methods (broadly, or in a specific application), please"
-        " let us know how BRC services and/or resources have helped you bootstrap the application "
-        "of computational methods to your research. Please write 'N/A' if this does not apply.": 
-        'N/A',
-        '8. How important is the Berkeley Research Computing Program to your research?': 'Essential',
-        '9. Do you use the Savio Account Management portal MyBRC?': 'No',
-        '9a.If yes, what feedback do you have for MyBRC?': '',
-        '10. Do you use Open Ondemand? Which application(s) do you use? (Check all that apply.)': [
-            'Desktop',
-            'MatLab',
-            'Jupyter Notebook/Lab',
-            'VS Code Server'
-        ],
-        '11. How could the Berkeley Research Computing Program be more useful to your research or '
-        'teaching?': 'N/A',
-        '12. Please suggest colleagues who might benefit from the Berkeley Research Computing '
-        'Program, with whom we should follow up. Names, e-mail addresses, and roles (faculty, '
-        'postdoc, graduate student, etc.) would be most helpful.': 'N/A',
-        '13. Please indicate your engagement with or interest in the following topics. (Check all '
-        'that apply.)': [
-            'I have visited the Research Data Management Program web site.',
-            'I have participated in a <a href="http://researchdata.berkeley.edu/">Research Data '
-            'Management Program</a> event or consultation.',
-            'I am interested in learning more about securing research data and/or secure '
-            'computation; please have an RDM consultant follow up with me.'
-        ],
-        '<h4>BRC is planning an in-person training session within the next 2-3 months and would '
-        'like input on what topics would be most useful to you personally. Please rate the '
-        'following topics on  how useful they would be to you.</h4>14a. Selecting computational '
-        'platforms that fit your research and budget (Savio, HPC@UC, XSEDE, commercial cloud '
-        'providers, AEoD) System overview (how to access Savio via condo contribution or faculty '
-        'compute allowance, system capabilities)': '3',
-        '14b. Basic usage of the Savio cluster (logging on, data transfer, accessing software, '
-        'using the scheduler; limited discussion of access models and capabilities)': '4',
-        '14c. Advanced usage of the Savio cluster (e.g. installing your own software, '
-        'parallelization strategies, effective use of specific system resources such as GPUs and '
-        'Hadoop/Spark -- please indicate specific interests below)': '2',
-        '14d. Use of Singularity on Savio (containerized applications, including Docker containers '
-        'packaged for Savio deployment)': '4',
-        '14e. Use of Analytic Environments on Demand (virtualized, scalable Windows environments '
-        'provisioned with licensed or open-source software applications applicable to research '
-        'projects)': '5 - Very useful',
-        '15. Any other or specific topics of interest?': 'None'
-    }
+        for index in range(5):
+            pi = User.objects.create(
+                username=f'test_user{index}', first_name='Test', last_name='User',
+                is_superuser=True)
+            
+            renewal_survey = {
+                "brc_feedback": "N/A", 
+                "mybrc_comments": "", 
+                "do_you_use_mybrc": "no", 
+                "classes_being_taught": f"sample answer {index}", 
+                "colleague_suggestions": "N/A", 
+                "grants_supported_by_brc": "Grant #1 etc. etc.\r\nGrant #2 etc. etc.", 
+                "which_brc_services_used": ["savio_hpc", "srdc"], 
+                "indicate_topic_interests": ["have_visited_rdmp_website", 
+                                            "have_had_rdmp_event_or_consultation", 
+                                            "want_to_learn_security_and_have_rdm_consult"], 
+                "brc_recommendation_rating": "6", 
+                "publications_supported_by_brc": "N/A", 
+                "which_open_ondemand_apps_used": ["desktop", "matlab", 
+                                                "jupyter_notebook", "vscode_server"], 
+                "recruitment_or_retention_cases": "N/A", 
+                "brc_recommendation_rating_reason": "Easy to use", 
+                "how_important_to_research_is_brc": "5", 
+                "training_session_other_topics_of_interest": "None", 
+                "how_brc_helped_bootstrap_computational_methods": "N/A", 
+                "training_session_usefulness_of_basic_savio_cluster": "4", 
+                "training_session_usefulness_of_singularity_on_savio": "4", 
+                "training_session_usefulness_of_advanced_savio_cluster": "2", 
+                "training_session_usefulness_of_analytic_envs_on_demand": "5", 
+                "training_session_usefulness_of_computational_platforms_training": "3"}
+            
+            active_project_status = ProjectStatusChoice.objects.get(name='Active')
+            
+            project_prefix = 'fc_' if index % 2 else 'pc_'
+            project = Project.objects.create(name=f'{project_prefix}test_project{index}',
+                                             status=active_project_status)
+            
+            requester = User.objects.create(
+                email=f'requester{index}@email.com',
+                first_name='Requester',
+                last_name=f'User {index}',
+                username=f'requester{index}')
+            pi = User.objects.create(
+                email=f'pi{index}@email.com',
+                first_name='PI',
+                last_name=f'User {index}',
+                username=f'pi{index}')
+            allocation_period_start_utc = display_time_zone_date_to_utc_datetime(
+                allocation_period.start_date)
+            fixture = AllocationRenewalRequest.objects.create(
+                requester=requester,
+                pi=pi,
+                computing_allowance=Resource.objects.get(
+                    name=BRCAllowances.FCA),
+                allocation_period=allocation_period,
+                status=AllocationRenewalRequestStatusChoice.objects.get(
+                    name='Under Review'),
+                renewal_survey_answers = renewal_survey, 
+                pre_project=project,
+                post_project=project,
+                request_time=allocation_period_start_utc - datetime.timedelta(days=1))
+            
+            fixtures.append(fixture)
+            if index % 2:
+                filtered_fixtures.append(fixture)
+        
+        fixtures = list(sorted(fixtures, key=lambda x: x.pre_project.name, reverse=True))
+        filtered_fixtures = list(sorted(filtered_fixtures, key=lambda x: x.pre_project.name, reverse=True))
+        self.fixtures = fixtures
+        self.filtered_fixtures = filtered_fixtures
 
     @enable_deployment('BRC')
     def test_get_renewal_survey_responses_json(self):
@@ -1158,10 +1100,16 @@ class TestRenewalSurveyResponses(TestBase):
 
         out.seek(0)
         output = json.loads(''.join(out.readlines()))
-        for item in output:
+        # print("output:")
+        # print(output)
+        # print("fixtures:")
+        # print(self.fixtures)
+        for index, item in enumerate(output):
             project_name = item.pop('project_name')
-            self.assertEquals(project_name, self.project_name)
-            self.assertDictEqual(item['renewal_survey_responses'], self.expected_survey_answers)
+            self.assertEquals(project_name, self.fixtures[index].pre_project.name)
+            # print("renewal answers for index #" + str(index))
+            # print(self.fixtures[index].renewal_survey_answers)
+            self.assertDictEqual(item['renewal_survey_responses'], swap_form_answer_id_for_text(self.fixtures[index].renewal_survey_answers))
         err.seek(0)
         self.assertEqual(err.read(), '')
 
@@ -1175,14 +1123,15 @@ class TestRenewalSurveyResponses(TestBase):
 
         out.seek(0)
         reader = DictReader(out.readlines())
-        for item in reader:
+        for index, item in enumerate(reader):
             project_name = item.pop('project_name')
             item.pop('project_title')
             item.pop('project_pi')
-            self.assertEquals(project_name, self.project_name)
-            self.assertEqual(len(item), len(self.expected_survey_answers))
-            sample = "8. How important is the Berkeley Research Computing Program to your research?"
-            self.assertEqual(item[sample], self.expected_survey_answers[sample])
+            self.assertEquals(project_name, self.fixtures[index].pre_project.name)
+            self.assertEqual(len(item), len(self.fixtures[index].renewal_survey_answers))
+            sample = ("6. Based upon your overall experience using BRC services, how likely are you"
+                " to recommend Berkeley Research Computing to others?")
+            self.assertEqual(item[sample], self.fixtures[index].renewal_survey_answers[sample])
 
         err.seek(0)
         self.assertEqual(err.read(), '')
@@ -1197,14 +1146,56 @@ class TestRenewalSurveyResponses(TestBase):
 
         out.seek(0)
         reader = DictReader(out.readlines())
-        for item in reader:
+        # print("reader:")
+        # print(reader)
+        # print("fixtures:")
+        # print(self.fixtures)
+        for index, item in enumerate(reader):
             project_name = item.pop('project_name')
             item.pop('project_title')
+            # print("project name: " + project_name)
             item.pop('project_pi')
-            self.assertEquals(project_name, self.project_name)
-            self.assertEqual(len(item), len(self.expected_survey_answers))
-            sample = "8. How important is the Berkeley Research Computing Program to your research?"
-            self.assertEqual(item[sample], self.expected_survey_answers[sample])
+            self.assertEquals(project_name, self.filtered_fixtures[index].pre_project.name)
+            self.assertEqual(len(item), len(self.filtered_fixtures[index].renewal_survey_answers))
+            sample = ("6. Based upon your overall experience using BRC services, how likely are you"
+                " to recommend Berkeley Research Computing to others?")
+            self.assertEqual(item[sample], self.fixtures[index].renewal_survey_answers[sample])
 
         err.seek(0)
         self.assertEqual(err.read(), '')
+
+@staticmethod
+def swap_form_answer_id_for_text(survey):
+    multiple_choice_fields = {}
+    form = ProjectRenewalSurveyForm()
+    for k, v in form.fields.items():
+        # Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices 
+        if (isinstance(v, forms.MultipleChoiceField)) or (isinstance(v, forms.ChoiceField)):
+            multiple_choice_fields[k] = {_k: _v for _k, _v in form.fields[k].choices}
+    for question, answer in survey.items():
+            if question in multiple_choice_fields.keys():
+                sub_map = multiple_choice_fields[question]
+                if (isinstance(answer, list)):
+                    # Multiple choice, array
+                    survey[question] = [sub_map.get(i,i) for i in answer]
+                elif answer != "":
+                    # Single choice replacement 
+                    survey[question] = sub_map[answer]
+        # Change keys of survey (question IDs) to be the human-readable text
+    # print("form.fields.items():")
+    # print(form.fields.items())
+    # print("starting survey:")
+    # print(survey)
+    for id, text in form.fields.items():
+        # print("survey[text.label]:")
+        # print(survey[text.label])
+        # print("id:")
+        # print(id)
+        # print("text:")
+        # print(text)
+        # print("survey.pop(id):")
+        # print(survey[id])
+        survey[text.label] = survey.pop(id)
+        # print("after assignment, survey[text.label]:")
+        # print(survey[text.label])
+    return survey
