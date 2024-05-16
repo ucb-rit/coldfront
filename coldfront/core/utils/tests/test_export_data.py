@@ -1100,16 +1100,11 @@ class TestRenewalSurveyResponses(TestBase):
 
         out.seek(0)
         output = json.loads(''.join(out.readlines()))
-        # print("output:")
-        # print(output)
-        # print("fixtures:")
-        # print(self.fixtures)
         for index, item in enumerate(output):
             project_name = item.pop('project_name')
-            self.assertEquals(project_name, self.fixtures[index].pre_project.name)
-            # print("renewal answers for index #" + str(index))
-            # print(self.fixtures[index].renewal_survey_answers)
-            self.assertDictEqual(item['renewal_survey_responses'], swap_form_answer_id_for_text(self.fixtures[index].renewal_survey_answers))
+            self.assertEqual(project_name, self.fixtures[index].pre_project.name)
+            self.assertEqual(item['renewal_survey_responses'], 
+                        swap_form_answer_id_for_text(self.fixtures[index].renewal_survey_answers))
         err.seek(0)
         self.assertEqual(err.read(), '')
 
@@ -1127,11 +1122,12 @@ class TestRenewalSurveyResponses(TestBase):
             project_name = item.pop('project_name')
             item.pop('project_title')
             item.pop('project_pi')
-            self.assertEquals(project_name, self.fixtures[index].pre_project.name)
+            self.assertEqual(project_name, self.fixtures[index].pre_project.name)
             self.assertEqual(len(item), len(self.fixtures[index].renewal_survey_answers))
             sample = ("6. Based upon your overall experience using BRC services, how likely are you"
                 " to recommend Berkeley Research Computing to others?")
-            self.assertEqual(item[sample], self.fixtures[index].renewal_survey_answers[sample])
+            sample_answer = "6"
+            self.assertEqual(item[sample], sample_answer)
 
         err.seek(0)
         self.assertEqual(err.read(), '')
@@ -1140,32 +1136,33 @@ class TestRenewalSurveyResponses(TestBase):
     def test_get_renewal_survey_responses_allowance_type(self):
         out, err = StringIO(''), StringIO('')
         call_command('export_data', 'renewal_survey_responses',
-                     '--format=csv', '--allocation_period=Allowance Year 2024 - 2025', 
+                     '--format=json', '--allocation_period=Allowance Year 2024 - 2025', 
                      '--allowance_type=fc_', stdout=out, stderr=err)
         sys.stdout = sys.__stdout__
 
         out.seek(0)
-        reader = DictReader(out.readlines())
-        # print("reader:")
-        # print(reader)
-        # print("fixtures:")
-        # print(self.fixtures)
-        for index, item in enumerate(reader):
+        output = json.loads(''.join(out.readlines()))
+        for index, item in enumerate(output):
             project_name = item.pop('project_name')
-            item.pop('project_title')
-            # print("project name: " + project_name)
-            item.pop('project_pi')
-            self.assertEquals(project_name, self.filtered_fixtures[index].pre_project.name)
-            self.assertEqual(len(item), len(self.filtered_fixtures[index].renewal_survey_answers))
-            sample = ("6. Based upon your overall experience using BRC services, how likely are you"
-                " to recommend Berkeley Research Computing to others?")
-            self.assertEqual(item[sample], self.fixtures[index].renewal_survey_answers[sample])
+            self.assertEqual(project_name, self.filtered_fixtures[index].pre_project.name)
+            self.assertEqual(item['renewal_survey_responses'], 
+                    swap_form_answer_id_for_text(self.filtered_fixtures[index].renewal_survey_answers))
 
         err.seek(0)
         self.assertEqual(err.read(), '')
 
 @staticmethod
 def swap_form_answer_id_for_text(survey):
+    '''
+    Takes a survey, a dict mapping survey question IDs to answer IDs.
+    Uses ProjectRenewalSurveyForm.
+    Swaps answer IDs for answer text, then question IDs for question text.
+    Returns the modified survey.
+
+    Parameter
+    ----------
+    _survey : survey to modify
+    '''
     multiple_choice_fields = {}
     form = ProjectRenewalSurveyForm()
     for k, v in form.fields.items():
@@ -1182,20 +1179,6 @@ def swap_form_answer_id_for_text(survey):
                     # Single choice replacement 
                     survey[question] = sub_map[answer]
         # Change keys of survey (question IDs) to be the human-readable text
-    # print("form.fields.items():")
-    # print(form.fields.items())
-    # print("starting survey:")
-    # print(survey)
     for id, text in form.fields.items():
-        # print("survey[text.label]:")
-        # print(survey[text.label])
-        # print("id:")
-        # print(id)
-        # print("text:")
-        # print(text)
-        # print("survey.pop(id):")
-        # print(survey[id])
         survey[text.label] = survey.pop(id)
-        # print("after assignment, survey[text.label]:")
-        # print(survey[text.label])
     return survey
