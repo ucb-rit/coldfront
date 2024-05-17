@@ -1104,7 +1104,7 @@ class TestRenewalSurveyResponses(TestBase):
             project_name = item.pop('project_name')
             self.assertEqual(project_name, self.fixtures[index].pre_project.name)
             self.assertEqual(item['renewal_survey_responses'], 
-                        swap_form_answer_id_for_text(self.fixtures[index].renewal_survey_answers))
+                    self.swap_form_answer_id_for_text(self.fixtures[index].renewal_survey_answers))
         err.seek(0)
         self.assertEqual(err.read(), '')
 
@@ -1146,39 +1146,39 @@ class TestRenewalSurveyResponses(TestBase):
             project_name = item.pop('project_name')
             self.assertEqual(project_name, self.filtered_fixtures[index].pre_project.name)
             self.assertEqual(item['renewal_survey_responses'], 
-                    swap_form_answer_id_for_text(self.filtered_fixtures[index].renewal_survey_answers))
+                    self.swap_form_answer_id_for_text(self.filtered_fixtures[index].renewal_survey_answers))
 
         err.seek(0)
         self.assertEqual(err.read(), '')
 
-@staticmethod
-def swap_form_answer_id_for_text(survey):
-    '''
-    Takes a survey, a dict mapping survey question IDs to answer IDs.
-    Uses ProjectRenewalSurveyForm.
-    Swaps answer IDs for answer text, then question IDs for question text.
-    Returns the modified survey.
+    @staticmethod
+    def swap_form_answer_id_for_text(survey):
+        '''
+        Takes a survey, a dict mapping survey question IDs to answer IDs.
+        Uses ProjectRenewalSurveyForm.
+        Swaps answer IDs for answer text, then question IDs for question text.
+        Returns the modified survey.
 
-    Parameter
-    ----------
-    _survey : survey to modify
-    '''
-    multiple_choice_fields = {}
-    form = ProjectRenewalSurveyForm()
-    for k, v in form.fields.items():
-        # Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices 
-        if (isinstance(v, forms.MultipleChoiceField)) or (isinstance(v, forms.ChoiceField)):
-            multiple_choice_fields[k] = {_k: _v for _k, _v in form.fields[k].choices}
-    for question, answer in survey.items():
-            if question in multiple_choice_fields.keys():
-                sub_map = multiple_choice_fields[question]
-                if (isinstance(answer, list)):
-                    # Multiple choice, array
-                    survey[question] = [sub_map.get(i,i) for i in answer]
-                elif answer != "":
-                    # Single choice replacement 
-                    survey[question] = sub_map[answer]
-        # Change keys of survey (question IDs) to be the human-readable text
-    for id, text in form.fields.items():
-        survey[text.label] = survey.pop(id)
-    return survey
+        Parameter
+        ----------
+        _survey : survey to modify
+        '''
+        multiple_choice_fields = {}
+        form = ProjectRenewalSurveyForm()
+        for k, v in form.fields.items():
+            # Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices 
+            if (isinstance(v, forms.MultipleChoiceField)) or (isinstance(v, forms.ChoiceField)):
+                multiple_choice_fields[k] = {_k: _v for _k, _v in form.fields[k].choices}
+        for question, answer in survey.items():
+                if question in multiple_choice_fields.keys():
+                    sub_map = multiple_choice_fields[question]
+                    if (isinstance(answer, list)):
+                        # Multiple choice, array
+                        survey[question] = [sub_map.get(i,i) for i in answer]
+                    elif answer != "":
+                        # Single choice replacement 
+                        survey[question] = sub_map[answer]
+            # Change keys of survey (question IDs) to be the human-readable text
+        for id, text in form.fields.items():
+            survey[text.label] = survey.pop(id)
+        return survey
