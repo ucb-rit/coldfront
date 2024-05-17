@@ -15,15 +15,14 @@ from http import HTTPStatus
 from coldfront.api.statistics.utils import get_accounting_allocation_objects, \
     create_project_allocation, create_user_project_allocation
 from coldfront.core.allocation.models import AllocationAttributeType, \
-    AllocationUserAttribute
+    AllocationUserAttribute, AllocationRenewalRequest, AllocationPeriod, \
+    AllocationRenewalRequestStatusChoice
 from coldfront.core.statistics.models import Job
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.tests.test_base import enable_deployment
 from coldfront.core.utils.tests.test_base import TestBase
-from coldfront.core.allocation.models import AllocationRenewalRequest, AllocationPeriod, \
-    AllocationRenewalRequestStatusChoice
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     ProjectUser, ProjectUserStatusChoice, ProjectUserRoleChoice, \
     ProjectAllocationRequestStatusChoice, SavioProjectAllocationRequest, \
@@ -1120,8 +1119,10 @@ class TestRenewalSurveyResponses(TestBase):
         reader = DictReader(out.readlines())
         for index, item in enumerate(reader):
             project_name = item.pop('project_name')
-            item.pop('project_title')
-            item.pop('project_pi')
+            project_title = item.pop('project_title')
+            project_pi = item.pop('project_pi')
+            self.assertEqual(project_title, self.fixtures[index].pre_project.title)
+            self.assertEqual(project_pi, self.fixtures[index].pi.username)
             self.assertEqual(project_name, self.fixtures[index].pre_project.name)
             self.assertEqual(len(item), len(self.fixtures[index].renewal_survey_answers))
             sample = ("6. Based upon your overall experience using BRC services, how likely are you"
@@ -1146,7 +1147,7 @@ class TestRenewalSurveyResponses(TestBase):
             project_name = item.pop('project_name')
             self.assertEqual(project_name, self.filtered_fixtures[index].pre_project.name)
             self.assertEqual(item['renewal_survey_responses'], 
-                    self.swap_form_answer_id_for_text(self.filtered_fixtures[index].renewal_survey_answers))
+                self.swap_form_answer_id_for_text(self.filtered_fixtures[index].renewal_survey_answers))
 
         err.seek(0)
         self.assertEqual(err.read(), '')
@@ -1161,7 +1162,7 @@ class TestRenewalSurveyResponses(TestBase):
 
         Parameter
         ----------
-        _survey : survey to modify
+        survey : survey to modify
         '''
         multiple_choice_fields = {}
         form = ProjectRenewalSurveyForm()
