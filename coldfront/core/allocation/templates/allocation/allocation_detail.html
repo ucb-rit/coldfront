@@ -192,15 +192,15 @@ Allocation Detail
       Users in Allocation
     </h2>
     <span class="badge badge-secondary">{{allocation_users.count}}</span>
+    {% if add_remove_users_buttons_visible %}
     <div class="float-right">
-      {% if secure_dir and can_edit_users %}
         {% comment %}
           <a class="btn btn-primary" href="{{mailto}}" role="button"><i class="far fa-envelope"></i> Email Project Users</a>
         {% endcomment %}
         <a class="btn btn-success" href="{% url 'secure-dir-manage-users' allocation.pk 'add' %}" role="button"><i class="fas fa-user-plus" aria-hidden="true"></i> Add Users</a>
         <a class="btn btn-danger" href="{% url 'secure-dir-manage-users' allocation.pk 'remove' %}" role="button"><i class="fas fa-user-times" aria-hidden="true"></i> Remove Users</a>
-      {% endif %}
     </div>
+    {% endif %}
   </div>
   <div class="card-body">
     <div class="table-responsive">
@@ -211,7 +211,9 @@ Allocation Detail
             <th scope="col">Email</th>
             <th scope="col">Cluster Username</th>
 <!--            <th scope="col">Last Modified</th>-->
-            <th scope="col">Usage</th>
+            {% if allocation_user_usages_visible %}
+              <th scope="col">Usage</th>
+            {% endif %}
             {% flag_enabled 'LRC_ONLY' as lrc_only %}
             {% if lrc_only %}
               <th scope="col">Billing ID</th>
@@ -233,7 +235,9 @@ Allocation Detail
               </td>
             {% endif %}
 <!--            <td>{{ user.modified|date:"M. d, Y" }}</td>-->
-            <td>{{ allocation_user_su_usages|get_value_from_dict:user.user.username }}</td>
+            {% if allocation_user_usages_visible %}
+              <td>{{ allocation_user_su_usages|get_value_from_dict:user.user.username }}</td>
+            {% endif %}
             {% flag_enabled 'LRC_ONLY' as lrc_only %}
             {% if lrc_only %}
               <td>{{ allocation_user_billing_ids|get_value_from_dict:user.user.username}}</td>
@@ -248,7 +252,7 @@ Allocation Detail
 </div>
 
 <!-- Start Removed Project Users -->
-{% if not secure_dir %}
+{% if removed_users_visible %}
   <div class="card mb-3">
       <div class="card-header">
           <h2 class="d-inline"><i class="fas fa-users" aria-hidden="true"></i> Users in Allocation and Removed from Project </h2> <span
