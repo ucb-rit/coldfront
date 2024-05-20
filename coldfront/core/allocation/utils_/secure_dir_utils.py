@@ -353,7 +353,6 @@ class SecureDirRequestApprovalRunner(object):
         self.approve_request()
         groups_alloc, scratch_alloc = self.call_create_secure_dir()
         if groups_alloc and scratch_alloc:
-            # self.create_pi_alloc_users(groups_alloc, scratch_alloc)
             self.send_email(groups_alloc, scratch_alloc)
             message = f'The secure directory for ' \
                       f'{self.request_obj.project.name} ' \
@@ -397,23 +396,6 @@ class SecureDirRequestApprovalRunner(object):
             logger.exception(e)
 
         return groups_alloc, scratch_alloc
-
-    def create_pi_alloc_users(self, groups_alloc, scratch_alloc):
-        """Creates active AllocationUsers for PIs of the project."""
-
-        pis = ProjectUser.objects.get(
-            project=self.request_obj.project,
-            status__name='Active',
-            role__name='Principal Investigator'
-        ).values_list('user', flat=True)
-
-        for pi in pis:
-            for alloc in [groups_alloc, scratch_alloc]:
-                AllocationUser.objects.create(
-                    allocation=alloc,
-                    user=pi,
-                    status=AllocationUserStatusChoice.objects.get(name='Active')
-                )
 
     def send_email(self, groups_alloc, scratch_alloc):
         """Send a notification email to the requester and PI."""
