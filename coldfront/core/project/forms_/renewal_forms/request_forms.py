@@ -16,8 +16,6 @@ from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAl
 from flags.state import flag_enabled
 from django import forms
 from django.utils.safestring import mark_safe
-from django.core.validators import MinLengthValidator
-
 
 class ProjectRenewalPIChoiceField(forms.ModelChoiceField):
 
@@ -548,33 +546,219 @@ class ProjectRenewalSurveyForm(forms.Form):
                 label=('15. Any other or specific topics of interest?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
+        
     def _update_lrc_survey_fields(self):
-        # TODO: Replace placeholders with LRC Survey Questions
-        self.fields['question_1'] = forms.CharField(
-                label='Question 1',
+        self.fields['which_sitrc_services_used'] = forms.MultipleChoiceField(
+                choices=(
+                    ('lawrencium_hpc', (
+                        'Lawrencium High Performance Computing and consulting')),
+                    ('condo_storage', (
+                        'Condo storage on Lawrencium')),
+                    ('svm', (
+                        'Scientific VM (SVM)')),
+                    ('aeod', (
+                        'Analytic Environments on Demand')),
+                    ('cloud_consulting', (
+                        'Cloud consulting (e.g., Amazon, Google)')),
+                    ('other', (
+                        'Other Lawrencium consulting (e.g. assessing the '
+                        'computation platform or resources appropriate '
+                        'for your research workflow)')),
+                    ('none', (
+                        'None of the above')),
+                ),
+                label='1. Which Science IT Research Computing services have you'
+                 ' used? (Check all that apply.)',
                 required=True,
-                widget=forms.Textarea(attrs={'rows': 3})
-                )
+                widget=forms.CheckboxSelectMultiple())
 
-        self.fields['question_2'] = forms.CharField(
-                label='Question 2',
+        self.fields['publications'] = forms.CharField(
+                label='2. Please list any publications (including papers, books, '
+                'dissertations, theses, and public presentations) that you '
+                'authored or co-authored, that have been supported by '
+                'ScienceIT resources and/or consulting. Please provide a '
+                'bibliographic reference, URL or DOI for each publication'
+                '/presentation. Please write \'N/A\' if this does not apply.',
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
         
-        self.fields['question_3'] = forms.MultipleChoiceField(
-            choices=(
-                ('1', (
-                    '1')),
-                ('2', (
-                    '2')),
-                ('3', (
-                    '3')),
-            ),
-            label=(
-                'LRC Choose an option:'),
-            required=False,
-            widget=forms.CheckboxSelectMultiple())
-
+        self.fields['grants'] = forms.CharField(
+                label='3. Please list any grant(s) or other competitively-'
+                'awarded funding that has been or will be supported by '
+                'Lawrencium Computing resources and/or consulting. '
+                'Please provide the name of the funding agency, the award '
+                'number or other identifier, and the amount of funding awarded. '
+                'Please write \'N/A\' if this does not apply.',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 3}))
+        
+        self.fields['recruitment_or_retention_cases'] = forms.CharField(
+                label='4. Please list any recruitment or retention cases you '
+                'are aware of in which the availability of the Lawrencium '
+                'high-performance computing cluster or other Lawrencium '
+                'Research Computing services -- such as Condo Storage, '
+                'SVM, or Cloud Computing '
+                'Support  -- played a role? Please indicate the recruitment/'
+                'retention case role (faculty, postdoc, or graduate student), '
+                'department, sponsoring faculty member, and outcome. This '
+                'information will not be shared publicly, except as a '
+                'component of aggregated statistics. '
+                'Please write \'N/A\' if this does not apply.',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 3}))
+        
+        self.fields['lrc_recommendation_rating'] = forms.ChoiceField(
+                choices=(
+                    ('1', (
+                        '1 - Not at all likely')),
+                    ('2', (
+                        '2')),
+                    ('3', (
+                        '3')),
+                    ('4', (
+                        '4')),
+                    ('5', (
+                        '5')),
+                    ('6', (
+                        '6')),
+                    ('7', (
+                        '7')),
+                    ('8', (
+                        '8')),
+                    ('9', (
+                        '9')),
+                    ('10', (
+                        '10 - Very likely')),
+                ),
+                label=(
+                    '5. Based upon your overall experience using LRC services, '
+                    'how likely are you to recommend LRC Computing to others?'),
+                required=True,
+                widget=forms.RadioSelect())   
+        
+        self.fields['lrc_recommendation_rating_reason'] = forms.CharField(
+                label='5a. What is the reason for your rating above?',
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2}))
+        
+        self.fields['bootstrap_computational_methods'] = forms.CharField(
+                label='6. If you are new to computational methods '
+                '(broadly, or in a specific application), please '
+                'let us know how ScienceIT services and/or resources have '
+                'helped you bootstrap the application of computational '
+                'methods to your research. Please write \'N/A\' if this does '
+                'not apply.',
+                required=True,
+                widget=forms.Textarea(attrs={'rows': 3}))
+        
+        self.fields['how_important_to_research_is_science_it'] = forms.ChoiceField(
+                choices=(
+                    ('1', (
+                        'Not at all important')),
+                    ('2', (
+                        'Somewhat important')),
+                    ('3', (
+                        'Important')),
+                    ('4', (
+                        'Very important')),
+                    ('5', (
+                        'Essential')),
+                    ('6', (
+                        'Not applicable')),
+                ),
+                label=(
+                    '7. How important is the Science IT Program to your research?'),
+                required=True,
+                widget=forms.RadioSelect())
+        
+        self.fields['do_you_use_mylrc'] = forms.ChoiceField(
+                choices=(
+                    ('yes', (
+                        'Yes')),
+                    ('no', (
+                        'No')),
+                ),
+                label=(
+                    '8. Do you use the LRC Account Management portal '
+                    'MyLRC?'),
+                required=True,
+                widget=forms.RadioSelect())
+        
+        self.fields['mylrc_comments'] = forms.CharField(
+                label=('8a. If yes, what feedback do you have for MyLRC?'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2}))
+            
+        self.fields['which_open_ondemand_apps_used'] = forms.MultipleChoiceField(
+                choices=(
+                    ('desktop', (
+                        'Desktop')),
+                    ('matlab', (
+                        'MatLab')),
+                    ('jupyter_notebook', (
+                        'Jupyter Notebook/Lab')),
+                    ('vscode_server', (
+                        'VS Code Server')),
+                    ('none', (
+                        'None of the above')),
+                    ('other', (
+                        'Other')),
+                ),
+                label=(
+                    '9. Do you use Open Ondemand? Which '
+                    'application(s) do you use? (Check all that apply.)'),
+                required=True,
+                widget=forms.CheckboxSelectMultiple())
+            
+        self.fields['other_open_ondemand'] = forms.CharField(
+                label=('9a. If you selected "other", please list the app(s).'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2}))
+        
+        self.fields['open_ondemand_feedback'] = forms.CharField(
+                label=('9b. Do you have any comments/suggestions about '
+                       'Open Ondemand?'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2}))
+        
+        self.fields['colleague_suggestions'] = forms.CharField(
+                label=(
+                    '10. Please suggest colleagues who might benefit from the '
+                    'ScienceIT Program, with whom we should follow up. '
+                    'Names, e-mail addresses, and roles '
+                    '(PI, postdoc, graduate student, etc.) would be '
+                    'most helpful.'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 3}))
+            
+        self.fields['hardware_feedback'] = forms.CharField(
+                label=('11. Do you have any comments/suggestions on '
+                       'GPU and CPU hardware requirements?'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2}))
+        
+        self.fields['storage_feedback'] = forms.CharField(
+                label=('12. Do you have any comments/suggestions on '
+                       'storage usage and requirement?'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2}))
+        
+        self.fields['kubernetes_demand'] = forms.CharField(
+                label=('13. Do you have any demand on '
+                       'Kubernetes service?'),
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2}))
+        
+        self.fields['contact_me'] = forms.MultipleChoiceField(
+                choices=(
+                    ('yes', (
+                        'Please contact me to follow up on my use ' 
+                        'of the Science IT Program.')),
+                ),
+                label=(
+                    'Thank you for taking time to fill out the survey.'),
+                required=False,
+                widget=forms.CheckboxSelectMultiple())
 
 class ProjectRenewalReviewAndSubmitForm(forms.Form):
 
