@@ -68,7 +68,7 @@ Note that these steps must be run from the root directory of the repo.
    Notes:
      - This step may be run multiple times.
 
-8. Retrieve a PostgreSQL database dump file that will be provided for you. Place it in the root directory of the repo. Load it into your instance. You must provide the name of your Docker project.
+8. Retrieve a PostgreSQL database dump file that will be provided for you. Place it in the root directory of the repo. Load it into your instance. You must provide the name of your Docker project. Note that this may take several minutes.
 
    ```bash
    export RELATIVE_CONTAINER_DUMP_FILE_PATH=YYYY_MM_DD-HH-MM.dump
