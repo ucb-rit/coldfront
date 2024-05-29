@@ -25,6 +25,11 @@
         "end_date": "2025-05-31"
     },
     {
+        "name": "Allowance Year 2025 - 2026",
+        "start_date": "2025-06-01",
+        "end_date": "2026-05-31"
+    },
+    {
         "name": "Fall Semester 2021",
         "start_date": "2021-08-18",
         "end_date": "2021-12-17"
@@ -143,5 +148,45 @@
         "name": "Summer Sessions 2024 - Session F",
         "start_date": "2024-07-01",
         "end_date": "2024-07-19"
+    },
+        {
+        "name": "Fall Semester 2024",
+        "start_date": "2024-08-21",
+        "end_date": "2024-12-20"
+    },
+    {
+        "name": "Spring Semester 2025",
+        "start_date": "2025-01-14",
+        "end_date": "2025-05-16"
+    },
+    {
+        "name": "Summer Sessions 2025 - Session A",
+        "start_date": "2025-05-27",
+        "end_date": "2025-07-03"
+    },
+    {
+        "name": "Summer Sessions 2025 - Session B",
+        "start_date": "2025-06-09",
+        "end_date": "2025-08-15"
+    },
+    {
+        "name": "Summer Sessions 2025 - Session C",
+        "start_date": "2025-06-23",
+        "end_date": "2025-08-15"
+    },
+    {
+        "name": "Summer Sessions 2025 - Session D",
+        "start_date": "2025-07-07",
+        "end_date": "2025-08-15"
+    },
+    {
+        "name": "Summer Sessions 2025 - Session E",
+        "start_date": "2025-07-28",
+        "end_date": "2025-08-15"
+    },
+    {
+        "name": "Summer Sessions 2025 - Session F",
+        "start_date": "2025-07-07",
+        "end_date": "2025-07-25"
     }
 ]
