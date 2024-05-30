@@ -183,6 +183,9 @@ Allocation Detail
       <div class="card-body">
         <h3 class="card-title">{{attribute}} by User</h3>
         <div id="user-pie"></div>
+        <div id="no-data-message">
+          <center>No usage data available.</center>
+        </div>
       </div>
     </div>
     {% endfor %}
@@ -358,23 +361,28 @@ Allocation Detail
           }
         }
       });
-
     }
   }
 
   function drawPies(pie_data) {
-    var chart = c3.generate({
-      bindto: '#user-pie',
-      pie: {
-        title: "Service Usage by User"
-      },
-      data: pie_data,
-      legend: {
-          position: 'right',
-      },
-    });
+    if (pie_data.columns[0].length > 1) {
+      var chart = c3.generate({
+        bindto: '#user-pie',
+        pie: {
+          title: "Service Usage by User"
+        },
+        data: pie_data,
+        legend: {
+            position: 'right',
+        },
+      });
+      $('#user-pie').show();
+      $('#no-data-message').hide();
+    } else {
+      $('#user-pie').hide();
+      $('#no-data-message').show();
+    }
   }
-
   $(".datepicker").datepicker({ dateFormat: 'yy-mm-dd' });
 </script>
 
