@@ -567,33 +567,33 @@ class ProjectRenewalSurveyForm(forms.Form):
                     ('none', (
                         'None of the above')),
                 ),
-                label='1. Which Science IT Research Computing services have you'
-                 ' used? (Check all that apply.)',
+                label=('1. Which Science IT Research Computing services have '
+                       'you used? (Check all that apply.)'),
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
 
         self.fields['publications'] = forms.CharField(
-                label='2. Please list any publications (including papers, books, '
+                label=('2. Please list any publications (including papers, books, '
                 'dissertations, theses, and public presentations) that you '
                 'authored or co-authored, that have been supported by '
                 'ScienceIT resources and/or consulting. Please provide a '
                 'bibliographic reference, URL or DOI for each publication'
-                '/presentation. Please write \'N/A\' if this does not apply.',
+                '/presentation. Please write \'N/A\' if this does not apply.'),
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
         
         self.fields['grants'] = forms.CharField(
-                label='3. Please list any grant(s) or other competitively-'
+                label=('3. Please list any grant(s) or other competitively-'
                 'awarded funding that has been or will be supported by '
                 'Lawrencium Computing resources and/or consulting. '
                 'Please provide the name of the funding agency, the award '
                 'number or other identifier, and the amount of funding awarded. '
-                'Please write \'N/A\' if this does not apply.',
+                'Please write \'N/A\' if this does not apply.'),
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
         
         self.fields['recruitment_or_retention_cases'] = forms.CharField(
-                label='4. Please list any recruitment or retention cases you '
+                label=('4. Please list any recruitment or retention cases you '
                 'are aware of in which the availability of the Lawrencium '
                 'high-performance computing cluster or other Lawrencium '
                 'Research Computing services -- such as Condo Storage, '
@@ -603,7 +603,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                 'department, sponsoring faculty member, and outcome. This '
                 'information will not be shared publicly, except as a '
                 'component of aggregated statistics. '
-                'Please write \'N/A\' if this does not apply.',
+                'Please write \'N/A\' if this does not apply.'),
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
         
@@ -630,24 +630,24 @@ class ProjectRenewalSurveyForm(forms.Form):
                     ('10', (
                         '10 - Very likely')),
                 ),
-                label=(
-                    '5. Based upon your overall experience using LRC services, '
-                    'how likely are you to recommend LRC Computing to others?'),
+                label=('5. Based upon your overall experience using LRC '
+                       'services, how likely are you to recommend LRC '
+                       'Computing to others?'),
                 required=True,
                 widget=forms.RadioSelect())   
         
         self.fields['lrc_recommendation_rating_reason'] = forms.CharField(
-                label='5a. What is the reason for your rating above?',
+                label=('5a. What is the reason for your rating above?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
         
         self.fields['bootstrap_computational_methods'] = forms.CharField(
-                label='6. If you are new to computational methods '
+                label=('6. If you are new to computational methods '
                 '(broadly, or in a specific application), please '
                 'let us know how ScienceIT services and/or resources have '
                 'helped you bootstrap the application of computational '
                 'methods to your research. Please write \'N/A\' if this does '
-                'not apply.',
+                'not apply.'),
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
         
@@ -666,8 +666,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                     ('6', (
                         'Not applicable')),
                 ),
-                label=(
-                    '7. How important is the Science IT Program to your research?'),
+                label=('7. How important is the Science IT Program to your research?'),
                 required=True,
                 widget=forms.RadioSelect())
         
@@ -678,9 +677,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                     ('no', (
                         'No')),
                 ),
-                label=(
-                    '8. Do you use the LRC Account Management portal '
-                    'MyLRC?'),
+                label=('8. Do you use the LRC Account Management portal MyLRC?'),
                 required=True,
                 widget=forms.RadioSelect())
         
@@ -704,8 +701,7 @@ class ProjectRenewalSurveyForm(forms.Form):
                     ('other', (
                         'Other')),
                 ),
-                label=(
-                    '9. Do you use Open Ondemand? Which '
+                label=('9. Do you use Open Ondemand? Which '
                     'application(s) do you use? (Check all that apply.)'),
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
@@ -722,9 +718,8 @@ class ProjectRenewalSurveyForm(forms.Form):
                 widget=forms.Textarea(attrs={'rows': 2}))
         
         self.fields['colleague_suggestions'] = forms.CharField(
-                label=(
-                    '10. Please suggest colleagues who might benefit from the '
-                    'ScienceIT Program, with whom we should follow up. '
+                label=('10. Please suggest colleagues who might benefit from '
+                    'the ScienceIT Program, with whom we should follow up. '
                     'Names, e-mail addresses, and roles '
                     '(PI, postdoc, graduate student, etc.) would be '
                     'most helpful.'),
@@ -744,26 +739,22 @@ class ProjectRenewalSurveyForm(forms.Form):
                 widget=forms.Textarea(attrs={'rows': 2}))
         
         self.fields['kubernetes_demand'] = forms.CharField(
-                label=('13. Do you have any demand on '
-                       'Kubernetes service?'),
+                label=('13. Do you have any demand on Kubernetes service?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
         
         self.fields['contact_me'] = forms.MultipleChoiceField(
                 choices=(
-                    ('yes', (
-                        'Please contact me to follow up on my use ' 
+                    ('yes', ('Please contact me to follow up on my use ' 
                         'of the Science IT Program.')),
                 ),
-                label=(
-                    'Thank you for taking time to fill out the survey.'),
+                label=('Thank you for taking time to fill out the survey.'),
                 required=False,
                 widget=forms.CheckboxSelectMultiple())
 
 class ProjectRenewalReviewAndSubmitForm(forms.Form):
 
     confirmation = forms.BooleanField(
-        label=(
-            'I have reviewed my selections and understand the changes '
+        label=('I have reviewed my selections and understand the changes '
             'described above. Submit my request.'),
         required=True)
