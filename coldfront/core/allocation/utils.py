@@ -79,7 +79,6 @@ def generate_user_su_pie_data(usage_data):
     pie_data = {
         "columns": [],
         "type": 'pie',
-        "order": 'asc',
     }
     for username, data in usage_data:
         label = "%s: %.2f" % (username, float(data)) 

@@ -346,7 +346,7 @@ Allocation Detail
     var guage_data = {{ guage_data | safe }};
     var pie_data = {{ pie_data | safe }};
   drawGauges(guage_data);
-  drawPies(pie_data)
+  drawPies(pie_data);
   });
 
   function drawGauges(guage_data) {
@@ -373,7 +373,7 @@ Allocation Detail
         },
         data: pie_data,
         legend: {
-            position: 'right',
+          position: 'right',
         },
       });
       $('#user-pie').show();
