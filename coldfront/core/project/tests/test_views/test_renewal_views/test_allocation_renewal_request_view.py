@@ -162,6 +162,9 @@ class TestAllocationRenewalRequestView(TestBase):
         self.assertTrue(pre_time <= request.request_time <= post_time)
         self.assertTrue(request.renewal_survey_answers)
 
+    # TODO: As of the time of this writing, only one period is selectable.
+    #  Moreover, any future period will have the survey, so this test may be
+    #  obsolete.
     def test_renewal_survey_step_conditionally_required(self):
         """Test that the renewal survey step is only required when the
         selected AllocationPeriod is 'Allowance Year 2024 - 2025'.
@@ -174,7 +177,6 @@ class TestAllocationRenewalRequestView(TestBase):
 
         # The survey only needs to be provided for a particular period.
         success_by_period_name = {
-            'Allowance Year 2023 - 2024': True,
             'Allowance Year 2024 - 2025': False,
         }
 
