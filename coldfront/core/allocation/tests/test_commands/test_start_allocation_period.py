@@ -9,6 +9,7 @@ import random
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db.models import Q
 
 from coldfront.api.statistics.utils import get_accounting_allocation_objects
 from coldfront.core.allocation.management.commands.start_allocation_period import Command as StartAllocationPeriodCommand
@@ -73,7 +74,11 @@ class TestStartAllocationPeriod(TestBase):
         self.next_allowance_year = get_next_allowance_year_period()
 
         self.previous_instructional_period = AllocationPeriod.objects.filter(
-            end_date__lt=self.current_date).latest('end_date')
+            Q(end_date__lt=self.current_date) &
+            (Q(name__startswith='Fall') |
+             Q(name__startswith='Spring') |
+             Q(name__startswith='Summer'))
+        ).latest('end_date')
         # There are some dates not covered by instructional AllocationPeriods
         # on which these tests would fail, so create one.
         self.current_instructional_period = AllocationPeriod.objects.create(
