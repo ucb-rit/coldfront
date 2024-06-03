@@ -74,6 +74,17 @@ def generate_guauge_data_from_usage(name, value, usage):
 
     return usage_data
 
+def generate_user_su_pie_data(usage_data):
+
+    pie_data = {
+        "columns": [],
+        "type": 'pie',
+    }
+    for username, data in usage_data:
+        label = "%s: %.2f" % (username, float(data)) 
+        if data != '0.00':
+            pie_data['columns'].append([label, data])
+    return pie_data
 
 def get_user_resources(user_obj):
 
