@@ -2,7 +2,9 @@
 
 
 <li id="navbar-admin" class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">Admin</a>
+    <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">Admin
+      <span class="badge badge-warning">{{ request_counts }}</span>
+    </a>
     <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
       <li><a class="dropdown-item" href="/admin">{{ PORTAL_NAME }} Administration</a></li>
         <li><a class="dropdown-item" href="{% url 'allocation-list' %}?show_all_allocations=on">All Allocations</a></li>
