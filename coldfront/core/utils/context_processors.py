@@ -93,17 +93,13 @@ def request_alert_counts(request):
         'project_removal_req_count': ProjectUserRemovalRequest.objects.filter(
             status__name__in=['Pending', 'Processing']).count(),
         'savio_project_req_count': SavioProjectAllocationRequest.objects.filter(
-            status__name__in=['Under Review', 'Approved - Processing'])
-            .count(),
+            status__name__in=['Under Review', 'Approved - Processing']).count(),
         'vector_project_req_count': VectorProjectAllocationRequest.objects.filter(
-            status__name__in=['Under Review', 'Approved - Processing']
-            ).count(),
+            status__name__in=['Under Review', 'Approved - Processing']).count(),
         'project_join_req_count': ProjectUserJoinRequest.objects.filter(
-            project_user__status__name='Pending - Add'
-            ).count(),
+            project_user__status__name='Pending - Add').count(),
         'project_renewal_req_count': AllocationRenewalRequest.objects.filter(
-            status__name__in=['Under Review']
-            ).count(),
+            status__name__in=['Under Review']).count(),
         'su_purchase_req_count': AllocationAdditionRequest.objects.filter(
             status__name__in=['Under Review']).count(),
         'secure_dir_join_req_count': SecureDirAddUserRequest.objects.filter(
