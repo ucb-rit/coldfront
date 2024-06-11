@@ -27,7 +27,10 @@
   <li>Allocation Period: {{ allocation_period.name }}</li>
 </ol>
 
-<p>Select an existing user to be a Principal Investigator of the project. You may search for the user in the selection field. If the desired user is not listed, you may skip this step and specify information for a new PI in the next step.</p>
+<p><strong>Select an existing user to be a Principal Investigator of the project. You may search for the user in the selection field.</strong></p>
+
+<p><strong>If the desired user is not listed, please do not add yourself as the PI. Instead, skip this step and provide information about your PI in the next step.</strong></p>
+
 {% flag_enabled 'LRC_ONLY' as lrc_only %}
 {% if lrc_only %}
   <p>Note: Only LBL employees, users with an "@lbl.gov" email, can be selected as a PI.</p>
@@ -39,17 +42,33 @@
 
 <form action="" method="post">
   {% csrf_token %}
+  
   <table>
     {{ wizard.management_form }}
     {% if wizard.form.forms %}
       {{ wizard.form.management_form }}
       {% for form in wizard.form.forms %}
-        {{ form|crispy }}
+        {% if form.pi_username.help_text %}
+          {% crispy form form.helper %}
+        {% else %}
+          {% crispy form form.helper %}
+          <div class="form-group">
+            <div class="help-block">
+              If your PI is not listed, please leave this field blank and provide their information in the next step.
+            </div>
+          </div>
+        {% endif %}
       {% endfor %}
     {% else %}
-      {{ wizard.form|crispy }}
+      {% crispy wizard.form wizard.form.helper %}
+      <div class="form-group">
+        <div class="help-block">
+          If your PI is not listed, please leave this field blank and provide their information in the next step.
+        </div>
+      </div>
     {% endif %}
   </table>
+
   {% if wizard.steps.prev %}
     <button
         class="btn btn-secondary"
