@@ -27,8 +27,13 @@
   <li>Allocation Period: {{ allocation_period.name }}</li>
 </ol>
 
-<p>Select an existing user to be a Principal Investigator of the project. You may search for the user in the selection field. If the desired user is not listed, you may skip this step and specify information for a new PI in the next step.</p>
-{% flag_enabled 'LRC_ONLY' as lrc_only %}
+
+
+<p><strong>Select an existing user to be a Principal Investigator of the project. You may search for the user in the selection field.</strong></p>
+
+<p><strong>If the desired user is not listed, please do not add yourself as the PI. Instead, skip this step and provide information about your PI in the next step.</strong></p>
+
+
 {% if lrc_only %}
   <p>Note: Only LBL employees, users with an "@lbl.gov" email, can be selected as a PI.</p>
 {% endif %}
@@ -50,6 +55,15 @@
       {{ wizard.form|crispy }}
     {% endif %}
   </table>
+
+    <script>
+    $('select').selectize({
+      create: false,
+      sortField: 'text',
+      placeholder: 'If your PI is not listed, please leave this field blank and provide their information in the next step.'
+    })
+  </script>
+
   {% if wizard.steps.prev %}
     <button
         class="btn btn-secondary"
