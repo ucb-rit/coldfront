@@ -27,20 +27,28 @@
   <li>Allocation Period: {{ allocation_period.name }}</li>
 </ol>
 
+<p>Select a user to be a Principal Investigator (PI) of the project. <b>Please review the instructions below.</b></p>
 
+<ul>
+  <li>If your PI is not listed, leave the field blank and provide information about your PI in the next step.</li>
 
-<p><strong>Select an existing user to be a Principal Investigator of the project. You may search for the user in the selection field.</strong></p>
+  {% flag_enabled 'LRC_ONLY' as lrc_only %}
+  {% if allowance_is_one_per_pi or lrc_only %}
+  <li>
+    If your PI is listed but not selectable, this may be for one of the following reasons:
+    <ul>
+      {% if allowance_is_one_per_pi %}
+      <li>A PI may only have one {{ computing_allowance.name }} at a time. Any PI with an existing {{ computing_allowance.name }} project or a pending request to create one is not selectable.</li>
+      {% endif %}
+      {% if lrc_only %}
+      <li>The PI must be an LBL employee. Any user who does not have an "@lbl.gov" email is not selectable.</li>
+      {% endif %}
+    </ul>
+  </li>
+  {% endif %}
 
-<p><strong>If the desired user is not listed, please do not add yourself as the PI. Instead, skip this step and provide information about your PI in the next step.</strong></p>
-
-
-{% if lrc_only %}
-  <p>Note: Only LBL employees, users with an "@lbl.gov" email, can be selected as a PI.</p>
-{% endif %}
-
-{% if allowance_is_one_per_pi %}
-  <p>Note: Each PI may only have one {{ computing_allowance.name }} at a time, so any that have pending requests or active allocations are not selectable.</p>
-{% endif %}
+  <li>If you are not the PI, please do not select yourself.</li>
+</ul>
 
 <form action="" method="post">
   {% csrf_token %}
@@ -60,7 +68,7 @@
     $('select').selectize({
       create: false,
       sortField: 'text',
-      placeholder: 'If your PI is not listed, please leave this field blank and provide their information in the next step.'
+      placeholder: 'Type to search. If your PI is not listed or selectable, please review the instructions above.'
     })
   </script>
 
