@@ -48,6 +48,25 @@ from coldfront.core.utils.common import utc_now_offset_aware, \
 from coldfront.core.utils.mail import send_email_template
 
 
+# =============================================================================
+# FORMS 
+# =============================================================================
+
+
+from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirRequestForm
+from coldfront.core.allocation.models import SecureDirRequest
+
+from coldfront.core.user.utils_.host_user_utils import host_user_lbl_email
+from flags.state import flag_enabled
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+
+from django.utils.dateparse import parse_date
+from django.db.models import DateField
+from datetime import datetime
+from django.utils.timezone import make_aware
+from django.utils import timezone
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -1080,6 +1099,7 @@ class SecureDirRequestListView(LoginRequiredMixin,
 
     template_name = 'secure_dir/secure_dir_request/secure_dir_request_list.html'
     # Show completed requests if True; else, show pending requests.
+    paginate_by = 30
     completed = False
 
     def test_func(self):
@@ -1106,26 +1126,116 @@ class SecureDirRequestListView(LoginRequiredMixin,
         else:
             order_by = '-modified'
 
-        return SecureDirRequest.objects.order_by(order_by)
+        securedir_request_form = SecureDirRequestForm(self.request.GET)
+        securedir_request_list = SecureDirRequest.objects.all()
+
+        if securedir_request_form.is_valid():
+            data = securedir_request_form.cleaned_data
+
+            request_time_input = data.get('request_time')
+            if request_time_input:
+                try:
+                    request_time_date = datetime.strptime(request_time_input, '%b. %d, %Y')
+                    request_time_date = make_aware(request_time_date)
+                    securedir_request_list = securedir_request_list.filter(
+                            request_time__date=request_time_date.date()
+                    )
+                except ValueError as e:
+                    print(f"Incorrect date format: {e}")
+
+            if data.get('requester'):
+                securedir_request_list = securedir_request_list.filter(
+                        requester__email__icontains=data.get('requester')
+                )
+
+            if data.get('project'):
+                securedir_request_list = securedir_request_list.filter(
+                        project__name__icontains=data.get('project') 
+                )
+
+            if not data.get('show_all_requests'):
+                pass
+
+        return securedir_request_list.order_by(order_by)
 
     def get_context_data(self, **kwargs):
         """Include either pending or completed requests."""
+
         context = super().get_context_data(**kwargs)
-        kwargs = {}
+        args, kwargs = [], {}
+
+        securedir_request_form = SecureDirRequestForm(self.request.GET)
+        if securedir_request_form.is_valid():
+            context['securedir_request_form'] = securedir_request_form
+            data = securedir_request_form.cleaned_data
+            filter_parameters = ''
+            for key, value in data.items():
+                if value:
+                    if isinstance(value, list):
+                        for ele in value:
+                            filter_parameters += '{}={}&'.format(key, ele)
+                    else:
+                            filter_parameters += '{}={}&'.format(key, value)
+            context['securedir_request_form'] = securedir_request_form
+
+        else:
+                filter_parameters = None
+                context['securedir_request_form'] = SecureDirRequestForm()
+
+        order_by = self.request.GET.get('order_by')
+        if order_by:
+                direction = self.request.GET.get('direction')
+                filter_parameters_with_order_by = filter_parameters + \
+                                            'order_by=%s&direction=%s&' % \
+                                            (order_by, direction)
+        else:
+                filter_parameters_with_order_by = filter_parameters
+
+        context['expand_accordion'] = 'show'
+        
+        context['filter_parameters'] = filter_parameters
+        context['filter_parameters_with_order_by'] = filter_parameters_with_order_by
+
 
         request_list = self.get_queryset()
+        user = self.request.user
+        
+        '''
+        permission = 'project.view_vectorprojectallocationrequest'
+        if not (user.is_superuser or user.has_perm(permission)):
+                args.append(Q(requester=user) | Q(pi=user))
+        '''
+        
 
         if self.completed:
-            status__name__in = [
-                'Approved - Complete', 'Denied']
+                status__name__in = [
+                'Approved - Complete', 'Approved - Scheduled', 'Denied']
         else:
-            status__name__in = ['Under Review', 'Approved - Processing']
-
+                status__name__in = ['Under Review', 'Approved - Processing']
         kwargs['status__name__in'] = status__name__in
-        context['secure_dir_request_list'] = request_list.filter(**kwargs)
+        context['secure_dir_request_list'] = request_list.filter(
+                *args, **kwargs)
+        context['request_filter'] = (
+                'completed' if self.completed else 'pending')
+        
+        paginator = Paginator(request_list, self.paginate_by)
+        page = self.request.GET.get('page')
+        try:
+                securedir_requests = paginator.page(page)
+        except PageNotAnInteger:
+                securedir_requests = paginator.page(1)
+        except EmptyPage:
+                securedir_requests = paginator.page(paginator.num_pages)
 
+        context['secure_dir_request_list'] = request_list.filter(
+            *args, **kwargs)
         context['request_filter'] = (
             'completed' if self.completed else 'pending')
+
+        context['actions_visible'] = not self.completed
+
+        return context
+        
 
         return context
 

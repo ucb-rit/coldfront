@@ -255,6 +255,8 @@ class ProjectJoinRequestListView(LoginRequiredMixin, UserPassesTestMixin,
                     'Pending - Add').order_by(
                     'project_user', '-created').distinct(
                     'project_user'))
+        
+        project_join_requests = project_join_requests.select_related('project_user__status')
 
         join_request_search_form = JoinRequestSearchForm(self.request.GET)
 
@@ -328,6 +330,8 @@ class ProjectJoinRequestListView(LoginRequiredMixin, UserPassesTestMixin,
             filter_parameters_with_order_by
 
         join_request_queryset = self.get_queryset()
+
+        join_request_queryset = join_request_queryset.select_related('project_user__status')
 
         paginator = Paginator(join_request_queryset, self.paginate_by)
 
