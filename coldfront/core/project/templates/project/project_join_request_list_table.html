@@ -26,6 +26,7 @@
     <th scope="col">
       Status
       {% include 'common/table_sorter.html' with table_sorter_field='project_user__status__name' %}
+      
     </th>
   </tr>
   </thead>
@@ -47,8 +48,12 @@
         {{ join_request.reason }}
       </td>
        <td>
-        {{ join_request.project_user.status.name }}
-      </td>
+    {% if join_request.project_user.status.name == "Pending - Add" %}
+      Pending on PI
+    {% else %}
+      {{ join_request.project_user.status.name }}
+    {% endif %}
+  </td>
     </tr>
   {% endfor %}
   </tbody>
