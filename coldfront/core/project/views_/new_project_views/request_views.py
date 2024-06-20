@@ -15,6 +15,11 @@ from coldfront.core.project.forms_.new_project_forms.request_forms import SavioP
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectRechargeExtraFieldsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import VectorProjectDetailsForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterDetailsForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterExistingPIForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterNewPIForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterExistingManagerForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterNewManagerForm
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import ProjectStatusChoice
@@ -741,54 +746,32 @@ class VectorProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
 class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                                 SessionWizardView):
     FORMS = [
-        ('computing_allowance', ComputingAllowanceForm),
-        ('allocation_period', SavioProjectAllocationPeriodForm),
-        ('existing_pi', SavioProjectExistingPIForm),
-        ('new_pi', SavioProjectNewPIForm),
-        ('ica_extra_fields', SavioProjectICAExtraFieldsForm),
-        ('recharge_extra_fields', SavioProjectRechargeExtraFieldsForm),
-        ('pool_allocations', SavioProjectPoolAllocationsForm),
-        ('pooled_project_selection', SavioProjectPooledProjectSelectionForm),
-        ('details', SavioProjectDetailsForm),
-        ('billing_id', BillingIDValidationForm),
-        ('survey', SavioProjectSurveyForm),
+                
+        ('details', StandaloneClusterDetailsForm),
+        ('existing_pi', StandaloneClusterExistingPIForm),
+        ('new_pi', StandaloneClusterNewPIForm),
+        ('existing_manager', StandaloneClusterExistingManagerForm),
+        ('new_manager', StandaloneClusterNewManagerForm),
     ]
 
     TEMPLATES = {
-        'computing_allowance':
-            'project/project_request/savio/project_computing_allowance.html',
-        'allocation_period':
-            'project/project_request/savio/project_allocation_period.html',
+        'details': 'project/project_request/standalone_cluster/project_details.html',
         'existing_pi':
-            'project/project_request/savio/project_existing_pi.html',
+            'project/project_request/standalone_cluster/project_existing_pi.html',
         'new_pi':
-            'project/project_request/savio/project_new_pi.html',
-        'ica_extra_fields':
-            'project/project_request/savio/project_ica_extra_fields.html',
-        'recharge_extra_fields':
-            'project/project_request/savio/project_recharge_extra_fields.html',
-        'pool_allocations':
-            'project/project_request/savio/project_pool_allocations.html',
-        'pooled_project_selection':
-            ('project/project_request/savio/'
-             'project_pooled_project_selection.html'),
-        'details': 'project/project_request/savio/project_details.html',
-        'billing_id': 'project/project_request/savio/project_billing_id.html',
-        'survey': 'project/project_request/savio/project_survey.html',
+            'project/project_request/standalone_cluster/project_new_pi.html',
+        'existing_manager':
+            'project/project_request/standalone_cluster/project_existing_manager.html',
+        'new_manager':
+            'project/project_request/standalone_cluster/project_new_manager.html',
     }
 
     form_list = [
-        ComputingAllowanceForm,
-        SavioProjectAllocationPeriodForm,
-        SavioProjectExistingPIForm,
-        SavioProjectNewPIForm,
-        SavioProjectICAExtraFieldsForm,
-        SavioProjectRechargeExtraFieldsForm,
-        SavioProjectPoolAllocationsForm,
-        SavioProjectPooledProjectSelectionForm,
-        SavioProjectDetailsForm,
-        BillingIDValidationForm,
-        SavioProjectSurveyForm,
+        StandaloneClusterDetailsForm,
+        StandaloneClusterExistingPIForm,
+        StandaloneClusterNewPIForm,
+        StandaloneClusterExistingManagerForm,
+        StandaloneClusterNewManagerForm,
     ]
 
     logger = logging.getLogger(__name__)
@@ -802,13 +785,8 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
     def test_func(self):
         if self.request.user.is_superuser:
             return True
-        signed_date = (
-            self.request.user.userprofile.access_agreement_signed_date)
-        if signed_date is not None:
-            return True
         message = (
-            'You must sign the User Access Agreement before you can create a '
-            'new project.')
+            'You do not have permission to create a standalone cluster.')
         messages.error(self.request, message)
 
     def get_context_data(self, form, **kwargs):
@@ -816,34 +794,6 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         current_step = int(self.steps.current)
         self.__set_data_from_previous_steps(current_step, context)
         return context
-
-    def get_form_kwargs(self, step=None):
-        # For each step, a list of kwargs required by the corresponding form.
-        required_keys_by_step_name = {
-            'allocation_period': ['computing_allowance'],
-            'existing_pi': ['computing_allowance', 'allocation_period'],
-            'pooled_project_selection': ['computing_allowance'],
-            'details': ['computing_allowance'],
-            'survey': ['computing_allowance'],
-        }
-        # For each step number, the corresponding step name.
-        step_names_by_step_number = {
-            self.step_numbers_by_form_name[name]: name
-            for name in required_keys_by_step_name
-        }
-
-        step_number = int(step)
-        if step_number not in step_names_by_step_number:
-            return {}
-
-        data = {}
-        self.__set_data_from_previous_steps(step_number, data)
-
-        kwargs = {}
-        step_name = step_names_by_step_number[step_number]
-        for key in required_keys_by_step_name[step_name]:
-            kwargs[key] = data.get(key, None)
-        return kwargs
 
     def get_template_names(self):
         return [self.TEMPLATES[self.FORMS[int(self.steps.current)][0]]]
@@ -855,71 +805,14 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         try:
             form_data = session_wizard_all_form_data(
                 form_list, kwargs['form_dict'], len(self.form_list))
-
             request_kwargs = {
                 'requester': self.request.user,
             }
-            computing_allowance = self.__get_computing_allowance(form_data)
-            computing_allowance_wrapper = ComputingAllowance(
-                computing_allowance)
-
             with transaction.atomic():
-                allocation_period = self.__get_allocation_period(form_data)
                 pi = self.__handle_pi_data(form_data)
-
-                if computing_allowance_wrapper.is_instructional():
-                    self.__handle_ica_allowance(
-                        form_data, computing_allowance_wrapper, request_kwargs)
-                elif computing_allowance_wrapper.is_recharge():
-                    self.__handle_recharge_allowance(
-                        form_data, computing_allowance_wrapper, request_kwargs)
-
-                pooling_requested = self.__get_pooling_requested(form_data)
-                if pooling_requested:
-                    project = self.__handle_pool_with_existing_project(
-                        form_data)
-                else:
-                    project = self.__handle_create_new_project(form_data)
-                    if self.__billing_id_required():
-                        self.__handle_billing_id(form_data, request_kwargs)
-
-                survey_data = self.__get_survey_data(form_data)
-
-                # Store transformed form data in a request.
-                # TODO: allocation_type will eventually be removed from the
-                # TODO: model.
-                computing_allowance_interface = ComputingAllowanceInterface()
-                request_kwargs['allocation_type'] = \
-                    computing_allowance_interface.name_short_from_name(
-                        computing_allowance_wrapper.get_name())
-                request_kwargs['computing_allowance'] = computing_allowance
-                request_kwargs['allocation_period'] = allocation_period
-                request_kwargs['pi'] = pi
-                request_kwargs['project'] = project
-                request_kwargs['pool'] = pooling_requested
-                request_kwargs['survey_answers'] = survey_data
-                request_kwargs['status'] = \
-                    ProjectAllocationRequestStatusChoice.objects.get(
-                        name='Under Review')
-                request_kwargs['request_time'] = utc_now_offset_aware()
-                request = SavioProjectAllocationRequest.objects.create(
-                    **request_kwargs)
-
-            # Send a notification email to admins.
-            try:
-                send_new_project_request_admin_notification_email(request)
-            except Exception as e:
-                self.logger.error(
-                    'Failed to send notification email. Details:\n')
-                self.logger.exception(e)
-            # Send a notification email to the PI if the requester differs.
-            if request.requester != request.pi:
-                try:
-                    send_new_project_request_pi_notification_email(request)
-                except Exception as e:
-                    self.logger.error(
-                        'Failed to send notification email. Details:\n')
-                    self.logger.exception(e)
+                manager = self.__handle_manager_data(form_data)
+                project = self.__handle_create_new_standalone_cluster(form_data)
+                # TODO: create Resource object to represent the cluster.
         except Exception as e:
             self.logger.exception(e)
             message = 'Unexpected failure. Please contact an administrator.'
@@ -936,145 +829,29 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
     def condition_dict():
         view = StandaloneClusterRequestWizard
         return {
-            '1': view.show_allocation_period_form_condition,
-            '3': view.show_new_pi_form_condition,
-            '4': view.show_ica_extra_fields_form_condition,
-            '5': view.show_recharge_extra_fields_form_condition,
-            '6': view.show_pool_allocations_form_condition,
-            '7': view.show_pooled_project_selection_form_condition,
-            '8': view.show_details_form_condition,
-            '9': view.show_billing_id_form_condition,
+            '2': view.show_new_pi_form_condition,
+            '4': view.show_new_manager_form_condition,
         }
 
-    def show_allocation_period_form_condition(self):
-        """Only show the form for selecting an AllocationPeriod for
-        periodic allowances."""
-        step_name = 'computing_allowance'
-        step = str(self.step_numbers_by_form_name[step_name])
-        cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        computing_allowance = cleaned_data.get('computing_allowance', None)
-        if not computing_allowance:
-            return False
-        return ComputingAllowance(computing_allowance).is_periodic()
-
-    def show_billing_id_form_condition(self):
-        """Only show the form for providing a billing ID when it is
-        required, and when pooling is not requested."""
-        if not self.__billing_id_required():
-            return False
-        step_name = 'pool_allocations'
-        step = str(self.step_numbers_by_form_name[step_name])
-        cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        return not cleaned_data.get('pool', False)
-
     def show_details_form_condition(self):
-        step_name = 'pool_allocations'
+        step_name = 'details'
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         return not cleaned_data.get('pool', False)
-
-    def show_ica_extra_fields_form_condition(self):
-        step_name = 'computing_allowance'
-        step = str(self.step_numbers_by_form_name[step_name])
-        cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        computing_allowance = cleaned_data.get('computing_allowance', None)
-        if not computing_allowance:
-            return False
-        computing_allowance = ComputingAllowance(computing_allowance)
-        return (
-            computing_allowance.is_instructional() and
-            computing_allowance.requires_extra_information())
 
     def show_new_pi_form_condition(self):
         step_name = 'existing_pi'
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         return cleaned_data.get('PI', None) is None
-
-    def show_pool_allocations_form_condition(self):
-        step_name = 'computing_allowance'
+    
+    def show_new_manager_form_condition(self):
+        step_name = 'existing_manager'
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        computing_allowance = cleaned_data.get('computing_allowance', None)
-        if not computing_allowance:
-            return False
-        return ComputingAllowance(computing_allowance).is_poolable()
-
-    def show_pooled_project_selection_form_condition(self):
-        step_name = 'pool_allocations'
-        step = str(self.step_numbers_by_form_name[step_name])
-        cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        return cleaned_data.get('pool', False)
-
-    def show_recharge_extra_fields_form_condition(self):
-        step_name = 'computing_allowance'
-        step = str(self.step_numbers_by_form_name[step_name])
-        cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        computing_allowance = cleaned_data.get('computing_allowance', None)
-        if not computing_allowance:
-            return False
-        computing_allowance = ComputingAllowance(computing_allowance)
-        return (
-            computing_allowance.is_recharge() and
-            computing_allowance.requires_extra_information())
+        return not cleaned_data.get('manager', False)        
 
     @staticmethod
-    def __billing_id_required():
-        """Return whether a billing ID should be requested from the
-        user. Ultimately, the form will only be included if pooling is
-        not requested."""
-        return flag_enabled('LRC_ONLY')
-
-    def __get_allocation_period(self, form_data):
-        """Return the AllocationPeriod the user selected."""
-        step_number = self.step_numbers_by_form_name['allocation_period']
-        data = form_data[step_number]
-        return data.get('allocation_period', None)
-
-    def __get_computing_allowance(self, form_data):
-        """Return the computing allowance (Resource) the user
-        selected."""
-        step_number = self.step_numbers_by_form_name['computing_allowance']
-        data = form_data[step_number]
-        return data['computing_allowance']
-
-    def __get_pooling_requested(self, form_data):
-        """Return whether pooling was requested."""
-        step_number = self.step_numbers_by_form_name['pool_allocations']
-        data = form_data[step_number]
-        return data.get('pool', False)
-
-    def __get_survey_data(self, form_data):
-        """Return provided survey data."""
-        step_number = self.step_numbers_by_form_name['survey']
-        return form_data[step_number]
-
-    def __handle_billing_id(self, form_data, request_kwargs):
-        """Store the User-provided billing ID in the given dictionary to
-        be used during request creation."""
-        step_number = self.step_numbers_by_form_name['billing_id']
-        data = form_data[step_number]
-        billing_id = data['billing_id']
-        request_kwargs['billing_activity'] = \
-            get_or_create_billing_activity_from_full_id(billing_id)
-
-    def __handle_ica_allowance(self, form_data, computing_allowance_wrapper,
-                               request_kwargs):
-        """Perform ICA-specific handling.
-
-        In particular, set fields in the given dictionary to be used
-        during request creation. Set the extra_fields field from the
-        given form data and set the state field to include an additional
-        step."""
-        if computing_allowance_wrapper.requires_extra_information():
-            step_number = self.step_numbers_by_form_name['ica_extra_fields']
-            data = form_data[step_number]
-            extra_fields = savio_project_request_ica_extra_fields_schema()
-            for field in extra_fields:
-                extra_fields[field] = data[field]
-            request_kwargs['extra_fields'] = extra_fields
-        request_kwargs['state'] = savio_project_request_ica_state_schema()
-
     def __handle_pi_data(self, form_data):
         """Return the requested PI. If the PI did not exist, create a
         new User and UserProfile."""
@@ -1123,27 +900,57 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             raise e
 
         return pi
+    
+    def __handle_manager_data(self, form_data):
+        """Return the requested manager. If the manager did not exist, create a
+        new User and UserProfile."""
+        # If an existing manager was selected, return the existing User object.
+        step_number = self.step_numbers_by_form_name['existing_manager']
+        data = form_data[step_number]
+        if data['manager']:
+            return data['manager']
 
-    def __handle_recharge_allowance(self, form_data,
-                                    computing_allowance_wrapper,
-                                    request_kwargs):
-        """Perform Recharge-specific handling.
+        # Create a new User object intended to be a new manager.
+        step_number = self.step_numbers_by_form_name['new_manager']
+        data = form_data[step_number]
+        email = data['email']
+        try:
+            manager = User.objects.create(
+                username=email,
+                first_name=data['first_name'],
+                last_name=data['last_name'],
+                email=email,
+                is_active=True)
+        except IntegrityError as e:
+            self.logger.error(f'User {email} unexpectedly exists.')
+            raise e
 
-        In particular, set fields in the given dictionary to be used
-        during request creation. If required, set the extra_fields field
-        from the given form data. In general, set the state field to
-        include an additional step."""
-        if computing_allowance_wrapper.requires_extra_information():
-            step_number = self.step_numbers_by_form_name[
-                'recharge_extra_fields']
-            data = form_data[step_number]
-            extra_fields = savio_project_request_recharge_extra_fields_schema()
-            for field in extra_fields:
-                extra_fields[field] = data[field]
-            request_kwargs['extra_fields'] = extra_fields
-        request_kwargs['state'] = savio_project_request_recharge_state_schema()
+        # Set the user's middle name in the UserProfile; generate a manager request.
+        try:
+            manager_profile = manager.userprofile
+        except UserProfile.DoesNotExist as e:
+            self.logger.error(
+                f'User {email} unexpectedly has no UserProfile.')
+            raise e
+        manager_profile.middle_name = data['middle_name']
+        manager_profile.upgrade_request = utc_now_offset_aware()
+        manager_profile.save()
 
-    def __handle_create_new_project(self, form_data):
+        # Create an unverified, primary EmailAddress for the new User object.
+        try:
+            EmailAddress.objects.create(
+                user=manager,
+                email=email,
+                verified=False,
+                primary=True)
+        except IntegrityError as e:
+            self.logger.error(
+                f'EmailAddress {email} unexpectedly already exists.')
+            raise e
+
+        return manager
+
+    def __handle_create_new_standalone_cluster(self, form_data):
         """Create a new project and an allocation to the primary Compute
         resource."""
         step_number = self.step_numbers_by_form_name['details']
@@ -1172,53 +979,13 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
         return project
 
-    def __handle_pool_with_existing_project(self, form_data):
-        """Return the requested project to pool with."""
-        step_number = \
-            self.step_numbers_by_form_name['pooled_project_selection']
-        data = form_data[step_number]
-        project = data['project']
-
-        # Validate that the project has exactly one allocation to the "Savio
-        # Compute" resource.
-        resource = get_primary_compute_resource()
-        allocations = Allocation.objects.filter(
-            project=project, resources__pk__exact=resource.pk)
-        try:
-            assert allocations.count() == 1
-        except AssertionError as e:
-            number = 'no' if allocations.count() == 0 else 'more than one'
-            self.logger.error(
-                f'Project {project.name} unexpectedly has {number} Allocation '
-                f'to Resource {resource.name}')
-            raise e
-
-        return project
-
     def __set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""
-        computing_allowance_form_step = \
-            self.step_numbers_by_form_name['computing_allowance']
-        if step > computing_allowance_form_step:
-            computing_allowance_form_data = self.get_cleaned_data_for_step(
-                str(computing_allowance_form_step))
-            if computing_allowance_form_data:
-                dictionary.update(computing_allowance_form_data)
-                computing_allowance_wrapper = ComputingAllowance(
-                    computing_allowance_form_data['computing_allowance'])
-                dictionary['allowance_is_one_per_pi'] = \
-                    computing_allowance_wrapper.is_one_per_pi()
-
-        allocation_period_form_step = \
-            self.step_numbers_by_form_name['allocation_period']
-        if step > allocation_period_form_step:
-            allocation_period_form_data = self.get_cleaned_data_for_step(
-                str(allocation_period_form_step))
-            if allocation_period_form_data:
-                dictionary.update(allocation_period_form_data)
-
+        details_step = self.step_numbers_by_form_name['details']
         existing_pi_step = self.step_numbers_by_form_name['existing_pi']
         new_pi_step = self.step_numbers_by_form_name['new_pi']
+        existing_manager_step = self.step_numbers_by_form_name['existing_manager']
+        new_manager_step = self.step_numbers_by_form_name['new_manager']
         if step > new_pi_step:
             existing_pi_form_data = self.get_cleaned_data_for_step(
                 str(existing_pi_step))
@@ -1239,33 +1006,28 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                         f'New PI: {first_name} {last_name} ({email})')
                 })
 
-        pool_allocations_step = \
-            self.step_numbers_by_form_name['pool_allocations']
-        if step > pool_allocations_step:
-            computing_allowance = ComputingAllowance(
-                dictionary['computing_allowance'])
-            if computing_allowance.is_poolable():
-                pool_allocations_form_data = self.get_cleaned_data_for_step(
-                    str(pool_allocations_step))
-                pooling_requested = pool_allocations_form_data['pool']
-            else:
-                pooling_requested = False
-            dictionary.update({'breadcrumb_pooling': pooling_requested})
-
-        pooled_project_selection_step = \
-            self.step_numbers_by_form_name['pooled_project_selection']
-        details_step = self.step_numbers_by_form_name['details']
-        if step > details_step:
-            if pooling_requested:
-                pooled_project_selection_form_data = \
-                    self.get_cleaned_data_for_step(
-                        str(pooled_project_selection_step))
-                project = pooled_project_selection_form_data['project']
+        if step > new_manager_step:
+            existing_manager_form_data = self.get_cleaned_data_for_step(
+                str(existing_manager_step))
+            new_manager_form_data = self.get_cleaned_data_for_step(str(new_manager_step))
+            if existing_manager_form_data['manager'] is not None:
+                manager = existing_manager_form_data['manager']
                 dictionary.update({
-                    'breadcrumb_project': f'Project: {project.name}'
+                    'breadcrumb_manager': (
+                        f'Existing manager: {manager.first_name} {manager.last_name} '
+                        f'({manager.email})')
                 })
             else:
-                details_form_data = self.get_cleaned_data_for_step(
-                    str(details_step))
-                name = details_form_data['name']
-                dictionary.update({'breadcrumb_project': f'Project: {name}'})
+                first_name = new_manager_form_data['first_name']
+                last_name = new_manager_form_data['last_name']
+                email = new_manager_form_data['email']
+                dictionary.update({
+                    'breadcrumb_manager': (
+                        f'New manager: {first_name} {last_name} ({email})')
+                })
+
+        if step > details_step:
+            details_form_data = self.get_cleaned_data_for_step(
+                str(details_step))
+            name = details_form_data['name']
+            dictionary.update({'breadcrumb_project': f'Project: {name}'})
