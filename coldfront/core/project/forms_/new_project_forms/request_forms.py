@@ -850,3 +850,123 @@ class VectorProjectDetailsForm(forms.Form):
             raise forms.ValidationError(
                 f'A project with name {name} already exists.')
         return name
+
+# =============================================================================
+# STANDALONE CLUSTERS
+# =============================================================================
+
+class StandaloneClusterDetailsForm(forms.Form):
+    name = forms.CharField(
+        help_text=(
+            'The unique name of the project, which must contain only '
+            'lowercase letters and numbers.'),
+        label='Name',
+        max_length=12,
+        required=True,
+        validators=[
+            MinLengthValidator(4),
+            RegexValidator(
+                r'^[0-9a-z]+$',
+                message=(
+                    'Name must contain only lowercase letters and numbers.'))
+        ])
+
+class StandaloneClusterExistingPIForm(forms.Form):
+    PI = PIChoiceField(
+        label='Principal Investigator',
+        queryset=User.objects.none(),
+        required=False,
+        widget=DisabledChoicesSelectWidget())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.disable_pi_choices()
+        self.exclude_pi_choices()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pi = self.cleaned_data['PI']
+        if pi is not None and pi not in self.fields['PI'].queryset:
+            raise forms.ValidationError(f'Invalid selection {pi.username}.')
+        return cleaned_data
+
+    def disable_pi_choices(self):
+        """Prevent certain Users, who should be displayed, from being
+        selected as PIs."""
+        disable_user_pks = set()
+
+        if flag_enabled('LRC_ONLY'):
+            # On LRC, PIs must be LBL employees.
+            non_lbl_employees = set(
+                [user.pk for user in User.objects.all()
+                 if not is_lbl_employee(user)])
+            disable_user_pks.update(non_lbl_employees)
+
+        self.fields['PI'].widget.disabled_choices = disable_user_pks
+
+    def exclude_pi_choices(self):
+        """Exclude certain Users from being displayed as PI options."""
+        # Exclude any user that does not have an email address or is inactive.
+        self.fields['PI'].queryset = User.objects.exclude(
+            Q(email__isnull=True) | Q(email__exact='') | Q(is_active=False))
+    
+class StandaloneClusterNewPIForm(forms.Form):
+    first_name = forms.CharField(max_length=30, required=True)
+    middle_name = forms.CharField(max_length=30, required=False)
+    last_name = forms.CharField(max_length=150, required=True)
+    email = forms.EmailField(max_length=100, required=True)
+
+    def clean_email(self):
+        cleaned_data = super().clean()
+        email = cleaned_data['email'].lower()
+        if (User.objects.filter(username=email).exists() or
+                User.objects.filter(email=email).exists()):
+            raise forms.ValidationError(
+                'A user with that email address already exists.')
+
+        if flag_enabled('LRC_ONLY'):
+            if not email.endswith('@lbl.gov'):
+                raise forms.ValidationError(
+                    'New PI must be an LBL employee with an LBL email.')
+
+        return email
+    
+class StandaloneClusterExistingManagerForm(forms.Form):
+    manager = PIChoiceField(
+        label='Manager',
+        queryset=User.objects.none(),
+        required=False,
+        widget=DisabledChoicesSelectWidget())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.exclude_manager_choices()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pi = self.cleaned_data['manager']
+        if pi is not None and pi not in self.fields['manager'].queryset:
+            raise forms.ValidationError(f'Invalid selection {pi.username}.')
+        return cleaned_data
+
+    def exclude_manager_choices(self):
+        """Exclude certain Users from being displayed as PI options."""
+        # Exclude any user that does not have an email address or is inactive.
+        self.fields['manager'].queryset = User.objects.exclude(
+            Q(email__isnull=True) | Q(email__exact='') | Q(is_active=False))
+    
+class StandaloneClusterNewManagerForm(forms.Form):
+    first_name = forms.CharField(max_length=30, required=True)
+    middle_name = forms.CharField(max_length=30, required=False)
+    last_name = forms.CharField(max_length=150, required=True)
+    email = forms.EmailField(max_length=100, required=True)
+
+    def clean_email(self):
+        cleaned_data = super().clean()
+        email = cleaned_data['email'].lower()
+        if (User.objects.filter(username=email).exists() or
+                User.objects.filter(email=email).exists()):
+            raise forms.ValidationError(
+                'A user with that email address already exists.')
+
+        return email
