@@ -870,6 +870,27 @@ class StandaloneClusterDetailsForm(forms.Form):
                 message=(
                     'Name must contain only lowercase letters and numbers.'))
         ])
+    title = forms.CharField(
+        help_text='A unique, human-readable title for the project.',
+        label='Title',
+        max_length=255,
+        required=True,
+        validators=[
+            MinLengthValidator(4),
+        ])
+    description = forms.CharField(
+        help_text='A few sentences describing your project.',
+        label='Description',
+        validators=[MinLengthValidator(10)],
+        widget=forms.Textarea(attrs={'rows': 3}))
+
+    def clean_name(self):
+        cleaned_data = super().clean()
+        name = cleaned_data['name'].lower()
+        if Project.objects.filter(name=name):
+            raise forms.ValidationError(
+                f'A project with name {name} already exists.')
+        return name
 
 class StandaloneClusterExistingPIForm(forms.Form):
     PI = PIChoiceField(
