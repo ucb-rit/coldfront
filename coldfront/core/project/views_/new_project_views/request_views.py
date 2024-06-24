@@ -20,7 +20,7 @@ from coldfront.core.project.forms_.new_project_forms.request_forms import Standa
 from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterNewPIForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterExistingManagerForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterNewManagerForm
-from coldfront.core.project.models import Project
+from coldfront.core.project.models import Project, ProjectUser, ProjectUserRoleChoice, ProjectUserStatusChoice
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import SavioProjectAllocationRequest
@@ -32,6 +32,7 @@ from coldfront.core.project.models import VectorProjectAllocationRequest
 from coldfront.core.project.utils_.new_project_utils import send_new_project_request_admin_notification_email
 from coldfront.core.project.utils_.new_project_utils import send_new_project_request_pi_notification_email
 from coldfront.core.resource.models import Resource
+from coldfront.core.resource.models import ResourceType
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
@@ -742,6 +743,11 @@ class VectorProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
         allocation.save()
 
         return project
+    
+# =============================================================================
+# STANDALONE CLUSTER
+# =============================================================================
+
 
 class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                                 SessionWizardView):
@@ -805,14 +811,18 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         try:
             form_data = session_wizard_all_form_data(
                 form_list, kwargs['form_dict'], len(self.form_list))
-            request_kwargs = {
-                'requester': self.request.user,
-            }
             with transaction.atomic():
                 pi = self.__handle_pi_data(form_data)
                 manager = self.__handle_manager_data(form_data)
-                project = self.__handle_create_new_standalone_cluster(form_data)
-                # TODO: create Resource object to represent the cluster.
+                project, resource = self.__handle_create_new_standalone_cluster(form_data)
+                pi_role = ProjectUserRoleChoice.objects.get(name='Principal Investigator')
+                manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
+                active_status = ProjectUserStatusChoice.objects.get(name='Active')
+                ProjectUser.objects.create(
+                    user=pi, project=project, role=pi_role, status=active_status)
+                ProjectUser.objects.create(
+                    user=manager, project=project, role=manager_role, 
+                    status=active_status)
         except Exception as e:
             self.logger.exception(e)
             message = 'Unexpected failure. Please contact an administrator.'
@@ -833,12 +843,6 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             '4': view.show_new_manager_form_condition,
         }
 
-    def show_details_form_condition(self):
-        step_name = 'details'
-        step = str(self.step_numbers_by_form_name[step_name])
-        cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        return not cleaned_data.get('pool', False)
-
     def show_new_pi_form_condition(self):
         step_name = 'existing_pi'
         step = str(self.step_numbers_by_form_name[step_name])
@@ -851,7 +855,6 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         return not cleaned_data.get('manager', False)        
 
-    @staticmethod
     def __handle_pi_data(self, form_data):
         """Return the requested PI. If the PI did not exist, create a
         new User and UserProfile."""
@@ -954,30 +957,38 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         """Create a new project and an allocation to the primary Compute
         resource."""
         step_number = self.step_numbers_by_form_name['details']
-        data = form_data[step_number]
+        data = self.__set_data_from_previous_steps(step_number, form_data)
+        project_data = form_data[step_number]
+        print(data)
+
+        resource_type, _ = ResourceType.objects.get_or_create(
+            name='Cluster', description='Cluster servers')
 
         # Create the new Project.
         status = ProjectStatusChoice.objects.get(name='New')
         try:
             project = Project.objects.create(
-                name=data['name'],
+                name=project_data['name'],
                 status=status,
-                title=data['title'],
-                description=data['description'])
-                #field_of_science=data['field_of_science'])
+                title=project_data['title'],
+                description=project_data['description'])
         except IntegrityError as e:
             self.logger.error(
-                f'Project {data["name"]} unexpectedly already exists.')
+                f'Project {project_data["name"]} unexpectedly already exists.')
             raise e
 
-        # Create an allocation to the primary compute resource.
-        status = AllocationStatusChoice.objects.get(name='New')
-        allocation = Allocation.objects.create(project=project, status=status)
-        resource = get_primary_compute_resource()
-        allocation.resources.add(resource)
-        allocation.save()
+        try:
+            resource = Resource.objects.create(
+                name=project_data["title"].title(), resource_type=resource_type
+            )
+            resource.description = project_data["description"]
+            resource.save()
+        except IntegrityError as e:
+            self.logger.error(
+                f'Resource {project_data["name"]} unexpectedly already exists.')
+            raise e
 
-        return project
+        return project, resource
 
     def __set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""
