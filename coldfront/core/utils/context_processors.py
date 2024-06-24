@@ -87,30 +87,33 @@ def primary_cluster_name(request):
 
 def request_alert_counts(request):
 
-    context = {   
-        'cluster_account_req_count': ClusterAccessRequest.objects.filter(
-            status__name__in=['Pending - Add', 'Processing']).count(),
-        'project_removal_req_count': ProjectUserRemovalRequest.objects.filter(
-            status__name__in=['Pending', 'Processing']).count(),
-        'savio_project_req_count': SavioProjectAllocationRequest.objects.filter(
-            status__name__in=['Under Review', 'Approved - Processing']).count(),
-        'vector_project_req_count': VectorProjectAllocationRequest.objects.filter(
-            status__name__in=['Under Review', 'Approved - Processing']).count(),
-        'project_join_req_count': ProjectUserJoinRequest.objects.filter(
-            project_user__status__name='Pending - Add').count(),
-        'project_renewal_req_count': AllocationRenewalRequest.objects.filter(
-            status__name__in=['Under Review']).count(),
-        'su_purchase_req_count': AllocationAdditionRequest.objects.filter(
-            status__name__in=['Under Review']).count(),
-        'secure_dir_join_req_count': SecureDirAddUserRequest.objects.filter(
-            status__name__in=['Pending', 'Processing']).count(),
-        'secure_dir_remove_req_count': SecureDirRemoveUserRequest.objects.filter(
-            status__name__in=['Pending', 'Processing']).count(),
-        'secure_dir_req_count': SecureDirRequest.objects.filter(
-            status__name__in=['Under Review', 'Approved - Processing']).count(),
-        }
-    context = {k:v for k,v in context.items() if (v > 0)}
-    req_count_sum = sum(context.values())
-    context['request_counts'] = req_count_sum
+    if request.user.is_superuser or request.user.is_staff:
+        context = {   
+            'cluster_account_req_count': ClusterAccessRequest.objects.filter(
+                status__name__in=['Pending - Add', 'Processing']).count(),
+            'project_removal_req_count': ProjectUserRemovalRequest.objects.filter(
+                status__name__in=['Pending', 'Processing']).count(),
+            'savio_project_req_count': SavioProjectAllocationRequest.objects.filter(
+                status__name__in=['Under Review', 'Approved - Processing']).count(),
+            'vector_project_req_count': VectorProjectAllocationRequest.objects.filter(
+                status__name__in=['Under Review', 'Approved - Processing']).count(),
+            'project_join_req_count': ProjectUserJoinRequest.objects.filter(
+                project_user__status__name='Pending - Add').count(),
+            'project_renewal_req_count': AllocationRenewalRequest.objects.filter(
+                status__name__in=['Under Review']).count(),
+            'su_purchase_req_count': AllocationAdditionRequest.objects.filter(
+                status__name__in=['Under Review']).count(),
+            'secure_dir_join_req_count': SecureDirAddUserRequest.objects.filter(
+                status__name__in=['Pending', 'Processing']).count(),
+            'secure_dir_remove_req_count': SecureDirRemoveUserRequest.objects.filter(
+                status__name__in=['Pending', 'Processing']).count(),
+            'secure_dir_req_count': SecureDirRequest.objects.filter(
+                status__name__in=['Under Review', 'Approved - Processing']).count(),
+            }
+        context = {k:v for k,v in context.items() if (v > 0)}
+        req_count_sum = sum(context.values())
+        context['request_counts'] = req_count_sum
 
-    return context
+        return context
+    else:
+        return {}
