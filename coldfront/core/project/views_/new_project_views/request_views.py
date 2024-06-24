@@ -20,6 +20,7 @@ from coldfront.core.project.forms_.new_project_forms.request_forms import Standa
 from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterNewPIForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterExistingManagerForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterNewManagerForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterReviewAndSubmitForm
 from coldfront.core.project.models import Project, ProjectUser, ProjectUserRoleChoice, ProjectUserStatusChoice
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import ProjectStatusChoice
@@ -758,6 +759,7 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         ('new_pi', StandaloneClusterNewPIForm),
         ('existing_manager', StandaloneClusterExistingManagerForm),
         ('new_manager', StandaloneClusterNewManagerForm),
+        ('review_and_submit', StandaloneClusterReviewAndSubmitForm),
     ]
 
     TEMPLATES = {
@@ -770,6 +772,8 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             'project/project_request/standalone_cluster/project_existing_manager.html',
         'new_manager':
             'project/project_request/standalone_cluster/project_new_manager.html',
+        'review_and_submit': 
+            'project/project_request/standalone_cluster/review_and_submit.html',
     }
 
     form_list = [
@@ -778,6 +782,7 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         StandaloneClusterNewPIForm,
         StandaloneClusterExistingManagerForm,
         StandaloneClusterNewManagerForm,
+        StandaloneClusterReviewAndSubmitForm,
     ]
 
     logger = logging.getLogger(__name__)
@@ -970,7 +975,7 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             project = Project.objects.create(
                 name=project_data['name'],
                 status=status,
-                title=project_data['title'],
+                title=project_data['name'].title(),
                 description=project_data['description'])
         except IntegrityError as e:
             self.logger.error(
@@ -979,7 +984,7 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
         try:
             resource = Resource.objects.create(
-                name=project_data["title"].title(), resource_type=resource_type
+                name=project_data["name"].title(), resource_type=resource_type
             )
             resource.description = project_data["description"]
             resource.save()
@@ -1003,18 +1008,21 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             new_pi_form_data = self.get_cleaned_data_for_step(str(new_pi_step))
             if existing_pi_form_data['PI'] is not None:
                 pi = existing_pi_form_data['PI']
+                pi_string = f'{pi.first_name} {pi.last_name} ({pi.email})'
                 dictionary.update({
                     'breadcrumb_pi': (
-                        f'Existing PI: {pi.first_name} {pi.last_name} '
-                        f'({pi.email})')
+                        f'Existing PI: {pi_string}'),
+                    'pi': pi_string
                 })
             else:
                 first_name = new_pi_form_data['first_name']
                 last_name = new_pi_form_data['last_name']
                 email = new_pi_form_data['email']
+                pi_string = f'{first_name} {last_name} ({email})'
                 dictionary.update({
                     'breadcrumb_pi': (
-                        f'New PI: {first_name} {last_name} ({email})')
+                        f'New PI: {pi_string}'),
+                    'pi': pi_string
                 })
 
         if step > new_manager_step:
@@ -1026,19 +1034,22 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary.update({
                     'breadcrumb_manager': (
                         f'Existing manager: {manager.first_name} {manager.last_name} '
-                        f'({manager.email})')
+                        f'({manager.email})'),
+                    'manager': (f'{manager.first_name} {manager.last_name} ({manager.email})')
                 })
             else:
                 first_name = new_manager_form_data['first_name']
                 last_name = new_manager_form_data['last_name']
                 email = new_manager_form_data['email']
+                manager_string = f'{first_name} {last_name} ({email})'
                 dictionary.update({
                     'breadcrumb_manager': (
-                        f'New manager: {first_name} {last_name} ({email})')
+                        f'New manager: {manager_string}'),
+                    'manager': manager_string
                 })
 
         if step > details_step:
             details_form_data = self.get_cleaned_data_for_step(
                 str(details_step))
             name = details_form_data['name']
-            dictionary.update({'breadcrumb_project': f'Project: {name}'})
+            dictionary.update({'breadcrumb_project': name.title()})
