@@ -858,7 +858,7 @@ class VectorProjectDetailsForm(forms.Form):
 class StandaloneClusterDetailsForm(forms.Form):
     name = forms.CharField(
         help_text=(
-            'The unique name of the project, which must contain only '
+            'The unique name of the standalone cluster, which must contain only '
             'lowercase letters and numbers.'),
         label='Name',
         max_length=12,
@@ -870,16 +870,8 @@ class StandaloneClusterDetailsForm(forms.Form):
                 message=(
                     'Name must contain only lowercase letters and numbers.'))
         ])
-    title = forms.CharField(
-        help_text='A unique, human-readable title for the project.',
-        label='Title',
-        max_length=255,
-        required=True,
-        validators=[
-            MinLengthValidator(4),
-        ])
     description = forms.CharField(
-        help_text='A few sentences describing your project.',
+        help_text='A few sentences describing your standalone cluster.',
         label='Description',
         validators=[MinLengthValidator(10)],
         widget=forms.Textarea(attrs={'rows': 3}))
@@ -991,3 +983,12 @@ class StandaloneClusterNewManagerForm(forms.Form):
                 'A user with that email address already exists.')
 
         return email
+
+class StandaloneClusterReviewAndSubmitForm(forms.Form):
+
+    confirmation = forms.BooleanField(
+        label=(
+            'I have reviewed my selections and understand the changes '
+            'described above. Submit my request.'),
+        required=True)
+    
