@@ -7,6 +7,6 @@ RUN apt-get update && \
     apt-get install -y apache2-dev
 
 COPY requirements.txt .
-RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install -r requirements.txt --break-system-packages
 
 WORKDIR /var/www/coldfront_app/coldfront
