@@ -5,4 +5,6 @@ RUN dnf update -y && \
 
 RUN dnf install -y postgresql
 
+WORKDIR /var/www/coldfront_app/coldfront
+
 CMD ["sleep", "infinity"]
