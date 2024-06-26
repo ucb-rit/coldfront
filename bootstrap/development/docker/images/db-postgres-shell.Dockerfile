@@ -1,4 +1,4 @@
-FROM coldfront-os
+FROM coldfront-app-base
 
 RUN dnf update -y && \
     dnf install -y gnupg wget
