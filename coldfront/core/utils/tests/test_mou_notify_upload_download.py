@@ -171,7 +171,7 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
     def test_new_project(self):
         """Test that the MOU notification task, MOU upload, and MOU download
         features work as expected."""
-        eligibility = { 'status': 'Approved' }
+        eligibility = { 'PI': self.request.pi, 'status': 'Approved' }
         readiness = { 'status': 'Approved' }
         extra_fields = {
             'course_name': 'TEST 101',
