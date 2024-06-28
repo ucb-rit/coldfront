@@ -14,6 +14,7 @@ from coldfront.core.project.utils_.renewal_utils import get_current_allowance_ye
 from constance import config
 from django.conf import settings
 from django.db.models import Q
+from flags.state import flag_enabled
 
 import logging
 
@@ -95,13 +96,9 @@ def request_alert_counts(request):
                 status__name__in=['Pending', 'Processing']).count(),
             'savio_project_req_count': SavioProjectAllocationRequest.objects.filter(
                 status__name__in=['Under Review', 'Approved - Processing']).count(),
-            'vector_project_req_count': VectorProjectAllocationRequest.objects.filter(
-                status__name__in=['Under Review', 'Approved - Processing']).count(),
             'project_join_req_count': ProjectUserJoinRequest.objects.filter(
                 project_user__status__name='Pending - Add').count(),
             'project_renewal_req_count': AllocationRenewalRequest.objects.filter(
-                status__name__in=['Under Review']).count(),
-            'su_purchase_req_count': AllocationAdditionRequest.objects.filter(
                 status__name__in=['Under Review']).count(),
             'secure_dir_join_req_count': SecureDirAddUserRequest.objects.filter(
                 status__name__in=['Pending', 'Processing']).count(),
@@ -110,6 +107,17 @@ def request_alert_counts(request):
             'secure_dir_req_count': SecureDirRequest.objects.filter(
                 status__name__in=['Under Review', 'Approved - Processing']).count(),
             }
+        if flag_enabled('SERVICE_UNITS_PURCHASABLE'):
+            context.update(
+                su_purchase_req_count =
+                AllocationAdditionRequest.objects.filter(
+                    status__name__in=['Under Review']).count()
+            )
+        if flag_enabled('BRC_ONLY'):
+            context.update(
+                vector_project_req_count = 
+                VectorProjectAllocationRequest.objects.filter(status__name__in=
+                    ['Under Review', 'Approved - Processing']).count())
         context = {k:v for k,v in context.items() if (v > 0)}
         req_count_sum = sum(context.values())
         context['request_counts'] = req_count_sum
