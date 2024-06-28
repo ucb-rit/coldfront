@@ -151,6 +151,7 @@ TEMPLATES = [
                 'coldfront.core.utils.context_processors.display_time_zone',
                 'coldfront.core.utils.context_processors.portal_and_program_names',
                 'coldfront.core.utils.context_processors.primary_cluster_name',
+                'coldfront.core.utils.context_processors.request_alert_counts',
             ],
         },
     },
