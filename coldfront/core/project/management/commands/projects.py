@@ -100,6 +100,7 @@ class Command(BaseCommand):
             'renew',
             help=(
                 'Renew ICA projects that have the Inactive status.'
+                'This command will approve and process the request.'
                 ))
         
         parser.add_argument(
@@ -108,7 +109,8 @@ class Command(BaseCommand):
         parser.add_argument(
             'username',
             help=(
-                'The username of the user making the request.'),
+                'The username of the user making the request.'
+                'The requester should be the project Principal Investigator.'),
             type=str)
         
         parser.add_argument(
@@ -227,7 +229,6 @@ class Command(BaseCommand):
         status = AllocationRenewalRequestStatusChoice.objects.get(name='Under Review')
         computing_allowance = Resource.objects.get(
             name='Instructional Computing Allowance')
-        # TODO:
         pi = requester
 
         request = AllocationRenewalRequest.objects.create(
@@ -378,6 +379,11 @@ class Command(BaseCommand):
         except Project.DoesNotExist:
             raise CommandError(
                 f'A Project with name "{project_name}" does not exist.')
+        else:
+            if not project_name.startswith("ic_"):
+                raise CommandError(
+                    f'The project with name "{project_name}" is not an ICA.'
+                )
         
         input_username = options['username']
         requester = None
