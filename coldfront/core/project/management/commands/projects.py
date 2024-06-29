@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management import CommandError
@@ -7,9 +9,12 @@ from django.db import transaction
 from flags.state import flag_enabled
 
 from coldfront.core.allocation.models import Allocation
+from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationAttribute
 from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationStatusChoice
+from coldfront.core.allocation.models import AllocationRenewalRequest
+from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
@@ -18,6 +23,8 @@ from coldfront.core.project.models import ProjectUserStatusChoice
 from coldfront.core.project.utils import is_primary_cluster_project
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunnerFactory
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
+from coldfront.core.project.utils_.renewal_utils import AllocationRenewalApprovalRunner
+from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcessingRunner
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource_name
 from coldfront.core.statistics.models import ProjectTransaction
@@ -46,11 +53,15 @@ class Command(BaseCommand):
         subparsers.required = True
         self._add_create_subparser(subparsers)
 
+        self._add_renew_subparser(subparsers)
+
     def handle(self, *args, **options):
         """Call the handler for the provided subcommand."""
         subcommand = options['subcommand']
         if subcommand == 'create':
             self._handle_create(*args, **options)
+        elif subcommand == 'renew':
+            self._handle_renew(*args, **options)
 
     @staticmethod
     def _add_create_subparser(parsers):
@@ -81,6 +92,34 @@ class Command(BaseCommand):
             nargs='+',
             type=str)
         add_argparse_dry_run_argument(parser)
+
+    @staticmethod
+    def _add_renew_subparser(parsers):
+        """Add a subparser for the 'renew' subcommand."""
+        parser = parsers.add_parser(
+            'renew',
+            help=(
+                'Renew ICA projects that have the Inactive status.'
+                ))
+        
+        parser.add_argument(
+            'name', help='The name of the project to renew.', type=str)
+        
+        parser.add_argument(
+            'username',
+            help=(
+                'The username of the user making the request.'),
+            type=str)
+        
+        parser.add_argument(
+            'allocation_period',
+            help=(
+                'Name of the allocation period the allowance is valid for.'
+            ), 
+            type=str)
+        
+        add_argparse_dry_run_argument(parser)
+        
 
     @staticmethod
     def _create_project_with_compute_allocation_and_pis(project_name,
@@ -181,6 +220,71 @@ class Command(BaseCommand):
             self.logger.info(message)
 
     @staticmethod
+    def _renew_project(project, allocation_period, requester):
+        pre_project = project
+        post_project = project
+        request_time = utc_now_offset_aware()
+        status = AllocationRenewalRequestStatusChoice.objects.get(name='Under Review')
+        computing_allowance = Resource.objects.get(
+            name='Instructional Computing Allowance')
+        # TODO:
+        pi = requester
+
+        request = AllocationRenewalRequest.objects.create(
+            requester=requester,
+            pi=pi,
+            computing_allowance=computing_allowance,
+            allocation_period=allocation_period,
+            status=status,
+            pre_project=pre_project,
+            post_project=post_project,
+            request_time=request_time)
+        
+        request.state['eligibility']['status'] = 'Approved'
+        request.state['eligibility']['timestamp'] = \
+            utc_now_offset_aware().isoformat()
+        request.save()
+
+        num_service_units = Decimal('200000.00')
+        approval_runner = AllocationRenewalApprovalRunner(
+            request, num_service_units, email_strategy=DropEmailStrategy())
+        approval_runner.run()
+
+        request.refresh_from_db()
+        processing_runner = AllocationRenewalProcessingRunner(
+            request, num_service_units)
+        processing_runner.run()
+
+
+    def _handle_renew(self, *args, **options):
+        """Handle the 'renew' subcommand."""
+        cleaned_options = self._validate_renew_options(options)
+
+        project_name = options['name']
+        alloc_period_name = options['allocation_period']
+        username_str = options['username']
+
+        message_template = (
+            f'{{0}} Project "{project_name}" renewed for  '
+            f'"{alloc_period_name}" Requested by {username_str}.')
+        if options['dry_run']:
+            message = message_template.format('Would create')
+            self.stdout.write(self.style.WARNING(message))
+            return
+        
+        try:
+            self._renew_project(cleaned_options['project'], 
+                cleaned_options['allocation_period'], cleaned_options['requester'])
+        except Exception as e:
+            message = message_template.format('Failed to renew')
+            self.stderr.write(self.style.ERROR(message))
+            self.logger.exception(f'{message}\n{e}')
+        else:
+            message = message_template.format('Renewed')
+            self.stdout.write(self.style.SUCCESS(message))
+            self.logger.info(message)
+
+    @staticmethod
     def _validate_create_options(options):
         """Validate the options provided to the 'create' subcommand.
         Raise a subcommand if any are invalid or if they violate
@@ -254,3 +358,45 @@ class Command(BaseCommand):
             'compute_resource': compute_resource,
             'pi_users': pi_users,
         }
+
+    @staticmethod
+    def _validate_renew_options(options):
+        """Validate the options provided to the 'renew' subcommand.
+        Raise a subcommand if any are invalid or if they violate
+        business logic, else return a dict of the form:
+            {
+                'project': Project,
+                'requester': User,
+                'allocation_period': AllocationPeriod,
+            }
+        """
+
+        project_name = options['name'].lower()
+        project = None
+        try:
+            project = Project.objects.get(name=project_name)
+        except Project.DoesNotExist:
+            raise CommandError(
+                f'A Project with name "{project_name}" does not exist.')
+        
+        input_username = options['username']
+        requester = None
+        try:
+            requester = User.objects.get(username=input_username)
+        except User.DoesNotExist:
+            raise CommandError(
+                f'User with username "{input_username}" does not exist.')
+        
+        input_allocation_period = options['allocation_period']
+        allocation_period = None
+        try:
+            allocation_period = AllocationPeriod.objects.get(name=input_allocation_period)
+        except AllocationPeriod.DoesNotExist:
+            raise CommandError(
+                f'"{input_allocation_period}" is not a valid allocation period.')
+        
+        return {
+                'project': project,
+                'requester': requester,
+                'allocation_period': allocation_period,
+            }
