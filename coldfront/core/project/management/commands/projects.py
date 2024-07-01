@@ -222,14 +222,13 @@ class Command(BaseCommand):
             self.logger.info(message)
 
     @staticmethod
-    def _renew_project(project, allocation_period, requester):
+    def _renew_project(project, allocation_period, requester, pi):
         pre_project = project
         post_project = project
         request_time = utc_now_offset_aware()
         status = AllocationRenewalRequestStatusChoice.objects.get(name='Under Review')
         computing_allowance = Resource.objects.get(
             name='Instructional Computing Allowance')
-        pi = requester
 
         request = AllocationRenewalRequest.objects.create(
             requester=requester,
@@ -275,7 +274,7 @@ class Command(BaseCommand):
         
         try:
             self._renew_project(cleaned_options['project'], 
-                cleaned_options['allocation_period'], cleaned_options['requester'])
+                cleaned_options['allocation_period'], cleaned_options['requester'], cleaned_options['pi'])
         except Exception as e:
             message = message_template.format('Failed to renew')
             self.stderr.write(self.style.ERROR(message))
@@ -368,22 +367,35 @@ class Command(BaseCommand):
             {
                 'project': Project,
                 'requester': User,
+                'pi': User,
                 'allocation_period': AllocationPeriod,
             }
         """
 
         project_name = options['name'].lower()
+        if not project_name.startswith("ic_"):
+            raise CommandError(
+                f'The project with name "{project_name}" is not an ICA.'
+            )
+        
         project = None
+        pi = None
         try:
             project = Project.objects.get(name=project_name)
         except Project.DoesNotExist:
             raise CommandError(
                 f'A Project with name "{project_name}" does not exist.')
-        else:
-            if not project_name.startswith("ic_"):
-                raise CommandError(
-                    f'The project with name "{project_name}" is not an ICA.'
-                )
+
+        try:
+            # For ICA projects, there should be only one Principal Investigator
+            pi = ProjectUser.objects.get(
+                project=project, 
+                role=ProjectUserRoleChoice.objects.get(
+                    name='Principal Investigator')
+                ).user
+        except ProjectUser.DoesNotExist:
+            raise CommandError(
+                f'Unable to find the PI for "{project_name}".')
         
         input_username = options['username']
         requester = None
@@ -404,5 +416,6 @@ class Command(BaseCommand):
         return {
                 'project': project,
                 'requester': requester,
+                'pi': pi,
                 'allocation_period': allocation_period,
             }
