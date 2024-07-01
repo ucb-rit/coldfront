@@ -421,7 +421,6 @@ class Command(BaseCommand):
                 raise CommandError(
                     f'"{input_allocation_period}" already ended.')
             elif utc_now_offset_aware().date() < allocation_period.start_date:
-                # TODO: Should I raise an error
                 raise CommandError(
                     f'"{input_allocation_period}" has not begun yet.')
         
