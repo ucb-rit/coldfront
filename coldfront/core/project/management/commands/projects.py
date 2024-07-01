@@ -110,7 +110,7 @@ class Command(BaseCommand):
             'username',
             help=(
                 'The username of the user making the request.'
-                'The requester should be the project Principal Investigator.'),
+                'The requester should be a user for the project.'),
             type=str)
         
         parser.add_argument(
@@ -372,6 +372,14 @@ class Command(BaseCommand):
             }
         """
 
+        input_username = options['username']
+        requester = None
+        try:
+            requester = User.objects.get(username=input_username)
+        except User.DoesNotExist:
+            raise CommandError(
+                f'User with username "{input_username}" does not exist.')
+
         project_name = options['name'].lower()
         if not project_name.startswith("ic_"):
             raise CommandError(
@@ -385,6 +393,10 @@ class Command(BaseCommand):
         except Project.DoesNotExist:
             raise CommandError(
                 f'A Project with name "{project_name}" does not exist.')
+        
+        if not ProjectUser.objects.filter(project=project, user=requester).exists():
+            raise CommandError(
+                f'Requester is not a user for the project "{project_name}".')
 
         try:
             # For ICA projects, there should be only one Principal Investigator
@@ -397,14 +409,6 @@ class Command(BaseCommand):
             raise CommandError(
                 f'Unable to find the PI for "{project_name}".')
         
-        input_username = options['username']
-        requester = None
-        try:
-            requester = User.objects.get(username=input_username)
-        except User.DoesNotExist:
-            raise CommandError(
-                f'User with username "{input_username}" does not exist.')
-        
         input_allocation_period = options['allocation_period']
         allocation_period = None
         try:
@@ -412,6 +416,14 @@ class Command(BaseCommand):
         except AllocationPeriod.DoesNotExist:
             raise CommandError(
                 f'"{input_allocation_period}" is not a valid allocation period.')
+        else:
+            if utc_now_offset_aware().date() > allocation_period.end_date:
+                raise CommandError(
+                    f'"{input_allocation_period}" already ended.')
+            elif utc_now_offset_aware().date() < allocation_period.start_date:
+                # TODO: Should I raise an error
+                raise CommandError(
+                    f'"{input_allocation_period}" has not begun yet.')
         
         return {
                 'project': project,
