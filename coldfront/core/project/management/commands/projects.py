@@ -15,6 +15,8 @@ from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
+from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
@@ -118,6 +120,13 @@ class Command(BaseCommand):
             help=(
                 'Name of the allocation period the allowance is valid for.'
             ), 
+            type=str)
+        
+        parser.add_argument(
+            'pi_username',
+            help=(
+                'Username of the PI for the project.'
+            ),
             type=str)
         
         add_argparse_dry_run_argument(parser)
@@ -230,7 +239,8 @@ class Command(BaseCommand):
         computing_allowance = Resource.objects.get(
             name='Instructional Computing Allowance')
 
-        request = AllocationRenewalRequest.objects.create(
+        with transaction.atomic():
+            request = AllocationRenewalRequest.objects.create(
             requester=requester,
             pi=pi,
             computing_allowance=computing_allowance,
@@ -240,20 +250,20 @@ class Command(BaseCommand):
             post_project=post_project,
             request_time=request_time)
         
-        request.state['eligibility']['status'] = 'Approved'
-        request.state['eligibility']['timestamp'] = \
-            utc_now_offset_aware().isoformat()
-        request.save()
+            request.state['eligibility']['status'] = 'Approved'
+            request.state['eligibility']['timestamp'] = \
+                utc_now_offset_aware().isoformat()
+            request.save()
 
-        num_service_units = Decimal('200000.00')
-        approval_runner = AllocationRenewalApprovalRunner(
-            request, num_service_units, email_strategy=DropEmailStrategy())
-        approval_runner.run()
+            num_service_units = Decimal(ComputingAllowanceInterface().service_units_from_name(BRCAllowances.ICA))
+            approval_runner = AllocationRenewalApprovalRunner(
+                request, num_service_units, email_strategy=DropEmailStrategy())
+            approval_runner.run()
 
-        request.refresh_from_db()
-        processing_runner = AllocationRenewalProcessingRunner(
-            request, num_service_units)
-        processing_runner.run()
+            request.refresh_from_db()
+            processing_runner = AllocationRenewalProcessingRunner(
+                request, num_service_units)
+            processing_runner.run()
 
 
     def _handle_renew(self, *args, **options):
@@ -263,18 +273,21 @@ class Command(BaseCommand):
         project_name = options['name']
         alloc_period_name = options['allocation_period']
         username_str = options['username']
+        pi_str = options['pi_username']
 
         message_template = (
-            f'{{0}} Project "{project_name}" renewed for  '
-            f'"{alloc_period_name}" Requested by {username_str}.')
+            f'{{0}} the allocation for PI "{pi_str}" under Project  '
+            f'"{project_name}" for {alloc_period_name}, '
+            f'requested by {username_str}.')
         if options['dry_run']:
-            message = message_template.format('Would create')
+            message = message_template.format('Would renew')
             self.stdout.write(self.style.WARNING(message))
             return
         
         try:
             self._renew_project(cleaned_options['project'], 
-                cleaned_options['allocation_period'], cleaned_options['requester'], cleaned_options['pi'])
+                cleaned_options['allocation_period'], 
+                cleaned_options['requester'], cleaned_options['pi'])
         except Exception as e:
             message = message_template.format('Failed to renew')
             self.stderr.write(self.style.ERROR(message))
@@ -373,21 +386,20 @@ class Command(BaseCommand):
         """
 
         input_username = options['username']
-        requester = None
         try:
             requester = User.objects.get(username=input_username)
         except User.DoesNotExist:
             raise CommandError(
                 f'User with username "{input_username}" does not exist.')
-
+    
         project_name = options['name'].lower()
-        if not project_name.startswith("ic_"):
+        ic_prefix = ComputingAllowanceInterface().code_from_name(
+            BRCAllowances.ICA)
+        if not project_name.startswith(ic_prefix):
             raise CommandError(
                 f'The project with name "{project_name}" is not an ICA.'
             )
         
-        project = None
-        pi = None
         try:
             project = Project.objects.get(name=project_name)
         except Project.DoesNotExist:
@@ -398,31 +410,37 @@ class Command(BaseCommand):
             raise CommandError(
                 f'Requester is not a user for the project "{project_name}".')
 
+        input_pi_username = options['pi_username']
         try:
-            # For ICA projects, there should be only one Principal Investigator
-            pi = ProjectUser.objects.get(
-                project=project, 
-                role=ProjectUserRoleChoice.objects.get(
-                    name='Principal Investigator')
-                ).user
-        except ProjectUser.DoesNotExist:
+            pi = User.objects.get(username=input_pi_username)
+        except User.DoesNotExist:
             raise CommandError(
-                f'Unable to find the PI for "{project_name}".')
+                f'User with username "{input_pi_username}" does not exist.')
+        
+        if not ProjectUser.objects.filter(project=project, 
+            role=ProjectUserRoleChoice.objects.get(name='Principal Investigator'),
+            user=pi).exists():
+                raise CommandError(
+                   f'{pi} is not a PI for project "{project_name}".')
         
         input_allocation_period = options['allocation_period']
-        allocation_period = None
         try:
             allocation_period = AllocationPeriod.objects.get(name=input_allocation_period)
         except AllocationPeriod.DoesNotExist:
             raise CommandError(
                 f'"{input_allocation_period}" is not a valid allocation period.')
         else:
-            if utc_now_offset_aware().date() > allocation_period.end_date:
-                raise CommandError(
-                    f'"{input_allocation_period}" already ended.')
-            elif utc_now_offset_aware().date() < allocation_period.start_date:
-                raise CommandError(
-                    f'"{input_allocation_period}" has not begun yet.')
+            allocation_period.assert_started()
+            allocation_period.assert_not_ended()
+
+            # TODO: In the linked example code the prefixes seem to be hardcoded, 
+            # is it fine if I do that here as well?
+            if not (allocation_period.name.startswith("Fall Semester")
+                or allocation_period.name.startswith("Spring Semester")
+                or allocation_period.name.startswith("Summer Sessions")):
+                    raise CommandError(
+                        f'"{input_allocation_period}" is not an acceptable period '
+                        f'for ICAs.')
         
         return {
                 'project': project,
