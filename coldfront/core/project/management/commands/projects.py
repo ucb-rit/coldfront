@@ -255,7 +255,9 @@ class Command(BaseCommand):
                 utc_now_offset_aware().isoformat()
             request.save()
 
-            num_service_units = Decimal(ComputingAllowanceInterface().service_units_from_name(BRCAllowances.ICA))
+            num_service_units = Decimal(ComputingAllowanceInterface().service_units_from_name(
+                BRCAllowances.ICA,
+                is_timed=True, allocation_period=allocation_period))
             approval_runner = AllocationRenewalApprovalRunner(
                 request, num_service_units, email_strategy=DropEmailStrategy())
             approval_runner.run()

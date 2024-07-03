@@ -2,6 +2,9 @@ from decimal import Decimal
 from io import StringIO
 
 from django.core.management import call_command
+from django.core.management import CommandError
+
+from django.db.models import Q
 
 from coldfront.api.statistics.utils import create_project_allocation
 from coldfront.core.project.tests.test_commands.test_service_units_base import \
@@ -14,6 +17,7 @@ from coldfront.core.project.models import ProjectUserStatusChoice
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.utils.common import utc_now_offset_aware
 
 
 class TestICARenewal(TestSUBase):
@@ -29,16 +33,25 @@ class TestICARenewal(TestSUBase):
         computing_allowance_interface = ComputingAllowanceInterface()
         project_name_prefix = computing_allowance_interface.code_from_name(
             computing_allowance.name)
+        
+        valid_alloc_periods = AllocationPeriod.objects.filter(Q(name__startswith="Fall") | 
+                                        Q(name__startswith="Summer") | 
+                                        Q(name__startswith="Spring"), 
+                                        start_date__lt=utc_now_offset_aware(), 
+                                        end_date__gt=utc_now_offset_aware())
+        self.allocation_period = valid_alloc_periods[0]
+        
         self.num_service_units = Decimal(
             computing_allowance_interface.service_units_from_name(
-                computing_allowance.name))
+                computing_allowance.name, is_timed=True, 
+                allocation_period=self.allocation_period))
         
         # Create an inactive project and make self.user the PI
-        project_name = f'{project_name_prefix}project'
+        self.project_name = f'{project_name_prefix}project'
         inactive_project_status = ProjectStatusChoice.objects.get(name='Inactive')
         inactive_project = Project.objects.create(
-            name=project_name,
-            title=project_name,
+            name=self.project_name,
+            title=self.project_name,
             status=inactive_project_status
         )
 
@@ -61,36 +74,54 @@ class TestICARenewal(TestSUBase):
         
         self.command = RenewalCommand()
 
-    def test_renew_valid_allocation_period(self):
-        """Test that 'renew' raises an error if the
-        allocation period is invalid."""
-        allocation_period = AllocationPeriod.objects.get(name="Fall Semester 2022")
-
-        computing_allowance = Resource.objects.get(
-            name='Instructional Computing Allowance')
-        project_name_prefix = ComputingAllowanceInterface().code_from_name(
-            computing_allowance.name)
-        project_name = f'{project_name_prefix}project'
-
-        output, error = self.command.renew(project_name, self.user.username, 
-                            allocation_period, self.user.username)
+    def test_renew_dry_run(self):
+        """Test that the request would be successful but the dry run
+        ensures that the the project is not updated."""
+        project = Project.objects.get(name=self.project_name)
+        self.assertEqual(project.status, 
+                         ProjectStatusChoice.objects.get(name='Inactive'))
+        output, error = self.command.renew(self.project_name, self.user.username,
+                            self.allocation_period, self.user.username, dry_run=True)
         
-        self.assertIn('AllocationPeriod already ended', output)
+        self.assertFalse(error)
         
-    def test_renew_updates_service_units(self):
-        allocation_period = AllocationPeriod.objects.get(name="Summer Sessions 2024 - Session B")
+        self.assertIn('Would renew', output)
+        self.service_units_attribute.refresh_from_db()
+        self.assertEqual(Decimal(self.service_units_attribute.value), Decimal('0.0'))
 
-        computing_allowance = Resource.objects.get(
-            name='Instructional Computing Allowance')
-        computing_allowance_interface = ComputingAllowanceInterface()
-        project_name_prefix =  computing_allowance_interface.code_from_name(
-            computing_allowance.name)
-        project_name = f'{project_name_prefix}project'
+    def test_renew_inactive_to_active(self):
+        """Test that a successful request updates a project's status
+        to 'Active' and the service units to the correct amount."""
+        project = Project.objects.get(name=self.project_name)
+        self.assertEqual(project.status, 
+                         ProjectStatusChoice.objects.get(name='Inactive'))
 
-        output, error = self.command.renew(project_name, self.user.username, 
-                            allocation_period, self.user.username)
+        output, error = self.command.renew(self.project_name, self.user.username,
+                            self.allocation_period, self.user.username)
+        
+        self.assertFalse(error)
+        now_active_proj = Project.objects.get(name=self.project_name)
+        self.assertEqual(now_active_proj.status, 
+                         ProjectStatusChoice.objects.get(name='Active'))
+        self.service_units_attribute.refresh_from_db()
+        self.assertEqual(Decimal(self.service_units_attribute.value), self.num_service_units)
 
-        self.assertEqual(self.num_service_units, self.existing_service_units)
+    def test_renew_fail_not_active(self):
+        """Test that an invalid request does not update the status
+        or service units of a project."""
+        project = Project.objects.get(name=self.project_name)
+        self.assertEqual(project.status, 
+                         ProjectStatusChoice.objects.get(name='Inactive'))
+
+        with self.assertRaises(CommandError) as cm:
+            self.command.renew("invalid project name", self.user.username,
+                            self.allocation_period, self.user.username)
+        self.assertIn("The project with name", str(cm.exception))
+        still_inactive_proj = Project.objects.get(name=self.project_name)
+        self.assertEqual(still_inactive_proj.status, 
+                         ProjectStatusChoice.objects.get(name='Inactive'))
+        self.service_units_attribute.refresh_from_db()
+        self.assertEqual(Decimal(self.service_units_attribute.value), Decimal('0.0'))
         
 
 class RenewalCommand(object):
