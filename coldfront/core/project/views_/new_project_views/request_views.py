@@ -983,8 +983,9 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             raise e
 
         try:
+            resource_name = project_data["name"].upper() + " Compute"
             resource = Resource.objects.create(
-                name=project_data["name"].title(), resource_type=resource_type
+                name=resource_name, resource_type=resource_type
             )
             resource.description = project_data["description"]
             resource.save()
