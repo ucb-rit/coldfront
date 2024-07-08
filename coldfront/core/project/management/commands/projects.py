@@ -16,6 +16,7 @@ from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice
 from coldfront.core.project.utils import is_primary_cluster_project
+from coldfront.core.project.utils_.new_project_utils import create_project_with_compute_allocation
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunnerFactory
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
 from coldfront.core.resource.models import Resource
@@ -102,10 +103,9 @@ class Command(BaseCommand):
          specified.
         """
         with transaction.atomic():
-            project = Project.objects.create(
-                name=project_name,
-                title=project_name,
-                status=ProjectStatusChoice.objects.get(name='Active'))
+            project = create_project_with_compute_allocation(project_name, 
+                                                             compute_resource, 
+                                                             settings.ALLOCATION_MAX)
 
             project_users = []
             for pi_user in pi_users:
@@ -116,25 +116,6 @@ class Command(BaseCommand):
                         name='Principal Investigator'),
                     status=ProjectUserStatusChoice.objects.get(name='Active'))
                 project_users.append(project_user)
-
-            allocation = Allocation.objects.create(
-                project=project,
-                status=AllocationStatusChoice.objects.get(name='Active'),
-                start_date=display_time_zone_current_date(),
-                end_date=None)
-            allocation.resources.add(compute_resource)
-
-            num_service_units = settings.ALLOCATION_MAX
-            AllocationAttribute.objects.create(
-                allocation_attribute_type=AllocationAttributeType.objects.get(
-                    name='Service Units'),
-                allocation=allocation,
-                value=str(num_service_units))
-
-            ProjectTransaction.objects.create(
-                project=project,
-                date_time=utc_now_offset_aware(),
-                allocation=num_service_units)
 
             runner_factory = NewProjectUserRunnerFactory()
             for project_user in project_users:

@@ -1,10 +1,12 @@
 from coldfront.api.statistics.utils import set_project_user_allocation_value
+from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationAttribute
 from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
+from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import SavioProjectAllocationRequest
@@ -733,3 +735,42 @@ def vector_request_state_status(vector_request):
     # finally activated.
     return ProjectAllocationRequestStatusChoice.objects.get(
         name='Approved - Processing')
+
+def create_project_with_compute_allocation(project_name, compute_resource, num_service_units):
+    """Create a Project with the given name, with an Allocation to
+        the given compute Resource with given number of service units. 
+        Return the Project.
+
+        Some fields are set by default:
+            - The Project's status is 'Active'.
+            - The Allocation's status is 'Active'.
+            - The Allocation's start_date is today.
+            - The Allocation's end_date is None.
+
+        TODO: When the command is generalized, allow these to be
+         specified.
+        """
+    project = Project.objects.create(
+                name=project_name,
+                title=project_name,
+                status=ProjectStatusChoice.objects.get(name='Active'))
+    
+    allocation = Allocation.objects.create(
+                project=project,
+                status=AllocationStatusChoice.objects.get(name='Active'),
+                start_date=display_time_zone_current_date(),
+                end_date=None)
+    allocation.resources.add(compute_resource)
+
+    AllocationAttribute.objects.create(
+                allocation_attribute_type=AllocationAttributeType.objects.get(
+                    name='Service Units'),
+                allocation=allocation,
+                value=str(num_service_units))
+    
+    ProjectTransaction.objects.create(
+                project=project,
+                date_time=utc_now_offset_aware(),
+                allocation=num_service_units)
+    
+    return project
