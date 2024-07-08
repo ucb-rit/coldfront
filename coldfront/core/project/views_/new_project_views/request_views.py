@@ -1,6 +1,8 @@
 from allauth.account.models import EmailAddress
 
 from coldfront.core.allocation.models import Allocation
+from coldfront.core.allocation.models import AllocationAttribute
+from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
@@ -32,6 +34,9 @@ from coldfront.core.project.models import savio_project_request_recharge_state_s
 from coldfront.core.project.models import VectorProjectAllocationRequest
 from coldfront.core.project.utils_.new_project_utils import send_new_project_request_admin_notification_email
 from coldfront.core.project.utils_.new_project_utils import send_new_project_request_pi_notification_email
+from coldfront.core.project.utils_.new_project_utils import create_project_with_compute_allocation
+from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunnerFactory
+from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.models import ResourceType
 from coldfront.core.resource.utils import get_primary_compute_resource
@@ -41,6 +46,8 @@ from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.common import display_time_zone_current_date
+from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 
 from django.conf import settings
 from django.contrib import messages
@@ -819,15 +826,7 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             with transaction.atomic():
                 pi = self.__handle_pi_data(form_data)
                 manager = self.__handle_manager_data(form_data)
-                project, resource = self.__handle_create_new_standalone_cluster(form_data)
-                pi_role = ProjectUserRoleChoice.objects.get(name='Principal Investigator')
-                manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
-                active_status = ProjectUserStatusChoice.objects.get(name='Active')
-                ProjectUser.objects.create(
-                    user=pi, project=project, role=pi_role, status=active_status)
-                ProjectUser.objects.create(
-                    user=manager, project=project, role=manager_role, 
-                    status=active_status)
+                project, resource = self.__handle_create_new_standalone_cluster(form_data, pi, manager)
         except Exception as e:
             self.logger.exception(e)
             message = 'Unexpected failure. Please contact an administrator.'
@@ -958,7 +957,7 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
         return manager
 
-    def __handle_create_new_standalone_cluster(self, form_data):
+    def __handle_create_new_standalone_cluster(self, form_data, pi, manager):
         """Create a new project and an allocation to the primary Compute
         resource."""
         step_number = self.step_numbers_by_form_name['details']
@@ -968,20 +967,7 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
         resource_type, _ = ResourceType.objects.get_or_create(
             name='Cluster', description='Cluster servers')
-
-        # Create the new Project.
-        status = ProjectStatusChoice.objects.get(name='New')
-        try:
-            project = Project.objects.create(
-                name=project_data['name'],
-                status=status,
-                title=project_data['name'].title(),
-                description=project_data['description'])
-        except IntegrityError as e:
-            self.logger.error(
-                f'Project {project_data["name"]} unexpectedly already exists.')
-            raise e
-
+        
         try:
             resource_name = project_data["name"].upper() + " Compute"
             resource = Resource.objects.create(
@@ -993,6 +979,28 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             self.logger.error(
                 f'Resource {project_data["name"]} unexpectedly already exists.')
             raise e
+        
+        # TODO: How many units should I allocate?
+        num_service_units = settings.ALLOCATION_MAX
+        project = create_project_with_compute_allocation(project_data['name'], resource, num_service_units)
+        
+        pi_role = ProjectUserRoleChoice.objects.get(name='Principal Investigator')
+        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
+        active_status = ProjectUserStatusChoice.objects.get(name='Active')
+        pi_project_user = ProjectUser.objects.create(
+            user=pi, project=project, role=pi_role, status=active_status)
+        manager_project_user = ProjectUser.objects.create(
+            user=manager, project=project, role=manager_role, 
+            status=active_status)
+        
+        project_users = [pi_project_user, manager_project_user]
+
+        runner_factory = NewProjectUserRunnerFactory()
+        for project_user in project_users:
+            runner = runner_factory.get_runner(
+                project_user, NewProjectUserSource.AUTO_ADDED,
+                email_strategy=DropEmailStrategy())
+            runner.run()
 
         return project, resource
 
