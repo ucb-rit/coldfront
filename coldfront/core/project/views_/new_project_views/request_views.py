@@ -1,8 +1,6 @@
 from allauth.account.models import EmailAddress
 
 from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.models import AllocationAttribute
-from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
@@ -46,7 +44,6 @@ from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 
 from django.conf import settings

@@ -6,12 +6,7 @@ from django.db import transaction
 
 from flags.state import flag_enabled
 
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.models import AllocationAttribute
-from coldfront.core.allocation.models import AllocationAttributeType
-from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice
@@ -21,10 +16,7 @@ from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserR
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource_name
-from coldfront.core.statistics.models import ProjectTransaction
 from coldfront.core.utils.common import add_argparse_dry_run_argument
-from coldfront.core.utils.common import display_time_zone_current_date
-from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 
 import logging
