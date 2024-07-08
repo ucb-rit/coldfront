@@ -824,11 +824,13 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 pi = self.__handle_pi_data(form_data)
                 manager = self.__handle_manager_data(form_data)
                 project, resource = self.__handle_create_new_standalone_cluster(form_data, pi, manager)
+                redirect_url = '/project/' + str(project.pk) + '/'
         except Exception as e:
             self.logger.exception(e)
             message = 'Unexpected failure. Please contact an administrator.'
             messages.error(self.request, message)
         else:
+            # TODO: More informative message?
             message = (
                 'Thank you for your submission. It will be reviewed and '
                 'processed by administrators.')
