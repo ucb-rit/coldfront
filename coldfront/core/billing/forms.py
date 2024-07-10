@@ -66,7 +66,17 @@ class BillingIDValidationForm(BillingIDValidityMixin, forms.Form):
         self.validate_billing_id(
             billing_id, ignore_invalid=not self.enforce_validity)
         return billing_id
-
+    
+class BillingIDValidateManyForm(forms.Form):
+    billing_ids = forms.CharField(
+        help_text='Example: \n123456-789',
+        label='Project IDs',
+        required=True,
+        widget=forms.Textarea)
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        return cleaned_data
 
 class BillingIDCreationForm(BillingIDValidityMixin, forms.Form):
 
