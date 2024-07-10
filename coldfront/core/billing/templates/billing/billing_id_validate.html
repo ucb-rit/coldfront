@@ -1,0 +1,28 @@
+{% extends "common/base.html" %}
+{% load common_tags %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}
+  Validate LBL Project IDs
+{% endblock %}
+
+{% block content %}
+
+<h1>Validate LBL Project IDs</h1>
+<p>Put each Project ID on its own line.</p>
+<hr>
+
+<form method="post">
+  {% csrf_token %}
+  {{ form|crispy }}
+  <input type="submit" class="btn btn-primary" value="Validate">
+</form>
+
+<script>
+  $("#navbar-main > ul > li.active").removeClass("active");
+  $("#navbar-admin").addClass("active");
+  $("#navbar-billing-id-usages").addClass("active");
+</script>
+
+{% endblock %}

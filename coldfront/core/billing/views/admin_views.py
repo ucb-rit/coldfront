@@ -12,6 +12,7 @@ from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 
 from coldfront.core.billing.forms import BillingIDCreationForm
+from coldfront.core.billing.forms import BillingIDValidateManyForm
 from coldfront.core.billing.forms import BillingIDSetProjectDefaultForm
 from coldfront.core.billing.forms import BillingIDSetRechargeForm
 from coldfront.core.billing.forms import BillingIDSetUserAccountForm
@@ -21,7 +22,10 @@ from coldfront.core.billing.utils.billing_activity_managers import ProjectBillin
 from coldfront.core.billing.utils.billing_activity_managers import ProjectUserBillingActivityManager
 from coldfront.core.billing.utils.billing_activity_managers import UserBillingActivityManager
 from coldfront.core.billing.utils.queries import get_billing_id_usages
+from coldfront.core.billing.utils.queries import is_billing_id_well_formed
+from coldfront.core.billing.utils.queries import get_billing_activity_from_full_id
 from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
+from coldfront.core.billing.utils.validation import is_billing_id_valid
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 
@@ -308,3 +312,35 @@ class BillingIDUsagesSearchView(LoginRequiredMixin, UserPassesTestMixin,
         context['next_url_parameter'] = urlencode({'next': next_url})
 
         return context
+    
+class BillingIDValidateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+
+    form_class = BillingIDValidateManyForm
+    template_name = 'billing/billing_id_validate.html'
+
+    def test_func(self):
+        return self.request.user.is_superuser
+
+    def form_valid(self, form):
+        billing_ids = form.cleaned_data.get('billing_ids')
+
+        validation_results = ''
+        if billing_ids:
+            separated_billing_ids = [s.strip() for s in billing_ids.split('\n')]
+            for full_id in separated_billing_ids:
+                append_str = "Malformed"
+                if is_billing_id_well_formed(full_id):
+                    billing_activity = get_billing_activity_from_full_id(full_id)
+                    if isinstance(billing_activity, BillingActivity) and \
+                            is_billing_id_valid(billing_activity.full_id()):
+                        append_str = "Valid"
+                    else:
+                        append_str = "Invalid"
+
+                validation_results += ( f'{full_id}: {append_str}, ' )
+        messages.success(self.request, validation_results)
+        return super().form_valid(form)
+
+
+    def get_success_url(self):
+        return '/billing/validate/'
