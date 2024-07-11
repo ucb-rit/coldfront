@@ -338,7 +338,7 @@ class BillingIDValidateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
                         append_str = "Invalid"
 
                 validation_results += ( f'{full_id}: {append_str}, ' )
-        messages.success(self.request, validation_results)
+        messages.success(self.request, validation_results.strip(', '))
         return super().form_valid(form)
 
 
