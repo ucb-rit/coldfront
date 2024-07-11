@@ -106,6 +106,28 @@ class TestBillingIds(TestBillingBase):
         billing_activity = get_billing_activity_from_full_id(billing_id)
         self.assertTrue(isinstance(billing_activity, BillingActivity))
 
+    def test_validate_malformed(self):
+        """Test that, when the given billing ID is malformed, the
+        'validate' subcommand raises an error."""
+        billing_id = '12345-67'
+        self.assertIsNone(get_billing_activity_from_full_id(billing_id))
+        self.assertFalse(is_billing_id_well_formed(billing_id))
+
+        with self.assertRaises(CommandError) as cm:
+            self.command.validate([billing_id])
+        self.assertIn('is malformed', str(cm.exception))
+
+    def test_validate_nonexistant(self):
+        """Test that, when the given billing ID does not exist, the
+        'validate' subcommand raises an error."""
+        billing_id = '123456-789'
+        self.assertIsNone(get_billing_activity_from_full_id(billing_id))
+        self.assertTrue(is_billing_id_well_formed(billing_id))
+
+        with self.assertRaises(CommandError) as cm:
+            self.command.validate([billing_id])
+        self.assertIn('does not exist', str(cm.exception))
+
     # TODO: test_list
 
     @enable_deployment('LRC')
@@ -400,6 +422,15 @@ class BillingIdsCommand(object):
         """Call the 'create' subcommand with the given billing ID, and
         flag values."""
         args = ['create', billing_id]
+        self._add_flags_to_args(args, **flags)
+        return self.call_subcommand(*args)
+    
+    def validate(self, billing_ids, **flags):
+        """Call the 'validate' subcommand with the given billing IDs, and
+        flag values."""
+        args = ['validate']
+        for billing_id in billing_ids:
+            args.append(billing_id)
         self._add_flags_to_args(args, **flags)
         return self.call_subcommand(*args)
 
