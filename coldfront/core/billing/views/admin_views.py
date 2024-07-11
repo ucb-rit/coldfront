@@ -10,6 +10,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
+from django.utils.safestring import mark_safe
 
 from coldfront.core.billing.forms import BillingIDCreationForm
 from coldfront.core.billing.forms import BillingIDValidateManyForm
@@ -327,8 +328,8 @@ class BillingIDValidateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
         validation_results = ''
         if billing_ids:
             separated_billing_ids = [s.strip() for s in billing_ids.split('\n')]
+            exists_malformed_or_invalid = False
             for full_id in separated_billing_ids:
-                append_str = "Malformed"
                 if is_billing_id_well_formed(full_id):
                     billing_activity = get_billing_activity_from_full_id(full_id)
                     if isinstance(billing_activity, BillingActivity) and \
@@ -336,9 +337,17 @@ class BillingIDValidateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
                         append_str = "Valid"
                     else:
                         append_str = "Invalid"
+                        exists_malformed_or_invalid = True
+                else:
+                    append_str = "Malformed"
+                    exists_malformed_or_invalid = True
 
-                validation_results += ( f'{full_id}: {append_str}, ' )
-        messages.success(self.request, validation_results.strip(', '))
+                validation_results += ( f'{full_id}: {append_str}<br />' )
+        if exists_malformed_or_invalid:
+            messages.error(self.request, mark_safe(validation_results))
+        else:
+            messages.success(self.request, mark_safe(validation_results))
+
         return super().form_valid(form)
 
 
