@@ -443,6 +443,16 @@ class ProjectListView(LoginRequiredMixin, ListView):
         context['user_agreement_signed'] = \
             access_agreement_signed(self.request.user)
 
+        for project in project_list:
+            try:
+                information = get_project_compute_allocation(
+                    project).get_information
+                information = information[len('Service Units: '):-len(' <br>')]
+                project.compute_allocation_information = information or 'N/A'
+            except Exception:
+                project.compute_allocation_information = 'N/A'
+        context['project_list'] = project_list
+
         return context
 
 
