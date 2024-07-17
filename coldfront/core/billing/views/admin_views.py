@@ -331,9 +331,7 @@ class BillingIDValidateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
             exists_malformed_or_invalid = False
             for full_id in separated_billing_ids:
                 if is_billing_id_well_formed(full_id):
-                    billing_activity = get_billing_activity_from_full_id(full_id)
-                    if isinstance(billing_activity, BillingActivity) and \
-                            is_billing_id_valid(billing_activity.full_id()):
+                    if is_billing_id_valid(full_id):
                         append_str = "Valid"
                     else:
                         append_str = "Invalid"

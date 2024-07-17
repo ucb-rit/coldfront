@@ -279,11 +279,10 @@ class Command(BaseCommand):
         """Handle the 'validate' subcommand."""
         for full_id in options['billings_ids']:
             if is_billing_id_well_formed(full_id):
-                billing_activity = self._get_billing_activity_or_error(full_id)
                 append_str = 'Valid'
-                if not is_billing_id_valid(billing_activity.full_id()):
+                if not is_billing_id_valid(full_id):
                     append_str = 'Invalid'
-                print(billing_activity.full_id() + ':', append_str)
+                print(full_id + ':', append_str)
             else:
                 raise CommandError(f'Billing ID {full_id} is malformed.')
 
