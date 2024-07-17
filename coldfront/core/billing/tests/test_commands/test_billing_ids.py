@@ -106,27 +106,29 @@ class TestBillingIds(TestBillingBase):
         billing_activity = get_billing_activity_from_full_id(billing_id)
         self.assertTrue(isinstance(billing_activity, BillingActivity))
 
-    def test_validate_malformed(self):
-        """Test that, when the given billing ID is malformed, the
-        'validate' subcommand raises an error."""
-        billing_id = '12345-67'
-        self.assertIsNone(get_billing_activity_from_full_id(billing_id))
-        self.assertFalse(is_billing_id_well_formed(billing_id))
+    def test_validate_success(self):
+        """Test that, given a variety of billing IDs, the
+        'validate' outputs correctly."""
 
-        with self.assertRaises(CommandError) as cm:
-            self.command.validate([billing_id])
-        self.assertIn('is malformed', str(cm.exception))
+        malformed_billing_id = '12345-67'
+        self.assertFalse(is_billing_id_well_formed(malformed_billing_id))
 
-    def test_validate_nonexistant(self):
-        """Test that, when the given billing ID does not exist, the
-        'validate' subcommand raises an error."""
-        billing_id = '123456-789'
-        self.assertIsNone(get_billing_activity_from_full_id(billing_id))
-        self.assertTrue(is_billing_id_well_formed(billing_id))
+        invalid_billing_id = '123456-789'
+        self.assertTrue(is_billing_id_well_formed(invalid_billing_id))
+        self.assertFalse(is_billing_id_valid(invalid_billing_id))
 
-        with self.assertRaises(CommandError) as cm:
-            self.command.validate([billing_id])
-        self.assertIn('does not exist', str(cm.exception))
+        valid_billing_id = '123456-788'
+        self.assertTrue(is_billing_id_well_formed(valid_billing_id))
+        self.assertTrue(is_billing_id_valid(valid_billing_id))
+
+        output, error = self.command.validate(
+            [malformed_billing_id, invalid_billing_id, valid_billing_id])
+        
+        self.assertFalse(error)
+
+        self.assertIn(malformed_billing_id + ": Malformed", output)
+        self.assertIn(invalid_billing_id + ": Invalid", output)
+        self.assertIn(valid_billing_id + ": Valid", output)
 
     # TODO: test_list
 

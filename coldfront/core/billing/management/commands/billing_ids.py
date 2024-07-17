@@ -108,11 +108,12 @@ class Command(BaseCommand):
     @staticmethod
     def _add_validate_subparser(parsers):
         parser = parsers.add_parser(
-            'validate', help=('Takes a billing ID as input and prints out "Valid" or "Invalid."'))
-
+            'validate', help=(
+                'Check whether one or more billing IDs are valid.'))
+        
         parser.add_argument(
-            'billings_ids', 
-            help=('A space-separated list of billings ids (e.g., 123456-789) to be validated.'),
+            'billing_ids', 
+            help=('A space-separated list of billing IDs.'),
             nargs='+',
             type=str)
 
@@ -277,14 +278,14 @@ class Command(BaseCommand):
             
     def _handle_validate(self, *args, **options):
         """Handle the 'validate' subcommand."""
-        for full_id in options['billings_ids']:
+        for full_id in options['billing_ids']:
             if is_billing_id_well_formed(full_id):
-                append_str = 'Valid'
-                if not is_billing_id_valid(full_id):
-                    append_str = 'Invalid'
-                print(full_id + ':', append_str)
+                if is_billing_id_valid(full_id):
+                    self.stdout.write(self.style.SUCCESS(full_id + ': Valid'))
+                else:
+                    self.stdout.write(self.style.ERROR(full_id + ': Invalid'))
             else:
-                raise CommandError(f'Billing ID {full_id} is malformed.')
+                self.stdout.write(self.style.ERROR(full_id + ': Malformed'))
 
     def _handle_set_project_default(self, project, billing_activity,
                                     dry_run=False):

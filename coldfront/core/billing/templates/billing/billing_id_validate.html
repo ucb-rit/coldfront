@@ -10,12 +10,11 @@
 {% block content %}
 
 <h1>Validate LBL Project IDs</h1>
-<p>
-    To test the validity of multiple Project IDs, put each on its own line. The form checks whether
-    each Project ID is well-formed, and if it is well-formed, it checks the validity of each ID. Do
-    not put extra text or spaces, else the form will consider the ID malformed.
-</p>
 <hr>
+
+<p>
+    To test the validity of multiple Project IDs, put each on its own line. 
+</p>
 
 <form method="post">
   {% csrf_token %}
