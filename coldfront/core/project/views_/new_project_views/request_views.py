@@ -823,7 +823,8 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             with transaction.atomic():
                 pi = self.__handle_pi_data(form_data)
                 manager = self.__handle_manager_data(form_data)
-                project, resource = self.__handle_create_new_standalone_cluster(form_data, pi, manager)
+                project = self.__handle_create_new_standalone_cluster(
+                                form_data, pi, manager)
                 redirect_url = '/project/' + str(project.pk) + '/'
         except Exception as e:
             self.logger.exception(e)
@@ -931,7 +932,8 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             self.logger.error(f'User {email} unexpectedly exists.')
             raise e
 
-        # Set the user's middle name in the UserProfile; generate a manager request.
+        # Set the user's middle name in the UserProfile; 
+        # generate a manager request.
         try:
             manager_profile = manager.userprofile
         except UserProfile.DoesNotExist as e:
@@ -981,7 +983,9 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         
         # TODO: How many units should I allocate?
         num_service_units = settings.ALLOCATION_MAX
-        project = create_project_with_compute_allocation(project_data['name'], resource, num_service_units)
+        project = create_project_with_compute_allocation(project_data['name'], 
+                                                         resource, 
+                                                         num_service_units)
         
         pi_role = ProjectUserRoleChoice.objects.get(name='Principal Investigator')
         manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
@@ -1001,7 +1005,7 @@ class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 email_strategy=DropEmailStrategy())
             runner.run()
 
-        return project, resource
+        return project
 
     def __set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""

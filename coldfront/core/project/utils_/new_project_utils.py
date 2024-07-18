@@ -736,7 +736,9 @@ def vector_request_state_status(vector_request):
     return ProjectAllocationRequestStatusChoice.objects.get(
         name='Approved - Processing')
 
-def create_project_with_compute_allocation(project_name, compute_resource, num_service_units):
+def create_project_with_compute_allocation(project_name, 
+                                           compute_resource, 
+                                           num_service_units):
     """Create a Project with the given name, with an Allocation to
         the given compute Resource with given number of service units. 
         Return the Project.
