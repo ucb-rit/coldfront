@@ -1,3 +1,7 @@
+import gspread
+from coldfront.core.utils.management.commands.utils import get_gspread_worksheet
+from django.conf import settings
+
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.project.forms import DisabledChoicesSelectWidget
@@ -17,6 +21,7 @@ from flags.state import flag_enabled
 from django import forms
 from django.utils.safestring import mark_safe
 from django.core.validators import MinLengthValidator
+from django.core.exceptions import ValidationError
 
 
 class ProjectRenewalPIChoiceField(forms.ModelChoiceField):
@@ -193,6 +198,53 @@ class ProjectRenewalProjectSelectionForm(forms.Form):
             _filter['pk__in'] = project_pks
         self.fields['project'].queryset = Project.objects.filter(
             **_filter).exclude(**exclude).order_by('name')
+
+class ProjectRenewalGoogleSurveyForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        self.project_name = kwargs.pop('project_name', None)
+        self.pi = kwargs.pop('pi', None)
+        self.allocation_period = kwargs.pop('allocation_period', None)
+        super().__init__(*args, **kwargs)
+        self._update_field_attributes()
+
+    def _update_field_attributes(self):
+        """Update field attributes with deployment-specific content."""
+        if flag_enabled('BRC_ONLY'):
+            self._update_brc_survey_fields()
+
+        elif flag_enabled('LRC_ONLY'):
+            self._update_lrc_survey_fields()
+
+    def validate_survey_completed(self, value):
+        gc = gspread.service_account(filename='tmp/credentials.json')
+        sh = gc.open_by_key("1TLYGCL04oGIWAJ4QBsE9VwcM1FaBjmT36Tkl83V6-WE")
+        wks = sh.get_worksheet(0)
+
+        # TODO: Have the col index for the questions hardcoded in JSON file
+        # alongside URLs?
+        periods = wks.col_values(23)
+        pis = wks.col_values(25)
+        projects = wks.col_values(26)
+
+        responses = zip(periods, pis, projects)
+        key = (self.allocation_period, self.pi.username, self.project_name)
+
+        # TODO: Should checks be added for the requester?
+        if key not in responses:
+            raise ValidationError(
+                f'Survey has not been filled out for {self.pi.username}, \
+                {self.project_name}, and {self.allocation_period} together.')
+
+    def _update_brc_survey_fields(self):
+        self.fields['was_survey_completed'] = forms.BooleanField(
+            initial=False,
+            required=True,
+            validators=[self.validate_survey_completed]
+        )
+
+    def _update_lrc_survey_fields(self):
+        pass
 
 class ProjectRenewalSurveyForm(forms.Form):
     

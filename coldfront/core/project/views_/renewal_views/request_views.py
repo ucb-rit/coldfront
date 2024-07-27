@@ -11,6 +11,7 @@ from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRen
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalPoolingPreferenceForm
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalProjectSelectionForm
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalSurveyForm
+from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalGoogleSurveyForm
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalReviewAndSubmitForm
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
@@ -205,6 +206,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ('new_project_details', SavioProjectDetailsForm),
         ('new_project_survey', SavioProjectSurveyForm),
         ('renewal_survey', ProjectRenewalSurveyForm),
+        ('google_renewal_survey', ProjectRenewalGoogleSurveyForm),
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
     ]
 
@@ -220,6 +222,8 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             'project/project_renewal/new_project_survey.html',
         'renewal_survey':
             'project/project_renewal/project_renewal_survey.html',
+        'google_renewal_survey':
+            'project/project_renewal/project_google_renewal_survey.html',
         'review_and_submit': 'project/project_renewal/review_and_submit.html',
     }
 
@@ -231,6 +235,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         SavioProjectDetailsForm,
         SavioProjectSurveyForm,
         ProjectRenewalSurveyForm,
+        ProjectRenewalGoogleSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
     ]
 
@@ -318,6 +323,15 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             kwargs['computing_allowance'] = self.computing_allowance
         elif step == self.step_numbers_by_form_name['new_project_survey']:
             kwargs['computing_allowance'] = self.computing_allowance
+        elif step == self.step_numbers_by_form_name['google_renewal_survey']:
+            kwargs['user'] = self.request.user
+
+            tmp = {}
+            self.__set_data_from_previous_steps(step, tmp)
+            kwargs['project_name'] = tmp['current_project'].name
+            kwargs['pi'] = tmp['PI'].user
+            kwargs['allocation_period'] = tmp['allocation_period'].name
+
         return kwargs
 
     def get_template_names(self):
@@ -587,6 +601,7 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         ('allocation_period', SavioProjectAllocationPeriodForm),
         ('pi_selection', ProjectRenewalPISelectionForm),
         ('renewal_survey', ProjectRenewalSurveyForm),
+        ('google_renewal_survey', ProjectRenewalGoogleSurveyForm),
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
     ]
 
@@ -594,6 +609,8 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         'allocation_period': 'project/project_renewal/allocation_period.html',
         'pi_selection': 'project/project_renewal/pi_selection.html',
         'renewal_survey': 'project/project_renewal/project_renewal_survey.html',
+        'google_renewal_survey': 
+            'project/project_renewal/project_google_renewal_survey.html',
         'review_and_submit': 'project/project_renewal/review_and_submit.html',
     }
 
@@ -601,6 +618,7 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         SavioProjectAllocationPeriodForm,
         ProjectRenewalPISelectionForm,
         ProjectRenewalSurveyForm,
+        ProjectRenewalGoogleSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
     ]
 
@@ -677,6 +695,14 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             kwargs['allocation_period_pk'] = getattr(
                 tmp.get('allocation_period', None), 'pk', None)
             kwargs['project_pks'] = [self.project_obj.pk]
+        elif step == self.step_numbers_by_form_name['google_renewal_survey']:
+            kwargs['user'] = self.request.user
+            kwargs['project_name'] = self.project_obj.name
+
+            tmp = {}
+            self.__set_data_from_previous_steps(len(self.FORMS), tmp)
+            kwargs['pi'] = tmp['PI'].user
+            kwargs['allocation_period'] = tmp['allocation_period'].name
         return kwargs
 
     def get_template_names(self):
