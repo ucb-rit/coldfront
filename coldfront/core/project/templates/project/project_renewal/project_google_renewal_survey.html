@@ -30,14 +30,23 @@ Project Renewal - Usage Survey
   <li>Requested Project: {{ requested_project }}</li>
 </ol>
 
-<p>Please respond to the following questions to provide us with more information about your project and computational needs.</p>
 {% with base="https://docs.google.com/forms/d/e/1FAIpQLSeC3R3RRxO6SXqZXM2Pwo2oZHbpvX6tKqU1MjLDU8HD1FVbOQ/viewform?usp=pp_url" %}
 {% with period_field="&entry.1284416437=" pi_name="&entry.904520088=" pi_user="&entry.1441596672=" proj_name="&entry.671387406=" req_name="&entry.900155562=" req_user="&entry.488770165=" %}
-<a 
+<p>
+    Please go to and fill out the survey below to provide us with more information about your project and computational needs. 
+    <span class="font-weight-bold">At the end of the survey, there are pre-filled fields needed for admin purposes. 
+    Please do not edit them.</span> If you edit them, your survey response will not be detected.
+</p>
+
+<p>If you are having issues, check that you did not edit the pre-filled fields in the admin section of the survey.</p>
+<a
+    class="btn btn-primary"
     href="{{base}}{{period_field}}{{allocation_period.name}}{{pi_name}}{{PI.user.first_name}}+{{PI.user.last_name}}{{pi_user}}{{PI.user.username}}{{proj_name}}{{current_project}}{{req_name}}{{user.first_name}}+{{user.last_name}}{{req_user}}{{user.username}}" 
-    target="_blank">
-        Go to survey
+        target="_blank">
+    Go to Survey
 </a>
+
+<p></p>
 {% endwith %}
 {% endwith %}
 

@@ -233,11 +233,13 @@ class ProjectRenewalGoogleSurveyForm(forms.Form):
         # TODO: Should checks be added for the requester?
         if key not in responses:
             raise ValidationError(
-                f'Survey has not been filled out for {self.pi.username}, \
-                {self.project_name}, and {self.allocation_period} together.')
+                f'Response for {self.pi.username}, \
+                {self.project_name}, {self.allocation_period} not detected.')
 
     def _update_brc_survey_fields(self):
         self.fields['was_survey_completed'] = forms.BooleanField(
+            label=('I have completed the survey and did NOT edit the pre-filled'
+            ' fields at the end of the survey.'),
             initial=False,
             required=True,
             validators=[self.validate_survey_completed]
