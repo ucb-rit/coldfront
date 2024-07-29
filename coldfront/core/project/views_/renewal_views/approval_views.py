@@ -11,6 +11,7 @@ from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcess
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_denial_reason
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_latest_update_timestamp
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_state_status
+from coldfront.core.project.utils_.renewal_utils import set_allocation_renewal_request_eligibility
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_current_date
@@ -375,15 +376,9 @@ class AllocationRenewalRequestReviewEligibilityView(LoginRequiredMixin,
         form_data = form.cleaned_data
         status = form_data['status']
         justification = form_data['justification']
-        timestamp = utc_now_offset_aware().isoformat()
-        self.request_obj.state['eligibility'] = {
-            'status': status,
-            'justification': justification,
-            'timestamp': timestamp,
-        }
-        self.request_obj.status = allocation_renewal_request_state_status(
-            self.request_obj)
-        self.request_obj.save()
+
+        set_allocation_renewal_request_eligibility(
+            self.request_obj, status, justification)
 
         if status == 'Denied':
             runner = AllocationRenewalDenialRunner(self.request_obj)
