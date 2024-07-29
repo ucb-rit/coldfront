@@ -35,6 +35,9 @@ from django.urls import reverse
 from urllib.parse import urljoin
 import logging
 
+from flags.state import flag_enabled
+import json
+
 
 logger = logging.getLogger(__name__)
 
@@ -1060,3 +1063,20 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
                 message = message_template.format(
                     future_period_request.pk, tmp_pre_project.pk)
                 logger.info(message)
+
+def get_renewal_survey(allocation_period_name):
+    """ TODO: Write documentation """
+
+    # TODO: How to get file path corrrectly onto file without hardcoding?
+    with open("coldfront/core/project/utils_/data/survey_data.json") as fp:
+        data = json.load(fp)
+        deployment = ''
+        if flag_enabled('BRC_ONLY'):
+            deployment = 'BRC'
+        else:
+            deployment = 'LRC'
+        for elem in data:
+            if elem["allocation_period"] == allocation_period_name and elem["deployment"] == deployment:
+                return elem
+    
+    return None
