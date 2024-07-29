@@ -26,6 +26,7 @@ from coldfront.core.project.utils_.renewal_utils import has_non_denied_renewal_r
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_admin_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pi_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pooling_notification_email
+from coldfront.core.project.utils_.renewal_utils import get_renewal_survey
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
@@ -205,7 +206,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ('project_selection', ProjectRenewalProjectSelectionForm),
         ('new_project_details', SavioProjectDetailsForm),
         ('new_project_survey', SavioProjectSurveyForm),
-        # ('renewal_survey', ProjectRenewalSurveyForm),
         ('google_renewal_survey', ProjectRenewalGoogleSurveyForm),
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
     ]
@@ -220,8 +220,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             'project/project_renewal/new_project_details.html',
         'new_project_survey':
             'project/project_renewal/new_project_survey.html',
-        # 'renewal_survey':
-        #     'project/project_renewal/project_renewal_survey.html',
         'google_renewal_survey':
             'project/project_renewal/project_google_renewal_survey.html',
         'review_and_submit': 'project/project_renewal/review_and_submit.html',
@@ -234,7 +232,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ProjectRenewalProjectSelectionForm,
         SavioProjectDetailsForm,
         SavioProjectSurveyForm,
-        # ProjectRenewalSurveyForm,
         ProjectRenewalGoogleSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
     ]
@@ -373,7 +370,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             request = self.create_allocation_renewal_request(
                 self.request.user, pi, self.computing_allowance,
                 allocation_period, tmp['current_project'], requested_project,
-                # tmp['renewal_survey_answers'], 
                 new_project_request=new_project_request)
 
             self.send_emails(request)
@@ -584,11 +580,12 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary.update(data)
                 dictionary['requested_project'] = data['name']
 
-        renewal_survey_form_step = self.step_numbers_by_form_name[
-            'renewal_survey']
-        if step > renewal_survey_form_step:
-            data = self.get_cleaned_data_for_step(str(renewal_survey_form_step))
-            dictionary['renewal_survey_answers'] = data or {}
+        google_renewal_survey_form_step = self.step_numbers_by_form_name[
+            'google_renewal_survey']
+        if step == google_renewal_survey_form_step:
+            survey_data = get_renewal_survey(dictionary['allocation_period'].name)
+            if survey_data != None:
+                dictionary['form_id'] = survey_data['form_id']
 
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
@@ -607,7 +604,6 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
     TEMPLATES = {
         'allocation_period': 'project/project_renewal/allocation_period.html',
         'pi_selection': 'project/project_renewal/pi_selection.html',
-        # 'renewal_survey': 'project/project_renewal/project_renewal_survey.html',
         'google_renewal_survey': 
             'project/project_renewal/project_google_renewal_survey.html',
         'review_and_submit': 'project/project_renewal/review_and_submit.html',
@@ -616,7 +612,6 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
     form_list = [
         SavioProjectAllocationPeriodForm,
         ProjectRenewalPISelectionForm,
-        # ProjectRenewalSurveyForm,
         ProjectRenewalGoogleSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
     ]
@@ -775,9 +770,11 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                 dictionary['breadcrumb_pooling_preference'] = \
                     form_class.SHORT_DESCRIPTIONS.get(
                         pooling_preference, 'Unknown')
-
-        # renewal_survey_form_step = self.step_numbers_by_form_name[
-        #     'renewal_survey']
-        # if step > renewal_survey_form_step:
-        #     data = self.get_cleaned_data_for_step(str(renewal_survey_form_step))
-        #     dictionary['renewal_survey_answers'] = data or {}
+        
+        google_renewal_survey_form_step = self.step_numbers_by_form_name[
+            'google_renewal_survey']
+        if step == google_renewal_survey_form_step:
+            survey_data = get_renewal_survey(dictionary['allocation_period'].name)
+            if survey_data != None:
+                dictionary['form_id'] = survey_data['form_id']
+                
