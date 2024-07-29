@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 from flags.state import flag_enabled
 
 from coldfront.core.resource.models import Resource
@@ -130,6 +132,27 @@ class ComputingAllowance(object):
     def get_name(self):
         """Return the name of the underlying Resource."""
         return self._name
+
+    def get_period_filters(self):
+        """Return a Django Q object that can be used to filter for
+        AllocationPeriods associated with the allowance.
+
+        If none are applicable, return None.
+        """
+        yearly_q = Q(name__startswith='Allowance Year')
+        if flag_enabled('BRC_ONLY'):
+            if self.is_yearly():
+                return yearly_q
+            elif self.is_instructional():
+                instructional_q = (
+                    Q(name__startswith='Fall Semester') |
+                    Q(name__startswith='Spring Semester') |
+                    Q(name__startswith='Summer Sessions'))
+                return instructional_q
+        if flag_enabled('LRC_ONLY'):
+            if self.is_yearly():
+                return yearly_q
+        return None
 
     def get_resource(self):
         """Return the underlying Resource."""
