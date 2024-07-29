@@ -205,6 +205,8 @@ class ProjectRenewalGoogleSurveyForm(forms.Form):
         self.project_name = kwargs.pop('project_name', None)
         self.pi = kwargs.pop('pi', None)
         self.allocation_period = kwargs.pop('allocation_period', None)
+        self.sheet_id = kwargs.pop('sheet_id', None)
+        self.sheet_data = kwargs.pop('sheet_data', None)
         super().__init__(*args, **kwargs)
         self._update_field_attributes()
 
@@ -218,14 +220,14 @@ class ProjectRenewalGoogleSurveyForm(forms.Form):
 
     def validate_survey_completed(self, value):
         gc = gspread.service_account(filename='tmp/credentials.json')
-        sh = gc.open_by_key("1TLYGCL04oGIWAJ4QBsE9VwcM1FaBjmT36Tkl83V6-WE")
+        sh = gc.open_by_key(self.sheet_id)
         wks = sh.get_worksheet(0)
 
         # TODO: Have the col index for the questions hardcoded in JSON file
         # alongside URLs?
-        periods = wks.col_values(23)
-        pis = wks.col_values(25)
-        projects = wks.col_values(26)
+        periods = wks.col_values(self.sheet_data["allocation_period_col"])
+        pis = wks.col_values(self.sheet_data["pi_username_col"])
+        projects = wks.col_values(self.sheet_data["project_name_col"])
 
         responses = zip(periods, pis, projects)
         key = (self.allocation_period, self.pi.username, self.project_name)

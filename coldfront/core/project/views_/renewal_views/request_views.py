@@ -327,6 +327,8 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             kwargs['project_name'] = tmp['current_project'].name
             kwargs['pi'] = tmp['PI'].user
             kwargs['allocation_period'] = tmp['allocation_period'].name
+            kwargs['sheet_id'] = tmp['sheet_id']
+            kwargs['sheet_data'] = tmp['sheet_data']
 
         return kwargs
 
@@ -586,6 +588,8 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             survey_data = get_renewal_survey(dictionary['allocation_period'].name)
             if survey_data != None:
                 dictionary['form_id'] = survey_data['form_id']
+                dictionary['sheet_id'] = survey_data['sheet_id']
+                dictionary['sheet_data'] = survey_data['sheet_data']
 
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
@@ -657,10 +661,6 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                     f'AllocationRenewalRequest for AllocationPeriod '
                     f'{allocation_period.name}.')
 
-            # request = self.create_allocation_renewal_request(
-            #     self.request.user, pi, self.computing_allowance,
-            #     allocation_period, self.project_obj, self.project_obj, 
-            #     tmp['renewal_survey_answers'])
             request = self.create_allocation_renewal_request(
                 self.request.user, pi, self.computing_allowance,
                 allocation_period, self.project_obj, self.project_obj)
@@ -696,9 +696,11 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             kwargs['user'] = self.request.user
             kwargs['project_name'] = self.project_obj.name
             tmp = {}
-            self.__set_data_from_previous_steps(len(self.FORMS), tmp)
+            self.__set_data_from_previous_steps(step, tmp)
             kwargs['pi'] = tmp['PI'].user
             kwargs['allocation_period'] = tmp['allocation_period'].name
+            kwargs['sheet_id'] = tmp['sheet_id']
+            kwargs['sheet_data'] = tmp['sheet_data']
         return kwargs
 
     def get_template_names(self):
@@ -777,4 +779,6 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             survey_data = get_renewal_survey(dictionary['allocation_period'].name)
             if survey_data != None:
                 dictionary['form_id'] = survey_data['form_id']
+                dictionary['sheet_id'] = survey_data['sheet_id']
+                dictionary['sheet_data'] = survey_data['sheet_data']
                 
