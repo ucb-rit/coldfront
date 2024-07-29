@@ -51,9 +51,13 @@ class SavioProjectAllocationPeriodForm(forms.Form):
     def __init__(self, *args, **kwargs):
         computing_allowance = kwargs.pop('computing_allowance', None)
         super().__init__(*args, **kwargs)
-        display_timezone = pytz.timezone(settings.DISPLAY_TIME_ZONE)
-        queryset = self.allocation_period_choices(
-            computing_allowance, utc_now_offset_aware(), display_timezone)
+        if computing_allowance is not None:
+            computing_allowance = ComputingAllowance(computing_allowance)
+            display_timezone = pytz.timezone(settings.DISPLAY_TIME_ZONE)
+            queryset = self.allocation_period_choices(
+                computing_allowance, utc_now_offset_aware(), display_timezone)
+        else:
+            queryset = AllocationPeriod.objects.none()
         self.fields['allocation_period'] = AllocationPeriodChoiceField(
             computing_allowance=computing_allowance,
             label='Allocation Period',
@@ -87,32 +91,29 @@ class SavioProjectAllocationPeriodForm(forms.Form):
 
     def _allocation_period_choices_brc(self, computing_allowance, date, f,
                                        order_by):
-        """TODO"""
-        allowance_name = computing_allowance.name
+        allowance_name = computing_allowance.get_name()
         if allowance_name in (BRCAllowances.FCA, BRCAllowances.PCA):
             return self._allocation_period_choices_allowance_year(
-                date, f, order_by)
+                computing_allowance, date, f, order_by)
         elif allowance_name == BRCAllowances.ICA:
             num_days = self.NUM_DAYS_BEFORE_ICA
             f = f & Q(start_date__lte=date + timedelta(days=num_days))
-            f = f & (
-                Q(name__startswith='Fall Semester') |
-                Q(name__startswith='Spring Semester') |
-                Q(name__startswith='Summer Sessions'))
+            allowance_periods_q = computing_allowance.get_period_filters()
+            if allowance_periods_q is not None:
+                f = f & allowance_periods_q
             return AllocationPeriod.objects.filter(f).order_by(*order_by)
         return AllocationPeriod.objects.none()
 
     def _allocation_period_choices_lrc(self, computing_allowance, date, f,
                                        order_by):
-        """TODO"""
         allowance_name = computing_allowance.name
         if allowance_name == LRCAllowances.PCA:
             return self._allocation_period_choices_allowance_year(
-                date, f, order_by)
+                computing_allowance, date, f, order_by)
         return AllocationPeriod.objects.none()
 
-    def _allocation_period_choices_allowance_year(self, date, f, order_by):
-        """TODO"""
+    def _allocation_period_choices_allowance_year(self, computing_allowance,
+                                                  date, f, order_by):
         if flag_enabled('ALLOCATION_RENEWAL_FOR_NEXT_PERIOD_REQUESTABLE'):
             # If projects for the next period may be requested, include it.
             started_before_date = (
@@ -126,7 +127,9 @@ class SavioProjectAllocationPeriodForm(forms.Form):
             # Otherwise, include only the current period.
             started_before_date = date
         f = f & Q(start_date__lte=started_before_date)
-        f = f & Q(name__startswith='Allowance Year')
+        allowance_periods_q = computing_allowance.get_period_filters()
+        if allowance_periods_q is not None:
+            f = f & allowance_periods_q
         return AllocationPeriod.objects.filter(f).order_by(*order_by)
 
 
