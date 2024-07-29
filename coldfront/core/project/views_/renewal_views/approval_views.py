@@ -1,6 +1,6 @@
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.utils import annotate_queryset_with_allocation_period_not_started_bool
-from coldfront.core.allocation.utils import prorated_allocation_amount
+from coldfront.core.allocation.utils import calculate_service_units_to_allocate
 from coldfront.core.project.forms import ReviewDenyForm
 from coldfront.core.project.forms import ReviewStatusForm
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
@@ -13,14 +13,11 @@ from coldfront.core.project.utils_.renewal_utils import allocation_renewal_reque
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_state_status
 from coldfront.core.project.utils_.renewal_utils import set_allocation_renewal_request_eligibility
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import format_date_month_name_day_year
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
-
-from decimal import Decimal
 
 from django.conf import settings
 from django.contrib import messages
@@ -110,17 +107,11 @@ class AllocationRenewalRequestMixin(object):
             'pi-allocation-renewal-request-detail', kwargs={'pk': pk})
 
     def get_service_units_to_allocate(self):
-        """Return the number of service units to allocate to the project
-        if it were to be approved now."""
-        num_service_units = Decimal(
-            ComputingAllowanceInterface().service_units_from_name(
-                self.computing_allowance_obj.get_name(),
-                is_timed=True, allocation_period=self.allocation_period_obj))
-        if self.computing_allowance_obj.are_service_units_prorated():
-            num_service_units = prorated_allocation_amount(
-                num_service_units, self.request_obj.request_time,
-                self.allocation_period_obj)
-        return num_service_units
+        """Return the number of service units to allocate to the
+        project."""
+        return calculate_service_units_to_allocate(
+            self.computing_allowance_obj, self.request_obj.request_time,
+            allocation_period=self.allocation_period_obj)
 
     def set_common_context_data(self, context):
         """Given a dictionary of context variables to include in the
