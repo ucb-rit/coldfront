@@ -1065,7 +1065,19 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
                 logger.info(message)
 
 def get_renewal_survey(allocation_period_name):
-    """ TODO: Write documentation """
+    """ Given the name of the allocation period, returns Google Form
+     Survey info depending on LRC/BRC. The information is a dict containing:
+        deployment: 'BRC/LRC',
+        sheet_id: string,
+        form_id: string,
+        allocation_period: string,
+        sheet_data: {
+            allocation_period_col: int,
+            pi_username_col: int,
+            project_name_col: int
+        } 
+    The sheet_data values refer to the column coordinates of information used
+    to enforce automatic check/block for the renewal form."""
 
     # TODO: How to get file path corrrectly onto file without hardcoding?
     with open("coldfront/core/project/utils_/data/survey_data.json") as fp:
