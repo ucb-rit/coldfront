@@ -1,3 +1,5 @@
+import gspread
+
 from coldfront.api.statistics.utils import set_project_user_allocation_value
 from coldfront.core.allocation.models import AllocationAttribute
 from coldfront.core.allocation.models import AllocationAttributeType
@@ -1063,6 +1065,13 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
                 message = message_template.format(
                     future_period_request.pk, tmp_pre_project.pk)
                 logger.info(message)
+
+def get_gspread_wks(sheet_id, wks_id):
+    gc = gspread.service_account(filename='tmp/credentials.json')
+    sh = gc.open_by_key(sheet_id)
+    wks = sh.get_worksheet(wks_id)
+    
+    return wks
 
 def get_renewal_survey(allocation_period_name):
     """ Given the name of the allocation period, returns Google Form
