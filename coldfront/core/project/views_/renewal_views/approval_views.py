@@ -11,6 +11,8 @@ from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcess
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_denial_reason
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_latest_update_timestamp
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_state_status
+from coldfront.core.project.utils_.renewal_utils import get_renewal_survey
+from coldfront.core.project.utils_.renewal_utils import get_gspread_wks
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_current_date
@@ -99,8 +101,8 @@ class AllocationRenewalRequestMixin(object):
             logger.exception(e)
             messages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
-        context['has_survey_answers'] = bool(
-            self.request_obj.renewal_survey_answers)
+        context['survey_response'] = \
+            self.get_google_renewal_survey_responses()
         return context
 
     @staticmethod
@@ -121,17 +123,30 @@ class AllocationRenewalRequestMixin(object):
                 self.allocation_period_obj)
         return num_service_units
 
+    def get_google_renewal_survey_responses(self):
+        """ TODO """
+        gform_info = get_renewal_survey(self.request_obj.allocation_period.name)
+        wks = get_gspread_wks(gform_info['sheet_id'], 0)
+        
+        pis = wks.col_values(gform_info["sheet_data"]["pi_username_col"])
+        projects = wks.col_values(gform_info["sheet_data"]["project_name_col"])
+
+        all_responses = list(zip(pis, projects))
+        key = (self.request_obj.pi.username, self.request_obj.post_project.name)
+
+        row_ind = all_responses.index(key) + 1 if key in all_responses else None
+
+        questions = wks.row_values(1)
+        response = wks.row_values(row_ind)
+
+        return zip(questions, response)
+
     def set_common_context_data(self, context):
         """Given a dictionary of context variables to include in the
         template, add additional, commonly-used variables."""
         context['renewal_request'] = self.request_obj
         context['computing_allowance_name'] = \
             self.computing_allowance_obj.get_name()
-        context['survey_form'] = ProjectRenewalSurveyForm(
-            initial=self.request_obj.renewal_survey_answers,
-            disable_fields=True)
-        context['has_survey_answers'] = bool(
-            self.request_obj.renewal_survey_answers)
 
     def set_objs(self, pk):
         self.request_obj = get_object_or_404(

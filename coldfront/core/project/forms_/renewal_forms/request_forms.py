@@ -1,7 +1,3 @@
-import gspread
-from coldfront.core.utils.management.commands.utils import get_gspread_worksheet
-from django.conf import settings
-
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.project.forms import DisabledChoicesSelectWidget
@@ -14,6 +10,7 @@ from coldfront.core.project.utils_.new_project_utils import non_denied_new_proje
 from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
 from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_request_statuses
 from coldfront.core.project.utils_.renewal_utils import pis_with_renewal_requests_pks
+from coldfront.core.project.utils_.renewal_utils import get_gspread_wks
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 
@@ -224,9 +221,7 @@ class ProjectRenewalGoogleSurveyForm(forms.Form):
         if self.user.username == 'test_user':
             return
         
-        gc = gspread.service_account(filename='tmp/credentials.json')
-        sh = gc.open_by_key(self.sheet_id)
-        wks = sh.get_worksheet(0)
+        wks = get_gspread_wks(self.sheet_id, 0)
 
         # TODO: Have the col index for the questions hardcoded in JSON file
         # alongside URLs?

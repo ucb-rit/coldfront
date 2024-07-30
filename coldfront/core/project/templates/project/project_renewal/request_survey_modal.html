@@ -17,7 +17,14 @@
         </button>
       </div>
       <div class="modal-body">
-        {{ survey_form|crispy }}
+        <table class="table">
+          {% for question_and_answer in survey_response %}
+          <tr>
+            <td>{{ question_and_answer.0 }}</td>
+            <td>{{ question_and_answer.1 }}</td>
+          </tr>
+        {% endfor %}
+        </table>
       </div>
     </div>
   </div>
