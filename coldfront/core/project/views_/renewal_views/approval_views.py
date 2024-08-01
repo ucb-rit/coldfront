@@ -103,6 +103,7 @@ class AllocationRenewalRequestMixin(object):
             context['allocation_amount'] = 'Failed to compute.'
         context['survey_response'] = \
             self.get_google_renewal_survey_responses()
+        context['has_survey_response'] = bool(context['survey_response'])
         return context
 
     @staticmethod
@@ -124,7 +125,10 @@ class AllocationRenewalRequestMixin(object):
         return num_service_units
 
     def get_google_renewal_survey_responses(self):
-        """ TODO """
+        """ Takes information from the request object and returns an
+         iterable of tuples representing the requester's survey answers. If no
+         answer is detected, return None. The format of the tuple:
+         ( question: string, answer: string ).  """
         gform_info = get_renewal_survey(self.request_obj.allocation_period.name)
         wks = get_gspread_wks(gform_info['sheet_id'], 0)
         
@@ -134,7 +138,9 @@ class AllocationRenewalRequestMixin(object):
         all_responses = list(zip(pis, projects))
         key = (self.request_obj.pi.username, self.request_obj.post_project.name)
 
-        row_ind = all_responses.index(key) + 1 if key in all_responses else None
+        if key not in all_responses:
+            return None
+        row_ind = all_responses.index(key) + 1
 
         questions = wks.row_values(1)
         response = wks.row_values(row_ind)
