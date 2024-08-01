@@ -131,6 +131,9 @@ class AllocationRenewalRequestMixin(object):
          ( question: string, answer: string ).  """
         gform_info = get_renewal_survey(self.request_obj.allocation_period.name)
         wks = get_gspread_wks(gform_info['sheet_id'], 0)
+
+        if wks == None:
+            return None
         
         pis = wks.col_values(gform_info["sheet_data"]["pi_username_col"])
         projects = wks.col_values(gform_info["sheet_data"]["project_name_col"])

@@ -1067,10 +1067,13 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
                 logger.info(message)
 
 def get_gspread_wks(sheet_id, wks_id):
-    gc = gspread.service_account(filename='tmp/credentials.json')
+    try:
+        gc = gspread.service_account(filename='tmp/credentials.json')
+    except:
+        return None
     sh = gc.open_by_key(sheet_id)
     wks = sh.get_worksheet(wks_id)
-    
+
     return wks
 
 def get_renewal_survey(allocation_period_name):
