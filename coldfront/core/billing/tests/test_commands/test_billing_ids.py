@@ -123,12 +123,10 @@ class TestBillingIds(TestBillingBase):
 
         output, error = self.command.validate(
             [malformed_billing_id, invalid_billing_id, valid_billing_id])
-        
-        self.assertFalse(error)
 
-        self.assertIn(malformed_billing_id + ": Malformed", output)
-        self.assertIn(invalid_billing_id + ": Invalid", output)
-        self.assertIn(valid_billing_id + ": Valid", output)
+        self.assertIn(malformed_billing_id + ': Malformed', error)
+        self.assertIn(invalid_billing_id + ': Invalid', error)
+        self.assertIn(valid_billing_id + ': Valid', output)
 
     # TODO: test_list
 

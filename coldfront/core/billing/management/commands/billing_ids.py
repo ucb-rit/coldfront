@@ -283,9 +283,9 @@ class Command(BaseCommand):
                 if is_billing_id_valid(full_id):
                     self.stdout.write(self.style.SUCCESS(full_id + ': Valid'))
                 else:
-                    self.stdout.write(self.style.ERROR(full_id + ': Invalid'))
+                    self.stderr.write(self.style.ERROR(full_id + ': Invalid'))
             else:
-                self.stdout.write(self.style.ERROR(full_id + ': Malformed'))
+                self.stderr.write(self.style.ERROR(full_id + ': Malformed'))
 
     def _handle_set_project_default(self, project, billing_activity,
                                     dry_run=False):
