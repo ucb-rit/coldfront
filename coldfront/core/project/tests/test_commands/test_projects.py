@@ -1,20 +1,20 @@
 from decimal import Decimal
 from io import StringIO
 
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management import CommandError
-
 from django.db.models import Q
 
 from coldfront.api.statistics.utils import create_project_allocation
-from coldfront.core.project.tests.test_commands.test_service_units_base import \
-    TestSUBase
+
+from coldfront.core.allocation.models import AllocationPeriod
+from coldfront.core.project.tests.test_commands.test_service_units_base import TestSUBase
 from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectStatusChoice
+from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice
-from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import utc_now_offset_aware
@@ -22,6 +22,14 @@ from coldfront.core.utils.common import utc_now_offset_aware
 
 class TestProjectsBase(TestSUBase):
     """A base class for tests of the projects management command."""
+    pass
+
+
+class TestProjectsCreate(TestProjectsBase):
+    """A class for testing the 'create' subcommand of the 'projects'
+    management command."""
+
+    # TODO
     pass
 
 
@@ -75,7 +83,7 @@ class TestProjectsRenew(TestProjectsBase):
             status=active_project_user_status,
             user=self.user)
         
-        self.existing_service_units = Decimal('0.00')
+        self.existing_service_units = settings.ALLOCATION_MIN
         accounting_allocation_objects = create_project_allocation(
             inactive_project, self.existing_service_units)
         self.compute_allocation = accounting_allocation_objects.allocation
@@ -84,60 +92,82 @@ class TestProjectsRenew(TestProjectsBase):
         
         self.command = ProjectsCommand()
 
-    def test_renew_dry_run(self):
+    def test_dry_run(self):
         """Test that the request would be successful but the dry run
         ensures that the project is not updated."""
         project = Project.objects.get(name=self.project_name)
         self.assertEqual(project.status, 
                          ProjectStatusChoice.objects.get(name='Inactive'))
         output, error = self.command.renew(
-            self.project_name, self.user.username, self.allocation_period,
+            self.project_name, self.allocation_period, self.user.username,
             self.user.username, dry_run=True)
         
         self.assertFalse(error)
-        
+
         self.assertIn('Would renew', output)
         self.service_units_attribute.refresh_from_db()
         self.assertEqual(
-            Decimal(self.service_units_attribute.value), Decimal('0.0'))
+            Decimal(self.service_units_attribute.value),
+            settings.ALLOCATION_MIN)
 
-    def test_renew_inactive_to_active(self):
+    def test_success(self):
         """Test that a successful request updates a project's status
         to 'Active' and the service units to the correct amount."""
         project = Project.objects.get(name=self.project_name)
-        self.assertEqual(project.status, 
+        self.assertEqual(project.status,
                          ProjectStatusChoice.objects.get(name='Inactive'))
 
         output, error = self.command.renew(
-            self.project_name, self.user.username, self.allocation_period,
+            self.project_name, self.allocation_period, self.user.username,
             self.user.username)
-        
+
         self.assertFalse(error)
         now_active_proj = Project.objects.get(name=self.project_name)
-        self.assertEqual(now_active_proj.status, 
+        self.assertEqual(now_active_proj.status,
                          ProjectStatusChoice.objects.get(name='Active'))
         self.service_units_attribute.refresh_from_db()
         self.assertEqual(
-            Decimal(self.service_units_attribute.value), self.num_service_units)
+            Decimal(self.service_units_attribute.value),
+            self.num_service_units)
 
-    def test_renew_fail_not_active(self):
-        """Test that an invalid request does not update the status
-        or service units of a project."""
+        # TODO: Also test:
+        #  That a request gets created and it's in the "Complete" state
+        #  That only a processing email is sent
+
+    def test_validate_project(self):
+        """Test that, if the project is invalid, the command raises an
+        error, and does not proceed."""
         project = Project.objects.get(name=self.project_name)
-        self.assertEqual(project.status, 
-                         ProjectStatusChoice.objects.get(name='Inactive'))
+        self.assertEqual(
+            project.status, ProjectStatusChoice.objects.get(name='Inactive'))
 
         with self.assertRaises(CommandError) as cm:
-            self.command.renew('invalid project name', self.user.username,
-                            self.allocation_period, self.user.username)
-        self.assertIn('The project with name', str(cm.exception))
+            self.command.renew(
+                'invalid project name', self.allocation_period,
+                self.user.username, self.user.username)
+        self.assertIn('A Project with name', str(cm.exception))
+        # TODO: Refactor the "not successful" checks into a block for reuse.
         still_inactive_proj = Project.objects.get(name=self.project_name)
-        self.assertEqual(still_inactive_proj.status, 
-                         ProjectStatusChoice.objects.get(name='Inactive'))
+        self.assertEqual(
+            still_inactive_proj.status,
+            ProjectStatusChoice.objects.get(name='Inactive'))
         self.service_units_attribute.refresh_from_db()
         self.assertEqual(
-            Decimal(self.service_units_attribute.value), Decimal('0.0'))
-        
+            Decimal(self.service_units_attribute.value),
+            settings.ALLOCATION_MIN)
+
+    # TODO
+    #   test_validate_computing_allowance
+    #     ComputingAllowance isn't renewable (e.g., Recharge, Condo)
+    #   test_validate_requester
+    #     Requester validation: doesn't exist; isn't active manager/PI
+    #   test_validate_pi
+    #     PI validation: doesn't exist; isn't active PI
+    #   test_validate_allocation_period
+    #     AllocationPeriod doesn't exist
+    #     AllocationPeriod isn't valid for project's computing allowance
+    #     AllocationPeriod isn't current
+
 
 class ProjectsCommand(object):
     """A wrapper class over the 'projects' management command."""
@@ -153,9 +183,11 @@ class ProjectsCommand(object):
         call_command(*args, **kwargs)
         return out.getvalue(), err.getvalue()
 
-    def renew(self, name, username, allocation_period, pi_username, **flags):
+    def renew(self, name, allocation_period, pi_username, requester_username,
+              **flags):
         """Call the 'renew' subcommand with the given positional arguments."""
-        args = ['renew', name, username, allocation_period, pi_username]
+        args = [
+            'renew', name, allocation_period, pi_username, requester_username]
         self._add_flags_to_args(args, **flags)
         return self.call_subcommand(*args)
 
