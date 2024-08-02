@@ -109,7 +109,7 @@ class ComputingAllowance(object):
         return self.is_periodic()
 
     def is_renewal_supported(self):
-        """Return whether there is support for renewing the
+        """Return whether there is UI support for renewing the
         allowance."""
         allowance_names = []
         if flag_enabled('BRC_ONLY'):

@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management import CommandError
@@ -15,7 +13,7 @@ from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
-from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
+from coldfront.core.allocation.utils import calculate_service_units_to_allocate
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
@@ -27,8 +25,10 @@ from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserR
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalApprovalRunner
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcessingRunner
+from coldfront.core.project.utils_.renewal_utils import set_allocation_renewal_request_eligibility
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource_name
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.statistics.models import ProjectTransaction
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 from coldfront.core.utils.common import display_time_zone_current_date
@@ -100,37 +100,26 @@ class Command(BaseCommand):
         """Add a subparser for the 'renew' subcommand."""
         parser = parsers.add_parser(
             'renew',
-            help=(
-                'Renew ICA projects that have the Inactive status.'
-                'This command will approve and process the request.'
-                ))
-        
+            help='Renew a PI\'s allowance under a project.')
         parser.add_argument(
-            'name', help='The name of the project to renew.', type=str)
-        
-        parser.add_argument(
-            'username',
-            help=(
-                'The username of the user making the request.'
-                'The requester should be a user for the project.'),
-            type=str)
-        
+            'name', help='The name of the project to renew under.', type=str)
         parser.add_argument(
             'allocation_period',
-            help=(
-                'Name of the allocation period the allowance is valid for.'
-            ), 
+            help='The name of the AllocationPeriod to renew under.',
             type=str)
-        
         parser.add_argument(
             'pi_username',
             help=(
-                'Username of the PI for the project.'
-            ),
+                'The username of the user whose allowance should be renewed. '
+                'The PI must be an active PI of the project.'),
             type=str)
-        
+        parser.add_argument(
+            'requester_username',
+            help=(
+                'The username of the user making the request. The requester '
+                'must be an active manager or PI of the project.'),
+            type=str)
         add_argparse_dry_run_argument(parser)
-        
 
     @staticmethod
     def _create_project_with_compute_allocation_and_pis(project_name,
@@ -231,33 +220,56 @@ class Command(BaseCommand):
             self.logger.info(message)
 
     @staticmethod
-    def _renew_project(project, allocation_period, requester, pi):
+    def _renew_project(project, allocation_period, requester, pi,
+                       computing_allowance, num_service_units):
+        """Renew the computing allowance of the given PI under the given
+        project for the given AllocationPeriod, as requested by the
+        given User and granting the given number of service units.
+
+            1. Create an AllocationRenewalRequest.
+            2. Update the state of the request to prepare it for
+               approval.
+            3. Approve the request.
+            4. Process the request.
+
+        Assumptions:
+            - The ComputingAllowance is renewable.
+            - The PI is an active PI of the project.
+            - The requester is an active Manager or PI of the project.
+            - The allowance is being renewed under the same project
+              (i.e., there is no change in pooling preferences).
+            - The AllocationPeriod is current: it has started, and it
+              has not ended.
+        """
         pre_project = project
         post_project = project
         request_time = utc_now_offset_aware()
-        status = AllocationRenewalRequestStatusChoice.objects.get(name='Under Review')
-        computing_allowance = Resource.objects.get(
-            name='Instructional Computing Allowance')
+        status = AllocationRenewalRequestStatusChoice.objects.get(
+            name='Under Review')
 
         with transaction.atomic():
             request = AllocationRenewalRequest.objects.create(
-            requester=requester,
-            pi=pi,
-            computing_allowance=computing_allowance,
-            allocation_period=allocation_period,
-            status=status,
-            pre_project=pre_project,
-            post_project=post_project,
-            request_time=request_time)
-        
-            request.state['eligibility']['status'] = 'Approved'
-            request.state['eligibility']['timestamp'] = \
-                utc_now_offset_aware().isoformat()
-            request.save()
+                requester=requester,
+                pi=pi,
+                computing_allowance=computing_allowance.get_resource(),
+                allocation_period=allocation_period,
+                status=status,
+                pre_project=pre_project,
+                post_project=post_project,
+                request_time=request_time)
 
-            num_service_units = Decimal(ComputingAllowanceInterface().service_units_from_name(
-                BRCAllowances.ICA,
-                is_timed=True, allocation_period=allocation_period))
+            eligibility_status = 'Approved'
+            eligibility_justification = ''
+            set_allocation_renewal_request_eligibility(
+                request, eligibility_status, eligibility_justification)
+
+            # TODO: The command currently assumes that the period has already
+            #  started. If allowing renewals for future periods:
+            #   - Refactor and reuse existing logic for determining whether to
+            #     run the processing runner.
+            #   - Refactor ane reuse existing logic to filter out periods that
+            #     are too far in the future.
+
             approval_runner = AllocationRenewalApprovalRunner(
                 request, num_service_units, email_strategy=DropEmailStrategy())
             approval_runner.run()
@@ -267,29 +279,32 @@ class Command(BaseCommand):
                 request, num_service_units)
             processing_runner.run()
 
-
     def _handle_renew(self, *args, **options):
         """Handle the 'renew' subcommand."""
         cleaned_options = self._validate_renew_options(options)
 
         project_name = options['name']
         alloc_period_name = options['allocation_period']
-        username_str = options['username']
+        requester_str = options['requester_username']
         pi_str = options['pi_username']
 
         message_template = (
             f'{{0}} the allocation for PI "{pi_str}" under Project  '
             f'"{project_name}" for {alloc_period_name}, '
-            f'requested by {username_str}.')
+            f'requested by {requester_str}.')
         if options['dry_run']:
             message = message_template.format('Would renew')
             self.stdout.write(self.style.WARNING(message))
             return
-        
+
         try:
-            self._renew_project(cleaned_options['project'], 
-                cleaned_options['allocation_period'], 
-                cleaned_options['requester'], cleaned_options['pi'])
+            self._renew_project(
+                cleaned_options['project'],
+                cleaned_options['allocation_period'],
+                cleaned_options['requester'],
+                cleaned_options['pi'],
+                cleaned_options['computing_allowance'],
+                cleaned_options['num_service_units'])
         except Exception as e:
             message = message_template.format('Failed to renew')
             self.stderr.write(self.style.ERROR(message))
@@ -384,69 +399,108 @@ class Command(BaseCommand):
                 'requester': User,
                 'pi': User,
                 'allocation_period': AllocationPeriod,
+                'computing_allowance': ComputingAllowance,
+                'num_service_units': Decimal,
             }
         """
-
-        input_username = options['username']
-        try:
-            requester = User.objects.get(username=input_username)
-        except User.DoesNotExist:
-            raise CommandError(
-                f'User with username "{input_username}" does not exist.')
-    
         project_name = options['name'].lower()
-        ic_prefix = ComputingAllowanceInterface().code_from_name(
-            BRCAllowances.ICA)
-        if not project_name.startswith(ic_prefix):
-            raise CommandError(
-                f'The project with name "{project_name}" is not an ICA.'
-            )
-        
         try:
             project = Project.objects.get(name=project_name)
         except Project.DoesNotExist:
             raise CommandError(
                 f'A Project with name "{project_name}" does not exist.')
-        
-        if not ProjectUser.objects.filter(project=project, user=requester).exists():
-            raise CommandError(
-                f'Requester is not a user for the project "{project_name}".')
 
-        input_pi_username = options['pi_username']
+        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance = ComputingAllowance(
+            computing_allowance_interface.allowance_from_project(project))
+        if not computing_allowance.is_renewable():
+            raise CommandError(
+                f'Computing allowance "{computing_allowance.get_name()}" is '
+                f'not renewable.')
+
+        active_project_user_status = ProjectUserStatusChoice.objects.get(
+            name='Active')
+        manager_project_user_role = ProjectUserRoleChoice.objects.get(
+            name='Manager')
+        pi_project_user_role = ProjectUserRoleChoice.objects.get(
+            name='Principal Investigator')
+
+        # The requester must be an "Active" "Manager" or "Principal
+        # Investigator" of the project.
+        requester_username = options['requester_username']
         try:
-            pi = User.objects.get(username=input_pi_username)
+            requester = User.objects.get(username=requester_username)
         except User.DoesNotExist:
             raise CommandError(
-                f'User with username "{input_pi_username}" does not exist.')
-        
-        if not ProjectUser.objects.filter(project=project, 
-            role=ProjectUserRoleChoice.objects.get(name='Principal Investigator'),
-            user=pi).exists():
-                raise CommandError(
-                   f'{pi} is not a PI for project "{project_name}".')
-        
-        input_allocation_period = options['allocation_period']
+                f'User with username "{requester_username}" does not exist.')
+        is_requester_valid = ProjectUser.objects.filter(
+            project=project, user=requester,
+            role__in=[manager_project_user_role, pi_project_user_role],
+            status=active_project_user_status).exists()
+        if not is_requester_valid:
+            raise CommandError(
+                f'Requester {requester.username} is not an active member of '
+                f'the project "{project_name}".')
+
+        # The PI must be an "Active" "Principal Investigator" of the project.
+        pi_username = options['pi_username']
         try:
-            allocation_period = AllocationPeriod.objects.get(name=input_allocation_period)
+            pi = User.objects.get(username=pi_username)
+        except User.DoesNotExist:
+            raise CommandError(
+                f'User with username "{pi_username}" does not exist.')
+        is_pi_valid = ProjectUser.objects.filter(
+            project=project, user=pi, role=pi_project_user_role,
+            status=active_project_user_status).exists()
+        if not is_pi_valid:
+            raise CommandError(
+                f'{pi} is not an active PI of the project "{project_name}".')
+
+        # The AllocationPeriod must be:
+        #     (a) valid for the project's computing allowance, and
+        #     (b) current.
+        allocation_period_name = options['allocation_period']
+        try:
+            allocation_period = AllocationPeriod.objects.get(
+                name=allocation_period_name)
         except AllocationPeriod.DoesNotExist:
             raise CommandError(
-                f'"{input_allocation_period}" is not a valid allocation period.')
-        else:
+                f'AllocationPeriod "{allocation_period_name}" does not exist.')
+
+        allowance_periods_q = computing_allowance.get_period_filters()
+        if not allowance_periods_q:
+            raise CommandError(
+                f'Unexpectedly found no AllocationPeriod filters for '
+                f'"{computing_allowance.get_name()}".')
+        allocation_periods_for_allowance = AllocationPeriod.objects.filter(
+            allowance_periods_q)
+        try:
+            error = (
+                f'"{allocation_period_name}" is not a valid AllocationPeriod '
+                f'for computing allowance "{computing_allowance.get_name()}".')
+            assert allocation_period in allocation_periods_for_allowance, error
+        except AssertionError as e:
+            raise CommandError(e)
+
+        try:
             allocation_period.assert_started()
             allocation_period.assert_not_ended()
+        except AssertionError as e:
+            raise CommandError(e)
 
-            # TODO: In the linked example code the prefixes seem to be hardcoded, 
-            # is it fine if I do that here as well?
-            if not (allocation_period.name.startswith("Fall Semester")
-                or allocation_period.name.startswith("Spring Semester")
-                or allocation_period.name.startswith("Summer Sessions")):
-                    raise CommandError(
-                        f'"{input_allocation_period}" is not an acceptable period '
-                        f'for ICAs.')
-        
+        request_time = utc_now_offset_aware()
+        num_service_units = calculate_service_units_to_allocate(
+            computing_allowance, request_time,
+            allocation_period=allocation_period)
+
+        # TODO (in progress): Add business logic to ensure that the PI is
+        #  allowed to have a renewal request made under them.
+
         return {
-                'project': project,
-                'requester': requester,
-                'pi': pi,
-                'allocation_period': allocation_period,
-            }
+            'project': project,
+            'requester': requester,
+            'pi': pi,
+            'allocation_period': allocation_period,
+            'computing_allowance': computing_allowance,
+            'num_service_units': num_service_units,
+        }
