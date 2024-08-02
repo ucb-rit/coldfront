@@ -103,7 +103,7 @@ class AllocationRenewalRequestMixin(object):
             context['allocation_amount'] = 'Failed to compute.'
         context['survey_response'] = \
             self.get_google_renewal_survey_responses()
-        context['has_survey_response'] = bool(context['survey_response'])
+        context['has_survey_answers'] = bool(context['survey_response'])
         return context
 
     @staticmethod
