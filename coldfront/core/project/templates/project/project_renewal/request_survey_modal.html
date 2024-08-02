@@ -19,9 +19,9 @@
       <div class="modal-body">
         <table class="table">
           {% for question_and_answer in survey_response %}
-          <tr>
+          <tr class="w-100">
             <td>{{ question_and_answer.0 }}</td>
-            <td>{{ question_and_answer.1 }}</td>
+            <td class="w-50 text-break">{{ question_and_answer.1 }}</td>
           </tr>
         {% endfor %}
         </table>
