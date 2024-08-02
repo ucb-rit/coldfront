@@ -1067,6 +1067,7 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
                 logger.info(message)
 
 def get_gspread_wks(sheet_id, wks_id):
+    """ TODO """
     try:
         gc = gspread.service_account(filename='tmp/credentials.json')
     except:
@@ -1104,3 +1105,62 @@ def get_renewal_survey(allocation_period_name):
                 return elem
     
     return None
+
+def export_existing_survey_responses():
+    allocation_period = AllocationPeriod.objects.get(
+        name="Allowance Year 2024 - 2025")
+    requests = AllocationRenewalRequest.objects.filter(
+        allocation_period=allocation_period)
+    survey_answers = [i for i in requests if 
+                           i.renewal_survey_answers != {}]
+    
+    survey_data = get_renewal_survey(allocation_period.name)
+    wks = get_gspread_wks(survey_data["sheet_id"], 0)
+
+    survey_questions = [
+        "which_brc_services_used",
+        "publications_supported_by_brc",
+        "grants_supported_by_brc",
+        "recruitment_or_retention_cases",
+        "classes_being_taught",
+        "brc_recommendation_rating",
+        "brc_recommendation_rating_reason",
+        "how_brc_helped_bootstrap_computational_methods",
+        "how_important_to_research_is_brc",
+        "do_you_use_mybrc",
+        "mybrc_comments",
+        "which_open_ondemand_apps_used",
+        "brc_feedback",
+        "colleague_suggestions",
+        "indicate_topic_interests",
+        "training_session_usefulness_of_computational_platforms_training",
+        "training_session_usefulness_of_basic_savio_cluster",
+        "training_session_usefulness_of_advanced_savio_cluster",
+        "training_session_usefulness_of_singularity_on_savio",
+        "training_session_usefulness_of_analytic_envs_on_demand",
+        "training_session_other_topics_of_interest"
+    ]
+
+    row_coor = len(wks.col_values(1)) + 1
+    col_coor = 2
+    for question in survey_questions:
+        answer = survey_answers[0].renewal_survey_answers[question]
+        wks.update_cell(row_coor, col_coor, str(answer))
+        col_coor += 1
+    
+    wks.update_cell(row_coor, 1, str(survey_answers[0].request_time))
+    wks.update_cell(row_coor, col_coor, 
+                    survey_answers[0].allocation_period.name)
+    wks.update_cell(row_coor, col_coor + 1, 
+                    f'{survey_answers[0].pi.first_name} \
+                    {survey_answers[0].pi.last_name}')
+    wks.update_cell(row_coor, col_coor + 2, survey_answers[0].pi.username)
+    wks.update_cell(row_coor, col_coor + 3, survey_answers[0].post_project.name)
+    wks.update_cell(row_coor, col_coor + 4, 
+                    f'{survey_answers[0].requester.first_name} \
+                        {survey_answers[0].requester.last_name}')
+    wks.update_cell(row_coor, col_coor + 5, 
+                    survey_answers[0].requester.username)
+    
+    return survey_answers[0]
+
