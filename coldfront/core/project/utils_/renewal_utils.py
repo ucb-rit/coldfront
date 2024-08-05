@@ -1106,61 +1106,92 @@ def get_renewal_survey(allocation_period_name):
     
     return None
 
-def export_existing_survey_responses():
-    allocation_period = AllocationPeriod.objects.get(
-        name="Allowance Year 2024 - 2025")
-    requests = AllocationRenewalRequest.objects.filter(
-        allocation_period=allocation_period)
-    survey_answers = [i for i in requests if 
-                           i.renewal_survey_answers != {}]
-    
-    survey_data = get_renewal_survey(allocation_period.name)
-    wks = get_gspread_wks(survey_data["sheet_id"], 0)
+def renewal_survey_answer_conversion(question, all_answers):
+    """ TODO """
+    new_answer = ''
+    if question == 'timestamp':
+        new_answer = str(all_answers.request_time)
+    elif question == 'which_brc_services_used':
+        brc_services_converter = {
+            'savio_hpc': 'Savio High Performance Computing and consulting',
+            'condo_storage': 'Condo storage on Savio',
+            'srdc': 'Secure Research Data & Computing (SRDC)',
+            'aeod': 'Analytic Environments on Demand',
+            'cloud_consulting': 'Cloud consulting (e.g., Amazon, Google, ' 
+                        'Microsoft, XSEDE, UCB\'s Cloud Working Group)',
+            'other': 'Other BRC consulting (e.g. assessing the '
+                        'computation platform or resources appropriate '
+                        'for your research workflow)',
+            'none': 'None of the above'
+        }
 
-    survey_questions = [
-        "which_brc_services_used",
-        "publications_supported_by_brc",
-        "grants_supported_by_brc",
-        "recruitment_or_retention_cases",
-        "classes_being_taught",
-        "brc_recommendation_rating",
-        "brc_recommendation_rating_reason",
-        "how_brc_helped_bootstrap_computational_methods",
-        "how_important_to_research_is_brc",
-        "do_you_use_mybrc",
-        "mybrc_comments",
-        "which_open_ondemand_apps_used",
-        "brc_feedback",
-        "colleague_suggestions",
-        "indicate_topic_interests",
-        "training_session_usefulness_of_computational_platforms_training",
-        "training_session_usefulness_of_basic_savio_cluster",
-        "training_session_usefulness_of_advanced_savio_cluster",
-        "training_session_usefulness_of_singularity_on_savio",
-        "training_session_usefulness_of_analytic_envs_on_demand",
-        "training_session_other_topics_of_interest"
-    ]
+        answer = all_answers.renewal_survey_answers[question]
+        for service in answer:
+            new_answer += brc_services_converter[service] + ', '
+    elif question == 'how_important_to_research_is_brc':
+        answer = all_answers.renewal_survey_answers[question]
+        if answer == '1':
+            new_answer = 'Not at all important'
+        elif answer == '2':
+            new_answer = 'Somewhat important'
+        elif answer == '3':
+            new_answer = 'Important' 
+        elif answer == '4':
+            new_answer = 'Very important'
+        elif answer == '5':
+            new_answer = 'Essential'
+        elif answer == '6':
+            new_answer = 'Not applicable'
+    elif question == 'which_open_ondemand_apps_used':
+        ondemand_apps_converter = {
+            'desktop': 'Desktop',
+            'matlab': 'Matlab',
+            'jupyter_notebook': 'Jupyter Notebook/Lab',
+            'vscode_server': 'VS Code Server',
+            'none': 'None of the above',
+            'other': 'Other'
+        }
 
-    row_coor = len(wks.col_values(1)) + 1
-    col_coor = 2
-    for question in survey_questions:
-        answer = survey_answers[0].renewal_survey_answers[question]
-        wks.update_cell(row_coor, col_coor, str(answer))
-        col_coor += 1
-    
-    wks.update_cell(row_coor, 1, str(survey_answers[0].request_time))
-    wks.update_cell(row_coor, col_coor, 
-                    survey_answers[0].allocation_period.name)
-    wks.update_cell(row_coor, col_coor + 1, 
-                    f'{survey_answers[0].pi.first_name} \
-                    {survey_answers[0].pi.last_name}')
-    wks.update_cell(row_coor, col_coor + 2, survey_answers[0].pi.username)
-    wks.update_cell(row_coor, col_coor + 3, survey_answers[0].post_project.name)
-    wks.update_cell(row_coor, col_coor + 4, 
-                    f'{survey_answers[0].requester.first_name} \
-                        {survey_answers[0].requester.last_name}')
-    wks.update_cell(row_coor, col_coor + 5, 
-                    survey_answers[0].requester.username)
-    
-    return survey_answers[0]
+        answer = all_answers.renewal_survey_answers[question]
+        for app in answer:
+            new_answer += ondemand_apps_converter[app] + ', '
+    elif question == 'indicate_topic_interests':
+        topic_interests_converter = {
+            'have_visited_rdmp_website': 'I have visited the Research Data '
+                    'Management Program web site.',
+            'have_had_rdmp_event_or_consultation': 'I have participated in a '
+                    'Research Data Management Program event or consultation.',
+            'want_to_learn_more_and_have_rdm_consult': 'I am interested in the '
+                    'Research Data Management Program; please have an RDM '
+                    'consultant follow up with me.',
+            'want_to_learn_security_and_have_rdm_consult': 'I am interested in '
+                    'learning more about securing research data and/or secure '
+                    'computation; please have an RDM consultant follow up with '
+                    'me.',
+            'interested_in_visualization_services': 'I am interested in '
+                    'resources or services that support visualization of '
+                    'research data.',
+            'none_of_the_above': 'None of the above.'
+        }
 
+        answer = all_answers.renewal_survey_answers[question]
+        for interest in answer:
+            new_answer += topic_interests_converter[interest] + ', '
+    elif question == 'allocation_period':
+        new_answer = all_answers.allocation_period.name
+    elif question == 'pi_name':
+        new_answer = f'{all_answers.pi.first_name} {all_answers.pi.last_name}'
+    elif question == 'pi_username':
+        new_answer = all_answers.pi.username
+    elif question == 'project_name':
+        new_answer = all_answers.post_project.name
+    elif question == 'requester_name':
+        new_answer = f'{all_answers.requester.first_name} ' \
+                        f'{all_answers.requester.last_name}'
+    elif question == 'requester_username':
+        new_answer = all_answers.requester.username
+    else:
+        answer = all_answers.renewal_survey_answers[question]
+        new_answer = str(answer)
+    new_answer = new_answer.rstrip(', ')
+    return new_answer
