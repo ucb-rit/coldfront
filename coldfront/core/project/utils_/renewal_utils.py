@@ -1067,7 +1067,8 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
                 logger.info(message)
 
 def get_gspread_wks(sheet_id, wks_id):
-    """ TODO """
+    """ Given the spreadsheet ID and worksheet ID of a Google Sheet, returns
+     a sheet that is editable. """
     try:
         gc = gspread.service_account(filename='tmp/credentials.json')
     except:
@@ -1107,7 +1108,8 @@ def get_renewal_survey(allocation_period_name):
     return None
 
 def renewal_survey_answer_conversion(question, all_answers):
-    """ TODO """
+    """ This function helps convert on-site renewal answers to correctly
+     formatted strings for Google Sheets. """
     new_answer = ''
     if question == 'timestamp':
         new_answer = str(all_answers.request_time)

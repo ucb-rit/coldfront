@@ -17,7 +17,13 @@ class Command(BaseCommand):
     logger = logging.getLogger(__name__)
 
     def handle(self, *args, **options):
-        """ TODO """
+        """ This command exports the existing responses to the on-site renewal 
+        survey to Google Sheets. Because of usage limits on Google API, only 2 
+        responses can be exported to the Sheet at a time, so a 30 second 
+        timeout is set before each response is written. As there are around 200 
+        existing responses, this command will take around 2 hours to 
+        complete. """
+        
         allocation_period = AllocationPeriod.objects.get(
             name="Allowance Year 2024 - 2025")
         requests = AllocationRenewalRequest.objects.filter(
@@ -60,7 +66,7 @@ class Command(BaseCommand):
         ]
 
         row_coor = len(wks.col_values(1)) + 1
-        for i in range(5):
+        for i in range(len(survey_answers)):
             all_answers = survey_answers[i]
             print(f'Adding {all_answers.requester.username}\'s answers...')
 
