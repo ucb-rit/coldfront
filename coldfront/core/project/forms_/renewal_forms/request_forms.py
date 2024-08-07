@@ -222,6 +222,10 @@ class ProjectRenewalGoogleSurveyForm(forms.Form):
             return
         
         wks = get_gspread_wks(self.sheet_id, 0)
+        if wks == None:
+            raise ValidationError(
+                f'Unknown backend issue. '
+                f'Please contact administrator if this persists.')
 
         # TODO: Have the col index for the questions hardcoded in JSON file
         # alongside URLs?
