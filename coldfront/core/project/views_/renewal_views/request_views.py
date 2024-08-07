@@ -324,7 +324,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             kwargs['user'] = self.request.user
             tmp = {}
             self.__set_data_from_previous_steps(step, tmp)
-            kwargs['project_name'] = tmp['current_project'].name
+            kwargs['project_name'] = tmp['requested_project'].name
             kwargs['pi'] = tmp['PI'].user
             kwargs['allocation_period'] = tmp['allocation_period'].name
             kwargs['sheet_id'] = tmp['sheet_id']
@@ -585,12 +585,46 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         google_renewal_survey_form_step = self.step_numbers_by_form_name[
             'google_renewal_survey']
         if step == google_renewal_survey_form_step:
-            survey_data = get_renewal_survey(dictionary['allocation_period'].name)
+            survey_data = get_renewal_survey(
+                dictionary['allocation_period'].name)
             if survey_data != None:
                 dictionary['form_id'] = survey_data['form_id']
+                dictionary['form_url'] = self.make_form_url(survey_data, 
+                                                            dictionary)
                 dictionary['sheet_id'] = survey_data['sheet_id']
                 dictionary['sheet_data'] = survey_data['sheet_data']
+    
+    def make_form_url(self, survey_data, dictionary):
+        """ This function creates the Google Form URL with appropriate
+         pre-filled parameters. """
+        BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
+        BASE_URL_TWO = '/viewform?usp=pp_url'
+        url = BASE_URL_ONE + survey_data['form_id'] + BASE_URL_TWO
 
+        PARAMETER_BASE_ONE = '&entry.'
+        PARAMETER_BASE_TWO = '='
+
+        question_ids_dict = survey_data['form_question_ids']
+        for parameter in question_ids_dict.keys():
+            value = ''
+            if parameter == 'allocation_period':
+                value = dictionary['allocation_period'].name
+            elif parameter == 'pi_name':
+                value = dictionary['PI'].user.first_name + '+' + \
+                    dictionary['PI'].user.last_name
+            elif parameter == 'pi_username':
+                value = dictionary['PI'].user.username
+            elif parameter == 'project_name':
+                value = dictionary['requested_project'].name
+            elif parameter == 'requester_name':
+                value = self.request.user.first_name + '+' + \
+                    self.request.user.last_name
+            elif parameter == 'requester_username':
+                value = self.request.user.username
+            value = value.replace(' ', '+')
+            url += PARAMETER_BASE_ONE + question_ids_dict[parameter] + \
+                PARAMETER_BASE_TWO + value
+        return url
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                                                UserPassesTestMixin,
@@ -779,6 +813,40 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             survey_data = get_renewal_survey(dictionary['allocation_period'].name)
             if survey_data != None:
                 dictionary['form_id'] = survey_data['form_id']
+                dictionary['form_url'] = self.make_form_url(survey_data, 
+                                                            dictionary)
                 dictionary['sheet_id'] = survey_data['sheet_id']
                 dictionary['sheet_data'] = survey_data['sheet_data']
+        
+    def make_form_url(self, survey_data, dictionary):
+        """ This function creates the Google Form URL with appropriate
+         pre-filled parameters. """
+        BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
+        BASE_URL_TWO = '/viewform?usp=pp_url'
+        url = BASE_URL_ONE + survey_data['form_id'] + BASE_URL_TWO
+
+        PARAMETER_BASE_ONE = '&entry.'
+        PARAMETER_BASE_TWO = '='
+
+        question_ids_dict = survey_data['form_question_ids']
+        for parameter in question_ids_dict.keys():
+            value = ''
+            if parameter == 'allocation_period':
+                value = dictionary['allocation_period'].name
+            elif parameter == 'pi_name':
+                value = dictionary['PI'].user.first_name + '+' + \
+                    dictionary['PI'].user.last_name
+            elif parameter == 'pi_username':
+                value = dictionary['PI'].user.username
+            elif parameter == 'project_name':
+                value = self.project_obj.name
+            elif parameter == 'requester_name':
+                value = self.request.user.first_name + '+' + \
+                    self.request.user.last_name
+            elif parameter == 'requester_username':
+                value = self.request.user.username
+            value = value.replace(' ', '+')
+            url += PARAMETER_BASE_ONE + question_ids_dict[parameter] + \
+                PARAMETER_BASE_TWO + value
+        return url
                 
