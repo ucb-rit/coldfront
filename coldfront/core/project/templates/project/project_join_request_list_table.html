@@ -23,6 +23,10 @@
     <th scope="col">
       Reason
     </th>
+    <th scope="col">
+      Status
+      {% include 'common/table_sorter.html' with table_sorter_field='project_user__status__name' %}
+    </th>
   </tr>
   </thead>
   <tbody>
@@ -41,6 +45,9 @@
       <td>{{ join_request.created|date:"M. d, Y" }}</td>
       <td>
         {{ join_request.reason }}
+      </td>
+      <td>
+        {{ join_request.project_user.status.name }}
       </td>
     </tr>
   {% endfor %}
