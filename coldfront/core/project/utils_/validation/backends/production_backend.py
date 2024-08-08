@@ -22,4 +22,4 @@ class ProductionValidatorBackend(BaseValidatorBackend):
         # TODO: Should checks be added for the requester?
         if key not in responses:
             raise ValidationError(
-                f'Response for {key[1]}, \ {key[2]}, {key[0]} not detected.')
+                f'Response for {key[1]}, {key[2]}, {key[0]} not detected.')
