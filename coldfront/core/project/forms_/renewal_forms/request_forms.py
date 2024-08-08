@@ -13,6 +13,7 @@ from coldfront.core.project.utils_.renewal_utils import pis_with_renewal_request
 from coldfront.core.project.utils_.renewal_utils import get_gspread_wks
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.project.utils_.validation import is_renewal_survey_completed
 
 from flags.state import flag_enabled
 from django import forms
@@ -216,31 +217,33 @@ class ProjectRenewalGoogleSurveyForm(forms.Form):
             self._update_lrc_survey_fields()
 
     def validate_survey_completed(self, value):
-        # Assume user has completed survey in tests. 
-        # TODO: Should this be changed?
-        if self.user.username == 'test_user':
-            return
+        key= (self.allocation_period, self.pi.username, self.project_name)
+        is_renewal_survey_completed(self.sheet_id, self.sheet_data, key)
+        # # Assume user has completed survey in tests. 
+        # # TODO: Should this be changed?
+        # if self.user.username == 'test_user':
+        #     return
         
-        wks = get_gspread_wks(self.sheet_id, 0)
-        if wks == None:
-            raise ValidationError(
-                f'Unknown backend issue. '
-                f'Please contact administrator if this persists.')
+        # wks = get_gspread_wks(self.sheet_id, 0)
+        # if wks == None:
+        #     raise ValidationError(
+        #         f'Unknown backend issue. '
+        #         f'Please contact administrator if this persists.')
 
-        # TODO: Have the col index for the questions hardcoded in JSON file
-        # alongside URLs?
-        periods = wks.col_values(self.sheet_data["allocation_period_col"])
-        pis = wks.col_values(self.sheet_data["pi_username_col"])
-        projects = wks.col_values(self.sheet_data["project_name_col"])
+        # # TODO: Have the col index for the questions hardcoded in JSON file
+        # # alongside URLs?
+        # periods = wks.col_values(self.sheet_data["allocation_period_col"])
+        # pis = wks.col_values(self.sheet_data["pi_username_col"])
+        # projects = wks.col_values(self.sheet_data["project_name_col"])
 
-        responses = zip(periods, pis, projects)
-        key = (self.allocation_period, self.pi.username, self.project_name)
+        # responses = zip(periods, pis, projects)
+        # key = (self.allocation_period, self.pi.username, self.project_name)
 
-        # TODO: Should checks be added for the requester?
-        if key not in responses:
-            raise ValidationError(
-                f'Response for {self.pi.username}, \
-                {self.project_name}, {self.allocation_period} not detected.')
+        # # TODO: Should checks be added for the requester?
+        # if key not in responses:
+        #     raise ValidationError(
+        #         f'Response for {self.pi.username}, \
+        #         {self.project_name}, {self.allocation_period} not detected.')
 
     def _update_brc_survey_fields(self):
         self.fields['was_survey_completed'] = forms.BooleanField(
