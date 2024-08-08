@@ -8,8 +8,11 @@ else
     wd=$PWD
 fi
 
+# Do not mount directly onto /app, since the venv is located there and would be
+# wiped out.
 docker run -it \
-    -v $wd/bootstrap/development/docker:/app \
+    -v $wd/bootstrap/development/docker/config:/app/config \
+    -v $wd/bootstrap/development/docker/scripts:/app/scripts \
+    -v $wd/bootstrap/development/docker/secrets:/app/secrets \
     coldfront-app-config:latest \
     python3 scripts/generate_secrets.py
-

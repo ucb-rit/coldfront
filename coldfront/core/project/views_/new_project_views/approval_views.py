@@ -1,11 +1,10 @@
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.utils import annotate_queryset_with_allocation_period_not_started_bool
-from coldfront.core.allocation.utils import prorated_allocation_amount
+from coldfront.core.allocation.utils import calculate_service_units_to_allocate
 from coldfront.core.project.forms import MemorandumSignedForm
 from coldfront.core.project.forms import ReviewDenyForm
 from coldfront.core.project.forms import ReviewStatusForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import NewProjectExtraFieldsFormFactory
-from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectExtraFieldsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
 from coldfront.core.project.forms_.new_project_forms.approval_forms import SavioProjectReviewSetupForm
 from coldfront.core.project.forms_.new_project_forms.approval_forms import VectorProjectReviewSetupForm
@@ -143,21 +142,13 @@ class SavioProjectRequestMixin(object):
                 'num_service_units']
             num_service_units = Decimal(f'{num_service_units_int:.2f}')
         else:
-            allowance_name = self.request_obj.computing_allowance.name
-
-            allocation_period = self.request_obj.allocation_period
             kwargs = {}
+            allocation_period = self.request_obj.allocation_period
             if allocation_period:
-                kwargs['is_timed'] = True
                 kwargs['allocation_period'] = allocation_period
-            num_service_units = Decimal(
-                self.interface.service_units_from_name(
-                    allowance_name, **kwargs))
-
-            if self.computing_allowance_obj.are_service_units_prorated():
-                num_service_units = prorated_allocation_amount(
-                    num_service_units, self.request_obj.request_time,
-                    self.request_obj.allocation_period)
+            num_service_units = calculate_service_units_to_allocate(
+                self.computing_allowance_obj, self.request_obj.request_time,
+                **kwargs)
         return num_service_units
 
     def get_survey_form(self):

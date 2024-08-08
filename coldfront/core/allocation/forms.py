@@ -281,13 +281,16 @@ class AllocationPeriodChoiceField(forms.ModelChoiceField):
 
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
+        if (self.computing_allowance is not None and
+                not isinstance(self.computing_allowance, ComputingAllowance)):
+            self.computing_allowance = ComputingAllowance(
+                self.computing_allowance)
         self.interface = ComputingAllowanceInterface()
         super().__init__(*args, **kwargs)
 
     def label_from_instance(self, obj):
-        computing_allowance = ComputingAllowance(self.computing_allowance)
         num_service_units = self.allocation_value(obj)
-        if computing_allowance.are_service_units_prorated():
+        if self.computing_allowance.are_service_units_prorated():
             num_service_units = prorated_allocation_amount(
                 num_service_units, utc_now_offset_aware(), obj)
         return (
@@ -297,7 +300,7 @@ class AllocationPeriodChoiceField(forms.ModelChoiceField):
     def allocation_value(self, obj):
         """Return the allocation value (Decimal) to use based on the
         allocation type and the AllocationPeriod."""
-        allowance_name = self.computing_allowance.name
+        allowance_name = self.computing_allowance.get_name()
         if flag_enabled('BRC_ONLY'):
             assert allowance_name in self._allowances_with_periods_brc()
             return Decimal(
