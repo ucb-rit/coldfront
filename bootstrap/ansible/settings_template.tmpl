@@ -122,6 +122,13 @@ ORACLE_BILLING_DB = {
 {% endif %}
 
 #------------------------------------------------------------------------------
+# Renewal Survey Validation settings
+#------------------------------------------------------------------------------
+
+# The class to use for validating whether renewal survey has been completed.
+RENEWAL_SURVEY_VALIDATOR_BACKEND = 'coldfront.core.project.utils_.validation.backends.production_backend.ProductionValidatorBackend'
+
+#------------------------------------------------------------------------------
 # SSL settings
 #------------------------------------------------------------------------------
 

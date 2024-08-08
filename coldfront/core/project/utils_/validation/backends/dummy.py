@@ -4,5 +4,5 @@ class DummyValidatorBackend(BaseValidatorBackend):
     """A backend for testing purposes."""
 
     def is_renewal_survey_completed(self, sheet_id, survey_data, key):
-        """TODO"""
-        return True
+        """ Always returns without causing ValidationError """
+        return
