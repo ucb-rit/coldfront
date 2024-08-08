@@ -1070,8 +1070,7 @@ def get_gspread_wks(sheet_id, wks_id):
     """ Given the spreadsheet ID and worksheet ID of a Google Sheet, returns
      a sheet that is editable. """
     try:
-        gc = gspread.service_account(
-            filename=settings.SERVICE_ACCOUNT_CREDENTIALS)
+        gc = gspread.service_account(filename='tmp/credentials.json')
     except:
         return None
     sh = gc.open_by_key(sheet_id)

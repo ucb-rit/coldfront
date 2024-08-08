@@ -252,7 +252,13 @@ class ProjectRenewalGoogleSurveyForm(forms.Form):
         )
 
     def _update_lrc_survey_fields(self):
-        pass
+        self.fields['was_survey_completed'] = forms.BooleanField(
+            label=('I have completed the survey and did NOT edit the pre-filled'
+            ' fields at the end of the survey.'),
+            initial=False,
+            required=True,
+            validators=[self.validate_survey_completed]
+        )
 
 class ProjectRenewalSurveyForm(forms.Form):
     
