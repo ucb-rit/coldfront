@@ -32,6 +32,19 @@ import os
 for a Project."""
 
 
+from coldfront.core.project.forms_.new_project_forms.request_forms import ServiceUnitsPurchaseRequestForm
+
+from coldfront.core.user.utils_.host_user_utils import host_user_lbl_email
+from flags.state import flag_enabled
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+
+from django.utils.dateparse import parse_date
+from django.db.models import DateField
+from datetime import datetime
+from django.utils.timezone import make_aware
+from django.utils import timezone
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -232,35 +245,126 @@ class AllocationAdditionRequestListView(LoginRequiredMixin,
     Service Units under Projects."""
 
     template_name = 'project/project_allocation_addition/request_list.html'
+    paginate_by = 30
     completed = False
 
+    def get_queryset(self):
+        order_by = self.request.GET.get('order_by')
+        if order_by:
+            direction = self.request.GET.get('direction')
+            if direction == 'asc':
+                direction = ''
+            else:
+                direction = '-'
+            order_by = direction + order_by
+        else:
+            order_by = '-request_time'
+
+        service_units_purchase_request_form = ServiceUnitsPurchaseRequestForm(self.request.GET)
+        service_units_purchase_request_list = AllocationAdditionRequest.objects.all()
+
+        if service_units_purchase_request_form.is_valid():
+            data = service_units_purchase_request_form.cleaned_data
+            request_time_input = data.get('request_time')
+            if request_time_input:
+                try:
+                    request_time_date = datetime.strptime(request_time_input, '%b. %d, %Y')
+                    request_time_date_str = request_time_date.strftime('%Y-%m-%d')
+                    service_units_purchase_request_list = service_units_purchase_request_list.filter(
+                        modified__date=request_time_date.date()
+                    )
+                except ValueError as e:
+                    print(f"Incorrect date format: {e}")
+
+            if data.get('requester'):
+                service_units_purchase_request_list = service_units_purchase_request_list.filter(
+                    requester__email__icontains=data.get('requester')
+                )
+
+            if data.get('project'):
+                service_units_purchase_request_list = service_units_purchase_request_list.filter(
+                    project__name__icontains=data.get('project')
+                )
+
+            num_service_units = data.get('num_service_units')
+            if num_service_units:
+                service_units_purchase_request_list = service_units_purchase_request_list.filter(
+                    num_service_units=num_service_units
+                )
+
+            if not data.get('show_all_requests'):
+                pass
+
+        return service_units_purchase_request_list.order_by(order_by)
+    
+
     def get_context_data(self, **kwargs):
-        """Include either pending or completed requests. If the user is
-        a superuser or has the appropriate permissions, show all such
-        requests. Otherwise, show only those for Projects of which the
-        user is a PI or manager."""
+        """Include either pending or completed requests.
+        If the user is a superuser or has the appropriate permissions,
+        show all such requests. Otherwise, show only those for Projects
+        of which the user is a PI or manager."""
         context = super().get_context_data(**kwargs)
+
+        args, kwargs = [], {}
+        service_units_purchase_request_form = ServiceUnitsPurchaseRequestForm(self.request.GET)
+        if service_units_purchase_request_form.is_valid():
+            context['service_units_purchase_request_form'] = service_units_purchase_request_form
+            data = service_units_purchase_request_form.cleaned_data
+            filter_parameters = ''
+            for key, value in data.items():
+                if value:
+                    if isinstance(value, list):
+                        for ele in value:
+                            filter_parameters += '{}={}&'.format(key, ele)
+                    else:
+                        filter_parameters += '{}={}&'.format(key, value)
+            context['service_units_purchase_request_form'] = service_units_purchase_request_form
+        else:
+            filter_parameters = None
+        context['service_units_purchase_request_form'] = ServiceUnitsPurchaseRequestForm()
+
+        order_by = self.get_order_by()
+        if order_by:
+            direction = self.request.GET.get('direction')
+            filter_parameters_with_order_by = filter_parameters + \
+                'order_by=%s&direction=%s&' % \
+                (order_by, direction)
+        else:
+            filter_parameters_with_order_by = filter_parameters
+
+        context['expand_accordion'] = 'show'
+        context['filter_parameters'] = filter_parameters
+        context['filter_parameters_with_order_by'] = filter_parameters_with_order_by
+
+        request_list = self.get_queryset()
+        user = self.request.user
+        permission = 'allocation.view_allocationadditionrequest'
+        if not (user.is_superuser or user.has_perm(permission)):
+            request_ids = [
+                r.id for r in request_list if is_user_manager_or_pi_of_project(user, r.project)
+            ]
+            request_list = request_list.filter(id__in=request_ids)
 
         if self.completed:
             status__name__in = ['Complete', 'Denied']
         else:
             status__name__in = ['Under Review']
-        order_by = self.get_order_by()
-        request_list = AllocationAdditionRequest.objects.filter(
-            status__name__in=status__name__in).order_by(order_by)
-
-        user = self.request.user
-        permission = 'allocation.view_allocationadditionrequest'
-        if not (user.is_superuser or user.has_perm(permission)):
-            request_ids = [
-                r.id for r in request_list
-                if is_user_manager_or_pi_of_project(user, r.project)]
-            request_list = AllocationAdditionRequest.objects.filter(
-                id__in=request_ids).order_by(order_by)
+        request_list = request_list.filter(status__name__in=status__name__in).order_by(order_by)
 
         context['addition_request_list'] = request_list
-        context['request_filter'] = (
-            'completed' if self.completed else 'pending')
+        context['request_filter'] = ('completed' if self.completed else 'pending')
+
+        paginator = Paginator(request_list, self.paginate_by)
+        page = self.request.GET.get('page')
+        try:
+            addition_requests = paginator.page(page)
+        except PageNotAnInteger:
+            addition_requests = paginator.page(1)
+        except EmptyPage:
+            addition_requests = paginator.page(paginator.num_pages)
+
+        context['addition_request_list'] = addition_requests
+        context['actions_visible'] = not self.completed
 
         return context
 
