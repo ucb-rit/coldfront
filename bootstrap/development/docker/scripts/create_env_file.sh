@@ -24,4 +24,3 @@ fi
 
 echo "DB_NAME=$DB_NAME" > $ENV_FILE_PATH
 echo "WEB_PORT=$PORT" >> $ENV_FILE_PATH
-

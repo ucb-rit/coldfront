@@ -11,6 +11,7 @@ from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRen
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalPoolingPreferenceForm
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalProjectSelectionForm
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalSurveyForm
+from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalGoogleSurveyForm
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalReviewAndSubmitForm
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
@@ -25,6 +26,7 @@ from coldfront.core.project.utils_.renewal_utils import has_non_denied_renewal_r
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_admin_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pi_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pooling_notification_email
+from coldfront.core.project.utils_.renewal_utils import get_renewal_survey
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
@@ -131,7 +133,7 @@ class AllocationRenewalMixin(object):
     @staticmethod
     def create_allocation_renewal_request(requester, pi, computing_allowance,
                                           allocation_period, pre_project,
-                                          post_project, renewal_survey_answers, 
+                                          post_project, 
                                           new_project_request=None):
         """Create a new AllocationRenewalRequest."""
         request_kwargs = dict()
@@ -142,7 +144,7 @@ class AllocationRenewalMixin(object):
         request_kwargs['status'] = \
             AllocationRenewalRequestStatusChoice.objects.get(
                 name='Under Review')
-        request_kwargs['renewal_survey_answers'] = renewal_survey_answers
+        # request_kwargs['renewal_survey_answers'] = renewal_survey_answers
         request_kwargs['pre_project'] = pre_project
         request_kwargs['post_project'] = post_project
         request_kwargs['new_project_request'] = new_project_request
@@ -204,7 +206,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ('project_selection', ProjectRenewalProjectSelectionForm),
         ('new_project_details', SavioProjectDetailsForm),
         ('new_project_survey', SavioProjectSurveyForm),
-        ('renewal_survey', ProjectRenewalSurveyForm),
+        ('google_renewal_survey', ProjectRenewalGoogleSurveyForm),
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
     ]
 
@@ -218,8 +220,8 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             'project/project_renewal/new_project_details.html',
         'new_project_survey':
             'project/project_renewal/new_project_survey.html',
-        'renewal_survey':
-            'project/project_renewal/project_renewal_survey.html',
+        'google_renewal_survey':
+            'project/project_renewal/project_google_renewal_survey.html',
         'review_and_submit': 'project/project_renewal/review_and_submit.html',
     }
 
@@ -230,7 +232,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ProjectRenewalProjectSelectionForm,
         SavioProjectDetailsForm,
         SavioProjectSurveyForm,
-        ProjectRenewalSurveyForm,
+        ProjectRenewalGoogleSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
     ]
 
@@ -318,6 +320,16 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             kwargs['computing_allowance'] = self.computing_allowance
         elif step == self.step_numbers_by_form_name['new_project_survey']:
             kwargs['computing_allowance'] = self.computing_allowance
+        elif step == self.step_numbers_by_form_name['google_renewal_survey']:
+            kwargs['user'] = self.request.user
+            tmp = {}
+            self.__set_data_from_previous_steps(step, tmp)
+            kwargs['project_name'] = tmp['requested_project'].name
+            kwargs['pi'] = tmp['PI'].user
+            kwargs['allocation_period'] = tmp['allocation_period'].name
+            kwargs['sheet_id'] = tmp['sheet_id']
+            kwargs['sheet_data'] = tmp['sheet_data']
+
         return kwargs
 
     def get_template_names(self):
@@ -360,7 +372,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             request = self.create_allocation_renewal_request(
                 self.request.user, pi, self.computing_allowance,
                 allocation_period, tmp['current_project'], requested_project,
-                tmp['renewal_survey_answers'], 
                 new_project_request=new_project_request)
 
             self.send_emails(request)
@@ -571,12 +582,49 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary.update(data)
                 dictionary['requested_project'] = data['name']
 
-        renewal_survey_form_step = self.step_numbers_by_form_name[
-            'renewal_survey']
-        if step > renewal_survey_form_step:
-            data = self.get_cleaned_data_for_step(str(renewal_survey_form_step))
-            dictionary['renewal_survey_answers'] = data or {}
+        google_renewal_survey_form_step = self.step_numbers_by_form_name[
+            'google_renewal_survey']
+        if step == google_renewal_survey_form_step:
+            survey_data = get_renewal_survey(
+                dictionary['allocation_period'].name)
+            if survey_data != None:
+                dictionary['form_id'] = survey_data['form_id']
+                dictionary['form_url'] = self.make_form_url(survey_data, 
+                                                            dictionary)
+                dictionary['sheet_id'] = survey_data['sheet_id']
+                dictionary['sheet_data'] = survey_data['sheet_data']
+    
+    def make_form_url(self, survey_data, dictionary):
+        """ This function creates the Google Form URL with appropriate
+         pre-filled parameters. """
+        BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
+        BASE_URL_TWO = '/viewform?usp=pp_url'
+        url = BASE_URL_ONE + survey_data['form_id'] + BASE_URL_TWO
 
+        PARAMETER_BASE_ONE = '&entry.'
+        PARAMETER_BASE_TWO = '='
+
+        question_ids_dict = survey_data['form_question_ids']
+        for parameter in question_ids_dict.keys():
+            value = ''
+            if parameter == 'allocation_period':
+                value = dictionary['allocation_period'].name
+            elif parameter == 'pi_name':
+                value = dictionary['PI'].user.first_name + '+' + \
+                    dictionary['PI'].user.last_name
+            elif parameter == 'pi_username':
+                value = dictionary['PI'].user.username
+            elif parameter == 'project_name':
+                value = dictionary['requested_project'].name
+            elif parameter == 'requester_name':
+                value = self.request.user.first_name + '+' + \
+                    self.request.user.last_name
+            elif parameter == 'requester_username':
+                value = self.request.user.username
+            value = value.replace(' ', '+')
+            url += PARAMETER_BASE_ONE + question_ids_dict[parameter] + \
+                PARAMETER_BASE_TWO + value
+        return url
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                                                UserPassesTestMixin,
@@ -586,21 +634,23 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
     FORMS = [
         ('allocation_period', SavioProjectAllocationPeriodForm),
         ('pi_selection', ProjectRenewalPISelectionForm),
-        ('renewal_survey', ProjectRenewalSurveyForm),
+        # ('renewal_survey', ProjectRenewalSurveyForm),
+        ('google_renewal_survey', ProjectRenewalGoogleSurveyForm),
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
     ]
 
     TEMPLATES = {
         'allocation_period': 'project/project_renewal/allocation_period.html',
         'pi_selection': 'project/project_renewal/pi_selection.html',
-        'renewal_survey': 'project/project_renewal/project_renewal_survey.html',
+        'google_renewal_survey': 
+            'project/project_renewal/project_google_renewal_survey.html',
         'review_and_submit': 'project/project_renewal/review_and_submit.html',
     }
 
     form_list = [
         SavioProjectAllocationPeriodForm,
         ProjectRenewalPISelectionForm,
-        ProjectRenewalSurveyForm,
+        ProjectRenewalGoogleSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
     ]
 
@@ -647,8 +697,7 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
 
             request = self.create_allocation_renewal_request(
                 self.request.user, pi, self.computing_allowance,
-                allocation_period, self.project_obj, self.project_obj, 
-                tmp['renewal_survey_answers'])
+                allocation_period, self.project_obj, self.project_obj)
 
             self.send_emails(request)
         except Exception as e:
@@ -677,6 +726,15 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             kwargs['allocation_period_pk'] = getattr(
                 tmp.get('allocation_period', None), 'pk', None)
             kwargs['project_pks'] = [self.project_obj.pk]
+        elif step == self.step_numbers_by_form_name['google_renewal_survey']:
+            kwargs['user'] = self.request.user
+            kwargs['project_name'] = self.project_obj.name
+            tmp = {}
+            self.__set_data_from_previous_steps(step, tmp)
+            kwargs['pi'] = tmp['PI'].user
+            kwargs['allocation_period'] = tmp['allocation_period'].name
+            kwargs['sheet_id'] = tmp['sheet_id']
+            kwargs['sheet_data'] = tmp['sheet_data']
         return kwargs
 
     def get_template_names(self):
@@ -748,9 +806,47 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                 dictionary['breadcrumb_pooling_preference'] = \
                     form_class.SHORT_DESCRIPTIONS.get(
                         pooling_preference, 'Unknown')
+        
+        google_renewal_survey_form_step = self.step_numbers_by_form_name[
+            'google_renewal_survey']
+        if step == google_renewal_survey_form_step:
+            survey_data = get_renewal_survey(dictionary['allocation_period'].name)
+            if survey_data != None:
+                dictionary['form_id'] = survey_data['form_id']
+                dictionary['form_url'] = self.make_form_url(survey_data, 
+                                                            dictionary)
+                dictionary['sheet_id'] = survey_data['sheet_id']
+                dictionary['sheet_data'] = survey_data['sheet_data']
+        
+    def make_form_url(self, survey_data, dictionary):
+        """ This function creates the Google Form URL with appropriate
+         pre-filled parameters. """
+        BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
+        BASE_URL_TWO = '/viewform?usp=pp_url'
+        url = BASE_URL_ONE + survey_data['form_id'] + BASE_URL_TWO
 
-        renewal_survey_form_step = self.step_numbers_by_form_name[
-            'renewal_survey']
-        if step > renewal_survey_form_step:
-            data = self.get_cleaned_data_for_step(str(renewal_survey_form_step))
-            dictionary['renewal_survey_answers'] = data or {}
+        PARAMETER_BASE_ONE = '&entry.'
+        PARAMETER_BASE_TWO = '='
+
+        question_ids_dict = survey_data['form_question_ids']
+        for parameter in question_ids_dict.keys():
+            value = ''
+            if parameter == 'allocation_period':
+                value = dictionary['allocation_period'].name
+            elif parameter == 'pi_name':
+                value = dictionary['PI'].user.first_name + '+' + \
+                    dictionary['PI'].user.last_name
+            elif parameter == 'pi_username':
+                value = dictionary['PI'].user.username
+            elif parameter == 'project_name':
+                value = self.project_obj.name
+            elif parameter == 'requester_name':
+                value = self.request.user.first_name + '+' + \
+                    self.request.user.last_name
+            elif parameter == 'requester_username':
+                value = self.request.user.username
+            value = value.replace(' ', '+')
+            url += PARAMETER_BASE_ONE + question_ids_dict[parameter] + \
+                PARAMETER_BASE_TWO + value
+        return url
+                

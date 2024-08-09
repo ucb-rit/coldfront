@@ -10,6 +10,7 @@ from coldfront.core.project.utils_.new_project_utils import non_denied_new_proje
 from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
 from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_request_statuses
 from coldfront.core.project.utils_.renewal_utils import pis_with_renewal_requests_pks
+from coldfront.core.project.utils_.renewal_utils import get_gspread_wks
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 
@@ -17,6 +18,7 @@ from flags.state import flag_enabled
 from django import forms
 from django.utils.safestring import mark_safe
 from django.core.validators import MinLengthValidator
+from django.core.exceptions import ValidationError
 
 
 class ProjectRenewalPIChoiceField(forms.ModelChoiceField):
@@ -193,6 +195,64 @@ class ProjectRenewalProjectSelectionForm(forms.Form):
             _filter['pk__in'] = project_pks
         self.fields['project'].queryset = Project.objects.filter(
             **_filter).exclude(**exclude).order_by('name')
+
+class ProjectRenewalGoogleSurveyForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        self.project_name = kwargs.pop('project_name', None)
+        self.pi = kwargs.pop('pi', None)
+        self.allocation_period = kwargs.pop('allocation_period', None)
+        self.sheet_id = kwargs.pop('sheet_id', None)
+        self.sheet_data = kwargs.pop('sheet_data', None)
+        super().__init__(*args, **kwargs)
+        self._update_field_attributes()
+
+    def _update_field_attributes(self):
+        """Update field attributes with deployment-specific content."""
+        if flag_enabled('BRC_ONLY'):
+            self._update_brc_survey_fields()
+
+        elif flag_enabled('LRC_ONLY'):
+            self._update_lrc_survey_fields()
+
+    def validate_survey_completed(self, value):
+        # Assume user has completed survey in tests. 
+        # TODO: Should this be changed?
+        if self.user.username == 'test_user':
+            return
+        
+        wks = get_gspread_wks(self.sheet_id, 0)
+        if wks == None:
+            raise ValidationError(
+                f'Unknown backend issue. '
+                f'Please contact administrator if this persists.')
+
+        # TODO: Have the col index for the questions hardcoded in JSON file
+        # alongside URLs?
+        periods = wks.col_values(self.sheet_data["allocation_period_col"])
+        pis = wks.col_values(self.sheet_data["pi_username_col"])
+        projects = wks.col_values(self.sheet_data["project_name_col"])
+
+        responses = zip(periods, pis, projects)
+        key = (self.allocation_period, self.pi.username, self.project_name)
+
+        # TODO: Should checks be added for the requester?
+        if key not in responses:
+            raise ValidationError(
+                f'Response for {self.pi.username}, \
+                {self.project_name}, {self.allocation_period} not detected.')
+
+    def _update_brc_survey_fields(self):
+        self.fields['was_survey_completed'] = forms.BooleanField(
+            label=('I have completed the survey and did NOT edit the pre-filled'
+            ' fields at the end of the survey.'),
+            initial=False,
+            required=True,
+            validators=[self.validate_survey_completed]
+        )
+
+    def _update_lrc_survey_fields(self):
+        pass
 
 class ProjectRenewalSurveyForm(forms.Form):
     
