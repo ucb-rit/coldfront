@@ -234,6 +234,8 @@ class Command(BaseCommand):
 
         Assumptions:
             - The ComputingAllowance is renewable.
+            - (TODO: Temporary) The ComputingAllowance is not one per
+              PI.
             - The PI is an active PI of the project.
             - The requester is an active Manager or PI of the project.
             - The allowance is being renewed under the same project
@@ -418,6 +420,14 @@ class Command(BaseCommand):
                 f'Computing allowance "{computing_allowance.get_name()}" is '
                 f'not renewable.')
 
+        # TODO: There are some allowances which a PI may only have one of.
+        #  Disallow renewals of these until business logic (in progress) is in
+        #  place to enforce this constraint.
+        if computing_allowance.is_one_per_pi():
+            raise CommandError(
+                'Renewals of computing allowances that are limited per PI are '
+                'not currently supported by this command.')
+
         active_project_user_status = ProjectUserStatusChoice.objects.get(
             name='Active')
         manager_project_user_role = ProjectUserRoleChoice.objects.get(
@@ -492,9 +502,6 @@ class Command(BaseCommand):
         num_service_units = calculate_service_units_to_allocate(
             computing_allowance, request_time,
             allocation_period=allocation_period)
-
-        # TODO (in progress): Add business logic to ensure that the PI is
-        #  allowed to have a renewal request made under them.
 
         return {
             'project': project,
