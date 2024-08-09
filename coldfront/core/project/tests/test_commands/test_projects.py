@@ -151,6 +151,7 @@ class TestProjectsRenew(TestProjectsBase):
                 'value': str(num_service_units),
             })
 
+    @enable_deployment('BRC')
     def test_dry_run(self):
         """Test that the request would be successful but the dry run
         ensures that the project is not updated."""
@@ -169,6 +170,7 @@ class TestProjectsRenew(TestProjectsBase):
             Decimal(self.service_units_attribute.value),
             settings.ALLOCATION_MIN)
 
+    @enable_deployment('BRC')
     def test_success(self):
         """Test that a successful request updates a project's status
         to 'Active' and the service units to the correct amount."""
@@ -201,6 +203,7 @@ class TestProjectsRenew(TestProjectsBase):
         # TODO: Also test:
         #  That only a processing email is sent
 
+    @enable_deployment('BRC')
     def test_validate_project(self):
         """Test that, if the project is invalid, the command raises an
         error, and does not proceed."""
@@ -219,6 +222,7 @@ class TestProjectsRenew(TestProjectsBase):
             Decimal(self.service_units_attribute.value),
             settings.ALLOCATION_MIN)
 
+    @enable_deployment('BRC')
     def test_validate_computing_allowance_non_renewable(self):
         """Test that computing allowances that cannot be renewed fail
         correctly (e.g., Recharge, Condo)."""
@@ -245,6 +249,7 @@ class TestProjectsRenew(TestProjectsBase):
 
     # TODO: Retire this test case once support for these allowances has been
     #  added.
+    @enable_deployment('BRC')
     def test_validate_computing_allowance_one_per_pi(self):
         """Test that computing allowances which a PI may only have one
         of fail correctly."""
@@ -269,6 +274,7 @@ class TestProjectsRenew(TestProjectsBase):
             self.assertIn('not currently supported', str(cm.exception))
             self._assert_project_inactive(project_name)
 
+    @enable_deployment('BRC')
     def test_validate_requester(self):
         """Test that requesters who do not exist, or are not an active
         manager/PI fail correctly."""
@@ -318,6 +324,7 @@ class TestProjectsRenew(TestProjectsBase):
                 Decimal(self.service_units_attribute.value),
                 settings.ALLOCATION_MIN)
 
+    @enable_deployment('BRC')
     def test_validate_pi(self):
         """Test that PIs who do not exist or are not active fail
         correctly."""
@@ -376,6 +383,7 @@ class TestProjectsRenew(TestProjectsBase):
                 Decimal(self.service_units_attribute.value),
                 settings.ALLOCATION_MIN)
 
+    @enable_deployment('BRC')
     def test_validate_allocation_period(self):
         """Test that AllocationPeriods which do not exist, are not valid
         for the given computing allowance, or are not current fail
