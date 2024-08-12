@@ -1,6 +1,6 @@
-from coldfront.core.project.utils_.gspread.backends.base import BaseGSpreadBackend
+from coldfront.core.project.utils_.google_renewal_survey.backends.base import BaseGoogleRenewalSurveyBackend
 
-class DummyGSpreadBackend(BaseGSpreadBackend):
+class DummyGoogleRenewalSurveyBackend(BaseGoogleRenewalSurveyBackend):
     """A backend for testing purposes."""
 
     def is_renewal_survey_completed(self, sheet_id, survey_data, key):
