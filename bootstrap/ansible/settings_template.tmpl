@@ -125,8 +125,12 @@ ORACLE_BILLING_DB = {
 # Renewal Survey Validation settings
 #------------------------------------------------------------------------------
 
+GSPREAD_CREDENTIALS_PATH = ''
+
+{% if GSPREAD_CREDENTIALS_PATH|length > 0  %}
 # The class to use for validating whether renewal survey has been completed.
-RENEWAL_SURVEY_VALIDATOR_BACKEND = 'coldfront.core.project.utils_.validation.backends.production_backend.ProductionValidatorBackend'
+GSPREAD_SURVEY_BACKEND = 'coldfront.core.project.utils_.gspread.backends.production_backend.ProductionGSpreadBackend'
+{% endif %}
 
 #------------------------------------------------------------------------------
 # SSL settings
