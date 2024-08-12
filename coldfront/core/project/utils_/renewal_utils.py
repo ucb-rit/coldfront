@@ -1197,3 +1197,10 @@ def renewal_survey_answer_conversion(question, all_answers):
         new_answer = str(answer)
     new_answer = new_answer.rstrip(', ')
     return new_answer
+
+def gsheet_column_to_index(column_str):
+    """Convert Google Sheets column (e.g., 'A', 'AA') to index number."""
+    index = 0
+    for char in column_str:
+        index = index * 26 + (ord(char.upper()) - ord('A') + 1)
+    return index

@@ -1,6 +1,7 @@
 from coldfront.core.project.utils_.google_renewal_survey.backends.base import BaseGoogleRenewalSurveyBackend
 from coldfront.core.project.utils_.renewal_utils import get_gspread_wks
 from coldfront.core.project.utils_.renewal_utils import get_renewal_survey
+from coldfront.core.project.utils_.renewal_utils import gsheet_column_to_index
 
 from django.core.exceptions import ValidationError
 
@@ -15,9 +16,16 @@ class ProductionGoogleRenewalSurveyBackend(BaseGoogleRenewalSurveyBackend):
                 f'Unknown backend issue. '
                 f'Please contact administrator if this persists.')
 
-        periods = wks.col_values(sheet_data['allocation_period_col'])
-        pis = wks.col_values(sheet_data['pi_username_col'])
-        projects = wks.col_values(sheet_data['project_name_col'])
+        periods_coor = gsheet_column_to_index(
+            sheet_data['allocation_period_col'])
+        pis_coor = gsheet_column_to_index(
+            sheet_data['pi_username_col'])
+        projects_coor = gsheet_column_to_index(
+            sheet_data['project_name_col'])
+        
+        periods = wks.col_values(periods_coor)
+        pis = wks.col_values(pis_coor)
+        projects = wks.col_values(projects_coor)
         responses = zip(periods, pis, projects)
 
         # TODO: Should checks be added for the requester?
@@ -40,8 +48,13 @@ class ProductionGoogleRenewalSurveyBackend(BaseGoogleRenewalSurveyBackend):
         if wks == None:
             return None
         
-        pis = wks.col_values(gform_info["sheet_data"]["pi_username_col"])
-        projects = wks.col_values(gform_info["sheet_data"]["project_name_col"])
+        pis_column_coor = gsheet_column_to_index(
+            gform_info["sheet_data"]["pi_username_col"])
+        projs_column_coor = gsheet_column_to_index(
+            gform_info["sheet_data"]["project_name_col"])
+        
+        pis = wks.col_values(pis_column_coor)
+        projects = wks.col_values(projs_column_coor)
 
         all_responses = list(zip(pis, projects))
         key = (pi_username, project_name)

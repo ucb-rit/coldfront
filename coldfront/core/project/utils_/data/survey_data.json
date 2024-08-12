@@ -5,9 +5,9 @@
         "form_id": "1FAIpQLSeC3R3RRxO6SXqZXM2Pwo2oZHbpvX6tKqU1MjLDU8HD1FVbOQ",
         "allocation_period": "Allowance Year 2024 - 2025",
         "sheet_data": {
-            "allocation_period_col": 23,
-            "pi_username_col": 25,
-            "project_name_col": 26
+            "allocation_period_col": "W",
+            "pi_username_col": "Y",
+            "project_name_col": "Z"
         },
         "form_question_ids": {
             "allocation_period": "1284416437",
@@ -24,9 +24,9 @@
         "form_id": "1FAIpQLScDEtQZEEI1f9EJ_x3A9fVVDNnaKLmKjP4XkoXjdzJpkbPoHA",
         "allocation_period": "Allowance Year 2025 - 2026",
         "sheet_data": {
-            "allocation_period_col": 27,
-            "pi_username_col": 29,
-            "project_name_col": 30
+            "allocation_period_col": "AA",
+            "pi_username_col": "AC",
+            "project_name_col": "AD"
         },
         "form_question_ids": {
             "allocation_period": "905185231",
@@ -43,9 +43,9 @@
         "form_id": "1FAIpQLSdYphIM0xzlLk5ljQL46SljqePwxJgl_hhcpPkDU6A_J48Hog",
         "allocation_period": "Allowance Year 2024 - 2025",
         "sheet_data": {
-            "allocation_period_col": 19,
-            "pi_username_col": 21,
-            "project_name_col": 22
+            "allocation_period_col": "S",
+            "pi_username_col": "U",
+            "project_name_col": "V"
         },
         "form_question_ids": {
             "allocation_period": "802720914",
