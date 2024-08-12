@@ -127,7 +127,7 @@ ORACLE_BILLING_DB = {
 
 {% if google_renewal_survey_backend == 'production' %}
 # The class to use for validating whether renewal survey has been completed.
-GSPREAD_SURVEY_BACKEND = 'coldfront.core.project.utils_.gspread.backends.production_backend.ProductionGSpreadBackend'
+GOOGLE_RENEWAL_SURVEY_BACKEND = 'coldfront.core.project.utils_.google_renewal_survey.backends.production_backend.ProductionGoogleRenewalSurveyBackend'
 {% endif %}
 
 #------------------------------------------------------------------------------

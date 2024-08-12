@@ -387,7 +387,7 @@ BILLING_VALIDATOR_BACKEND = 'coldfront.core.billing.utils.validation.backends.du
 #------------------------------------------------------------------------------
 
 # The class to use for validating whether renewal survey has been completed.
-GSPREAD_SURVEY_BACKEND = 'coldfront.core.project.utils_.gspread.backends.dummy.DummyGSpreadBackend'
+GOOGLE_RENEWAL_SURVEY_BACKEND = 'coldfront.core.project.utils_.google_renewal_survey.backends.dummy.DummyGoogleRenewalSurveyBackend'
 
 #------------------------------------------------------------------------------
 # Multiple Email Address settings

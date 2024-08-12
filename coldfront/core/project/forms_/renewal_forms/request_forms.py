@@ -12,7 +12,7 @@ from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_reque
 from coldfront.core.project.utils_.renewal_utils import pis_with_renewal_requests_pks
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
-from coldfront.core.project.utils_.gspread import is_renewal_survey_completed
+from coldfront.core.project.utils_.google_renewal_survey import is_renewal_survey_completed
 
 from flags.state import flag_enabled
 from django import forms
