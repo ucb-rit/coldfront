@@ -10,10 +10,9 @@ from coldfront.core.project.utils_.new_project_utils import non_denied_new_proje
 from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
 from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_request_statuses
 from coldfront.core.project.utils_.renewal_utils import pis_with_renewal_requests_pks
-from coldfront.core.project.utils_.renewal_utils import get_gspread_wks
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
-from coldfront.core.project.utils_.validation import is_renewal_survey_completed
+from coldfront.core.project.utils_.gspread import is_renewal_survey_completed
 
 from flags.state import flag_enabled
 from django import forms
