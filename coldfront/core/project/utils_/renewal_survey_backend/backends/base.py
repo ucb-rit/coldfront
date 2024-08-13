@@ -14,3 +14,9 @@ class BaseRenewalSurveyBackend(ABC):
                             pi_username):
         """Return the question and answers of a particular survey response."""
         pass
+
+    @abstractmethod
+    def get_survey_url(self, survey_data, parameters):
+        """This function returns the unique link to a pre-filled form for the
+          user to fill out."""
+        pass

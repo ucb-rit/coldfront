@@ -11,3 +11,7 @@ class PermissiveRenewalSurveyBackend(BaseRenewalSurveyBackend):
                             pi_username):
         """ Return None """
         return None
+    
+    def get_survey_url(self, survey_data, parameters):
+        """Return None."""
+        return None
