@@ -122,12 +122,15 @@ ORACLE_BILLING_DB = {
 {% endif %}
 
 #------------------------------------------------------------------------------
-# Renewal Survey Validation settings
+# Renewal Survey Backend settings
 #------------------------------------------------------------------------------
 
-{% if google_renewal_survey_backend == 'production' %}
+{% if renewal_survey_backend == 'google' %}
 # The class to use for validating whether renewal survey has been completed.
-GOOGLE_RENEWAL_SURVEY_BACKEND = 'coldfront.core.project.utils_.google_renewal_survey.backends.production_backend.ProductionGoogleRenewalSurveyBackend'
+RENEWAL_SURVEY_BACKEND = 'coldfront.core.project.utils_.renewal_survey_backend.backends.google.GoogleRenewalSurveyBackend'
+
+# Path to the renewal survey data file.
+RENEWAL_SURVEY_DATA_PATH = 'coldfront/core/project/utils_/data/google_survey_data.json'
 {% endif %}
 
 #------------------------------------------------------------------------------

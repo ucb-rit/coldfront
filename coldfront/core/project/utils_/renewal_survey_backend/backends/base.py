@@ -1,7 +1,7 @@
 from abc import ABC
 from abc import abstractmethod
 
-class BaseGoogleRenewalSurveyBackend(ABC):
+class BaseRenewalSurveyBackend(ABC):
     """An interface for accessing GSpread API using any of a number of 
     backends."""
     @abstractmethod

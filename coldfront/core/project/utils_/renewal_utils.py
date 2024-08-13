@@ -1093,8 +1093,14 @@ def get_renewal_survey(allocation_period_name):
     The sheet_data values refer to the column coordinates of information used
     to enforce automatic check/block for the renewal form."""
 
-    # TODO: How to get file path corrrectly onto file without hardcoding?
-    with open("coldfront/core/project/utils_/data/survey_data.json") as fp:
+    # If a different survey solution is used in the future, a different 
+    # survey data file would be opened. Right now, the only one is 
+    # google_survey_data.json
+    survey_data_path = settings.RENEWAL_SURVEY_DATA_PATH
+    if survey_data_path == '':
+        return None
+    
+    with open(survey_data_path) as fp:
         data = json.load(fp)
         deployment = ''
         if flag_enabled('BRC_ONLY'):

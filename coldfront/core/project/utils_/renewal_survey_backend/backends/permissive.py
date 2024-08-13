@@ -1,6 +1,6 @@
-from coldfront.core.project.utils_.google_renewal_survey.backends.base import BaseGoogleRenewalSurveyBackend
+from coldfront.core.project.utils_.renewal_survey_backend.backends.base import BaseRenewalSurveyBackend
 
-class DummyGoogleRenewalSurveyBackend(BaseGoogleRenewalSurveyBackend):
+class PermissiveRenewalSurveyBackend(BaseRenewalSurveyBackend):
     """A backend for testing purposes."""
 
     def is_renewal_survey_completed(self, sheet_id, survey_data, key):
