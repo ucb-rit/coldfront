@@ -27,6 +27,7 @@ from coldfront.core.project.utils_.renewal_utils import send_new_allocation_rene
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pi_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pooling_notification_email
 from coldfront.core.project.utils_.renewal_utils import get_renewal_survey
+from coldfront.core.project.utils_.renewal_survey_backend import get_survey_url
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
@@ -595,36 +596,9 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary['sheet_data'] = survey_data['sheet_data']
     
     def make_form_url(self, survey_data, dictionary):
-        """ This function creates the Google Form URL with appropriate
-         pre-filled parameters. """
-        BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
-        BASE_URL_TWO = '/viewform?usp=pp_url'
-        url = BASE_URL_ONE + survey_data['form_id'] + BASE_URL_TWO
-
-        PARAMETER_BASE_ONE = '&entry.'
-        PARAMETER_BASE_TWO = '='
-
-        question_ids_dict = survey_data['form_question_ids']
-        for parameter in question_ids_dict.keys():
-            value = ''
-            if parameter == 'allocation_period':
-                value = dictionary['allocation_period'].name
-            elif parameter == 'pi_name':
-                value = dictionary['PI'].user.first_name + '+' + \
-                    dictionary['PI'].user.last_name
-            elif parameter == 'pi_username':
-                value = dictionary['PI'].user.username
-            elif parameter == 'project_name':
-                value = dictionary['requested_project'].name
-            elif parameter == 'requester_name':
-                value = self.request.user.first_name + '+' + \
-                    self.request.user.last_name
-            elif parameter == 'requester_username':
-                value = self.request.user.username
-            value = value.replace(' ', '+')
-            url += PARAMETER_BASE_ONE + question_ids_dict[parameter] + \
-                PARAMETER_BASE_TWO + value
-        return url
+        """Get pre-filled survey link for user."""
+        dictionary['requester'] = self.request.user
+        return get_survey_url(survey_data, dictionary)
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                                                UserPassesTestMixin,
@@ -634,7 +608,6 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
     FORMS = [
         ('allocation_period', SavioProjectAllocationPeriodForm),
         ('pi_selection', ProjectRenewalPISelectionForm),
-        # ('renewal_survey', ProjectRenewalSurveyForm),
         ('google_renewal_survey', ProjectRenewalGoogleSurveyForm),
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
     ]
@@ -820,34 +793,8 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                 dictionary['sheet_data'] = survey_data['sheet_data']
         
     def make_form_url(self, survey_data, dictionary):
-        """ This function creates the Google Form URL with appropriate
-         pre-filled parameters. """
-        BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
-        BASE_URL_TWO = '/viewform?usp=pp_url'
-        url = BASE_URL_ONE + survey_data['form_id'] + BASE_URL_TWO
-
-        PARAMETER_BASE_ONE = '&entry.'
-        PARAMETER_BASE_TWO = '='
-
-        question_ids_dict = survey_data['form_question_ids']
-        for parameter in question_ids_dict.keys():
-            value = ''
-            if parameter == 'allocation_period':
-                value = dictionary['allocation_period'].name
-            elif parameter == 'pi_name':
-                value = dictionary['PI'].user.first_name + '+' + \
-                    dictionary['PI'].user.last_name
-            elif parameter == 'pi_username':
-                value = dictionary['PI'].user.username
-            elif parameter == 'project_name':
-                value = self.project_obj.name
-            elif parameter == 'requester_name':
-                value = self.request.user.first_name + '+' + \
-                    self.request.user.last_name
-            elif parameter == 'requester_username':
-                value = self.request.user.username
-            value = value.replace(' ', '+')
-            url += PARAMETER_BASE_ONE + question_ids_dict[parameter] + \
-                PARAMETER_BASE_TWO + value
-        return url
+        """Get pre-filled survey link for user."""
+        dictionary['requester'] = self.request.user
+        dictionary['project_name'] = self.project_obj.name
+        return get_survey_url(survey_data, dictionary)
                 
