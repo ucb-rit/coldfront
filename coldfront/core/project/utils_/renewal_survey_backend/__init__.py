@@ -11,7 +11,7 @@ __all__ = [
 ]
 
 def get_backend(backend=None, **kwds):
-    klass = import_string(backend or settings.GOOGLE_RENEWAL_SURVEY_BACKEND)
+    klass = import_string(backend or settings.RENEWAL_SURVEY_BACKEND)
     return klass(**kwds)
 
 def is_renewal_survey_completed(sheet_id, sheet_data, key):

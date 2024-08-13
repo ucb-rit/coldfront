@@ -38,13 +38,16 @@ Project Renewal - Usage Survey
 </p>
 
 <p>If you are having issues, check that you did not edit the pre-filled fields in the admin section of the survey.</p>
-<a
-    class="btn btn-primary"
-    href={{form_url}} 
-        target="_blank">
-    Go to Survey
-</a>
-
+{% if form_url %}
+  <a
+      class="btn btn-primary"
+      href={{form_url}} 
+          target="_blank">
+      Go to Survey
+  </a>
+{% else %}
+  <p class="font-weight-bold">Link to Google Form Not Available</p>
+{% endif %}
 <p></p>
 
 

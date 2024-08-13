@@ -20,4 +20,4 @@ admin_email: developer@localhost
 email_admin_list: ['developer@localhost']
 request_approval_cc_list: ['developer@localhost']
 
-google_renewal_survey_backend: 'dummy'
+renewal_survey_backend: 'permissive'

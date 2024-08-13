@@ -1,11 +1,11 @@
-from coldfront.core.project.utils_.google_renewal_survey.backends.base import BaseGoogleRenewalSurveyBackend
+from coldfront.core.project.utils_.renewal_survey_backend.backends.base import BaseRenewalSurveyBackend
 from coldfront.core.project.utils_.renewal_utils import get_gspread_wks
 from coldfront.core.project.utils_.renewal_utils import get_renewal_survey
 from coldfront.core.project.utils_.renewal_utils import gsheet_column_to_index
 
 from django.core.exceptions import ValidationError
 
-class ProductionGoogleRenewalSurveyBackend(BaseGoogleRenewalSurveyBackend):
+class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
     """A backend that invokes gspread API which connects to Google Sheets
     to validate whether renewal survey was completed."""
 

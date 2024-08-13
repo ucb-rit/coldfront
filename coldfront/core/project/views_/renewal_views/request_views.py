@@ -733,8 +733,9 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             self.__set_data_from_previous_steps(step, tmp)
             kwargs['pi'] = tmp['PI'].user
             kwargs['allocation_period'] = tmp['allocation_period'].name
-            kwargs['sheet_id'] = tmp['sheet_id']
-            kwargs['sheet_data'] = tmp['sheet_data']
+            if 'sheet_id' in tmp.keys():
+                kwargs['sheet_id'] = tmp['sheet_id']
+                kwargs['sheet_data'] = tmp['sheet_data']
         return kwargs
 
     def get_template_names(self):
