@@ -20,3 +20,13 @@ class BaseRenewalSurveyBackend(ABC):
         """This function returns the unique link to a pre-filled form for the
           user to fill out."""
         pass
+
+    @abstractmethod
+    def set_necessary_data(self, allocation_period_name, data, dictionary, 
+                           url=False):
+        """This function takes a dictionary and adds the necessary keys to it so
+        that coldfront.core.project.views_.renewal_views.request_views and 
+        coldfront.core.project.forms_.renewal_forms.request_forms function
+        properly. `allocation_period_name` is used to identify which survey to
+        obtain hard-coded data from."""
+        pass

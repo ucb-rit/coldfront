@@ -99,4 +99,23 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
             url += PARAMETER_BASE_ONE + question_ids_dict[parameter] + \
                 PARAMETER_BASE_TWO + value
         return url
-    
+
+    def set_necessary_data(self, allocation_period_name, data, dictionary, 
+                           url=False):
+        """This function takes a dictionary and adds the necessary keys to it so
+        that coldfront.core.project.views_.renewal_views.request_views and 
+        coldfront.core.project.forms_.renewal_forms.request_forms function
+        properly. `allocation_period_name` is used to identify which survey to
+        obtain hard-coded data from."""
+        survey_data = get_renewal_survey(allocation_period_name)
+        if survey_data != None:
+            dictionary['sheet_id'] = survey_data['sheet_id']
+            dictionary['sheet_data'] = survey_data['sheet_data']
+            if url:
+                dictionary['form_id'] = survey_data['form_id']
+                dictionary['form_url'] = self.get_survey_url(survey_data, dictionary)
+            else:
+                dictionary['requester'] = data['requester']
+                dictionary['project_name'] = data['project_name']
+                dictionary['pi'] = data['PI'].user
+                dictionary['allocation_period'] = data['allocation_period']

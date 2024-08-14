@@ -198,7 +198,7 @@ class ProjectRenewalProjectSelectionForm(forms.Form):
 
 class ProjectRenewalGoogleSurveyForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user', None)
+        self.requester = kwargs.pop('requester', None)
         self.project_name = kwargs.pop('project_name', None)
         self.pi = kwargs.pop('pi', None)
         self.allocation_period = kwargs.pop('allocation_period', None)
@@ -216,7 +216,10 @@ class ProjectRenewalGoogleSurveyForm(forms.Form):
             self._update_lrc_survey_fields()
 
     def validate_survey_completed(self, value):
-        key= (self.allocation_period, self.pi.username, self.project_name)
+        key = None
+        if self.allocation_period is not None and self.pi is not None:
+            key = (self.allocation_period.name, self.pi.username, 
+                   self.project_name)
         is_renewal_survey_completed(self.sheet_id, self.sheet_data, key)
 
     def _update_brc_survey_fields(self):

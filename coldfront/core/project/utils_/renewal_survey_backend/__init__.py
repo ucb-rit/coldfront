@@ -8,7 +8,8 @@ __all__ = [
     'get_backend',
     'is_renewal_survey_completed',
     'get_survey_response',
-    'get_survey_url'
+    'get_survey_url',
+    'set_necessary_data'
 ]
 
 def get_backend(backend=None, **kwds):
@@ -35,3 +36,13 @@ def get_survey_url(survey_data, parameters):
     to fill out."""
     backend = get_backend()
     return backend.get_survey_url(survey_data, parameters)
+
+def set_necessary_data(allocation_period_name, data, dictionary, url=False):
+    """This function takes a dictionary and adds the necessary keys to it so
+    that coldfront.core.project.views_.renewal_views.request_views and 
+    coldfront.core.project.forms_.renewal_forms.request_forms function
+    properly. `allocation_period_name` is used to identify which survey to
+    obtain hard-coded data from."""
+    backend = get_backend()
+    return backend.set_necessary_data(allocation_period_name, data, dictionary, 
+                                      url)
