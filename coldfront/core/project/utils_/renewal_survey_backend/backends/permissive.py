@@ -13,5 +13,11 @@ class PermissiveRenewalSurveyBackend(BaseRenewalSurveyBackend):
         return None
     
     def get_survey_url(self, survey_data, parameters):
-        """Return None."""
+        """ Return None """
         return None
+    
+    def set_necessary_data(self, allocation_period_name, data, dictionary, 
+                           url=False):
+        """ Do nothing """
+        return
+    

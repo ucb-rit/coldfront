@@ -28,6 +28,7 @@ from coldfront.core.project.utils_.renewal_utils import send_new_allocation_rene
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pooling_notification_email
 from coldfront.core.project.utils_.renewal_survey_utils import get_renewal_survey
 from coldfront.core.project.utils_.renewal_survey_backend import get_survey_url
+from coldfront.core.project.utils_.renewal_survey_backend import set_necessary_data
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
@@ -322,14 +323,9 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         elif step == self.step_numbers_by_form_name['new_project_survey']:
             kwargs['computing_allowance'] = self.computing_allowance
         elif step == self.step_numbers_by_form_name['google_renewal_survey']:
-            kwargs['user'] = self.request.user
             tmp = {}
             self.__set_data_from_previous_steps(step, tmp)
-            kwargs['project_name'] = tmp['requested_project'].name
-            kwargs['pi'] = tmp['PI'].user
-            kwargs['allocation_period'] = tmp['allocation_period'].name
-            kwargs['sheet_id'] = tmp['sheet_id']
-            kwargs['sheet_data'] = tmp['sheet_data']
+            set_necessary_data(tmp['allocation_period'].name, tmp, kwargs)
 
         return kwargs
 
@@ -586,20 +582,24 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         google_renewal_survey_form_step = self.step_numbers_by_form_name[
             'google_renewal_survey']
         if step == google_renewal_survey_form_step:
-            survey_data = get_renewal_survey(
-                dictionary['allocation_period'].name)
-            if survey_data != None:
-                dictionary['form_id'] = survey_data['form_id']
-                dictionary['form_url'] = self.make_form_url(survey_data, 
-                                                            dictionary)
-                dictionary['sheet_id'] = survey_data['sheet_id']
-                dictionary['sheet_data'] = survey_data['sheet_data']
+            dictionary['requester'] = self.request.user
+            dictionary['project_name'] = dictionary['requested_project'].name
+            set_necessary_data(dictionary['allocation_period'].name, None,
+                               dictionary, url=True)
+            # survey_data = get_renewal_survey(
+            #     dictionary['allocation_period'].name)
+            # if survey_data != None:
+            #     dictionary['form_id'] = survey_data['form_id']
+            #     dictionary['form_url'] = self.make_form_url(survey_data, 
+            #                                                 dictionary)
+            #     dictionary['sheet_id'] = survey_data['sheet_id']
+            #     dictionary['sheet_data'] = survey_data['sheet_data']
     
-    def make_form_url(self, survey_data, dictionary):
-        """Get pre-filled survey link for user."""
-        dictionary['requester'] = self.request.user
-        dictionary['project_name'] = dictionary['requested_project'].name
-        return get_survey_url(survey_data, dictionary)
+    # def make_form_url(self, survey_data, dictionary):
+    #     """Get pre-filled survey link for user."""
+    #     dictionary['requester'] = self.request.user
+    #     dictionary['project_name'] = dictionary['requested_project'].name
+    #     return get_survey_url(survey_data, dictionary)
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                                                UserPassesTestMixin,
@@ -701,15 +701,19 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                 tmp.get('allocation_period', None), 'pk', None)
             kwargs['project_pks'] = [self.project_obj.pk]
         elif step == self.step_numbers_by_form_name['google_renewal_survey']:
-            kwargs['user'] = self.request.user
-            kwargs['project_name'] = self.project_obj.name
             tmp = {}
             self.__set_data_from_previous_steps(step, tmp)
-            kwargs['pi'] = tmp['PI'].user
-            kwargs['allocation_period'] = tmp['allocation_period'].name
-            if 'sheet_id' in tmp.keys():
-                kwargs['sheet_id'] = tmp['sheet_id']
-                kwargs['sheet_data'] = tmp['sheet_data']
+            set_necessary_data(tmp['allocation_period'].name, tmp, kwargs)
+
+            # kwargs['user'] = self.request.user
+            # kwargs['project_name'] = self.project_obj.name
+            # tmp = {}
+            # self.__set_data_from_previous_steps(step, tmp)
+            # kwargs['pi'] = tmp['PI'].user
+            # kwargs['allocation_period'] = tmp['allocation_period'].name
+            # if 'sheet_id' in tmp.keys():
+            #     kwargs['sheet_id'] = tmp['sheet_id']
+            #     kwargs['sheet_data'] = tmp['sheet_data']
         return kwargs
 
     def get_template_names(self):
@@ -785,17 +789,22 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         google_renewal_survey_form_step = self.step_numbers_by_form_name[
             'google_renewal_survey']
         if step == google_renewal_survey_form_step:
-            survey_data = get_renewal_survey(dictionary['allocation_period'].name)
-            if survey_data != None:
-                dictionary['form_id'] = survey_data['form_id']
-                dictionary['form_url'] = self.make_form_url(survey_data, 
-                                                            dictionary)
-                dictionary['sheet_id'] = survey_data['sheet_id']
-                dictionary['sheet_data'] = survey_data['sheet_data']
+            dictionary['requester'] = self.request.user
+            dictionary['project_name'] = self.project_obj.name
+            set_necessary_data(dictionary['allocation_period'].name, None, 
+                               dictionary, url=True)
+
+            # survey_data = get_renewal_survey(dictionary['allocation_period'].name)
+            # if survey_data != None:
+            #     dictionary['form_id'] = survey_data['form_id']
+            #     dictionary['form_url'] = self.make_form_url(survey_data, 
+            #                                                 dictionary)
+            #     dictionary['sheet_id'] = survey_data['sheet_id']
+            #     dictionary['sheet_data'] = survey_data['sheet_data']
         
-    def make_form_url(self, survey_data, dictionary):
-        """Get pre-filled survey link for user."""
-        dictionary['requester'] = self.request.user
-        dictionary['project_name'] = self.project_obj.name
-        return get_survey_url(survey_data, dictionary)
+    # def make_form_url(self, survey_data, dictionary):
+    #     """Get pre-filled survey link for user."""
+    #     dictionary['requester'] = self.request.user
+    #     dictionary['project_name'] = self.project_obj.name
+    #     return get_survey_url(survey_data, dictionary)
                 
