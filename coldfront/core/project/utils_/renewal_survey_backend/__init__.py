@@ -37,12 +37,21 @@ def get_survey_url(survey_data, parameters):
     backend = get_backend()
     return backend.get_survey_url(survey_data, parameters)
 
-def set_necessary_data(allocation_period_name, data, dictionary, url=False):
+def set_necessary_data(allocation_period_name, dictionary, data=None,
+                       url=False):
     """This function takes a dictionary and adds the necessary keys to it so
     that coldfront.core.project.views_.renewal_views.request_views and 
     coldfront.core.project.forms_.renewal_forms.request_forms function
-    properly. `allocation_period_name` is used to identify which survey to
-    obtain hard-coded data from."""
+    properly. 
+    Input:
+        - `allocation_period_name` is used to identify which survey to
+            obtain hard-coded data from. 
+        - `dictionary` is a dictionary which needs the necessary keys added to
+            it. It does not necessarily have to be empty.
+        - `url` determines whether the url generated in `get_survey_url` should
+            be added to `dictionary`.
+        - `data`: If there are additional keys/values that need to be in 
+            `dictionary`, include in `data`. """
     backend = get_backend()
-    return backend.set_necessary_data(allocation_period_name, data, dictionary, 
+    return backend.set_necessary_data(allocation_period_name, dictionary, data, 
                                       url)

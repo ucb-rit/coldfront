@@ -22,8 +22,7 @@ class BaseRenewalSurveyBackend(ABC):
         pass
 
     @abstractmethod
-    def set_necessary_data(self, allocation_period_name, data, dictionary, 
-                           url=False):
+    def set_necessary_data(self, allocation_period_name, dictionary, data, url):
         """This function takes a dictionary and adds the necessary keys to it so
         that coldfront.core.project.views_.renewal_views.request_views and 
         coldfront.core.project.forms_.renewal_forms.request_forms function
