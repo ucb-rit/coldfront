@@ -26,8 +26,6 @@ from coldfront.core.project.utils_.renewal_utils import has_non_denied_renewal_r
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_admin_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pi_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pooling_notification_email
-from coldfront.core.project.utils_.renewal_survey_utils import get_renewal_survey
-from coldfront.core.project.utils_.renewal_survey_backend import get_survey_url
 from coldfront.core.project.utils_.renewal_survey_backend import set_necessary_data
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
@@ -325,7 +323,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         elif step == self.step_numbers_by_form_name['google_renewal_survey']:
             tmp = {}
             self.__set_data_from_previous_steps(step, tmp)
-            set_necessary_data(tmp['allocation_period'].name, tmp, kwargs)
+            set_necessary_data(tmp['allocation_period'].name, kwargs, data=tmp)
 
         return kwargs
 
@@ -584,8 +582,8 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         if step == google_renewal_survey_form_step:
             dictionary['requester'] = self.request.user
             dictionary['project_name'] = dictionary['requested_project'].name
-            set_necessary_data(dictionary['allocation_period'].name, None,
-                               dictionary, url=True)
+            set_necessary_data(dictionary['allocation_period'].name, dictionary, 
+                               url=True)
             # survey_data = get_renewal_survey(
             #     dictionary['allocation_period'].name)
             # if survey_data != None:
@@ -703,7 +701,7 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         elif step == self.step_numbers_by_form_name['google_renewal_survey']:
             tmp = {}
             self.__set_data_from_previous_steps(step, tmp)
-            set_necessary_data(tmp['allocation_period'].name, tmp, kwargs)
+            set_necessary_data(tmp['allocation_period'].name, kwargs, data=tmp)
 
             # kwargs['user'] = self.request.user
             # kwargs['project_name'] = self.project_obj.name
@@ -791,8 +789,8 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         if step == google_renewal_survey_form_step:
             dictionary['requester'] = self.request.user
             dictionary['project_name'] = self.project_obj.name
-            set_necessary_data(dictionary['allocation_period'].name, None, 
-                               dictionary, url=True)
+            set_necessary_data(dictionary['allocation_period'].name, dictionary, 
+                               url=True)
 
             # survey_data = get_renewal_survey(dictionary['allocation_period'].name)
             # if survey_data != None:
