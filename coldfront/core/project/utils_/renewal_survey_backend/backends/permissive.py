@@ -1,7 +1,7 @@
 from coldfront.core.project.utils_.renewal_survey_backend.backends.base import BaseRenewalSurveyBackend
 
 class PermissiveRenewalSurveyBackend(BaseRenewalSurveyBackend):
-    """A backend for testing purposes."""
+    """A backend for development purposes."""
 
     def is_renewal_survey_completed(self, sheet_id, survey_data, key):
         """ Always returns without causing ValidationError """
