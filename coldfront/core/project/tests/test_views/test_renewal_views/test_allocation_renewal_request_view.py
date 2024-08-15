@@ -85,11 +85,11 @@ class TestAllocationRenewalRequestView(TestBase):
         }
         form_data.append(pooling_preference_form_data)
 
-        google_renewal_survey_form_data = {
+        renewal_survey_form_data = {
             '6-was_survey_completed': True,
             current_step_key: '6',
         }
-        form_data.append(google_renewal_survey_form_data)
+        form_data.append(renewal_survey_form_data)
 
         review_and_submit_form_data = {
             '7-confirmation': True,
