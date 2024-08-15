@@ -16,11 +16,11 @@ def get_backend(backend=None, **kwds):
     klass = import_string(backend or settings.RENEWAL_SURVEY_BACKEND)
     return klass(**kwds)
 
-def is_renewal_survey_completed(sheet_id, sheet_data, key):
+def is_renewal_survey_completed(survey_id, survey_data, key):
     """A backend that invokes gspread API which connects to Google Sheets
     to validate whether renewal survey was completed."""
     backend = get_backend()
-    return backend.is_renewal_survey_completed(sheet_id, sheet_data, key)
+    return backend.is_renewal_survey_completed(survey_id, survey_data, key)
 
 def get_survey_response(allocation_period_name, project_name, pi_username):
     """Takes information from the request object and returns an
