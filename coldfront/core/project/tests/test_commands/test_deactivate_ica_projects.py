@@ -10,7 +10,7 @@ from coldfront.core.allocation.models import AllocationAttributeUsage, \
     AllocationUserAttributeUsage
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     ProjectUserStatusChoice, ProjectUserRoleChoice, ProjectUser
-from coldfront.core.project.utils import get_project_compute_allocation
+from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.project.tests.test_commands.test_service_units_base import TestSUBase
 

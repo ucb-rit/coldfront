@@ -33,6 +33,7 @@ Note that these steps must be run from the root directory of the repo.
    Notes:
      - This step may be performed multiple times.
      - The `main.yml` file does not need to be modified in any way, despite indications within it. Its pre-defined values will be overridden and added to based on the other YML files in the directory.
+     - Settings may be added or overridden by specifying them in an `overrides.yml` file in the directory.
 
 5. Generate a `.env` file with environment variables that will be passed to `docker-compose.yml`. You must provide a deployment name ("BRC" or "LRC"), as well as a port where the web service will be available ("8880", "8881", "8882", or "8883").
 

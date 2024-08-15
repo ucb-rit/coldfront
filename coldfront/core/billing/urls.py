@@ -17,6 +17,9 @@ with flagged_paths('LRC_ONLY') as path:
         path('usages/',
              admin_views.BillingIDUsagesSearchView.as_view(),
              name='billing-id-usages'),
+        path('validate/',
+             admin_views.BillingIDValidateView.as_view(),
+             name='billing-id-validate'),
     ]
 
 
