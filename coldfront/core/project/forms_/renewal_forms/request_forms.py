@@ -202,8 +202,8 @@ class ProjectRenewalSurveyForm(forms.Form):
         self.project_name = kwargs.pop('project_name', None)
         self.pi = kwargs.pop('pi', None)
         self.allocation_period = kwargs.pop('allocation_period', None)
-        self.sheet_id = kwargs.pop('sheet_id', None)
-        self.sheet_data = kwargs.pop('sheet_data', None)
+        self.survey_id = kwargs.pop('survey_id', None)
+        self.survey_data = kwargs.pop('survey_data', None)
         super().__init__(*args, **kwargs)
         self._update_field_attributes()
 
@@ -220,7 +220,7 @@ class ProjectRenewalSurveyForm(forms.Form):
         if self.allocation_period is not None and self.pi is not None:
             key = (self.allocation_period.name, self.pi.username, 
                    self.project_name)
-        is_renewal_survey_completed(self.sheet_id, self.sheet_data, key)
+        is_renewal_survey_completed(self.survey_id, self.survey_data, key)
 
     def _update_brc_survey_fields(self):
         self.fields['was_survey_completed'] = forms.BooleanField(

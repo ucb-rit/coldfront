@@ -765,18 +765,3 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             dictionary['project_name'] = self.project_obj.name
             set_necessary_data(dictionary['allocation_period'].name, dictionary, 
                                url=True)
-
-            # survey_data = get_renewal_survey(dictionary['allocation_period'].name)
-            # if survey_data != None:
-            #     dictionary['form_id'] = survey_data['form_id']
-            #     dictionary['form_url'] = self.make_form_url(survey_data, 
-            #                                                 dictionary)
-            #     dictionary['sheet_id'] = survey_data['sheet_id']
-            #     dictionary['sheet_data'] = survey_data['sheet_data']
-        
-    # def make_form_url(self, survey_data, dictionary):
-    #     """Get pre-filled survey link for user."""
-    #     dictionary['requester'] = self.request.user
-    #     dictionary['project_name'] = self.project_obj.name
-    #     return get_survey_url(survey_data, dictionary)
-                

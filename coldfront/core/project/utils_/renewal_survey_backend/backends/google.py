@@ -9,19 +9,19 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
     """A backend that invokes gspread API which connects to Google Sheets
     to validate whether renewal survey was completed."""
 
-    def is_renewal_survey_completed(self, sheet_id, sheet_data, key):
-        wks = get_gspread_wks(sheet_id, 0)
+    def is_renewal_survey_completed(self, survey_id, survey_data, key):
+        wks = get_gspread_wks(survey_id, 0)
         if wks == None:
             raise ValidationError(
                 f'Unknown backend issue. '
                 f'Please contact administrator if this persists.')
 
         periods_coor = gsheet_column_to_index(
-            sheet_data['allocation_period_col'])
+            survey_data['allocation_period_col'])
         pis_coor = gsheet_column_to_index(
-            sheet_data['pi_username_col'])
+            survey_data['pi_username_col'])
         projects_coor = gsheet_column_to_index(
-            sheet_data['project_name_col'])
+            survey_data['project_name_col'])
         
         periods = wks.col_values(periods_coor)
         pis = wks.col_values(pis_coor)
@@ -108,8 +108,8 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
         obtain hard-coded data from."""
         survey_data = get_renewal_survey(allocation_period_name)
         if survey_data != None:
-            dictionary['sheet_id'] = survey_data['sheet_id']
-            dictionary['sheet_data'] = survey_data['sheet_data']
+            dictionary['survey_id'] = survey_data['sheet_id']
+            dictionary['survey_data'] = survey_data['sheet_data']
             if url:
                 dictionary['form_id'] = survey_data['form_id']
                 dictionary['form_url'] = self.get_survey_url(survey_data, dictionary)
