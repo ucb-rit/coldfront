@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.utils.module_loading import import_string
 
-"""Methods relating to renewal survey completion validation."""
+"""Methods relating to renewal survey backend."""
 
 
 __all__ = [

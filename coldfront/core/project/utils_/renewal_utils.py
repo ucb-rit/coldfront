@@ -1,5 +1,3 @@
-import gspread
-
 from coldfront.api.statistics.utils import set_project_user_allocation_value
 from coldfront.core.allocation.models import AllocationAttribute
 from coldfront.core.allocation.models import AllocationAttributeType
@@ -37,9 +35,6 @@ from django.db.models import Q
 from django.urls import reverse
 from urllib.parse import urljoin
 import logging
-
-from flags.state import flag_enabled
-import json
 
 
 logger = logging.getLogger(__name__)
