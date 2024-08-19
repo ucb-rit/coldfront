@@ -51,7 +51,7 @@ Note that these steps must be run from the root directory of the repo.
 
    ```bash
    export DOCKER_PROJECT_NAME=brc-dev
-   docker-compose \
+   docker compose \
        -f bootstrap/development/docker/docker-compose.yml \
        -p $DOCKER_PROJECT_NAME \
        up
@@ -90,7 +90,7 @@ Note that these steps must be run from the root directory of the repo.
     - Enter into the application shell container:
 
          ```bash
-         docker-compose -p $DOCKER_PROJECT_NAME exec app-shell bash
+         docker compose -p $DOCKER_PROJECT_NAME exec app-shell bash
          ```
 
     - From within the container, start a Django shell:
