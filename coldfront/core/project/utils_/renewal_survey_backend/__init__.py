@@ -16,29 +16,30 @@ def get_backend(backend=None, **kwds):
     klass = import_string(backend or settings.RENEWAL_SURVEY_BACKEND)
     return klass(**kwds)
 
-def is_renewal_survey_completed(survey_id, survey_data, key):
-    """A backend that invokes gspread API which connects to Google Sheets
-    to validate whether renewal survey was completed."""
-    backend = get_backend()
+def is_renewal_survey_completed(survey_id, survey_data, key, chosen_backend=None):
+    """Return whether the renewal survey has been completed. If not, raise 
+    ValidationError"""
+    backend = chosen_backend or get_backend()
     return backend.is_renewal_survey_completed(survey_id, survey_data, key)
 
-def get_survey_response(allocation_period_name, project_name, pi_username):
+def get_survey_response(allocation_period_name, project_name, pi_username,
+                        chosen_backend=None):
     """Takes information from the request object and returns an
          iterable of tuples representing the requester's survey answers. If no
          answer is detected, return None. The format of the tuple:
          ( question: string, answer: string ). """
-    backend = get_backend()
+    backend = chosen_backend or get_backend()
     return backend.get_survey_response(
         allocation_period_name, project_name, pi_username)
 
-def get_survey_url(survey_data, parameters):
+def get_survey_url(survey_data, parameters, chosen_backend=None):
     """This function returns the unique link to a pre-filled form for the user 
     to fill out."""
-    backend = get_backend()
+    backend = chosen_backend or get_backend()
     return backend.get_survey_url(survey_data, parameters)
 
 def set_necessary_data(allocation_period_name, dictionary, data=None,
-                       url=False):
+                       url=False, chosen_backend=None):
     """This function takes a dictionary and adds the necessary keys to it so
     that coldfront.core.project.views_.renewal_views.request_views and 
     coldfront.core.project.forms_.renewal_forms.request_forms function
@@ -52,6 +53,6 @@ def set_necessary_data(allocation_period_name, dictionary, data=None,
             be added to `dictionary`.
         - `data`: If there are additional keys/values that need to be in 
             `dictionary`, include in `data`. """
-    backend = get_backend()
+    backend = chosen_backend or get_backend()
     return backend.set_necessary_data(allocation_period_name, dictionary, data, 
                                       url)
