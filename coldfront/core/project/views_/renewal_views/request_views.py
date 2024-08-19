@@ -142,7 +142,6 @@ class AllocationRenewalMixin(object):
         request_kwargs['status'] = \
             AllocationRenewalRequestStatusChoice.objects.get(
                 name='Under Review')
-        # request_kwargs['renewal_survey_answers'] = renewal_survey_answers
         request_kwargs['pre_project'] = pre_project
         request_kwargs['post_project'] = post_project
         request_kwargs['new_project_request'] = new_project_request
@@ -409,6 +408,14 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             form_class.POOLED_TO_UNPOOLED_OLD,
         )
         return cleaned_data.get('preference', None) in preferences
+    
+    # def show_renewal_survey_form_condition(self):
+    #     """Only show the renewal survey form for a particular period.
+    #     TODO: This period has been hard-coded for the short-term. A
+    #      longer-term solution without hard-coding must be applied prior
+    #      to the start of the period following it.
+    #     """
+    #     return True
 
     def __get_survey_data(self, form_data):
         """Return provided survey data."""
@@ -600,10 +607,6 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         # Define a lookup table from form name to step number.
         self.step_numbers_by_form_name = {
             name: i for i, (name, _) in enumerate(self.FORMS)}
-
-    @staticmethod
-    def condition_dict():
-        pass
 
     def dispatch(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
