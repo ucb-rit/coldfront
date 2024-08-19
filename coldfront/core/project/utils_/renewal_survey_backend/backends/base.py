@@ -6,7 +6,7 @@ class BaseRenewalSurveyBackend(ABC):
     backends."""
     @abstractmethod
     def is_renewal_survey_completed(self, survey_id, survey_data, key):
-        """Return whether the Google renewal survey has been completed"""
+        """Return whether the renewal survey has been completed"""
         pass
 
     @abstractmethod

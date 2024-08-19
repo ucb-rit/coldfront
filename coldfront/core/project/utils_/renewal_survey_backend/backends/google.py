@@ -10,6 +10,7 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
     to validate whether renewal survey was completed."""
 
     def is_renewal_survey_completed(self, survey_id, survey_data, key):
+        """Return whether the Google renewal survey has been completed"""
         wks = get_gspread_wks(survey_id, 0)
         if wks == None:
             raise ValidationError(
