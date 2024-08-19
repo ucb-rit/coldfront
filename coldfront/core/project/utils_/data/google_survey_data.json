@@ -39,6 +39,25 @@
     },
     {
         "deployment": "LRC",
+        "sheet_id": "1PowpvWTN5tIBlrJqwRiCcDRJ14FyygNTaXk2XW1pHtM",
+        "form_id": "1FAIpQLSeral1cUjI66cJGiYzexNnnsYKYmoUcsG2jaKhEPf-lQ6dTWg",
+        "allocation_period": "Allowance Year 2023 - 2024",
+        "sheet_data": {
+            "allocation_period_col": "S",
+            "pi_username_col": "U",
+            "project_name_col": "V"
+        },
+        "form_question_ids": {
+            "allocation_period": "802720914",
+            "pi_name": "574693970",
+            "pi_username": "1139435150",
+            "project_name": "2105443046",
+            "requester_name": "1277048294",
+            "requester_username": "2042172552"
+        }
+    },
+    {
+        "deployment": "LRC",
         "sheet_id": "1PwDKeNKwZWL7AFwIe8jxmKscNiHrfljakrwU6WIVuKo",
         "form_id": "1FAIpQLSdYphIM0xzlLk5ljQL46SljqePwxJgl_hhcpPkDU6A_J48Hog",
         "allocation_period": "Allowance Year 2024 - 2025",
