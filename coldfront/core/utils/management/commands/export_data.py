@@ -13,7 +13,7 @@ from coldfront.core.allocation.models import AllocationAttributeType, \
 from coldfront.core.statistics.models import Job
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
-from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalSurveyForm
+from coldfront.core.project.forms_.renewal_forms.request_forms import DeprecatedProjectRenewalSurveyForm
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
@@ -527,7 +527,7 @@ class Command(BaseCommand):
         surveys = []
         # Create dict of multiple choice fields to replace field IDs with text. ID : text
         multiple_choice_fields = {}
-        form = ProjectRenewalSurveyForm()
+        form = DeprecatedProjectRenewalSurveyForm()
         for k, v in form.fields.items():
             # Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices 
             if (isinstance(v, forms.MultipleChoiceField)) or (isinstance(v, forms.ChoiceField)):
