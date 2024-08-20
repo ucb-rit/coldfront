@@ -6,53 +6,38 @@ from django.utils.module_loading import import_string
 
 __all__ = [
     'get_backend',
-    'is_renewal_survey_completed',
-    'get_survey_response',
-    'get_survey_url',
-    'set_necessary_data'
+    'validate_renewal_survey_completion',
+    'get_renewal_survey_response',
+    'get_renewal_survey_url',
+    'set_necessary_data',
 ]
 
 def get_backend(backend=None, **kwds):
     klass = import_string(backend or settings.RENEWAL_SURVEY_BACKEND)
     return klass(**kwds)
 
-def is_renewal_survey_completed(survey_id, survey_data, key, chosen_backend=None):
+def validate_renewal_survey_completion(allocation_period_name, project_name, 
+                                    pi_username, chosen_backend=None):
     """Return whether the renewal survey has been completed. If not, raise 
     ValidationError"""
     backend = chosen_backend or get_backend()
-    return backend.is_renewal_survey_completed(survey_id, survey_data, key)
+    return backend.validate_renewal_survey_completion(allocation_period_name, 
+                                                      project_name, pi_username)
 
-def get_survey_response(allocation_period_name, project_name, pi_username,
+def get_renewal_survey_response(allocation_period_name, project_name, pi_username,
                         chosen_backend=None):
     """Takes information from the request object and returns an
          iterable of tuples representing the requester's survey answers. If no
          answer is detected, return None. The format of the tuple:
          ( question: string, answer: string ). """
     backend = chosen_backend or get_backend()
-    return backend.get_survey_response(
+    return backend.get_renewal_survey_response(
         allocation_period_name, project_name, pi_username)
 
-def get_survey_url(survey_data, parameters, chosen_backend=None):
+def get_renewal_survey_url(allocation_period_name, pi, project_name, requester, 
+                           chosen_backend=None):
     """This function returns the unique link to a pre-filled form for the user 
     to fill out."""
     backend = chosen_backend or get_backend()
-    return backend.get_survey_url(survey_data, parameters)
-
-def set_necessary_data(allocation_period_name, dictionary, data=None,
-                       url=False, chosen_backend=None):
-    """This function takes a dictionary and adds the necessary keys to it so
-    that coldfront.core.project.views_.renewal_views.request_views and 
-    coldfront.core.project.forms_.renewal_forms.request_forms function
-    properly. 
-    Input:
-        - `allocation_period_name` is used to identify which survey to
-            obtain hard-coded data from. 
-        - `dictionary` is a dictionary which needs the necessary keys added to
-            it. It does not necessarily have to be empty.
-        - `url` determines whether the url generated in `get_survey_url` should
-            be added to `dictionary`.
-        - `data`: If there are additional keys/values that need to be in 
-            `dictionary`, include in `data`. """
-    backend = chosen_backend or get_backend()
-    return backend.set_necessary_data(allocation_period_name, dictionary, data, 
-                                      url)
+    return backend.get_renewal_survey_url(allocation_period_name, pi, 
+                                          project_name, requester)

@@ -24,7 +24,7 @@ from coldfront.core.project.utils_.renewal_utils import has_non_denied_renewal_r
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_admin_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pi_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pooling_notification_email
-from coldfront.core.project.utils_.renewal_survey_backend import set_necessary_data
+from coldfront.core.project.utils_.renewal_survey_backend import get_renewal_survey_url
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
@@ -320,7 +320,9 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         elif step == self.step_numbers_by_form_name['renewal_survey']:
             tmp = {}
             self.__set_data_from_previous_steps(step, tmp)
-            set_necessary_data(tmp['allocation_period'].name, kwargs, data=tmp)
+            kwargs['project_name'] = tmp['project_name']
+            kwargs['allocation_period_name'] = tmp['allocation_period'].name
+            kwargs['pi_username'] = tmp['PI'].user.username
 
         return kwargs
 
@@ -408,14 +410,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             form_class.POOLED_TO_UNPOOLED_OLD,
         )
         return cleaned_data.get('preference', None) in preferences
-    
-    # def show_renewal_survey_form_condition(self):
-    #     """Only show the renewal survey form for a particular period.
-    #     TODO: This period has been hard-coded for the short-term. A
-    #      longer-term solution without hard-coding must be applied prior
-    #      to the start of the period following it.
-    #     """
-    #     return True
 
     def __get_survey_data(self, form_data):
         """Return provided survey data."""
@@ -571,8 +565,11 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         if step == renewal_survey_form_step:
             dictionary['requester'] = self.request.user
             dictionary['project_name'] = dictionary['requested_project'].name
-            set_necessary_data(dictionary['allocation_period'].name, dictionary, 
-                               url=True)
+            dictionary['form_url'] = get_renewal_survey_url(
+                                        dictionary['allocation_period'].name,
+                                        dictionary['PI'].user,
+                                        dictionary['project_name'],
+                                        self.request.user)
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                                                UserPassesTestMixin,
@@ -668,7 +665,9 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         elif step == self.step_numbers_by_form_name['renewal_survey']:
             tmp = {}
             self.__set_data_from_previous_steps(step, tmp)
-            set_necessary_data(tmp['allocation_period'].name, kwargs, data=tmp)
+            kwargs['project_name'] = tmp['project_name']
+            kwargs['allocation_period_name'] = tmp['allocation_period'].name
+            kwargs['pi_username'] = tmp['PI'].user.username
         return kwargs
 
     def get_template_names(self):
@@ -731,5 +730,8 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         if step == renewal_survey_form_step:
             dictionary['requester'] = self.request.user
             dictionary['project_name'] = self.project_obj.name
-            set_necessary_data(dictionary['allocation_period'].name, dictionary, 
-                               url=True)
+            dictionary['form_url'] = get_renewal_survey_url(
+                                        dictionary['allocation_period'].name, 
+                                        dictionary['PI'].user,
+                                        self.project_obj.name, 
+                                        self.request.user)

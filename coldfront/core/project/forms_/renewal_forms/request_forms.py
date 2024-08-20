@@ -12,7 +12,7 @@ from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_reque
 from coldfront.core.project.utils_.renewal_utils import pis_with_renewal_requests_pks
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
-from coldfront.core.project.utils_.renewal_survey_backend import is_renewal_survey_completed
+from coldfront.core.project.utils_.renewal_survey_backend import validate_renewal_survey_completion
 
 from flags.state import flag_enabled
 from django import forms
@@ -198,12 +198,9 @@ class ProjectRenewalProjectSelectionForm(forms.Form):
 
 class ProjectRenewalSurveyForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        self.requester = kwargs.pop('requester', None)
         self.project_name = kwargs.pop('project_name', None)
-        self.pi = kwargs.pop('pi', None)
-        self.allocation_period = kwargs.pop('allocation_period', None)
-        self.survey_id = kwargs.pop('survey_id', None)
-        self.survey_data = kwargs.pop('survey_data', None)
+        self.pi_username = kwargs.pop('pi_username', None)
+        self.allocation_period_name = kwargs.pop('allocation_period_name', None)
         super().__init__(*args, **kwargs)
         self._update_field_attributes()
 
@@ -216,11 +213,9 @@ class ProjectRenewalSurveyForm(forms.Form):
             self._update_lrc_survey_fields()
 
     def validate_survey_completed(self, value):
-        key = None
-        if self.allocation_period is not None and self.pi is not None:
-            key = (self.allocation_period.name, self.pi.username, 
-                   self.project_name)
-        is_renewal_survey_completed(self.survey_id, self.survey_data, key)
+        validate_renewal_survey_completion(self.allocation_period_name, 
+                                           self.project_name, 
+                                           self.pi_username)
 
     def _update_brc_survey_fields(self):
         self.fields['was_survey_completed'] = forms.BooleanField(
