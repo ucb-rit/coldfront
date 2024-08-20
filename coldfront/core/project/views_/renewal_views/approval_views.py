@@ -10,7 +10,7 @@ from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcess
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_denial_reason
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_latest_update_timestamp
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_state_status
-from coldfront.core.project.utils_.renewal_survey_backend import get_survey_response
+from coldfront.core.project.utils_.renewal_survey_backend import get_renewal_survey_response
 from coldfront.core.project.utils_.renewal_utils import set_allocation_renewal_request_eligibility
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.utils.common import display_time_zone_current_date
@@ -97,7 +97,7 @@ class AllocationRenewalRequestMixin(object):
             logger.exception(e)
             messages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
-        context['survey_response'] = get_survey_response(
+        context['survey_response'] = get_renewal_survey_response(
             self.request_obj.allocation_period.name,
             self.request_obj.post_project.name,
             self.request_obj.pi.username)

@@ -9,32 +9,41 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
     """A backend that invokes gspread API which connects to Google Sheets
     to validate whether renewal survey was completed."""
 
-    def is_renewal_survey_completed(self, survey_id, survey_data, key):
-        """Return whether the Google renewal survey has been completed"""
-        wks = get_gspread_wks(survey_id, 0)
-        if wks == None:
+    def validate_renewal_survey_completion(self, allocation_period_name, 
+                                           project_name, pi_username):
+        """Check whether the Google renewal survey has been completed. If not,
+        raise an error."""
+        try:
+            survey_data = get_renewal_survey(allocation_period_name)
+
+            # The wks_id will almost always be 0
+            wks = get_gspread_wks(survey_data['sheet_id'], 0)
+            periods_coor = gsheet_column_to_index(
+                survey_data['sheet_data']['allocation_period_col'])
+            pis_coor = gsheet_column_to_index(
+                survey_data['sheet_data']['pi_username_col'])
+            projects_coor = gsheet_column_to_index(
+                survey_data['sheet_data']['project_name_col'])
+            
+            periods = wks.col_values(periods_coor)
+            pis = wks.col_values(pis_coor)
+            projects = wks.col_values(projects_coor)
+            responses = zip(periods, pis, projects)
+
+            key = (allocation_period_name, pi_username, 
+                   project_name)
+        except:
             raise ValidationError(
                 f'Unknown backend issue. '
                 f'Please contact administrator if this persists.')
-
-        periods_coor = gsheet_column_to_index(
-            survey_data['allocation_period_col'])
-        pis_coor = gsheet_column_to_index(
-            survey_data['pi_username_col'])
-        projects_coor = gsheet_column_to_index(
-            survey_data['project_name_col'])
         
-        periods = wks.col_values(periods_coor)
-        pis = wks.col_values(pis_coor)
-        projects = wks.col_values(projects_coor)
-        responses = zip(periods, pis, projects)
-
         # TODO: Should checks be added for the requester?
         if key not in responses:
             raise ValidationError(
-                f'Response for {key[1]}, {key[2]}, {key[0]} not detected.')
+                f'Response for {pi_username}, {project_name}, '
+                f'{allocation_period_name} not detected.')
     
-    def get_survey_response(self, allocation_period_name, project_name, 
+    def get_renewal_survey_response(self, allocation_period_name, project_name, 
                             pi_username):
         """ Takes information from the request object and returns an
          iterable of tuples representing the requester's survey answers. If no
@@ -45,6 +54,7 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
         if gform_info == None:
             return None
 
+        # The wks_id will almost always be 0
         wks = get_gspread_wks(gform_info['sheet_id'], 0)
         if wks == None:
             return None
@@ -69,53 +79,46 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
 
         return zip(questions, response)
     
-    def get_survey_url(self, survey_data, parameters):
+    def get_renewal_survey_url(self, allocation_period_name, pi, project_name, 
+                               requester):
         """This function returns the unique link to a pre-filled form for the
           user to fill out."""
+        
+        gform_info = get_renewal_survey(allocation_period_name)
+        if gform_info == None:
+            return None
+
+        # The wks_id will almost always be 0
+        wks = get_gspread_wks(gform_info['sheet_id'], 0)
+        if wks == None:
+            return None
+        
         BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
         BASE_URL_TWO = '/viewform?usp=pp_url'
-        url = BASE_URL_ONE + survey_data['form_id'] + BASE_URL_TWO
+
+        url = BASE_URL_ONE + gform_info['form_id'] + BASE_URL_TWO
 
         PARAMETER_BASE_ONE = '&entry.'
         PARAMETER_BASE_TWO = '='
-
-        question_ids_dict = survey_data['form_question_ids']
-        for parameter in question_ids_dict.keys():
+        
+        question_ids_dict = gform_info['form_question_ids']
+        for question in question_ids_dict.keys():
             value = ''
-            if parameter == 'allocation_period':
-                value = parameters['allocation_period'].name
-            elif parameter == 'pi_name':
-                value = parameters['PI'].user.first_name + '+' + \
-                    parameters['PI'].user.last_name
-            elif parameter == 'pi_username':
-                value = parameters['PI'].user.username
-            elif parameter == 'project_name':
-                value = parameters['project_name']
-            elif parameter == 'requester_name':
-                value = parameters['requester'].first_name + '+' + \
-                    parameters['requester'].last_name
-            elif parameter == 'requester_username':
-                value = parameters['requester'].username
+            if question == 'allocation_period':
+                value = allocation_period_name
+            elif question == 'pi_name':
+                value = pi.first_name + '+' + pi.last_name
+            elif question == 'pi_username':
+                value = pi.username
+            elif question == 'project_name':
+                value = project_name
+            elif question == 'requester_name':
+                value = requester.first_name + '+' + \
+                    requester.last_name
+            elif question == 'requester_username':
+                value = requester.username
             value = value.replace(' ', '+')
-            url += PARAMETER_BASE_ONE + question_ids_dict[parameter] + \
+            url += PARAMETER_BASE_ONE + question_ids_dict[question] + \
                 PARAMETER_BASE_TWO + value
         return url
-
-    def set_necessary_data(self, allocation_period_name, dictionary, data, url):
-        """This function takes a dictionary and adds the necessary keys to it so
-        that coldfront.core.project.views_.renewal_views.request_views and 
-        coldfront.core.project.forms_.renewal_forms.request_forms function
-        properly. `allocation_period_name` is used to identify which survey to
-        obtain hard-coded data from."""
-        survey_data = get_renewal_survey(allocation_period_name)
-        if survey_data != None:
-            dictionary['survey_id'] = survey_data['sheet_id']
-            dictionary['survey_data'] = survey_data['sheet_data']
-            if url:
-                dictionary['form_id'] = survey_data['form_id']
-                dictionary['form_url'] = self.get_survey_url(survey_data, dictionary)
-            else:
-                dictionary['requester'] = data['requester']
-                dictionary['project_name'] = data['project_name']
-                dictionary['pi'] = data['PI'].user
-                dictionary['allocation_period'] = data['allocation_period']
+    
