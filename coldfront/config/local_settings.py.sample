@@ -389,9 +389,6 @@ BILLING_VALIDATOR_BACKEND = 'coldfront.core.billing.utils.validation.backends.du
 # The class to use for validating whether renewal survey has been completed.
 RENEWAL_SURVEY_BACKEND = 'coldfront.core.project.utils_.renewal_survey_backend.backends.permissive.PermissiveRenewalSurveyBackend'
 
-# Path to the renewal survey data file.
-RENEWAL_SURVEY_DATA_PATH = ''
-
 #------------------------------------------------------------------------------
 # Multiple Email Address settings
 #------------------------------------------------------------------------------

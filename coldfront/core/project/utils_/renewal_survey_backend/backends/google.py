@@ -1,9 +1,10 @@
-from coldfront.core.project.utils_.renewal_survey_backend.backends.base import BaseRenewalSurveyBackend
-from coldfront.core.project.utils_.renewal_survey_utils import get_gspread_wks
-from coldfront.core.project.utils_.renewal_survey_utils import get_renewal_survey
-from coldfront.core.project.utils_.renewal_survey_utils import gsheet_column_to_index
+import gspread
+import json
+from flags.state import flag_enabled
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from coldfront.core.project.utils_.renewal_survey_backend.backends.base import BaseRenewalSurveyBackend
 
 class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
     """A backend that invokes gspread API which connects to Google Sheets
@@ -14,15 +15,15 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
         """Check whether the Google renewal survey has been completed. If not,
         raise an error."""
         try:
-            survey_data = get_renewal_survey(allocation_period_name)
+            survey_data = self._get_renewal_survey(allocation_period_name)
 
             # The wks_id will almost always be 0
-            wks = get_gspread_wks(survey_data['sheet_id'], 0)
-            periods_coor = gsheet_column_to_index(
+            wks = self._get_gspread_wks(survey_data['sheet_id'], 0)
+            periods_coor = self._gsheet_column_to_index(
                 survey_data['sheet_data']['allocation_period_col'])
-            pis_coor = gsheet_column_to_index(
+            pis_coor = self._gsheet_column_to_index(
                 survey_data['sheet_data']['pi_username_col'])
-            projects_coor = gsheet_column_to_index(
+            projects_coor = self._gsheet_column_to_index(
                 survey_data['sheet_data']['project_name_col'])
             
             periods = wks.col_values(periods_coor)
@@ -50,18 +51,18 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
          answer is detected, return None. The format of the tuple:
          ( question: string, answer: string ).  """
 
-        gform_info = get_renewal_survey(allocation_period_name)
+        gform_info = self._get_renewal_survey(allocation_period_name)
         if gform_info == None:
             return None
 
         # The wks_id will almost always be 0
-        wks = get_gspread_wks(gform_info['sheet_id'], 0)
+        wks = self._get_gspread_wks(gform_info['sheet_id'], 0)
         if wks == None:
             return None
         
-        pis_column_coor = gsheet_column_to_index(
+        pis_column_coor = self._gsheet_column_to_index(
             gform_info["sheet_data"]["pi_username_col"])
-        projs_column_coor = gsheet_column_to_index(
+        projs_column_coor = self._gsheet_column_to_index(
             gform_info["sheet_data"]["project_name_col"])
         
         pis = wks.col_values(pis_column_coor)
@@ -84,12 +85,12 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
         """This function returns the unique link to a pre-filled form for the
           user to fill out."""
         
-        gform_info = get_renewal_survey(allocation_period_name)
+        gform_info = self._get_renewal_survey(allocation_period_name)
         if gform_info == None:
             return None
 
         # The wks_id will almost always be 0
-        wks = get_gspread_wks(gform_info['sheet_id'], 0)
+        wks = self._get_gspread_wks(gform_info['sheet_id'], 0)
         if wks == None:
             return None
         
@@ -121,4 +122,55 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
             url += PARAMETER_BASE_ONE + question_ids_dict[question] + \
                 PARAMETER_BASE_TWO + value
         return url
+    
+    def _gsheet_column_to_index(self, column_str):
+        """Convert Google Sheets column (e.g., 'A', 'AA') to index number."""
+        index = 0
+        for char in column_str:
+            index = index * 26 + (ord(char.upper()) - ord('A') + 1)
+        return index
+    
+    def _get_gspread_wks(self, sheet_id, wks_id):
+        """ Given the spreadsheet ID and worksheet ID of a Google Sheet, returns
+        a sheet that is editable. """
+        try:
+            gc = gspread.service_account(filename='tmp/credentials.json')
+        except:
+            return None
+        sh = gc.open_by_key(sheet_id)
+        wks = sh.get_worksheet(wks_id)
+
+        return wks
+    
+    def _get_renewal_survey(self, allocation_period_name):
+        """ Given the name of the allocation period, returns Google Form
+        Survey info depending on LRC/BRC. The information is a dict containing:
+            deployment: 'BRC/LRC',
+            sheet_id: string,
+            form_id: string,
+            allocation_period: string,
+            sheet_data: {
+                allocation_period_col: int,
+                pi_username_col: int,
+                project_name_col: int
+            } 
+        The sheet_data values refer to the column coordinates of information used
+        to enforce automatic check/block for the renewal form."""
+
+        # TODO: Change
+        survey_data_path = settings.GOOGLE_RENEWAL_SURVEY_DATA_PATH
+        if survey_data_path == '':
+            return None
+        
+        with open(survey_data_path) as fp:
+            data = json.load(fp)
+            deployment = ''
+            if flag_enabled('BRC_ONLY'):
+                deployment = 'BRC'
+            else:
+                deployment = 'LRC'
+            for elem in data:
+                if elem["allocation_period"] == allocation_period_name and elem["deployment"] == deployment:
+                    return elem
+        return None
     
