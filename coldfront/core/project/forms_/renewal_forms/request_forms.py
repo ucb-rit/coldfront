@@ -212,9 +212,12 @@ class ProjectRenewalSurveyForm(forms.Form):
         )
 
     def validate_survey_completed(self, value):
-        validate_renewal_survey_completion(self.allocation_period_name, 
+        try:
+            validate_renewal_survey_completion(self.allocation_period_name, 
                                            self.project_name, 
                                            self.pi_username)
+        except Exception as e:
+            raise ValidationError(e)
 
 class DeprecatedProjectRenewalSurveyForm(forms.Form):
     

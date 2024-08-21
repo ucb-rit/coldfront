@@ -34,13 +34,13 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
             key = (allocation_period_name, pi_username, 
                    project_name)
         except:
-            raise ValidationError(
+            raise Exception(
                 f'Unknown backend issue. '
                 f'Please contact administrator if this persists.')
         
         # TODO: Should checks be added for the requester?
         if key not in responses:
-            raise ValidationError(
+            raise Exception(
                 f'Response for {pi_username}, {project_name}, '
                 f'{allocation_period_name} not detected.')
     
