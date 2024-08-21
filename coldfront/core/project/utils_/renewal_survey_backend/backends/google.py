@@ -1,10 +1,13 @@
 import gspread
 import json
 from flags.state import flag_enabled
+import logging
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from coldfront.core.project.utils_.renewal_survey_backend.backends.base import BaseRenewalSurveyBackend
+
+logger = logging.getLogger(__name__)
 
 class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
     """A backend that invokes gspread API which connects to Google Sheets
@@ -30,19 +33,22 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
             pis = wks.col_values(pis_coor)
             projects = wks.col_values(projects_coor)
             responses = list(zip(periods, pis, projects))
-        except:
-            raise Exception(
-                f'Unknown backend issue. '
-                f'Please contact administrator if this persists.')
+
+        except Exception as e:
+            message = (f'Something went wrong with connecting to Google Sheets.'
+                        f' Allowing user to progress past step. Details:\n{e}')
+            logger.exception(message)
+            return
         
         # TODO: Should checks be added for the requester?
         key = (allocation_period_name, pi_username, 
-                   project_name)
+                project_name)
         
         for i in range(len(responses) - 1, 0, -1):
             if key == responses[i]:
                 return
         
+        # Reaches here if a response was not found.
         raise Exception(
                 f'Response for {pi_username}, {project_name}, '
                 f'{allocation_period_name} not detected.')
