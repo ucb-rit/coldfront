@@ -8,8 +8,7 @@ __all__ = [
     'get_backend',
     'validate_renewal_survey_completion',
     'get_renewal_survey_response',
-    'get_renewal_survey_url',
-    'set_necessary_data',
+    'get_renewal_survey_url'
 ]
 
 def get_backend(backend=None, **kwds):
