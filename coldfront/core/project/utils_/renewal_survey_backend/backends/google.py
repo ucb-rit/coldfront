@@ -13,7 +13,7 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
     def validate_renewal_survey_completion(self, allocation_period_name, 
                                            project_name, pi_username):
         """Check whether the Google renewal survey has been completed. If not,
-        raise an error."""
+        raise an Exception."""
         try:
             survey_data = self._get_renewal_survey(allocation_period_name)
 
@@ -29,18 +29,21 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
             periods = wks.col_values(periods_coor)
             pis = wks.col_values(pis_coor)
             projects = wks.col_values(projects_coor)
-            responses = zip(periods, pis, projects)
-
-            key = (allocation_period_name, pi_username, 
-                   project_name)
+            responses = list(zip(periods, pis, projects))
         except:
             raise Exception(
                 f'Unknown backend issue. '
                 f'Please contact administrator if this persists.')
         
         # TODO: Should checks be added for the requester?
-        if key not in responses:
-            raise Exception(
+        key = (allocation_period_name, pi_username, 
+                   project_name)
+        
+        for i in range(len(responses) - 1, 0, -1):
+            if key == responses[i]:
+                return
+        
+        raise Exception(
                 f'Response for {pi_username}, {project_name}, '
                 f'{allocation_period_name} not detected.')
     
@@ -71,9 +74,15 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
         all_responses = list(zip(pis, projects))
         key = (pi_username, project_name)
 
-        if key not in all_responses:
+        row_ind = None
+        for i in range(len(all_responses) - 1, 0, -1):
+            if all_responses[i] == key:
+                # Correct for Google Sheets not being zero-indexed
+                row_ind = i + 1
+                break
+
+        if row_ind is None:
             return None
-        row_ind = all_responses.index(key) + 1
 
         questions = wks.row_values(1)
         response = wks.row_values(row_ind)

@@ -18,7 +18,7 @@ def get_backend(backend=None, **kwds):
 def validate_renewal_survey_completion(allocation_period_name, project_name, 
                                     pi_username, chosen_backend=None):
     """Return whether the renewal survey has been completed. If not, raise 
-    ValidationError"""
+    Exception"""
     backend = chosen_backend or get_backend()
     return backend.validate_renewal_survey_completion(allocation_period_name, 
                                                       project_name, pi_username)
