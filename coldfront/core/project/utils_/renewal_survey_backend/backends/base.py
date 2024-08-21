@@ -9,7 +9,7 @@ class BaseRenewalSurveyBackend(ABC):
     def validate_renewal_survey_completion(self, allocation_period_name, 
                                            project_name, pi_username):
         """Check whether the renewal survey has been completed. If not,
-        raise an error."""
+        raise an Exception."""
         pass
 
     @abstractmethod
