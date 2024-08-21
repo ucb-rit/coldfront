@@ -128,6 +128,9 @@ ORACLE_BILLING_DB = {
 # Path to the hard-coded data for Google Form renewal surveys
 GOOGLE_RENEWAL_SURVEY_DATA_PATH = 'coldfront/core/project/utils_/data/google_survey_data.json'
 
+# The credentials needed to read from Google Sheets.
+GOOGLE_OAUTH2_KEY_FILE = "tmp/credentials.json"
+
 {% if renewal_survey_backend == 'google' %}
 # The class to use for validating whether renewal survey has been completed.
 RENEWAL_SURVEY_BACKEND = 'coldfront.core.project.utils_.renewal_survey_backend.backends.google.GoogleRenewalSurveyBackend'
