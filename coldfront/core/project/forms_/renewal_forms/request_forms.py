@@ -202,7 +202,7 @@ class ProjectRenewalSurveyForm(forms.Form):
         self.pi_username = kwargs.pop('pi_username', None)
         self.allocation_period_name = kwargs.pop('allocation_period_name', None)
         super().__init__(*args, **kwargs)
-        
+
         self.fields['was_survey_completed'] = forms.BooleanField(
             label=('I have completed the survey and did NOT edit the pre-filled'
             ' fields at the end of the survey.'),
@@ -210,38 +210,11 @@ class ProjectRenewalSurveyForm(forms.Form):
             required=True,
             validators=[self.validate_survey_completed]
         )
-        # self._update_field_attributes()
-
-    # def _update_field_attributes(self):
-    #     """Update field attributes with deployment-specific content."""
-    #     if flag_enabled('BRC_ONLY'):
-    #         self._update_brc_survey_fields()
-
-    #     elif flag_enabled('LRC_ONLY'):
-    #         self._update_lrc_survey_fields()
 
     def validate_survey_completed(self, value):
         validate_renewal_survey_completion(self.allocation_period_name, 
                                            self.project_name, 
                                            self.pi_username)
-
-    # def _update_brc_survey_fields(self):
-    #     self.fields['was_survey_completed'] = forms.BooleanField(
-    #         label=('I have completed the survey and did NOT edit the pre-filled'
-    #         ' fields at the end of the survey.'),
-    #         initial=False,
-    #         required=True,
-    #         validators=[self.validate_survey_completed]
-    #     )
-
-    # def _update_lrc_survey_fields(self):
-    #     self.fields['was_survey_completed'] = forms.BooleanField(
-    #         label=('I have completed the survey and did NOT edit the pre-filled'
-    #         ' fields at the end of the survey.'),
-    #         initial=False,
-    #         required=True,
-    #         validators=[self.validate_survey_completed]
-    #     )
 
 class DeprecatedProjectRenewalSurveyForm(forms.Form):
     

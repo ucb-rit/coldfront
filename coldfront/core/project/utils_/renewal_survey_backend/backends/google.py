@@ -134,7 +134,8 @@ class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
         """ Given the spreadsheet ID and worksheet ID of a Google Sheet, returns
         a sheet that is editable. """
         try:
-            gc = gspread.service_account(filename='tmp/credentials.json')
+            gc = gspread.service_account(
+                filename=settings.GOOGLE_OAUTH2_KEY_FILE)
         except:
             return None
         sh = gc.open_by_key(sheet_id)
