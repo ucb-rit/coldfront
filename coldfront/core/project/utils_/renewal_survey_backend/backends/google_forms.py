@@ -9,7 +9,7 @@ from coldfront.core.project.utils_.renewal_survey_backend.backends.base import B
 
 logger = logging.getLogger(__name__)
 
-class GoogleRenewalSurveyBackend(BaseRenewalSurveyBackend):
+class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
     """A backend that invokes gspread API which connects to Google Sheets
     to validate whether renewal survey was completed."""
 
