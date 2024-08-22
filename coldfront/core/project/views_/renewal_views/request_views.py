@@ -379,6 +379,9 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
 
     @staticmethod
     def condition_dict():
+        """Return a mapping from a string index `i` into FORMS
+        (zero-indexed) to a function determining whether FORMS[int(i)]
+        should be included."""
         view = AllocationRenewalRequestView
         return {
             '3': view.show_project_selection_form_condition,
