@@ -91,6 +91,16 @@ FILE_STORAGE = {
 }
 
 #------------------------------------------------------------------------------
+# Renewal Survey settings
+#------------------------------------------------------------------------------
+
+# Permit renewal requests to be made without a survey response.
+RENEWAL_SURVEY = {
+    'backend': 'coldfront.core.project.utils_.renewal_survey_backend.backends.permissive.PermissiveRenewalSurveyBackend',
+    'details': {},
+}
+
+#------------------------------------------------------------------------------
 # SSL settings
 #------------------------------------------------------------------------------
 
@@ -128,4 +138,5 @@ FLAGS = {
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': True}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': False}],
     'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': False}],
+    'RENEWAL_SURVEY_ENABLED': [{'condition': 'boolean', 'value': True}],
 }
