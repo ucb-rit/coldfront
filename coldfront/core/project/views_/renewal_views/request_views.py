@@ -387,6 +387,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             '3': view.show_project_selection_form_condition,
             '4': view.show_new_project_forms_condition,
             '5': view.show_new_project_forms_condition,
+            '6': view.show_renewal_survey_form_condition,
         }
 
     def show_new_project_forms_condition(self):
