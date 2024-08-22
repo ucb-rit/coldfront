@@ -106,7 +106,7 @@ class SavioProjectAllocationPeriodForm(forms.Form):
 
     def _allocation_period_choices_lrc(self, computing_allowance, date, f,
                                        order_by):
-        allowance_name = computing_allowance.name
+        allowance_name = computing_allowance.get_name()
         if allowance_name == LRCAllowances.PCA:
             return self._allocation_period_choices_allowance_year(
                 computing_allowance, date, f, order_by)
