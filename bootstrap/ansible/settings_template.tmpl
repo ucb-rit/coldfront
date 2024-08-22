@@ -122,18 +122,26 @@ ORACLE_BILLING_DB = {
 {% endif %}
 
 #------------------------------------------------------------------------------
-# Renewal Survey Backend settings
+# Renewal Survey settings
 #------------------------------------------------------------------------------
-
-# Path to the hard-coded data for Google Form renewal surveys
-GOOGLE_RENEWAL_SURVEY_DATA_PATH = 'coldfront/core/project/utils_/data/google_survey_data.json'
-
-# The credentials needed to read from Google Sheets.
-GOOGLE_OAUTH2_KEY_FILE = "tmp/credentials.json"
-
 {% if renewal_survey_backend == 'google_forms' %}
-# The class to use for validating whether renewal survey has been completed.
-RENEWAL_SURVEY_BACKEND = 'coldfront.core.project.utils_.renewal_survey_backend.backends.google_forms.GoogleFormsRenewalSurveyBackend'
+# Use Google Forms as the backend for renewal surveys.
+RENEWAL_SURVEY = {
+    'backend': 'coldfront.core.project.utils_.renewal_survey_backend.backends.google.GoogleRenewalSurveyBackend',
+    'details': {
+        # The path to a file containing credentials for the Google service
+        # account that has access to survey responses.
+        'credentials_file_path': '{{ renewal_survey_google_forms_service_account_credentials_file_path }}',
+        # The path to a file on local disk that contains data about each survey.
+        'survey_data_file_path': '{{ renewal_survey_google_forms_survey_data_file_path }}',
+    },
+}
+{% else %}
+# Permit renewal requests to be made without a survey response.
+RENEWAL_SURVEY = {
+    'backend': 'coldfront.core.project.utils_.renewal_survey_backend.backends.permissive.PermissiveRenewalSurveyBackend',
+    'details': {},
+}
 {% endif %}
 
 #------------------------------------------------------------------------------

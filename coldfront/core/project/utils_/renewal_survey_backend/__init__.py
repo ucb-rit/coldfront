@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 def get_backend(backend=None, **kwds):
-    klass = import_string(backend or settings.RENEWAL_SURVEY_BACKEND)
+    klass = import_string(backend or settings.RENEWAL_SURVEY['backend'])
     return klass(**kwds)
 
 def validate_renewal_survey_completion(allocation_period_name, project_name, 

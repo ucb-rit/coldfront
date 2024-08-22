@@ -1,13 +1,17 @@
 import gspread
 import json
-from flags.state import flag_enabled
 import logging
+import os
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
+
+from flags.state import flag_enabled
+
 from coldfront.core.project.utils_.renewal_survey_backend.backends.base import BaseRenewalSurveyBackend
 
+
 logger = logging.getLogger(__name__)
+
 
 class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
     """A backend that invokes gspread API which connects to Google Sheets
@@ -61,12 +65,12 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
          ( question: string, answer: string ).  """
 
         gform_info = self._get_renewal_survey(allocation_period_name)
-        if gform_info == None:
+        if gform_info is None:
             return None
 
         # The wks_id will almost always be 0
         wks = self._get_gspread_wks(gform_info['sheet_id'], 0)
-        if wks == None:
+        if wks is None:
             return None
         
         pis_column_coor = self._gsheet_column_to_index(
@@ -101,12 +105,12 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
           user to fill out."""
         
         gform_info = self._get_renewal_survey(allocation_period_name)
-        if gform_info == None:
+        if gform_info is None:
             return None
 
         # The wks_id will almost always be 0
         wks = self._get_gspread_wks(gform_info['sheet_id'], 0)
-        if wks == None:
+        if wks is None:
             return None
         
         BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
@@ -137,28 +141,38 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
             url += PARAMETER_BASE_ONE + question_ids_dict[question] + \
                 PARAMETER_BASE_TWO + value
         return url
-    
-    def _gsheet_column_to_index(self, column_str):
+
+    @staticmethod
+    def _gsheet_column_to_index(column_str):
         """Convert Google Sheets column (e.g., 'A', 'AA') to index number."""
         index = 0
         for char in column_str:
             index = index * 26 + (ord(char.upper()) - ord('A') + 1)
         return index
-    
-    def _get_gspread_wks(self, sheet_id, wks_id):
-        """ Given the spreadsheet ID and worksheet ID of a Google Sheet, returns
-        a sheet that is editable. """
+
+    @staticmethod
+    def _get_gspread_wks(sheet_id, wks_id):
+        """Given the spreadsheet ID and worksheet ID of a Google Sheet,
+        returns a sheet that is editable."""
+        credentials_file_path = settings.RENEWAL_SURVEY.get(
+            'details', {}).get('credentials_file_path', '')
+        assert isinstance(credentials_file_path, str)
+        if not os.path.isfile(credentials_file_path):
+            # TODO: Consider raising an Exception instaed.
+            return None
+
         try:
-            gc = gspread.service_account(
-                filename=settings.GOOGLE_OAUTH2_KEY_FILE)
+            gc = gspread.service_account(filename=credentials_file_path)
         except:
             return None
+
         sh = gc.open_by_key(sheet_id)
         wks = sh.get_worksheet(wks_id)
 
         return wks
-    
-    def _get_renewal_survey(self, allocation_period_name):
+
+    @staticmethod
+    def _get_renewal_survey(allocation_period_name):
         """ Given the name of the allocation period, returns Google Form
         Survey info depending on LRC/BRC. The information is a dict containing:
             deployment: 'BRC/LRC',
@@ -172,12 +186,13 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
             } 
         The sheet_data values refer to the column coordinates of information used
         to enforce automatic check/block for the renewal form."""
-
-        # TODO: Change
-        survey_data_path = settings.GOOGLE_RENEWAL_SURVEY_DATA_PATH
-        if survey_data_path == '':
+        survey_data_path = settings.RENEWAL_SURVEY.get(
+            'details', {}).get('survey_data_file_path', '')
+        assert isinstance(survey_data_path, str)
+        if not os.path.isfile(survey_data_path):
+            # TODO: Consider raising an exception instead.
             return None
-        
+
         with open(survey_data_path) as fp:
             data = json.load(fp)
             deployment = ''
@@ -186,7 +201,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
             else:
                 deployment = 'LRC'
             for elem in data:
-                if elem["allocation_period"] == allocation_period_name and elem["deployment"] == deployment:
+                if (elem['allocation_period'] == allocation_period_name and
+                        elem['deployment'] == deployment):
                     return elem
         return None
-    

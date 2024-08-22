@@ -383,13 +383,6 @@ TOKEN_EXPIRATION_HOURS = 24
 BILLING_VALIDATOR_BACKEND = 'coldfront.core.billing.utils.validation.backends.dummy.DummyValidatorBackend'
 
 #------------------------------------------------------------------------------
-# Renewal Survey Backend settings
-#------------------------------------------------------------------------------
-
-# The class to use for validating whether renewal survey has been completed.
-RENEWAL_SURVEY_BACKEND = 'coldfront.core.project.utils_.renewal_survey_backend.backends.permissive.PermissiveRenewalSurveyBackend'
-
-#------------------------------------------------------------------------------
 # Multiple Email Address settings
 #------------------------------------------------------------------------------
 
