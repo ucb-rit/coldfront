@@ -387,6 +387,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             '3': view.show_project_selection_form_condition,
             '4': view.show_new_project_forms_condition,
             '5': view.show_new_project_forms_condition,
+            '6': view.show_renewal_survey_form_condition,
         }
 
     def show_new_project_forms_condition(self):
@@ -413,6 +414,10 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             form_class.POOLED_TO_UNPOOLED_OLD,
         )
         return cleaned_data.get('preference', None) in preferences
+
+    def show_renewal_survey_form_condition(self):
+        """Only show the renewal survey form if a survey is required."""
+        return flag_enabled('RENEWAL_SURVEY_ENABLED')
 
     def __get_survey_data(self, form_data):
         """Return provided survey data."""
@@ -697,6 +702,20 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             'You must be an active Manager or Principal Investigator of the '
             'Project.')
         messages.error(self.request, message)
+
+    @staticmethod
+    def condition_dict():
+        """Return a mapping from a string index `i` into FORMS
+        (zero-indexed) to a function determining whether FORMS[int(i)]
+        should be included."""
+        view = AllocationRenewalRequestUnderProjectView
+        return {
+            '2': view.show_renewal_survey_form_condition,
+        }
+
+    def show_renewal_survey_form_condition(self):
+        """Only show the renewal survey form if a survey is required."""
+        return flag_enabled('RENEWAL_SURVEY_ENABLED')
 
     def __set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""

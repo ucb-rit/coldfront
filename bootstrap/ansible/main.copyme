@@ -146,6 +146,9 @@ flag_multiple_email_addresses_allowed: False
 # TODO: For BRC, enable MOU generation (requires access to the package).
 flag_mou_generation_enabled: False
 
+# Whether to include a survey as part of the allowance renewal request process.
+flag_renewal_survey_enabled: True
+
 #------------------------------------------------------------------------------
 # User-facing strings
 #------------------------------------------------------------------------------
@@ -228,6 +231,9 @@ oracle_billing_db_passwd: ""
 # renewal_survey_google_forms_service_account_credentials_file_path: '/path/to/google-service-account-key.json'
 # renewal_survey_google_forms_survey_data_file_path: '/path/to/google-forms-survey-data.json'
 
+# # Renewal survey settings: 'permissive' backend.
+# # N/A: No applicable settings.
+
 #------------------------------------------------------------------------------
 # REST API settings
 #------------------------------------------------------------------------------
@@ -243,7 +249,7 @@ allow_all_jobs: false
 sentry_dsn: ""
 
 ###############################################################################
-# Deployment-specific settings: staging, production, development.
+# Deployment-specific settings: staging, production, development
 ###############################################################################
 
 # TODO: Uncomment the section pertaining to the current deployment type.
