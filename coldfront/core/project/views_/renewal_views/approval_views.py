@@ -33,6 +33,8 @@ from django.views.generic import DetailView
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
 
+from flags.state import flag_enabled
+
 import iso8601
 import logging
 
@@ -97,11 +99,13 @@ class AllocationRenewalRequestMixin(object):
             logger.exception(e)
             messages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
-        context['survey_response'] = get_renewal_survey_response(
-            self.request_obj.allocation_period.name,
-            self.request_obj.post_project.name,
-            self.request_obj.pi.username)
-        context['has_survey_answers'] = bool(context['survey_response'])
+        if flag_enabled('RENEWAL_SURVEY_ENABLED'):
+            context['survey_response'] = get_renewal_survey_response(
+                self.request_obj.allocation_period.name,
+                self.request_obj.post_project.name,
+                self.request_obj.pi.username)
+        context['has_survey_answers'] = bool(
+            context.get('survey_response', None))
         return context
 
     @staticmethod

@@ -127,7 +127,7 @@ ORACLE_BILLING_DB = {
 {% if renewal_survey_backend == 'google_forms' %}
 # Use Google Forms as the backend for renewal surveys.
 RENEWAL_SURVEY = {
-    'backend': 'coldfront.core.project.utils_.renewal_survey_backend.backends.google.GoogleRenewalSurveyBackend',
+    'backend': 'coldfront.core.project.utils_.renewal_survey_backend.backends.google_forms.GoogleFormsRenewalSurveyBackend',
     'details': {
         # The path to a file containing credentials for the Google service
         # account that has access to survey responses.
