@@ -76,6 +76,22 @@ EXTRA_EXTRA_APPS = []
 EXTRA_EXTRA_MIDDLEWARE = []
 
 #------------------------------------------------------------------------------
+# Django Cache settings
+#------------------------------------------------------------------------------
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://{{ redis_host }}:6379/0',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'DB': 0,
+            'PASSWORD': '{{ redis_passwd }}',
+        }
+    }
+}
+
+#------------------------------------------------------------------------------
 # File Storage Settings
 #------------------------------------------------------------------------------
 
@@ -134,6 +150,8 @@ RENEWAL_SURVEY = {
         'credentials_file_path': '{{ renewal_survey_google_forms_service_account_credentials_file_path }}',
         # The path to a file on local disk that contains data about each survey.
         'survey_data_file_path': '{{ renewal_survey_google_forms_survey_data_file_path }}',
+        # The key to cache survey data from the above file under.
+        'survey_data_cache_key': '{{ renewal_survey_google_forms_survey_data_cache_key }}',
     },
 }
 {% else %}

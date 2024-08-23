@@ -230,6 +230,7 @@ oracle_billing_db_passwd: ""
 # # Renewal survey settings: 'google_forms' backend.
 # renewal_survey_google_forms_service_account_credentials_file_path: '/path/to/google-service-account-key.json'
 # renewal_survey_google_forms_survey_data_file_path: '/path/to/google-forms-survey-data.json'
+# renewal_survey_google_forms_survey_data_cache_key: 'renewal_survey_google_forms_survey_data'
 
 # # Renewal survey settings: 'permissive' backend.
 # # N/A: No applicable settings.
