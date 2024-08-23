@@ -72,7 +72,7 @@ EXTRA_EXTRA_MIDDLEWARE = []
 
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.DummyCache',
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
     }
 }
 
