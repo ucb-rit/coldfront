@@ -14,8 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
-    """A backend that invokes gspread API which connects to Google Sheets
-    to validate whether renewal survey was completed."""
+    """A backend that invokes which connects to Google Sheets to validate 
+    whether renewal survey was completed. If there are issues connecting to 
+    Google Sheets then the error is logged and no Exception is raised."""
 
     def validate_renewal_survey_completion(self, allocation_period_name, 
                                            project_name, pi_username):
@@ -59,10 +60,11 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
     
     def get_renewal_survey_response(self, allocation_period_name, project_name, 
                             pi_username):
-        """ Takes information from the request object and returns an
-         iterable of tuples representing the requester's survey answers. If no
-         answer is detected, return None. The format of the tuple:
-         ( question: string, answer: string ).  """
+        """ Takes the identifying information for a response and finds the 
+        specific survey response. Each question is then paired with its answer 
+        in a tuple and the array of tuples in correct order are returned. If no 
+        response is detected, return None. The format of the tuple: 
+        ( question: string, answer: string ). """
 
         gform_info = self._get_renewal_survey(allocation_period_name)
         if gform_info is None:
@@ -101,8 +103,8 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
     
     def get_renewal_survey_url(self, allocation_period_name, pi, project_name, 
                                requester):
-        """This function returns the unique link to a pre-filled form for the
-          user to fill out."""
+        """ This function returns the unique link to a pre-filled form for the
+          user to fill out. """
         
         gform_info = self._get_renewal_survey(allocation_period_name)
         if gform_info is None:

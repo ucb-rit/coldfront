@@ -5,7 +5,7 @@ class PermissiveRenewalSurveyBackend(BaseRenewalSurveyBackend):
 
     def validate_renewal_survey_completion(self, allocation_period_name, 
                                            project_name, pi_username):
-        """ Always returns without causing ValidationError """
+        """ Always returns without raising Exception """
         return
 
     def get_renewal_survey_response(self, allocation_period_name, project_name, 
@@ -15,6 +15,6 @@ class PermissiveRenewalSurveyBackend(BaseRenewalSurveyBackend):
     
     def get_renewal_survey_url(self, allocation_period_name, pi, project_name, 
                                requester):
-        """Return None"""
+        """ Return None """
         return None
     
