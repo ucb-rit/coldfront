@@ -4,8 +4,7 @@ import logging
 import os
 
 from django.conf import settings
-
-from flags.state import flag_enabled
+from django.core.cache import cache
 
 from coldfront.core.project.utils_.renewal_survey_backend.backends.base import BaseRenewalSurveyBackend
 
@@ -23,63 +22,60 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         """Check whether the Google renewal survey has been completed. If not,
         raise an Exception."""
         try:
-            survey_data = self._get_renewal_survey(allocation_period_name)
+            survey_data = self._load_renewal_survey_metadata(
+                allocation_period_name)
 
-            # The wks_id will almost always be 0
-            wks = self._get_gspread_wks(survey_data['sheet_id'], 0)
+            wks = self._get_gspread_wks(survey_data['sheet_id'])
             periods_coor = self._gsheet_column_to_index(
                 survey_data['sheet_data']['allocation_period_col'])
             pis_coor = self._gsheet_column_to_index(
                 survey_data['sheet_data']['pi_username_col'])
             projects_coor = self._gsheet_column_to_index(
                 survey_data['sheet_data']['project_name_col'])
-            
+
             periods = wks.col_values(periods_coor)
             pis = wks.col_values(pis_coor)
             projects = wks.col_values(projects_coor)
             responses = list(zip(periods, pis, projects))
 
         except Exception as e:
-            message = (f'Something went wrong with connecting to Google Sheets.'
-                        f' Allowing user to progress past step. Details:\n{e}')
+            message = (
+                f'Something went wrong with connecting to Google Sheets. '
+                f'Allowing user to progress past step. Details:\n{e}')
             logger.exception(message)
             return
-        
-        # TODO: Should checks be added for the requester?
-        key = (allocation_period_name, pi_username, 
-                project_name)
-        
+
+        key = (allocation_period_name, pi_username,  project_name)
+
         for i in range(len(responses) - 1, 0, -1):
             if key == responses[i]:
                 return
-        
+
         # Reaches here if a response was not found.
         raise Exception(
                 f'Response for {pi_username}, {project_name}, '
                 f'{allocation_period_name} not detected.')
-    
-    def get_renewal_survey_response(self, allocation_period_name, project_name, 
-                            pi_username):
-        """ Takes the identifying information for a response and finds the 
+
+    def get_renewal_survey_response(self, allocation_period_name, project_name,
+                                    pi_username):
+        """Takes the identifying information for a response and finds the
         specific survey response. Each question is then paired with its answer 
         in a tuple and the array of tuples in correct order are returned. If no 
         response is detected, return None. The format of the tuple: 
-        ( question: string, answer: string ). """
-
-        gform_info = self._get_renewal_survey(allocation_period_name)
+        ( question: string, answer: string )."""
+        gform_info = self._load_renewal_survey_metadata(allocation_period_name)
         if gform_info is None:
             return None
 
-        # The wks_id will almost always be 0
-        wks = self._get_gspread_wks(gform_info['sheet_id'], 0)
+        wks = self._get_gspread_wks(gform_info['sheet_id'])
         if wks is None:
             return None
-        
+
         pis_column_coor = self._gsheet_column_to_index(
             gform_info["sheet_data"]["pi_username_col"])
         projs_column_coor = self._gsheet_column_to_index(
             gform_info["sheet_data"]["project_name_col"])
-        
+
         pis = wks.col_values(pis_column_coor)
         projects = wks.col_values(projs_column_coor)
 
@@ -100,21 +96,19 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         response = wks.row_values(row_ind)
 
         return zip(questions, response)
-    
+
     def get_renewal_survey_url(self, allocation_period_name, pi, project_name, 
                                requester):
-        """ This function returns the unique link to a pre-filled form for the
-          user to fill out. """
-        
-        gform_info = self._get_renewal_survey(allocation_period_name)
+        """This function returns the unique link to a pre-filled form for the
+          user to fill out."""
+        gform_info = self._load_renewal_survey_metadata(allocation_period_name)
         if gform_info is None:
             return None
 
-        # The wks_id will almost always be 0
-        wks = self._get_gspread_wks(gform_info['sheet_id'], 0)
+        wks = self._get_gspread_wks(gform_info['sheet_id'])
         if wks is None:
             return None
-        
+
         BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
         BASE_URL_TWO = '/viewform?usp=pp_url'
 
@@ -122,7 +116,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
 
         PARAMETER_BASE_ONE = '&entry.'
         PARAMETER_BASE_TWO = '='
-        
+
         question_ids_dict = gform_info['form_question_ids']
         for question in question_ids_dict.keys():
             value = ''
@@ -145,6 +139,27 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         return url
 
     @staticmethod
+    def _get_gspread_wks(sheet_id, wks_id=0):
+        """Given the spreadsheet ID and worksheet ID (default 0) of a
+        Google Sheet, return a sheet that is editable.
+
+        Raises:
+            - FileNotFoundError
+        """
+        credentials_file_path = settings.RENEWAL_SURVEY.get(
+            'details', {}).get('credentials_file_path', '')
+        assert isinstance(credentials_file_path, str)
+        if not os.path.isfile(credentials_file_path):
+            raise FileNotFoundError(
+                f'Could not find credentials file: {credentials_file_path}.')
+
+        gc = gspread.service_account(filename=credentials_file_path)
+        sh = gc.open_by_key(sheet_id)
+        wks = sh.get_worksheet(wks_id)
+
+        return wks
+
+    @staticmethod
     def _gsheet_column_to_index(column_str):
         """Convert Google Sheets column (e.g., 'A', 'AA') to index number."""
         index = 0
@@ -152,58 +167,96 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
             index = index * 26 + (ord(char.upper()) - ord('A') + 1)
         return index
 
+    def _load_renewal_survey_metadata(self, allocation_period_name):
+        """Return a dict containing metadata about the Google Form and
+        Google Sheet pertaining to the AllocationPeriod with the given
+        name.
+
+        The dict should be of the form:
+
+            {
+                # The ID of the Google Sheet linked to the Google Form.
+                "sheet_id": "str",
+
+                # The ID of the Google Form.
+                "form_id": "str",
+
+                # The name of the AllocationPeriod.
+                "allocation_period": "str",
+
+                # Indices (e.g., "X", "AC") of columns in which specific
+                # form answers are stored in the sheet.
+                "sheet_data": {
+                    "allocation_period_col": "str",
+                    "pi_username_col": "str",
+                    "project_name_col": "str",
+                },
+
+                # The IDs of form questions, used to pre-fill answers.
+                "form_question_ids": {
+                    "allocation_period": "str",
+                    "pi_name": "str",
+                    "pi_username": "str",
+                    "project_name": "str",
+                    "requester_name": "str",
+                    "requester_username": "str",
+                },
+            }
+
+        These dicts are stored in a file on local disk, and cached in
+        Django's caching mechanism.
+
+        Raises:
+            - FileNotFoundError
+            - ValueError
+        """
+        renewal_survey_details = settings.RENEWAL_SURVEY.get('details', {})
+        cache_key = renewal_survey_details.get('survey_data_cache_key', None)
+        if cache_key is None:
+            logger.error(
+                'Failed to retrieve cache key from settings.RENEWAL_SURVEY.')
+
+        cache_value = {}
+        if cache_key is not None and cache_key in cache:
+            cache_value = cache.get(cache_key)
+            if allocation_period_name in cache_value:
+                return cache_value[allocation_period_name]
+
+        metadata = self._load_survey_metadata_from_file(allocation_period_name)
+
+        cache_value[allocation_period_name] = metadata
+        cache.set(cache_key, cache_value)
+
+        return metadata
+
     @staticmethod
-    def _get_gspread_wks(sheet_id, wks_id):
-        """Given the spreadsheet ID and worksheet ID of a Google Sheet,
-        returns a sheet that is editable."""
-        credentials_file_path = settings.RENEWAL_SURVEY.get(
-            'details', {}).get('credentials_file_path', '')
-        assert isinstance(credentials_file_path, str)
-        if not os.path.isfile(credentials_file_path):
-            # TODO: Consider raising an Exception instaed.
-            return None
+    def _load_survey_metadata_from_file(allocation_period_name):
+        """Return a dict containing metadata about the Google Form and
+        Google Sheet pertaining to the AllocationPeriod with the given
+        name, sourced from a file on local disk.
 
-        try:
-            gc = gspread.service_account(filename=credentials_file_path)
-        except:
-            return None
+        Raises:
+            - FileNotFoundError
+            - ValueError
+        """
+        renewal_survey_details = settings.RENEWAL_SURVEY.get('details', {})
+        metadata_file_path = renewal_survey_details.get(
+            'survey_data_file_path', None)
+        if not os.path.isfile(metadata_file_path):
+            raise FileNotFoundError(
+                f'Could not find renewal survey data file: '
+                f'{metadata_file_path}.')
 
-        sh = gc.open_by_key(sheet_id)
-        wks = sh.get_worksheet(wks_id)
+        metadata = None
+        with open(metadata_file_path, 'r') as f:
+            metadata_dicts = json.load(f)
+            for metadata_dict in metadata_dicts:
+                if metadata_dict['allocation_period'] == allocation_period_name:
+                    metadata = metadata_dict
+                    break
 
-        return wks
+        if metadata is None:
+            raise ValueError(
+                'Failed to load survey data for AllocationPeriod from file.')
 
-    @staticmethod
-    def _get_renewal_survey(allocation_period_name):
-        """ Given the name of the allocation period, returns Google Form
-        Survey info depending on LRC/BRC. The information is a dict containing:
-            deployment: 'BRC/LRC',
-            sheet_id: string,
-            form_id: string,
-            allocation_period: string,
-            sheet_data: {
-                allocation_period_col: int,
-                pi_username_col: int,
-                project_name_col: int
-            } 
-        The sheet_data values refer to the column coordinates of information used
-        to enforce automatic check/block for the renewal form."""
-        survey_data_path = settings.RENEWAL_SURVEY.get(
-            'details', {}).get('survey_data_file_path', '')
-        assert isinstance(survey_data_path, str)
-        if not os.path.isfile(survey_data_path):
-            # TODO: Consider raising an exception instead.
-            return None
-
-        with open(survey_data_path) as fp:
-            data = json.load(fp)
-            deployment = ''
-            if flag_enabled('BRC_ONLY'):
-                deployment = 'BRC'
-            else:
-                deployment = 'LRC'
-            for elem in data:
-                if (elem['allocation_period'] == allocation_period_name and
-                        elem['deployment'] == deployment):
-                    return elem
-        return None
+        return metadata
