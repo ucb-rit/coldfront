@@ -38,12 +38,12 @@ Project Renewal - Usage Survey
 </p>
 
 <p>If you are having issues, check that you did not edit the pre-filled fields in the admin section of the survey.</p>
-{% if form_url %}
+{% if renewal_survey_url %}
   <a
       class="btn btn-primary"
-      href={{form_url}} 
-          target="_blank">
-      Go to Survey
+      href="{{ renewal_survey_url }}"
+      target="_blank">
+    Go to Survey
   </a>
 {% else %}
   <p class="font-weight-bold">Survey unavailable. Please proceed to the next step.</p>

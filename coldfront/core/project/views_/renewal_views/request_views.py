@@ -269,6 +269,14 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         context = super().get_context_data(form=form, **kwargs)
         current_step = int(self.steps.current)
         self.__set_data_from_previous_steps(current_step, context)
+
+        if current_step == self.step_numbers_by_form_name['renewal_survey']:
+            context['renewal_survey_url'] = get_renewal_survey_url(
+                context['allocation_period'].name,
+                context['PI'].user,
+                context['requested_project'].name,
+                self.request.user)
+
         return context
 
     def get_form_kwargs(self, step=None):
@@ -320,7 +328,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         elif step == self.step_numbers_by_form_name['renewal_survey']:
             tmp = {}
             self.__set_data_from_previous_steps(step, tmp)
-            kwargs['project_name'] = tmp['project_name']
+            kwargs['project_name'] = tmp['requested_project'].name
             kwargs['allocation_period_name'] = tmp['allocation_period'].name
             kwargs['pi_username'] = tmp['PI'].user.username
 
@@ -568,16 +576,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary.update(data)
                 dictionary['requested_project'] = data['name']
 
-        renewal_survey_form_step = self.step_numbers_by_form_name[
-            'renewal_survey']
-        if step == renewal_survey_form_step:
-            dictionary['requester'] = self.request.user
-            dictionary['project_name'] = dictionary['requested_project'].name
-            dictionary['form_url'] = get_renewal_survey_url(
-                                        dictionary['allocation_period'].name,
-                                        dictionary['PI'].user,
-                                        dictionary['project_name'],
-                                        self.request.user)
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                                                UserPassesTestMixin,
@@ -656,6 +654,14 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         context = super().get_context_data(form=form, **kwargs)
         current_step = int(self.steps.current)
         self.__set_data_from_previous_steps(current_step, context)
+
+        if current_step == self.step_numbers_by_form_name['renewal_survey']:
+            context['renewal_survey_url'] = get_renewal_survey_url(
+                context['allocation_period'].name,
+                context['PI'].user,
+                context['requested_project'].name,
+                self.request.user)
+
         return context
 
     def get_form_kwargs(self, step=None):
@@ -673,7 +679,7 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         elif step == self.step_numbers_by_form_name['renewal_survey']:
             tmp = {}
             self.__set_data_from_previous_steps(step, tmp)
-            kwargs['project_name'] = tmp['project_name']
+            kwargs['project_name'] = tmp['requested_project'].name
             kwargs['allocation_period_name'] = tmp['allocation_period'].name
             kwargs['pi_username'] = tmp['PI'].user.username
         return kwargs
@@ -746,14 +752,3 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                 dictionary['breadcrumb_pooling_preference'] = \
                     form_class.SHORT_DESCRIPTIONS.get(
                         pooling_preference, 'Unknown')
-        
-        renewal_survey_form_step = self.step_numbers_by_form_name[
-            'renewal_survey']
-        if step == renewal_survey_form_step:
-            dictionary['requester'] = self.request.user
-            dictionary['project_name'] = self.project_obj.name
-            dictionary['form_url'] = get_renewal_survey_url(
-                                        dictionary['allocation_period'].name, 
-                                        dictionary['PI'].user,
-                                        self.project_obj.name, 
-                                        self.request.user)
