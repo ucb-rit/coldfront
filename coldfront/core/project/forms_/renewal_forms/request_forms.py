@@ -1,3 +1,5 @@
+import logging
+
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.project.forms import DisabledChoicesSelectWidget
@@ -12,13 +14,16 @@ from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_reque
 from coldfront.core.project.utils_.renewal_utils import pis_with_renewal_requests_pks
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
-from coldfront.core.project.utils_.renewal_survey_backend import validate_renewal_survey_completion
+from coldfront.core.project.utils_.renewal_survey import is_renewal_survey_completed
 
 from flags.state import flag_enabled
 from django import forms
 from django.utils.safestring import mark_safe
 from django.core.validators import MinLengthValidator
 from django.core.exceptions import ValidationError
+
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectRenewalPIChoiceField(forms.ModelChoiceField):
@@ -196,6 +201,7 @@ class ProjectRenewalProjectSelectionForm(forms.Form):
         self.fields['project'].queryset = Project.objects.filter(
             **_filter).exclude(**exclude).order_by('name')
 
+
 class ProjectRenewalSurveyForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.project_name = kwargs.pop('project_name', None)
@@ -212,12 +218,32 @@ class ProjectRenewalSurveyForm(forms.Form):
         )
 
     def validate_survey_completed(self, value):
+        """Raise ValidationError if no renewal survey was completed for
+        the specified PI and Project under the specified
+        AllocationPeriod.
+
+        If completion cannot be determined (e.g., due to an error in the
+        survey backend), do not raise an error (such that the user may
+        proceed).
+        """
         try:
-            validate_renewal_survey_completion(self.allocation_period_name, 
-                                           self.project_name, 
-                                           self.pi_username)
+            is_survey_completed = is_renewal_survey_completed(
+                self.allocation_period_name, self.project_name,
+                self.pi_username)
         except Exception as e:
-            raise ValidationError(e)
+            message = (
+                f'Encountered an exception when determining whether a renewal '
+                f'survey was completed for {self.allocation_period_name}, '
+                f'{self.project_name}, {self.pi_username}. Allowing the user '
+                f'to proceed to the next step. Details:\n{e}')
+            logger.exception(message)
+            return
+
+        if not is_survey_completed:
+            raise ValidationError(
+                f'No response for {self.pi_username} and {self.project_name} '
+                f'detected for {self.allocation_period_name}.')
+
 
 class DeprecatedProjectRenewalSurveyForm(forms.Form):
     

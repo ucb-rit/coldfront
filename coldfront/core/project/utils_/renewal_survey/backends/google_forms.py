@@ -6,63 +6,47 @@ import os
 from django.conf import settings
 from django.core.cache import cache
 
-from coldfront.core.project.utils_.renewal_survey_backend.backends.base import BaseRenewalSurveyBackend
+from coldfront.core.project.utils_.renewal_survey.backends.base import BaseRenewalSurveyBackend
 
 
 logger = logging.getLogger(__name__)
 
 
 class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
-    """A backend that invokes which connects to Google Sheets to validate 
-    whether renewal survey was completed. If there are issues connecting to 
-    Google Sheets then the error is logged and no Exception is raised."""
+    """A backend that supports a renewal survey hosted on Google
+    Forms."""
 
-    def validate_renewal_survey_completion(self, allocation_period_name, 
-                                           project_name, pi_username):
-        """Check whether the Google renewal survey has been completed. If not,
-        raise an Exception."""
-        try:
-            survey_data = self._load_renewal_survey_metadata(
-                allocation_period_name)
+    def is_renewal_survey_completed(self, allocation_period_name, project_name,
+                                    pi_username):
+        """Return whether there is a response for the given project and
+        PI in the Google Sheet for the period."""
+        survey_data = self._load_renewal_survey_metadata(allocation_period_name)
 
-            wks = self._get_gspread_wks(survey_data['sheet_id'])
-            periods_coor = self._gsheet_column_to_index(
-                survey_data['sheet_data']['allocation_period_col'])
-            pis_coor = self._gsheet_column_to_index(
-                survey_data['sheet_data']['pi_username_col'])
-            projects_coor = self._gsheet_column_to_index(
-                survey_data['sheet_data']['project_name_col'])
+        wks = self._get_gspread_wks(survey_data['sheet_id'])
+        periods_coor = self._gsheet_column_to_index(
+            survey_data['sheet_data']['allocation_period_col'])
+        pis_coor = self._gsheet_column_to_index(
+            survey_data['sheet_data']['pi_username_col'])
+        projects_coor = self._gsheet_column_to_index(
+            survey_data['sheet_data']['project_name_col'])
 
-            periods = wks.col_values(periods_coor)
-            pis = wks.col_values(pis_coor)
-            projects = wks.col_values(projects_coor)
-            responses = list(zip(periods, pis, projects))
-
-        except Exception as e:
-            message = (
-                f'Something went wrong with connecting to Google Sheets. '
-                f'Allowing user to progress past step. Details:\n{e}')
-            logger.exception(message)
-            return
+        periods = wks.col_values(periods_coor)
+        pis = wks.col_values(pis_coor)
+        projects = wks.col_values(projects_coor)
+        responses = list(zip(periods, pis, projects))
 
         key = (allocation_period_name, pi_username,  project_name)
-
+        # Search later responses first.
         for i in range(len(responses) - 1, 0, -1):
-            if key == responses[i]:
-                return
+            if responses[i] == key:
+                return True
 
-        # Reaches here if a response was not found.
-        raise Exception(
-                f'Response for {pi_username}, {project_name}, '
-                f'{allocation_period_name} not detected.')
+        return False
 
     def get_renewal_survey_response(self, allocation_period_name, project_name,
                                     pi_username):
-        """Takes the identifying information for a response and finds the
-        specific survey response. Each question is then paired with its answer 
-        in a tuple and the array of tuples in correct order are returned. If no 
-        response is detected, return None. The format of the tuple: 
-        ( question: string, answer: string )."""
+        """Fetch the response for the given project and PI in the Google
+        Sheet for the period. Return None if there is no response."""
         gform_info = self._load_renewal_survey_metadata(allocation_period_name)
         if gform_info is None:
             return None
@@ -72,9 +56,9 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
             return None
 
         pis_column_coor = self._gsheet_column_to_index(
-            gform_info["sheet_data"]["pi_username_col"])
+            gform_info['sheet_data']['pi_username_col'])
         projs_column_coor = self._gsheet_column_to_index(
-            gform_info["sheet_data"]["project_name_col"])
+            gform_info['sheet_data']['project_name_col'])
 
         pis = wks.col_values(pis_column_coor)
         projects = wks.col_values(projs_column_coor)
@@ -83,6 +67,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         key = (pi_username, project_name)
 
         row_ind = None
+        # Search later responses first.
         for i in range(len(all_responses) - 1, 0, -1):
             if all_responses[i] == key:
                 # Correct for Google Sheets not being zero-indexed
@@ -99,8 +84,13 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
 
     def get_renewal_survey_url(self, allocation_period_name, pi, project_name, 
                                requester):
-        """This function returns the unique link to a pre-filled form for the
-          user to fill out."""
+        """Return a pre-filled link to the Google Form for the period,
+        wherein the following are pre-filled:
+            - The name of the AllocationPeriod
+            - The name and username of the PI (User object)
+            - The name of the project
+            - The name and username of the requester (User object)
+        """
         gform_info = self._load_renewal_survey_metadata(allocation_period_name)
         if gform_info is None:
             return None

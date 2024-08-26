@@ -10,7 +10,7 @@ from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcess
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_denial_reason
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_latest_update_timestamp
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_state_status
-from coldfront.core.project.utils_.renewal_survey_backend import get_renewal_survey_response
+from coldfront.core.project.utils_.renewal_survey import get_renewal_survey_response
 from coldfront.core.project.utils_.renewal_utils import set_allocation_renewal_request_eligibility
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.utils.common import display_time_zone_current_date
