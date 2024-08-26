@@ -106,7 +106,7 @@ FILE_STORAGE = {
 
 # Permit renewal requests to be made without a survey response.
 RENEWAL_SURVEY = {
-    'backend': 'coldfront.core.project.utils_.renewal_survey_backend.backends.permissive.PermissiveRenewalSurveyBackend',
+    'backend': 'coldfront.core.project.utils_.renewal_survey.backends.permissive.PermissiveRenewalSurveyBackend',
     'details': {},
 }
 
