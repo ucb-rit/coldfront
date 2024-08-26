@@ -87,7 +87,8 @@ CACHES = {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'DB': 0,
             'PASSWORD': '{{ redis_passwd }}',
-        }
+        },
+        'TIMEOUT': 24 * 60 * 60,  # One day in seconds
     }
 }
 
