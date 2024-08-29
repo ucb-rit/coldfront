@@ -520,8 +520,10 @@ class Command(BaseCommand):
                  allocation_period__name=allocation_period)
 
         _surveys = list(allocation_requests.values_list('renewal_survey_answers', flat=True))
+        _surveys = [i for i in _surveys if i != {}]
         if len(_surveys) == 0:
             raise Exception("There are no valid renewal requests in the specified allocation period.")
+        
         if {} in _surveys:
             raise Exception("This allocation period does not have an associated survey.")
         surveys = []
