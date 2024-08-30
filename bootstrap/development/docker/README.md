@@ -51,7 +51,7 @@ Note that these steps must be run from the root directory of the repo.
 
    ```bash
    export DOCKER_PROJECT_NAME=brc-dev
-   docker-compose \
+   docker compose \
        -f bootstrap/development/docker/docker-compose.yml \
        -p $DOCKER_PROJECT_NAME \
        up
@@ -69,12 +69,19 @@ Note that these steps must be run from the root directory of the repo.
    Notes:
      - This step may be run multiple times.
 
-8. Retrieve a PostgreSQL database dump file that will be provided for you. Place it in the root directory of the repo. Load it into your instance. You must provide the name of your Docker project. Note that this may take several minutes.
+8. Retrieve a PostgreSQL database dump file that will be provided for you. Place it in the root directory of the repo. Load it into your instance. You must provide the name of your Docker project.
 
    ```bash
    export RELATIVE_CONTAINER_DUMP_FILE_PATH=YYYY_MM_DD-HH-MM.dump
    sh bootstrap/development/docker/scripts/docker_load_database_backup.sh $DOCKER_PROJECT_NAME $RELATIVE_CONTAINER_DUMP_FILE_PATH
    ```
+
+   Notes:
+     - This may take several minutes.
+     - The following error may appear in the output, but is not an issue:
+       ```
+       ERROR:  role "postgres" already exists
+       ```
 
 9. At this point, the web service should be functioning. Navigate to it from the browser at "http://localhost:WEB_PORT", where `WEB_PORT` is the one defined above.
 
@@ -83,7 +90,7 @@ Note that these steps must be run from the root directory of the repo.
     - Enter into the application shell container:
 
          ```bash
-         docker-compose -p $DOCKER_PROJECT_NAME exec app-shell bash
+         docker compose -p $DOCKER_PROJECT_NAME exec app-shell bash
          ```
 
     - From within the container, start a Django shell:
