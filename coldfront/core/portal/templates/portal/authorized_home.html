@@ -168,6 +168,8 @@
                         <span class="badge badge-warning">Pending</span>
                     {% elif 'Processing' in project.display_status %}
                         <span class="badge badge-warning">Processing</span>
+                    {% elif 'Inactive' in project.display_status %}
+                        <span class="badge badge-warning">Inactive</span>
                     {% else %}
                         <span class="badge badge-danger">No Access</span>
                     {% endif %}
