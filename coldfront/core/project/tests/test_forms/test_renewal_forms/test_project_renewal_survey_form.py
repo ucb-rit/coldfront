@@ -31,6 +31,12 @@ class TestProjectRenewalSurveyForm(TestBase):
             name='Active')
         
     def test_is_renewal_survey_completed_returns_false(self):
+        """ Test that when is_renewal_survey_completed returns False, the 
+            correct  ValidationError is raised. """
+        
+        # With the dummy backend, is_renewal_survey_completed returns whether
+        # the PI username is less than 5 characters. This username is thus
+        # greater than 5 characters.
         user = User.objects.create(
             email='test_user@email.com',
             first_name='Test',
@@ -62,6 +68,12 @@ class TestProjectRenewalSurveyForm(TestBase):
             str(form.errors))
     
     def test_is_renewal_survey_completed_returns_true(self):
+        """ Test that when is_renewal_survey_completed returns True, the form
+            is valid. """
+        
+        # With the dummy backend, is_renewal_survey_completed returns whether
+        # the PI username is less than 5 characters. This username is thus
+        # less than 5 characters.
         user = User.objects.create(
             email='test_user@email.com',
             first_name='Test',
