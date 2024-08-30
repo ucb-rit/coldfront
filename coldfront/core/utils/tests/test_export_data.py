@@ -27,7 +27,7 @@ from coldfront.core.project.models import Project, ProjectStatusChoice, \
     ProjectUser, ProjectUserStatusChoice, ProjectUserRoleChoice, \
     ProjectAllocationRequestStatusChoice, SavioProjectAllocationRequest, \
     VectorProjectAllocationRequest
-from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalSurveyForm
+from coldfront.core.project.forms_.renewal_forms.request_forms import DeprecatedProjectRenewalSurveyForm
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
@@ -1167,7 +1167,7 @@ class TestRenewalSurveyResponses(TestBase):
     def swap_form_answer_id_for_text(survey):
         '''
         Takes a survey, a dict mapping survey question IDs to answer IDs.
-        Uses ProjectRenewalSurveyForm.
+        Uses DeprecatedProjectRenewalSurveyForm.
         Swaps answer IDs for answer text, then question IDs for question text.
         Returns the modified survey.
 
@@ -1176,7 +1176,7 @@ class TestRenewalSurveyResponses(TestBase):
         survey : survey to modify
         '''
         multiple_choice_fields = {}
-        form = ProjectRenewalSurveyForm()
+        form = DeprecatedProjectRenewalSurveyForm()
         for k, v in form.fields.items():
             # Only ChoiceField or MultipleChoiceField 
             # (in this specific survey form) have choices 

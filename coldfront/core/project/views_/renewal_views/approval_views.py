@@ -4,13 +4,13 @@ from coldfront.core.allocation.utils import calculate_service_units_to_allocate
 from coldfront.core.project.forms import ReviewDenyForm
 from coldfront.core.project.forms import ReviewStatusForm
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
-from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalSurveyForm
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalApprovalRunner
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalDenialRunner
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcessingRunner
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_denial_reason
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_latest_update_timestamp
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_state_status
+from coldfront.core.project.utils_.renewal_survey import get_renewal_survey_response
 from coldfront.core.project.utils_.renewal_utils import set_allocation_renewal_request_eligibility
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.utils.common import display_time_zone_current_date
@@ -32,6 +32,8 @@ from django.urls import reverse_lazy
 from django.views.generic import DetailView
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
+
+from flags.state import flag_enabled
 
 import iso8601
 import logging
@@ -97,8 +99,13 @@ class AllocationRenewalRequestMixin(object):
             logger.exception(e)
             messages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
+        if flag_enabled('RENEWAL_SURVEY_ENABLED'):
+            context['survey_response'] = get_renewal_survey_response(
+                self.request_obj.allocation_period.name,
+                self.request_obj.post_project.name,
+                self.request_obj.pi.username)
         context['has_survey_answers'] = bool(
-            self.request_obj.renewal_survey_answers)
+            context.get('survey_response', None))
         return context
 
     @staticmethod
@@ -119,11 +126,6 @@ class AllocationRenewalRequestMixin(object):
         context['renewal_request'] = self.request_obj
         context['computing_allowance_name'] = \
             self.computing_allowance_obj.get_name()
-        context['survey_form'] = ProjectRenewalSurveyForm(
-            initial=self.request_obj.renewal_survey_answers,
-            disable_fields=True)
-        context['has_survey_answers'] = bool(
-            self.request_obj.renewal_survey_answers)
 
     def set_objs(self, pk):
         self.request_obj = get_object_or_404(

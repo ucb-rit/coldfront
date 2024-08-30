@@ -65,40 +65,7 @@ class TestAllocationRenewalRequestUnderProjectView(TestBase):
         """Return the name of the request view."""
         return 'allocation_renewal_request_under_project_view'
 
-    @staticmethod
-    def _sample_renewal_survey_post_data():
-        """Return a dict of renewal survey answers to be sent to the
-        view via a POST request."""
-        return {
-            'which_brc_services_used': 'srdc',
-            'publications_supported_by_brc': 'N/A',
-            'grants_supported_by_brc': 'N/A',
-            'recruitment_or_retention_cases': 'N/A',
-            'classes_being_taught': 'N/A',
-            'brc_recommendation_rating': 6,
-            'brc_recommendation_rating_reason': '',
-            'how_brc_helped_bootstrap_computational_methods': 'N/A',
-            'how_important_to_research_is_brc': 2,
-            'do_you_use_mybrc': 'no',
-            'mybrc_comments': '',
-            'which_open_ondemand_apps_used': [
-                'jupyter_notebook',
-                'vscode_server',
-            ],
-            'brc_feedback': '',
-            'colleague_suggestions': '',
-            'indicate_topic_interests': [
-                'have_had_rdmp_event_or_consultation',
-                'want_to_learn_more_and_have_rdm_consult',
-            ],
-            'training_session_usefulness_of_computational_platforms_training':
-                2,
-            'training_session_usefulness_of_basic_savio_cluster': 4,
-            'training_session_other_topics_of_interest': '',
-        }
-
-    def _send_post_requests(self, allocation_period, project, pi_project_user,
-                            include_renewal_survey=True):
+    def _send_post_requests(self, allocation_period, project, pi_project_user):
         """Send the necessary POST requests to the view for the given
         AllocationPeriod, Project, and PI ProjectUser. Optionally
         include sample renewal survey answers."""
@@ -119,15 +86,11 @@ class TestAllocationRenewalRequestUnderProjectView(TestBase):
         }
         form_data.append(pi_selection_form_data)
 
-        if include_renewal_survey:
-            # While the renewal survey is only conditionally required, data may
-            # always be POSTed and accepted.
-            renewal_survey_step = '2'
-            renewal_survey_form_data = {}
-            for key, value in self._sample_renewal_survey_post_data().items():
-                renewal_survey_form_data[f'{renewal_survey_step}-{key}'] = value
-            renewal_survey_form_data[current_step_key] = renewal_survey_step
-            form_data.append(renewal_survey_form_data)
+        renewal_survey_form_data = {
+            '2-was_survey_completed': True,
+            current_step_key: '2',
+        }
+        form_data.append(renewal_survey_form_data)
 
         review_and_submit_form_data = {
             '3-confirmation': True,
@@ -154,8 +117,7 @@ class TestAllocationRenewalRequestUnderProjectView(TestBase):
         allocation_period = get_current_allowance_year_period()
 
         self._send_post_requests(
-            allocation_period, project, pi_project_user,
-            include_renewal_survey=True)
+            allocation_period, project, pi_project_user)
 
         post_time = utc_now_offset_aware()
 
@@ -163,40 +125,4 @@ class TestAllocationRenewalRequestUnderProjectView(TestBase):
         self.assertEqual(requests.count(), 1)
         request = requests.first()
         self.assertTrue(pre_time <= request.request_time <= post_time)
-        self.assertTrue(request.renewal_survey_answers)
 
-    # TODO: As of the time of this writing, only one period is selectable.
-    #  Moreover, any future period will have the survey, so this test may be
-    #  obsolete.
-    def test_renewal_survey_step_conditionally_required(self):
-        """Test that the renewal survey step is only required when the
-        selected AllocationPeriod is 'Allowance Year 2024 - 2025'.
-
-        TODO: This period has been hard-coded for the short-term. Once a
-         longer-term solution without hard-coding has been applied,
-         update this test accordingly.
-        """
-        project, pi_project_user = self._create_project_to_renew()
-
-        # The survey only needs to be provided for a particular period.
-        success_by_period_name = {
-            'Allowance Year 2024 - 2025': False,
-        }
-
-        for period_name, success_expected in success_by_period_name.items():
-            allocation_period = AllocationPeriod.objects.get(name=period_name)
-            func = self._send_post_requests
-            args = [allocation_period, project, pi_project_user]
-            kwargs = {'include_renewal_survey': False}
-            if success_expected:
-                func(*args, **kwargs)
-            else:
-                with self.assertRaises(AssertionError) as _:
-                    func(*args, **kwargs)
-            requests = AllocationRenewalRequest.objects.filter(
-                allocation_period=allocation_period, post_project=project)
-            if success_expected:
-                self.assertTrue(requests.count() == 1)
-                self.assertFalse(requests.first().renewal_survey_answers)
-            else:
-                self.assertFalse(requests.exists())
