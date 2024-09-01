@@ -20,22 +20,31 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
                                     pi_username):
         """Return whether there is a response for the given project and
         PI in the Google Sheet for the period."""
+
+        # TODO: The current assumption is that the sheet only contains responses
+        #  pertaining to one period, so it does not need to be checked,
+        #  conserving a read request to the Google Sheets API. If this
+        #  assumption changes (i.e., a sheet may be shared amongst multiple
+        #  periods), restore the check.
+
         survey_data = self._load_renewal_survey_metadata(allocation_period_name)
 
         wks = self._get_gspread_wks(survey_data['sheet_id'])
-        periods_coor = self._gsheet_column_to_index(
-            survey_data['sheet_data']['allocation_period_col'])
+        # periods_coor = self._gsheet_column_to_index(
+        #     survey_data['sheet_data']['allocation_period_col'])
         pis_coor = self._gsheet_column_to_index(
             survey_data['sheet_data']['pi_username_col'])
         projects_coor = self._gsheet_column_to_index(
             survey_data['sheet_data']['project_name_col'])
 
-        periods = wks.col_values(periods_coor)
+        # periods = wks.col_values(periods_coor)
         pis = wks.col_values(pis_coor)
         projects = wks.col_values(projects_coor)
-        responses = list(zip(periods, pis, projects))
+        # responses = list(zip(periods, pis, projects))
+        responses = list(zip(pis, projects))
 
-        key = (allocation_period_name, pi_username,  project_name)
+        # key = (allocation_period_name, pi_username, project_name)
+        key = (pi_username, project_name)
         # Search later responses first.
         for i in range(len(responses) - 1, 0, -1):
             if responses[i] == key:
@@ -93,10 +102,6 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         """
         gform_info = self._load_renewal_survey_metadata(allocation_period_name)
         if gform_info is None:
-            return None
-
-        wks = self._get_gspread_wks(gform_info['sheet_id'])
-        if wks is None:
             return None
 
         BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
