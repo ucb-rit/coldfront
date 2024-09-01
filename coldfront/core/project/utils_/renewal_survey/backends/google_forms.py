@@ -104,6 +104,10 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         if gform_info is None:
             return None
 
+        wks = self._get_gspread_wks(gform_info['sheet_id'])
+        if wks is None:
+            return None
+
         BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
         BASE_URL_TWO = '/viewform?usp=pp_url'
 

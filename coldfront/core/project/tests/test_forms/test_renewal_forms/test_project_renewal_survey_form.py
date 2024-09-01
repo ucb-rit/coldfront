@@ -37,6 +37,7 @@ class TestProjectRenewalSurveyForm(TestBase):
         # With the dummy backend, is_renewal_survey_completed returns whether
         # the PI username is less than 5 characters. This username is thus
         # greater than 5 characters.
+
         user = User.objects.create(
             email='test_user@email.com',
             first_name='Test',
@@ -74,6 +75,7 @@ class TestProjectRenewalSurveyForm(TestBase):
         # With the dummy backend, is_renewal_survey_completed returns whether
         # the PI username is less than 5 characters. This username is thus
         # less than 5 characters.
+
         user = User.objects.create(
             email='test_user@email.com',
             first_name='Test',
