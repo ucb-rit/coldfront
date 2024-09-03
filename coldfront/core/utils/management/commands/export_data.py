@@ -628,7 +628,7 @@ class Command(BaseCommand):
 
         try:
             json_output = json.dumps(list(query_set), indent=4, default=str)
-            output.writelines(json_output)
+            output.writelines(json_output + '\n')
         except Exception as e:
             error.write(str(e))
 
