@@ -1,0 +1,38 @@
+{% if status == 'Active' %}
+  <span class="badge badge-success">
+    Active
+  </span>
+{% elif status == 'Pending - Add' %}
+  <span class="badge badge-warning">
+    Pending
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Pending" content="Administrators will review the user's request to access the project on the cluster, and configure their cluster account accordingly." %}
+{% elif status == 'Pending - Remove' %}
+  <span class="badge badge-warning">
+    Pending Removal
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Pending Removal" content="The user is being removed from the project. Administrators will configure their cluster account accordingly." %}
+{% elif status == 'Processing' %}
+  {% comment %}
+    In practice, this status is not set.
+  {% endcomment %}
+  <span class="badge badge-warning">
+    Processing
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Processing" content="Administrators have approved the user's request to access the project on the cluster, and are currently configuring their cluster account accordingly." %}
+{% elif status == "Denied" %}
+  <span class="badge badge-danger">
+    Denied
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Denied" content="Administrators have denied the user's request to access the project on the cluster. Please contact us for further assistance." %}
+{% elif status == "None" %}
+  <span class="badge badge-danger">
+    No Access
+  </span>
+  {% include "portal/info_hover_popup.html" with title="No Access" content="The user has not requested access to the project on the cluster." %}
+{% else %}
+  <span class="badge badge-danger">
+    Error
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Error" content="Error. Please contact an administrator." %}
+{% endif %}
