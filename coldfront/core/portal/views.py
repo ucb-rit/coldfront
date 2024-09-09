@@ -28,6 +28,27 @@ from coldfront.core.project.models import ProjectUserRemovalRequest
 
 def home(request):
 
+    def _compute_project_user_cluster_access_statuses(_user):
+        """Return a dict mapping each Project object that the given User
+        is associated with to a str describing the user's access to the
+        cluster under the project."""
+        statuses = {}
+
+        cluster_access_attributes = AllocationUserAttribute.objects.filter(
+            allocation_attribute_type__name='Cluster Account Status',
+            allocation_user__user=_user)
+        for attribute in cluster_access_attributes:
+            _project = attribute.allocation.project
+            statuses[_project] = attribute.value
+
+        for project_user_removal_request in \
+                ProjectUserRemovalRequest.objects.filter(
+                    project_user__user=_user, status__name='Pending'):
+            _project = project_user_removal_request.project_user.project
+            statuses[_project] = 'Pending - Remove'
+
+        return statuses
+
     context = {}
     if request.user.is_authenticated:
         template_name = 'portal/authorized_home.html'
@@ -37,13 +58,8 @@ def home(request):
              Q(projectuser__status__name__in=['Active', 'Pending - Remove']))
         ).distinct().order_by('name')
 
-        cluster_access_attributes = AllocationUserAttribute.objects.filter(allocation_attribute_type__name='Cluster Account Status',
-                                                                       allocation_user__user=request.user)
-        access_states = {}
-        for attribute in cluster_access_attributes:
-            project = attribute.allocation.project
-            status = attribute.value
-            access_states[project] = status
+        access_states = _compute_project_user_cluster_access_statuses(
+            request.user)
 
         for project in project_list:
             project.display_status = access_states.get(project, None)
@@ -73,13 +89,6 @@ def home(request):
                 distinct('project_user').count()
 
         context['num_join_requests'] = num_join_requests
-
-        context['pending_removal_request_projects'] = \
-            [removal_request.project_user.project.name
-             for removal_request in
-             ProjectUserRemovalRequest.objects.filter(
-                 Q(project_user__user__username=request.user.username) &
-                 Q(status__name='Pending'))]
 
     else:
         template_name = 'portal/nonauthorized_home.html'
