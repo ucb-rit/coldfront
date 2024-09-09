@@ -20,7 +20,6 @@ from coldfront.core.allocation.models import (Allocation,
                                               AllocationStatusChoice,
                                               AllocationUserAttribute,
                                               AllocationUserStatusChoice)
-from coldfront.core.allocation.utils import get_allocation_user_cluster_access_status
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.allocation.utils import get_project_compute_resource_name
 # from coldfront.core.grant.models import Grant
@@ -138,8 +137,7 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 allocation_obj.allocationuserattribute_set.select_related(
                     'allocation_user__user'
                 ).filter(
-                    allocation_attribute_type__name='Cluster Account Status',
-                    value__in=['Pending - Add', 'Processing', 'Active'])
+                    allocation_attribute_type__name='Cluster Account Status')
             for status in statuses:
                 username = status.allocation_user.user.username
                 cluster_access_statuses[username] = status.value
@@ -1109,8 +1107,9 @@ class ProjectUserDetail(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
             else:
                 try:
                     cluster_access_status = \
-                        get_allocation_user_cluster_access_status(
-                            allocation_obj, project_user_obj.user).value
+                        allocation_obj.allocationuserattribute_set.get(
+                            allocation_user__user=project_user_obj.user,
+                            allocation_attribute_type__name='Cluster Account Status').value
                 except AllocationUserAttribute.DoesNotExist:
                     cluster_access_status = 'None'
                 except AllocationUserAttribute.MultipleObjectsReturned:
