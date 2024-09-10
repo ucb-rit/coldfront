@@ -7,7 +7,6 @@ following values:
 "Active"
 "Pending - Add"
 "Pending - Remove"
-"Processing"
 "Denied"
 "None"
 
@@ -31,14 +30,6 @@ Usage: {% include "allocation/cluster_access_badge.html" with status="status" %}
     Pending Removal
   </span>
   {% include "portal/info_hover_popup.html" with title="Pending Removal" content="The user is being removed from the project. Administrators will configure their cluster account accordingly." %}
-{% elif status == "Processing" %}
-  {% comment %}
-    In practice, this status is not set.
-  {% endcomment %}
-  <span class="badge badge-warning">
-    Processing
-  </span>
-  {% include "portal/info_hover_popup.html" with title="Processing" content="Administrators have approved the user's request to access the project on the cluster, and are currently configuring their cluster account accordingly." %}
 {% elif status == "Denied" %}
   <span class="badge badge-danger">
     Denied
