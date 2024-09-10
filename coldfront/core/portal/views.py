@@ -12,6 +12,7 @@ from coldfront.core.allocation.models import (Allocation,
                                               AllocationUser,
                                               AllocationUserAttribute)
 from coldfront.core.allocation.utils import get_project_compute_resource_name
+from coldfront.core.allocation.utils import has_cluster_access
 # from coldfront.core.grant.models import Grant
 from coldfront.core.portal.utils import (generate_allocations_chart_data,
                                          generate_publication_by_year_chart_data,
@@ -62,13 +63,12 @@ def home(request):
             request.user)
 
         for project in project_list:
-            project.display_status = access_states.get(project, None)
-            if (project.display_status is not None and
-                    'Active' in project.display_status):
-                context['cluster_username'] = request.user.username
-
+            project.display_status = access_states.get(project, 'None')
             resource_name = get_project_compute_resource_name(project)
             project.cluster_name = resource_name.replace(' Compute', '')
+
+        if has_cluster_access(request.user):
+            context['cluster_username'] = request.user.username
 
         allocation_list = Allocation.objects.filter(
            Q(status__name__in=['Active', 'New', 'Renewal Requested', ]) &
