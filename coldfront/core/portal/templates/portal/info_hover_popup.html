@@ -1,3 +1,19 @@
+{% comment %}
+
+Display an info icon that, when hovered over, displays a popup that has a title
+and content (text).
+
+Usage: {% include "portal/info_hover_popup.html" with title="title" content="content" %}
+
+The following jQuery code must be included in the calling template for the popup
+to appear:
+
+$(document).ready(function(){
+    $('[data-toggle="popover"]').popover();
+});
+
+{% endcomment %}
+
 <a href="#" data-toggle="popover" title="{{ title }}" data-trigger="hover" data-content="{{ content }}">
   <span class="accessibility-link-text">{{ title }} Info Hover Popup Text</span>
   <i class="fas fa-info-circle"></i>

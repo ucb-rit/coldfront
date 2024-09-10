@@ -1,3 +1,22 @@
+{% comment %}
+
+Display a badge, info icon, and popup denoting a user's access to the cluster
+under a project, based on a string `status`, which is expected to be one of the
+following values:
+
+"Active"
+"Pending - Add"
+"Pending - Remove"
+"Processing"
+"Denied"
+"None"
+
+If a different value is given, display an "Error" badge.
+
+Usage: {% include "allocation/cluster_access_badge.html" with status="status" %}
+
+{% endcomment %}
+
 {% if status == "Active" %}
   <span class="badge badge-success">
     Active
