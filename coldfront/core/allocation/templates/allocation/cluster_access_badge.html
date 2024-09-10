@@ -1,18 +1,18 @@
-{% if status == 'Active' %}
+{% if status == "Active" %}
   <span class="badge badge-success">
     Active
   </span>
-{% elif status == 'Pending - Add' %}
+{% elif status == "Pending - Add" %}
   <span class="badge badge-warning">
     Pending
   </span>
   {% include "portal/info_hover_popup.html" with title="Pending" content="Administrators will review the user's request to access the project on the cluster, and configure their cluster account accordingly." %}
-{% elif status == 'Pending - Remove' %}
+{% elif status == "Pending - Remove" %}
   <span class="badge badge-warning">
     Pending Removal
   </span>
   {% include "portal/info_hover_popup.html" with title="Pending Removal" content="The user is being removed from the project. Administrators will configure their cluster account accordingly." %}
-{% elif status == 'Processing' %}
+{% elif status == "Processing" %}
   {% comment %}
     In practice, this status is not set.
   {% endcomment %}
