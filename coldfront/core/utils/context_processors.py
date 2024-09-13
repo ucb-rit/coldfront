@@ -1,9 +1,20 @@
-from coldfront.core.project.models import ProjectUser
+from coldfront.core.allocation.models import (AllocationRenewalRequest,
+                                              AllocationAdditionRequest,
+                                              SecureDirAddUserRequest,
+                                              SecureDirRemoveUserRequest,
+                                              SecureDirRequest,
+                                              ClusterAccessRequest)
+from coldfront.core.project.models import (ProjectUserRemovalRequest,
+                                           SavioProjectAllocationRequest,
+                                           VectorProjectAllocationRequest,
+                                           ProjectUserJoinRequest,
+                                           ProjectUser)
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 
 from constance import config
 from django.conf import settings
 from django.db.models import Q
+from flags.state import flag_enabled
 
 import logging
 
@@ -73,3 +84,51 @@ def primary_cluster_name(request):
     return {
         'PRIMARY_CLUSTER_NAME': settings.PRIMARY_CLUSTER_NAME,
     }
+
+
+def request_alert_counts(request):
+    if request.user.is_superuser or request.user.is_staff:
+        context = {   
+            'cluster_account_req_count':
+                ClusterAccessRequest.objects.filter(
+                    status__name__in=['Pending - Add', 'Processing']).count(),
+            'project_removal_req_count':
+                ProjectUserRemovalRequest.objects.filter(
+                    status__name__in=['Pending', 'Processing']).count(),
+            'savio_project_req_count':
+                SavioProjectAllocationRequest.objects.filter(
+                    status__name__in=[
+                        'Under Review', 'Approved - Processing']).count(),
+            'project_join_req_count': ProjectUserJoinRequest.objects.filter(
+                project_user__status__name='Pending - Add').count(),
+            'project_renewal_req_count':
+                AllocationRenewalRequest.objects.filter(
+                    status__name__in=['Under Review']).count(),
+            'secure_dir_join_req_count': SecureDirAddUserRequest.objects.filter(
+                status__name__in=['Pending', 'Processing']).count(),
+            'secure_dir_remove_req_count':
+                SecureDirRemoveUserRequest.objects.filter(
+                    status__name__in=['Pending', 'Processing']).count(),
+            'secure_dir_req_count': SecureDirRequest.objects.filter(
+                status__name__in=[
+                    'Under Review', 'Approved - Processing']).count(),
+            }
+
+        if flag_enabled('SERVICE_UNITS_PURCHASABLE'):
+            context['su_purchase_req_count'] = \
+                AllocationAdditionRequest.objects.filter(
+                    status__name__in=['Under Review']).count()
+
+        if flag_enabled('BRC_ONLY'):
+            context['vector_project_req_count'] = \
+                VectorProjectAllocationRequest.objects.filter(
+                    status__name__in=[
+                        'Under Review', 'Approved - Processing']).count()
+
+        context = {k: v for k,v in context.items() if v > 0}
+        req_count_sum = sum(context.values())
+        context['request_counts'] = req_count_sum
+
+        return context
+    else:
+        return {}
