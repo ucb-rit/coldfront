@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+  
+<p>Dear PIs and Project Managers for {{project_name}}</p>
+
+<p>Thank you for using the {{cluster_name}} supercluster.</p>
+    
+<p>It is time to renew your {{allowance_name}} accounts for {{allocation_period.name}}. The {{allowance_name}} provides up to 500K Service Units (SUs) of free compute time on the {{cluster_name}} Super Cluster per fiscal year. The {{allocation_period.name}} cycle starts on {{allocation_period.start_date}}, and ends on {{allocation_period.end_date}}. Please follow the instructions below:</p>
+<ul>
+    <li>Log in to the <a href="{{portal_url}}">{{portal_name}}</a> User Portal.</li>
+    <li>Under the "Project" menu, click on "Projects".</li>
+    <li>Click on the ID of your {{project_prefix}} project.</li>
+    <li>Click on the "Renew Allowance" button.</li>
+    <li>Fill out the renewal form.</li>
+    <ul>
+        <li>Select the "{{allocation_period.name}}" Allocation Period, which will grant 500,000 Service Units, available starting on {{allocation_period.start_date}}.</li>
+        <li>Select the PI whose allowance you'd like to renew. (If there are multiple, they must be renewed individually.)</li>
+        <li>Fill out the Usage Survey.</li>
+        <li>Review your selections and submit the form.</li>
+    </ul>
+</ul>
+
+<p>Please submit your renewal request before {{allocation_period.start_date}}, to get the entire 500K SUs on {{cluster_name}}:</p>
+
+<p>Don't hesitate to get in touch with us at <a href= "mailto: {{help_email}}">{{help_email}}</a> if you have any questions.</p>
+
+<p>Thank you,</p>
+<p>--</p>
+<p>{{email_signature}}</p>
+
+</body>
+</html>
