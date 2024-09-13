@@ -133,9 +133,15 @@ class SavioProjectAllocationPeriodForm(forms.Form):
         return AllocationPeriod.objects.filter(f).order_by(*order_by)
 
 
+class ComputingAllowanceField(forms.ModelChoiceField):
+
+    def label_from_instance(self, obj):
+        return obj.name
+
+
 class ComputingAllowanceForm(forms.Form):
 
-    computing_allowance = forms.ModelChoiceField(
+    computing_allowance = ComputingAllowanceField(
         label='Computing Allowance',
         queryset=Resource.objects.filter(
             resource_type__name='Computing Allowance').order_by('pk'))
