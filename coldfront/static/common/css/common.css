@@ -143,6 +143,7 @@ body > main > div > div.card.border-primary > div.card-body > form > div.alert.a
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
+  margin-left: 5px;
 }
 
 
