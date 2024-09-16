@@ -1100,26 +1100,26 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
                     future_period_request.pk, tmp_pre_project.pk)
                 logger.info(message)
 
-# TODO: Remove these later
-COMPUTING_ALLOWANCE_INTERFACE = ComputingAllowanceInterface()
-if flag_enabled('BRC_ONLY'):
-    ALLOWANCE_NAME = BRCAllowances.FCA
-    PROJECT_NAME_PREFIX = COMPUTING_ALLOWANCE_INTERFACE.code_from_name(
-        ALLOWANCE_NAME)
-elif flag_enabled('LRC_ONLY'):
-    ALLOWANCE_NAME = LRCAllowances.PCA
-    PROJECT_NAME_PREFIX = COMPUTING_ALLOWANCE_INTERFACE.code_from_name(
-        ALLOWANCE_NAME)
-else:
-    raise ImproperlyConfigured
-
-NUM_BATCHES = 2
-
-MINUTES_BETWEEN_BATCHES = 60
-
 def send_tailored_email(project):
     """ This function sends one personally tailored email to the PIs/managers 
     returned by `managers_and_pis_to_email` of project. """
+
+    # TODO: Remove these later
+    COMPUTING_ALLOWANCE_INTERFACE = ComputingAllowanceInterface()
+    if flag_enabled('BRC_ONLY'):
+        ALLOWANCE_NAME = BRCAllowances.FCA
+        PROJECT_NAME_PREFIX = COMPUTING_ALLOWANCE_INTERFACE.code_from_name(
+            ALLOWANCE_NAME)
+    elif flag_enabled('LRC_ONLY'):
+        ALLOWANCE_NAME = LRCAllowances.PCA
+        PROJECT_NAME_PREFIX = COMPUTING_ALLOWANCE_INTERFACE.code_from_name(
+            ALLOWANCE_NAME)
+    else:
+        raise ImproperlyConfigured
+
+    NUM_BATCHES = 2
+
+    MINUTES_BETWEEN_BATCHES = 60
 
     alloc_period = get_next_allowance_year_period()
     template_context = {
@@ -1161,6 +1161,24 @@ def send_mass_renewal_emails():
     the deployment) and splits them into NUM_BATCHES (a constant) sublists. 
     Using django-q, the function schedules calls to `send_batch_renewal_emails` 
     on each sublist with an hour between each call. """
+
+    # TODO: Remove these later
+    COMPUTING_ALLOWANCE_INTERFACE = ComputingAllowanceInterface()
+    if flag_enabled('BRC_ONLY'):
+        ALLOWANCE_NAME = BRCAllowances.FCA
+        PROJECT_NAME_PREFIX = COMPUTING_ALLOWANCE_INTERFACE.code_from_name(
+            ALLOWANCE_NAME)
+    elif flag_enabled('LRC_ONLY'):
+        ALLOWANCE_NAME = LRCAllowances.PCA
+        PROJECT_NAME_PREFIX = COMPUTING_ALLOWANCE_INTERFACE.code_from_name(
+            ALLOWANCE_NAME)
+    else:
+        raise ImproperlyConfigured
+
+    NUM_BATCHES = 2
+
+    MINUTES_BETWEEN_BATCHES = 60
+
     active_status = ProjectStatusChoice.objects.get(name='Active')
 
     projects = Project.objects.filter(

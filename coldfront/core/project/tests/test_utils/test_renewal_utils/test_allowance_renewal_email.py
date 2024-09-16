@@ -1,6 +1,3 @@
-import math
-from datetime import datetime, timedelta
-
 from django.core import mail
 from django.contrib.auth.models import User
 from django_q.models import Schedule
