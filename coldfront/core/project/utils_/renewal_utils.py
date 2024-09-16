@@ -1105,15 +1105,10 @@ def send_new_allocation_period_renewal_notification_email(project):
     returned by `managers_and_pis_to_email` of project. """
 
     # TODO: Remove these later
-    computing_allowance_interface = ComputingAllowanceInterface()
     if flag_enabled('BRC_ONLY'):
         ALLOWANCE_NAME = BRCAllowances.FCA
-        PROJECT_NAME_PREFIX = computing_allowance_interface.code_from_name(
-            ALLOWANCE_NAME)
     elif flag_enabled('LRC_ONLY'):
         ALLOWANCE_NAME = LRCAllowances.PCA
-        PROJECT_NAME_PREFIX = computing_allowance_interface.code_from_name(
-            ALLOWANCE_NAME)
     else:
         raise ImproperlyConfigured
 
@@ -1121,11 +1116,9 @@ def send_new_allocation_period_renewal_notification_email(project):
     template_context = {
         'project_name': project.name,
         'allocation_period': alloc_period,
-        'project_prefix': PROJECT_NAME_PREFIX,
         'allowance_name': ALLOWANCE_NAME,
         'cluster_name': settings.PRIMARY_CLUSTER_NAME,
-        'portal_name': settings.PORTAL_NAME,
-        'portal_url': settings.CENTER_BASE_URL,
+        'project_url': project_detail_url(project),
         'help_email': settings.CENTER_HELP_EMAIL,
         'email_signature': settings.EMAIL_SIGNATURE
     }
