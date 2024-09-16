@@ -41,7 +41,8 @@ class TestAllowanceRenewalEmail(TestBase):
         self.projects = [self.project1, project2]
     
     def test_send_tailored_email(self):
-        """TODO"""
+        """ This tests that the `send_tailored_email` function sends a 
+        valid renewal email to PIs/Managers of a project. """
         self.assertEqual(len(mail.outbox), 0)
 
         send_tailored_email(self.project1)
@@ -54,7 +55,9 @@ class TestAllowanceRenewalEmail(TestBase):
         self.assertEqual(settings.EMAIL_SENDER, email.from_email)
 
     def test_send_batch_renewal_emails(self):
-        """TODO"""
+        """ This tests that the `send_batch_renewal_emails` function sends
+        unique renewal emails to the PIs/Managers of each project passed to
+        it. """
         self.assertEqual(len(mail.outbox), 0)
 
         send_batch_renewal_emails(self.projects)
@@ -74,7 +77,8 @@ class TestAllowanceRenewalEmail(TestBase):
         self.assertEqual(settings.EMAIL_SENDER, email2.from_email)
 
     def test_send_mass_renewal_emails(self):
-        """TODO"""
+        """ This tests that the `send_mass_renewal_emails` function schedules
+         the correct number of calls to `send_batch_renewal_emails`. """
         self.assertEqual(len(mail.outbox), 0)
         scheduled_tasks = Schedule.objects.filter(
             func='coldfront.core.project.tasks.send_batch_renewal_emails')

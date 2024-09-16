@@ -1105,21 +1105,17 @@ def send_tailored_email(project):
     returned by `managers_and_pis_to_email` of project. """
 
     # TODO: Remove these later
-    COMPUTING_ALLOWANCE_INTERFACE = ComputingAllowanceInterface()
+    computing_allowance_interface = ComputingAllowanceInterface()
     if flag_enabled('BRC_ONLY'):
         ALLOWANCE_NAME = BRCAllowances.FCA
-        PROJECT_NAME_PREFIX = COMPUTING_ALLOWANCE_INTERFACE.code_from_name(
+        PROJECT_NAME_PREFIX = computing_allowance_interface.code_from_name(
             ALLOWANCE_NAME)
     elif flag_enabled('LRC_ONLY'):
         ALLOWANCE_NAME = LRCAllowances.PCA
-        PROJECT_NAME_PREFIX = COMPUTING_ALLOWANCE_INTERFACE.code_from_name(
+        PROJECT_NAME_PREFIX = computing_allowance_interface.code_from_name(
             ALLOWANCE_NAME)
     else:
         raise ImproperlyConfigured
-
-    NUM_BATCHES = 2
-
-    MINUTES_BETWEEN_BATCHES = 60
 
     alloc_period = get_next_allowance_year_period()
     template_context = {
@@ -1163,21 +1159,20 @@ def send_mass_renewal_emails():
     on each sublist with an hour between each call. """
 
     # TODO: Remove these later
-    COMPUTING_ALLOWANCE_INTERFACE = ComputingAllowanceInterface()
+    NUM_BATCHES = 2
+    MINUTES_BETWEEN_BATCHES = 60
+
+    computing_allowance_interface = ComputingAllowanceInterface()
     if flag_enabled('BRC_ONLY'):
         ALLOWANCE_NAME = BRCAllowances.FCA
-        PROJECT_NAME_PREFIX = COMPUTING_ALLOWANCE_INTERFACE.code_from_name(
+        PROJECT_NAME_PREFIX = computing_allowance_interface.code_from_name(
             ALLOWANCE_NAME)
     elif flag_enabled('LRC_ONLY'):
         ALLOWANCE_NAME = LRCAllowances.PCA
-        PROJECT_NAME_PREFIX = COMPUTING_ALLOWANCE_INTERFACE.code_from_name(
+        PROJECT_NAME_PREFIX = computing_allowance_interface.code_from_name(
             ALLOWANCE_NAME)
     else:
         raise ImproperlyConfigured
-
-    NUM_BATCHES = 2
-
-    MINUTES_BETWEEN_BATCHES = 60
 
     active_status = ProjectStatusChoice.objects.get(name='Active')
 
