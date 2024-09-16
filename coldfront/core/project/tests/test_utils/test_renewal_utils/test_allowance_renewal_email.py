@@ -4,7 +4,9 @@ from django_q.models import Schedule
 
 from coldfront.config import settings
 from coldfront.core.project.models import ProjectUser, ProjectUserRoleChoice, ProjectUserStatusChoice
-from coldfront.core.project.utils_.renewal_utils import send_batch_renewal_emails, send_mass_renewal_emails, send_tailored_email
+from coldfront.core.project.utils_.renewal_utils import send_new_allocation_period_renewal_notification_email
+from coldfront.core.project.utils_.renewal_utils import batch_send_new_allocation_period_renewal_notification_email
+from coldfront.core.project.utils_.renewal_utils import send_all_new_allocation_period_renewal_notification_emails
 from coldfront.core.utils.tests.test_base import TestBase
 
 
@@ -41,11 +43,12 @@ class TestAllowanceRenewalEmail(TestBase):
         self.projects = [self.project1, project2]
     
     def test_send_tailored_email(self):
-        """ This tests that the `send_tailored_email` function sends a 
+        """ This tests that the 
+        `send_new_allocation_period_renewal_notification_email` function sends a 
         valid renewal email to PIs/Managers of a project. """
         self.assertEqual(len(mail.outbox), 0)
 
-        send_tailored_email(self.project1)
+        send_new_allocation_period_renewal_notification_email(self.project1)
 
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
@@ -55,12 +58,13 @@ class TestAllowanceRenewalEmail(TestBase):
         self.assertEqual(settings.EMAIL_SENDER, email.from_email)
 
     def test_send_batch_renewal_emails(self):
-        """ This tests that the `send_batch_renewal_emails` function sends
-        unique renewal emails to the PIs/Managers of each project passed to
-        it. """
+        """ This tests that the 
+        `batch_send_new_allocation_period_renewal_notification_email` function 
+        sends unique renewal emails to the PIs/Managers of each project passed 
+        to it. """
         self.assertEqual(len(mail.outbox), 0)
 
-        send_batch_renewal_emails(self.projects)
+        batch_send_new_allocation_period_renewal_notification_email(self.projects)
 
         self.assertEqual(len(mail.outbox), 2)
 
@@ -77,19 +81,21 @@ class TestAllowanceRenewalEmail(TestBase):
         self.assertEqual(settings.EMAIL_SENDER, email2.from_email)
 
     def test_send_mass_renewal_emails(self):
-        """ This tests that the `send_mass_renewal_emails` function schedules
-         the correct number of calls to `send_batch_renewal_emails`. """
+        """ This tests that the 
+        `send_all_new_allocation_period_renewal_notification_emails` function 
+        schedules the correct number of calls to 
+        `batch_send_new_allocation_period_renewal_notification_email`. """
+
+        func = 'coldfront.core.project.tasks.batch_send_new_allocation_period_renewal_notification_email'
         self.assertEqual(len(mail.outbox), 0)
-        scheduled_tasks = Schedule.objects.filter(
-            func='coldfront.core.project.tasks.send_batch_renewal_emails')
+        scheduled_tasks = Schedule.objects.filter(func=func)
         
         self.assertEqual(len(scheduled_tasks), 0)
 
         # TODO: Get this value from settings when it's moved to settings
         NUM_BATCHES = 2
 
-        send_mass_renewal_emails()
-        scheduled_tasks = Schedule.objects.filter(
-            func='coldfront.core.project.tasks.send_batch_renewal_emails')
+        send_all_new_allocation_period_renewal_notification_emails()
+        scheduled_tasks = Schedule.objects.filter(func=func)
         self.assertEqual(len(scheduled_tasks), NUM_BATCHES)
     

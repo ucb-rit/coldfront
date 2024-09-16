@@ -1100,7 +1100,7 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
                     future_period_request.pk, tmp_pre_project.pk)
                 logger.info(message)
 
-def send_tailored_email(project):
+def send_new_allocation_period_renewal_notification_email(project):
     """ This function sends one personally tailored email to the PIs/managers 
     returned by `managers_and_pis_to_email` of project. """
 
@@ -1146,17 +1146,19 @@ def send_tailored_email(project):
         html_body=html_message
     )
 
-def send_batch_renewal_emails(projects):
+def batch_send_new_allocation_period_renewal_notification_email(projects):
     """ This function sends a personally tailored email (via 
-    `send_tailored_email`) to the PIs/managers of each project in projects. """
+    `send_new_allocation_period_renewal_notification_email`) to the PIs/managers
+    of each project in projects. """
     for project in projects:
-        send_tailored_email(project)
+        send_new_allocation_period_renewal_notification_email(project)
 
-def send_mass_renewal_emails():
+def send_all_new_allocation_period_renewal_notification_emails():
     """ This function gets the list of all `Active` FCAs/PCAs (depending on 
     the deployment) and splits them into NUM_BATCHES (a constant) sublists. 
-    Using django-q, the function schedules calls to `send_batch_renewal_emails` 
-    on each sublist with an hour between each call. """
+    Using django-q, the function schedules calls to 
+    `batch_send_new_allocation_period_renewal_notification_email` on each 
+    sublist with an hour between each call. """
 
     # TODO: Remove these later
     NUM_BATCHES = 2
@@ -1185,7 +1187,7 @@ def send_mass_renewal_emails():
     for i in range(NUM_BATCHES):
         start = batch_size * i
         schedule(
-            'coldfront.core.project.tasks.send_batch_renewal_emails',
+            'coldfront.core.project.tasks.batch_send_new_allocation_period_renewal_notification_email',
             projects[start:start + batch_size],
             schedule_type=Schedule.ONCE,
             next_run=now + timedelta(minutes=i * MINUTES_BETWEEN_BATCHES)
