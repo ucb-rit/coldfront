@@ -153,13 +153,6 @@ def set_allocation_user_attribute_value(allocation_user_obj, type_name, value):
     return allocation_user_attribute
 
 
-def get_allocation_user_cluster_access_status(allocation_obj, user_obj):
-    return allocation_obj.allocationuserattribute_set.get(
-        allocation_user__user=user_obj,
-        allocation_attribute_type__name='Cluster Account Status',
-        value__in=['Pending - Add', 'Processing', 'Active'])
-
-
 def get_project_compute_resource_name(project_obj):
     """Return the name of the '{cluster_name} Compute' Resource that
     corresponds to the given Project.
@@ -235,6 +228,30 @@ def prorated_allocation_amount(amount, dt, allocation_period):
     else:
         amount = amount_per_month * (start_month - month)
     return Decimal(f'{math.floor(amount):.2f}')
+
+
+def calculate_service_units_to_allocate(computing_allowance,
+                                        request_time, allocation_period=None):
+    """Return the number of service units to allocate to a new project
+    request or allowance renewal request with the given
+    ComputingAllowance, if it were to be made at the given datetime. If
+    the request is associated with an AllocationPeriod, use it to
+    determine the number. Prorate as needed."""
+    kwargs = {}
+    if allocation_period is not None:
+        kwargs['is_timed'] = True
+        kwargs['allocation_period'] = allocation_period
+
+    computing_allowance_interface = ComputingAllowanceInterface()
+    num_service_units = Decimal(
+        computing_allowance_interface.service_units_from_name(
+            computing_allowance.get_name(), **kwargs))
+
+    if computing_allowance.are_service_units_prorated():
+        num_service_units = prorated_allocation_amount(
+            num_service_units, request_time, allocation_period)
+
+    return num_service_units
 
 
 def review_cluster_access_requests_url():

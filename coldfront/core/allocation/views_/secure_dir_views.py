@@ -978,6 +978,9 @@ class SecureDirRequestWizard(LoginRequiredMixin,
 
     @staticmethod
     def condition_dict():
+        """Return a mapping from a string index `i` into FORMS
+        (zero-indexed) to a function determining whether FORMS[int(i)]
+        should be included."""
         view = SecureDirRequestWizard
         return {
             '1': view.show_rdm_consultation_form_condition

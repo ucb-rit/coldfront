@@ -160,19 +160,7 @@
                   </td>
                   <td>{{ project.cluster_name|upper }}</td>
                   <td>
-                    {% if project.name in pending_removal_request_projects %}
-                        <span class="badge badge-danger">Pending Removal</span>
-                    {% elif 'Active' in project.display_status %}
-                        <span class="badge badge-success">Active</span>
-                    {% elif 'Pending' in project.display_status %}
-                        <span class="badge badge-warning">Pending</span>
-                    {% elif 'Processing' in project.display_status %}
-                        <span class="badge badge-warning">Processing</span>
-                    {% elif 'Inactive' in project.display_status %}
-                        <span class="badge badge-warning">Inactive</span>
-                    {% else %}
-                        <span class="badge badge-danger">No Access</span>
-                    {% endif %}
+                    {% include "allocation/cluster_access_badge.html" with status=project.display_status %}
                   </td>
                 </tr>
               {% endfor %}
@@ -264,6 +252,7 @@
 
 <script>
   $(function () {
+    $('[data-toggle="popover"]').popover();
     $('[data-toggle="tooltip"]').tooltip()
   })
 </script>
