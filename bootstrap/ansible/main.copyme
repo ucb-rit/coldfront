@@ -169,6 +169,18 @@ center_login_guide: "https://docs-research-it.berkeley.edu/services/high-perform
 center_help_email: "brc-hpc-help@berkeley.edu"
 
 #------------------------------------------------------------------------------
+# BRC Vector settings
+#------------------------------------------------------------------------------
+
+# The username of the user to set as the PI for all Vector projects.
+# TODO: For MyBRC, set this to a value that will be provided.
+vector_pi_username: ''
+
+# The name of the Savio project to which all Vector users are given access.
+# TODO: For MyBRC, set this to a value that will be provided.
+savio_project_for_vector_users: ''
+
+#------------------------------------------------------------------------------
 # BRC File storage settings
 #------------------------------------------------------------------------------
 
