@@ -23,25 +23,28 @@ class TestProjectJoinView(TestBase):
         key."""
         return reverse('project-join', kwargs={'pk': pk})
 
-    def test_inactive_projects_cannot_be_joined(self):
-        """Test that Projects with the 'Inactive' status cannot be
-        joined."""
-        name = 'inactive_project'
-        inactive_status = ProjectStatusChoice.objects.get(name='Inactive')
-        project = Project.objects.create(
-            name=name, title=name, status=inactive_status)
+    def test_new_archived_inactive_projects_not_joinable(self):
+        """Test that Projects with the 'Inactive', 'Archived', or 'New' status 
+        cannot be joined."""
+        statuses = ['Inactive', 'Archived', 'New']
+        for status in statuses:
+            name = f'{status.lower()}_project'
+            status_obj = ProjectStatusChoice.objects.get(name=status)
+            project = Project.objects.create(
+                name=name, title=name, status=status_obj)
 
-        url = self.project_join_url(project.pk)
-        data = {
-            'reason': 'This is a test reason for joining the project.',
-        }
-        response = self.client.post(url, data)
+            url = self.project_join_url(project.pk)
+            data = {
+                'reason': 'This is a test reason for joining the project.',
+            }
+            response = self.client.post(url, data)
 
-        expected = f'Project {name} is inactive, and may not be joined.'
-        messages = list(response.context['messages'])
-        self.assertEqual(len(messages), 1)
-        actual = messages[0].message
-        self.assertEqual(expected, actual)
+            expected = \
+                f'Project {name} is {status}, and may not be joined.'
+            messages = list(response.context['messages'])
+            self.assertEqual(len(messages), 1)
+            actual = messages[0].message
+            self.assertEqual(expected, actual)
 
     def test_host_user(self):
         """Test that ProjectJoinView sets the host user in

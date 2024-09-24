@@ -27,22 +27,21 @@ class TestProjectJoinListView(TestBase):
         return f'{reverse("project-join-list")}?{urlencode(parameters)}'
 
     def test_inactive_projects_not_included(self):
-        """Test that Projects with the 'Inactive' status are not
-        included in the list."""
-        active_name = 'active_project'
-        active_status = ProjectStatusChoice.objects.get(name='Active')
-        Project.objects.create(
-            name=active_name, title=active_name, status=active_status)
-        inactive_name = 'inactive_project'
-        inactive_status = ProjectStatusChoice.objects.get(name='Inactive')
-        Project.objects.create(
-            name=inactive_name, title=inactive_name, status=inactive_status)
+        """Test that Projects with the 'Inactive', 'Archived', or 'New' status 
+        are not included in the list."""
+        statuses = ['Active', 'Inactive', 'Archived', 'New']
+        for status in statuses:
+            name = f'{status.lower()}_project'
+            status_obj = ProjectStatusChoice.objects.get(name=status)
+            Project.objects.create(
+                name=name, title=name, status=status_obj)
 
         url = self.project_join_list_url()
         response = self.client.get(url)
 
-        self.assertContains(response, active_name)
-        self.assertNotContains(response, inactive_name)
+        self.assertContains(response, f'{statuses[0].lower()}_project')
+        for i in range(1, len(statuses)):
+            self.assertNotContains(response, f'{statuses[i].lower()}_project')
 
     def create_join_request(self, user, project, host_user=None):
         """Creates a join request for a certain project. Returns the response"""
