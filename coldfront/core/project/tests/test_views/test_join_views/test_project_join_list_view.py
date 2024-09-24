@@ -26,7 +26,7 @@ class TestProjectJoinListView(TestBase):
         given URL parameters."""
         return f'{reverse("project-join-list")}?{urlencode(parameters)}'
 
-    def test_inactive_projects_not_included(self):
+    def test_inactive_archived_new_projects_not_included(self):
         """Test that Projects with the 'Inactive', 'Archived', or 'New' status 
         are not included in the list."""
         statuses = ['Active', 'Inactive', 'Archived', 'New']
