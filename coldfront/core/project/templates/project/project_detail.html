@@ -290,14 +290,13 @@ Project Detail
             <th>Email</th>
             <th>
               Role
-              <a href="#" data-toggle="popover" title="Role" data-trigger="hover" data-content="Manager role grants user access to add/remove users, and allocations to the project.">
-                <span class="accessibility-link-text">Role Help Text</span>
-                <i class="fas fa-info-circle"></i>
-              </a>
+              {% include "portal/info_hover_popup.html" with title="Role" content="Manager role grants user access to add/remove users, and allocations to the project." %}
             </th>
             <th>Cluster Username</th>
-            <th>Project Access on Cluster</th>
-
+            <th>
+              Project Access on Cluster
+              {% include "portal/info_hover_popup.html" with title="Project Access on Cluster" content="This denotes whether the user's cluster account has been configured to have access to the project." %}
+            </th>
             {% if is_allowed_to_update_project %}
               <th>Actions</th>
             {% endif %}
@@ -319,31 +318,19 @@ Project Detail
               {% endif %}
             </td>
             <td>
-              {% if user.cluster_access_status == "Active" %}
-                <span class="badge badge-success">
-                  Active
-                </span>
-              {% elif user.cluster_access_status == "Pending - Add" %}
-                <span class="badge badge-warning">
-                  Pending
-                </span>
-              {% elif user.cluster_access_status == "Processing" %}
-                <span class="badge badge-warning">
-                  Processing
-                </span>
-              {% else %}
-                <span class="badge badge-danger">
-                  No Access
-                </span>
-                {% if cluster_accounts_requestable and is_allowed_to_update_project and user.user in project.pis or user.user in project.managers  %}
-                  <br><br>
-                  <form action="{% url 'allocation-request-cluster-account' compute_allocation_pk user.user.pk %}" method="post">
-                    {% csrf_token %}
-                    <button class="btn btn-primary" type="submit">
-                      <i class="fas fa-terminal" aria-hidden="true"></i>
-                      Request
-                    </button>
-                  </form>
+              {% include "allocation/cluster_access_badge.html" with status=user.cluster_access_status %}
+              {% if user.cluster_access_status == "None" %}
+                {% if user.role.name == "Principal Investigator" or user.role.name == "Manager" %}
+                  {% if cluster_accounts_requestable and is_allowed_to_update_project %}
+                    <br><br>
+                    <form action="{% url 'allocation-request-cluster-account' compute_allocation_pk user.user.pk %}" method="post">
+                      {% csrf_token %}
+                      <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-terminal" aria-hidden="true"></i>
+                        Request
+                      </button>
+                    </form>
+                  {% endif %}
                 {% endif %}
               {% endif %}
             </td>

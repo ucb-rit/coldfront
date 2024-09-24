@@ -153,13 +153,6 @@ def set_allocation_user_attribute_value(allocation_user_obj, type_name, value):
     return allocation_user_attribute
 
 
-def get_allocation_user_cluster_access_status(allocation_obj, user_obj):
-    return allocation_obj.allocationuserattribute_set.get(
-        allocation_user__user=user_obj,
-        allocation_attribute_type__name='Cluster Account Status',
-        value__in=['Pending - Add', 'Processing', 'Active'])
-
-
 def get_project_compute_resource_name(project_obj):
     """Return the name of the '{cluster_name} Compute' Resource that
     corresponds to the given Project.
