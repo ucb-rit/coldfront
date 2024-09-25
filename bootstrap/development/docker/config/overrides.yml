@@ -1,0 +1,3 @@
+renewal_survey_backend: google_forms
+renewal_survey_google_forms_service_account_credentials_file_path: /var/www/coldfront_app/renewal_survey_files/credentials.json
+renewal_survey_google_forms_survey_data_file_path: /var/www/coldfront_app/renewal_survey_files/google_survey_data.json
