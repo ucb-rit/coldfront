@@ -102,34 +102,18 @@ Project User Detail
           <tr>
             <th scope="row">Project Access on Cluster:</th>
             <td>
-              {% if cluster_access_status == 'Active' %}
-                <span class="badge badge-success">
-                  Active
-                </span>
-              {% elif cluster_access_status == 'Pending - Add' %}
-                <span class="badge badge-warning">
-                  Pending
-                </span>
-              {% elif cluster_access_status == 'Processing' %}
-                <span class="badge badge-warning">
-                  Processing
-                </span>
-              {% elif cluster_access_status == 'None' %}
-                <span class="badge badge-danger">
-                  No Access
-                </span>
-                {% if project_user_obj.user in project_user_obj.project.pis or project_user_obj.user in project_user_obj.project.managers %}
+              {% include "allocation/cluster_access_badge.html" with status=cluster_access_status %}
+              {% if cluster_access_status == "None" %}
+                {% if project_user_obj.role.name == "Principal Investigator" or project_user_obj.role.name == "Manager" %}
                   <br><br>
                   <form action="{% url 'allocation-request-cluster-account' allocation_obj.pk project_user_obj.user.pk %}" method="post">
                     {% csrf_token %}
                     <button class="btn btn-primary" type="submit">
                       <i class="fas fa-terminal" aria-hidden="true"></i>
-                      Request Cluster Access
+                      Request
                     </button>
                   </form>
                 {% endif %}
-              {% else %}
-                Failed to retrieve status. Please contact an administrator.
               {% endif %}
             </td>
           </tr>
@@ -138,5 +122,11 @@ Project User Detail
     </div>
   </div>
 </form>
+
+<script>
+$(document).ready(function() {
+    $('[data-toggle="popover"]').popover();
+});
+</script>
 
 {% endblock%}
