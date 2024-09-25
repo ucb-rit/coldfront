@@ -6,7 +6,9 @@
     since existing templates use javascript to target it by ID
 {% endcomment %}
 <li id="navbar-admin" class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">Staff</a>
+    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" data-toggle="dropdown">Staff
+        <span class="badge badge-warning ml-2">{{ request_counts }}</span>
+    </a>
     <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
     {% comment %}
         all staff can perform a user search
@@ -25,33 +27,38 @@
         {% endif %}
 
         <li><div class="dropdown-divider"></div></li>
-        <li class="dropdown-submenu"><a class="dropdown-item dropdown-toggle" href="#">Requests</a>
+        <li class="dropdown-submenu"><a class="dropdown-item dropdown-toggle navbar-align-badges" href="#">Requests
+            <span class="badge badge-warning">{{ request_counts }}</span>
+        </a>
             <ul class="dropdown-menu">
-                <li><a id="navbar-allocation-cluster-account-requests" class="dropdown-item" href="{% url 'allocation-cluster-account-request-list' %}?show_all_requests=on">
-                    Cluster Account Requests
+                <li><a id="navbar-view-all-requests-admin" class="dropdown-item navbar-align-badges" href="{% url 'request-hub-admin' %}">
+                    All Requests <span class="badge badge-warning">{{ request_counts }}</span>
                 </a></li>
-                <li><a id="navbar-project-new-project-requests" class="dropdown-item" href="{% url 'new-project-pending-request-list' %}">
-                    New Project Requests
+                <li><a id="navbar-allocation-cluster-account-requests" class="dropdown-item navbar-align-badges" href="{% url 'allocation-cluster-account-request-list' %}?show_all_requests=on">
+                    Cluster Access Requests <span class="badge badge-warning">{{ cluster_account_req_count }}</span>
+                </a></li>
+                <li><a id="navbar-project-new-project-requests" class="dropdown-item navbar-align-badges" href="{% url 'new-project-pending-request-list' %}">
+                    New Project Requests <span class="badge badge-warning">{{ savio_project_req_count }}</span>
                 </a></li>
                 {% flag_enabled 'BRC_ONLY' as brc_only %}
                 {% if brc_only %}
-                <li><a id="navbar-project-vector-project-requests" class="dropdown-item" href="{% url 'vector-project-pending-request-list' %}">
-                    New Vector Project Requests
+                <li><a id="navbar-project-vector-project-requests" class="dropdown-item navbar-align-badges" href="{% url 'vector-project-pending-request-list' %}">
+                    New Vector Project Requests <span class="badge badge-warning">{{ vector_project_req_count }}</span>
                 </a></li>
                 {% endif %}
-                <li><a id="navbar-project-join-request-list" class="dropdown-item" href="{% url 'project-join-request-list' %}">
-                    Project Join Requests
+                <li><a id="navbar-project-join-request-list" class="dropdown-item navbar-align-badges" href="{% url 'project-join-request-list' %}">
+                    Project Join Requests <span class="badge badge-warning">{{ project_join_req_count }}</span>
                 </a></li>
-                <li><a id="navbar-project-removal-requests" class="dropdown-item" href="{% url 'project-removal-request-list' %}">
-                    Project Removal Requests
+                <li><a id="navbar-project-removal-requests" class="dropdown-item navbar-align-badges" href="{% url 'project-removal-request-list' %}">
+                    Project Removal Requests <span class="badge badge-warning">{{ project_removal_req_count }}</span>
                 </a></li>
-                <li><a id="navbar-pi-allocation-renewal-requests" class="dropdown-item" href="{% url 'pi-allocation-renewal-pending-request-list' %}">
-                    Project Renewal Requests
+                <li><a id="navbar-pi-allocation-renewal-requests" class="dropdown-item navbar-align-badges" href="{% url 'pi-allocation-renewal-pending-request-list' %}">
+                    Project Renewal Requests <span class="badge badge-warning">{{ project_renewal_req_count }}</span>
                 </a></li>
                 {% flag_enabled 'SERVICE_UNITS_PURCHASABLE' as service_units_purchasable %}
                 {% if service_units_purchasable %}
-                <li><a id="navbar-service-units-purchase-requests" class="dropdown-item" href="{% url 'service-units-purchase-pending-request-list' %}">
-                    Service Units Purchase Requests
+                <li><a id="navbar-service-units-purchase-requests" class="dropdown-item navbar-align-badges" href="{% url 'service-units-purchase-pending-request-list' %}">
+                    Service Units Purchase Requests <span class="badge badge-warning ml-2">{{ su_purchase_req_count }}</span>
                 </a></li>
                 {% endif %}
             </ul>

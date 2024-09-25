@@ -325,6 +325,9 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
     @staticmethod
     def condition_dict():
+        """Return a mapping from a string index `i` into FORMS
+        (zero-indexed) to a function determining whether FORMS[int(i)]
+        should be included."""
         view = SavioProjectRequestWizard
         return {
             '1': view.show_allocation_period_form_condition,

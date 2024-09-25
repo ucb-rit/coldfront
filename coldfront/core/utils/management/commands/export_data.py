@@ -13,7 +13,7 @@ from coldfront.core.allocation.models import AllocationAttributeType, \
 from coldfront.core.statistics.models import Job
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
-from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalSurveyForm
+from coldfront.core.project.forms_.renewal_forms.request_forms import DeprecatedProjectRenewalSurveyForm
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
@@ -520,14 +520,16 @@ class Command(BaseCommand):
                  allocation_period__name=allocation_period)
 
         _surveys = list(allocation_requests.values_list('renewal_survey_answers', flat=True))
+        _surveys = [i for i in _surveys if i != {}]
         if len(_surveys) == 0:
             raise Exception("There are no valid renewal requests in the specified allocation period.")
+        
         if {} in _surveys:
             raise Exception("This allocation period does not have an associated survey.")
         surveys = []
         # Create dict of multiple choice fields to replace field IDs with text. ID : text
         multiple_choice_fields = {}
-        form = ProjectRenewalSurveyForm()
+        form = DeprecatedProjectRenewalSurveyForm()
         for k, v in form.fields.items():
             # Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices 
             if (isinstance(v, forms.MultipleChoiceField)) or (isinstance(v, forms.ChoiceField)):
@@ -626,7 +628,7 @@ class Command(BaseCommand):
 
         try:
             json_output = json.dumps(list(query_set), indent=4, default=str)
-            output.writelines(json_output)
+            output.writelines(json_output + '\n')
         except Exception as e:
             error.write(str(e))
 

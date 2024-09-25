@@ -287,8 +287,10 @@ class RequestHubView(LoginRequiredMixin,
         proj_join_request_object.button_text = \
             'Go To Project Join Requests Main Page'
         proj_join_request_object.id = 'project_join_request_section'
-        proj_join_request_object.help_text = \
-            'Showing your project join requests.'
+        proj_join_request_object.help_text = (
+            'Showing your project join requests. Please contact a project '
+            'manager or PI if your request has not been reviewed in a '
+            'reasonable time frame.')
 
         return proj_join_request_object
 

@@ -76,6 +76,33 @@ EXTRA_EXTRA_APPS = []
 EXTRA_EXTRA_MIDDLEWARE = []
 
 #------------------------------------------------------------------------------
+# Django Cache settings
+#------------------------------------------------------------------------------
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://{{ redis_host }}:6379/0',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'DB': 0,
+            'PASSWORD': '{{ redis_passwd }}',
+        },
+        'TIMEOUT': 24 * 60 * 60,  # One day in seconds
+    }
+}
+
+#------------------------------------------------------------------------------
+# BRC Vector Settings
+#------------------------------------------------------------------------------
+
+# The username of the user to set as the PI for all Vector projects.
+VECTOR_PI_USERNAME = '{{ vector_pi_username }}'
+
+# The name of the Savio project to which all Vector users are given access.
+SAVIO_PROJECT_FOR_VECTOR_USERS = '{{ savio_project_for_vector_users }}'
+
+#------------------------------------------------------------------------------
 # File Storage Settings
 #------------------------------------------------------------------------------
 
@@ -119,6 +146,32 @@ ORACLE_BILLING_DB = {
     'user': '{{ oracle_billing_db_user }}',
     'password': '{{ oracle_billing_db_passwd }}',
 }
+{% endif %}
+
+#------------------------------------------------------------------------------
+# Renewal Survey settings
+#------------------------------------------------------------------------------
+{% if renewal_survey_backend == 'google_forms' %}
+# Use Google Forms as the backend for renewal surveys.
+RENEWAL_SURVEY = {
+    'backend': 'coldfront.core.project.utils_.renewal_survey.backends.google_forms.GoogleFormsRenewalSurveyBackend',
+    'details': {
+        # The path to a file containing credentials for the Google service
+        # account that has access to survey responses.
+        'credentials_file_path': '{{ renewal_survey_google_forms_service_account_credentials_file_path }}',
+        # The path to a file on local disk that contains data about each survey.
+        'survey_data_file_path': '{{ renewal_survey_google_forms_survey_data_file_path }}',
+        # The key to cache survey data from the above file under.
+        'survey_data_cache_key': '{{ renewal_survey_google_forms_survey_data_cache_key }}',
+    },
+}
+{% else %}
+# Permit renewal requests to be made without a survey response.
+RENEWAL_SURVEY = {
+    'backend': 'coldfront.core.project.utils_.renewal_survey.backends.permissive.PermissiveRenewalSurveyBackend',
+    'details': {},
+}
+
 {% endif %}
 
 #------------------------------------------------------------------------------
@@ -246,6 +299,7 @@ FLAGS = {
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': {{ flag_sso_enabled }}}],
     'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': {{ flag_mou_generation_enabled }}}],
+    'RENEWAL_SURVEY_ENABLED': [{'condition': 'boolean', 'value': {{ flag_renewal_survey_enabled }}}],
 }
 
 # Enforce that boolean flags are consistent with each other.
