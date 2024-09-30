@@ -58,6 +58,8 @@ DATABASES = {
 LOG_PATH = '/var/log/user_portals/cf_mybrc/cf_mybrc_portal.log'
 API_LOG_PATH = '/var/log/user_portals/cf_mybrc/cf_mybrc_api.log'
 
+STREAM_LOGS_TO_STDOUT = False
+
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = ['test@test.test']
 
@@ -65,6 +67,16 @@ REQUEST_APPROVAL_CC_LIST = ['test@test.test']
 EXTRA_EXTRA_APPS = []
 # Extra middleware to be included.
 EXTRA_EXTRA_MIDDLEWARE = []
+
+#------------------------------------------------------------------------------
+# Django Cache settings
+#------------------------------------------------------------------------------
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
 
 #------------------------------------------------------------------------------
 # File Storage Settings
@@ -88,6 +100,16 @@ FILE_STORAGE = {
             'filename_type': 'SecureDirectory_RUA',
         },
     },
+}
+
+#------------------------------------------------------------------------------
+# Renewal Survey settings
+#------------------------------------------------------------------------------
+
+# Permit renewal requests to be made without a survey response.
+RENEWAL_SURVEY = {
+    'backend': 'coldfront.core.project.utils_.renewal_survey.backends.permissive.PermissiveRenewalSurveyBackend',
+    'details': {},
 }
 
 #------------------------------------------------------------------------------
@@ -129,4 +151,5 @@ FLAGS = {
     'SSO_ENABLED': [{'condition': 'boolean', 'value': False}],
     'USER_DEPARTMENTS_ENABLED': [{'condition': 'boolean', 'value': True}],
     'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': False}],
+    'RENEWAL_SURVEY_ENABLED': [{'condition': 'boolean', 'value': True}],
 }

@@ -178,6 +178,17 @@ Allocation Detail
       </div>
     </div>
     {% endfor %}
+    {% for attribute in attributes_with_usage %}
+    <div class="card mb-3 mr-1">
+      <div class="card-body">
+        <h3 class="card-title">{{attribute}} by User</h3>
+        <div id="user-pie"></div>
+        <div id="no-data-message">
+          <center>No usage data available.</center>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
     {% endif %}
   </div>
 </div>
@@ -333,7 +344,9 @@ Allocation Detail
 
   $(document).ready(function () {
     var guage_data = {{ guage_data | safe }};
+    var pie_data = {{ pie_data | safe }};
   drawGauges(guage_data);
+  drawPies(pie_data);
   });
 
   function drawGauges(guage_data) {
@@ -348,7 +361,26 @@ Allocation Detail
           }
         }
       });
+    }
+  }
 
+  function drawPies(pie_data) {
+    if (pie_data.columns[0].length > 1) {
+      var chart = c3.generate({
+        bindto: '#user-pie',
+        pie: {
+          title: "Service Usage by User"
+        },
+        data: pie_data,
+        legend: {
+          position: 'right',
+        },
+      });
+      $('#user-pie').show();
+      $('#no-data-message').hide();
+    } else {
+      $('#user-pie').hide();
+      $('#no-data-message').show();
     }
   }
   $(".datepicker").datepicker({ dateFormat: 'yy-mm-dd' });

@@ -174,7 +174,9 @@ urlpatterns += [
 # Allocation Renewal Requests
 urlpatterns += [
     path('<int:pk>/renew',
-         renewal_request_views.AllocationRenewalRequestUnderProjectView.as_view(),
+         renewal_request_views.AllocationRenewalRequestUnderProjectView.as_view(
+             condition_dict=renewal_request_views.AllocationRenewalRequestUnderProjectView.condition_dict(),
+         ),
          name='project-renew'),
     path('renew-pi-allocation-landing/',
          renewal_request_views.AllocationRenewalLandingView.as_view(),
