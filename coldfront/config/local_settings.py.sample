@@ -439,8 +439,7 @@ SESAME_MAX_AGE = 300
 # Data import settings
 #------------------------------------------------------------------------------
 
-# The credentials needed to read from Google Sheets.
-GOOGLE_OAUTH2_KEY_FILE = "/tmp/credentials.json"
+
 
 # -----------------------------------------------------------------------------
 # Miscellaneous settings
