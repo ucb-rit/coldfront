@@ -27,6 +27,7 @@ from allauth.account.models import EmailAddress
 
 from coldfront.core.account.utils.queries import update_user_primary_email_address
 from coldfront.core.allocation.utils import has_cluster_access
+from coldfront.core.department.models import UserDepartment
 from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.user.models import IdentityLinkingRequest, IdentityLinkingRequestStatusChoice
 from coldfront.core.user.models import UserProfile as UserProfileModel
@@ -89,6 +90,24 @@ class UserProfile(TemplateView):
         group_list = ', '.join(
             [group.name for group in viewed_user.groups.all()])
         context['group_list'] = group_list
+
+        auth_department_list = \
+            [f'{ud.department.name} ({ud.department.code})'
+            for ud in UserDepartment.objects.select_related('department') \
+            .filter(userprofile=viewed_user.userprofile,
+                    is_authoritative=True) \
+            .order_by('department__name')]
+        non_auth_department_list = \
+            [f'{ud.department.name} ({ud.department.code})'
+            for ud in UserDepartment.objects.select_related('department') \
+            .filter(userprofile=viewed_user.userprofile,
+                    is_authoritative=False) \
+            .order_by('department__name')]
+        context['auth_department_list'] = auth_department_list
+        context['non_auth_department_list'] = non_auth_department_list
+        context['department_display_name'] = \
+                                import_from_settings('DEPARTMENT_DISPLAY_NAME')
+
         context['viewed_user'] = viewed_user
 
         context['has_cluster_access'] = has_cluster_access(viewed_user)

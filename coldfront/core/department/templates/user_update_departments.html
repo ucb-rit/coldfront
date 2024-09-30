@@ -1,0 +1,62 @@
+{% extends "common/base.html" %}
+{% load feature_flags %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Update {{ department_display_name }}s
+{% endblock %}
+
+{% block head %}
+{{ wizard.form.media }}
+{% endblock %}
+
+{% block content %}
+
+<h1>Update Departments</h1>
+<hr>
+
+<script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
+<script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
+<link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
+
+<p>Select all the {{ department_display_name | lower }}s you are associated with.
+Deselect a {{ department_display_name | lower }} to remove it from your associations.</p>
+<p>Only non-authoritative (user-selected) {{ department_display_name | lower}}s can be modified.</p>
+{% if auth_department_list %}
+  <p>Your authoritative departments are listed here:
+    <br>
+    {% for department in auth_department_list %}
+      {{ department }}
+      <span class="badge badge-success" title="Verified by the campus directory.">
+        <i class="fas fa-check"></i>
+      </span>
+      <br>
+    {% endfor %}
+  </p>
+{% endif %}
+<p>Non-Berkeley users should select "Other".</p>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form action="" method="post">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <input class="btn btn-primary" type="submit" value="Submit" />
+      <a href="{% url 'user-profile' %}" class="btn btn-secondary">
+        Cancel
+      </a>
+    </form>
+  </div>
+</div>
+
+<script>
+  $('select').selectize({
+    create: false,
+    sortField: 'text'
+  })
+</script>
+
+
+{% endblock %}

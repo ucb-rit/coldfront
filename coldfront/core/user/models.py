@@ -1,4 +1,6 @@
 from coldfront.core.billing.models import BillingActivity
+from coldfront.core.department.models import Department
+from coldfront.core.department.models import UserDepartment
 from django.contrib.auth.models import User
 from django.core.validators import EmailValidator
 from django.core.validators import MinLengthValidator
@@ -11,7 +13,6 @@ from model_utils.models import TimeStampedModel
 from phonenumber_field.modelfields import PhoneNumberField
 from rest_framework.authtoken.models import Token
 from simple_history.models import HistoricalRecords
-
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -41,8 +42,9 @@ class UserProfile(models.Model):
         User, related_name='host_user', blank=True, null=True,
         on_delete=models.SET_NULL)
 
-    history = HistoricalRecords()
+    departments = models.ManyToManyField(Department, through=UserDepartment)
 
+    history = HistoricalRecords(m2m_fields=[departments])
 
 class EmailAddress(models.Model):
     user = models.ForeignKey(

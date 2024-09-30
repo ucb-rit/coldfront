@@ -4,12 +4,14 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
+from coldfront.core.department.models import UserDepartment
 from coldfront.core.project.forms_.new_project_forms.request_forms import ComputingAllowanceForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectAllocationPeriodForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectDetailsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectExistingPIForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectICAExtraFieldsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectNewPIForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPIDepartmentForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPoolAllocationsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPooledProjectSelectionForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectRechargeExtraFieldsForm
@@ -32,8 +34,11 @@ from coldfront.core.resource.utils_.allowance_utils.computing_allowance import C
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
+from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.department.utils.ldap import ldap_get_user_departments
+from coldfront.core.department.utils.queries import fetch_and_set_user_departments
 
 from django.conf import settings
 from django.contrib import messages
@@ -125,6 +130,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         ('allocation_period', SavioProjectAllocationPeriodForm),
         ('existing_pi', SavioProjectExistingPIForm),
         ('new_pi', SavioProjectNewPIForm),
+        ('pi_department', SavioProjectPIDepartmentForm),
         ('ica_extra_fields', SavioProjectICAExtraFieldsForm),
         ('recharge_extra_fields', SavioProjectRechargeExtraFieldsForm),
         ('pool_allocations', SavioProjectPoolAllocationsForm),
@@ -143,6 +149,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             'project/project_request/savio/project_existing_pi.html',
         'new_pi':
             'project/project_request/savio/project_new_pi.html',
+        'pi_department':
+            'project/project_request/savio/project_pi_department.html',
         'ica_extra_fields':
             'project/project_request/savio/project_ica_extra_fields.html',
         'recharge_extra_fields':
@@ -162,6 +170,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         SavioProjectAllocationPeriodForm,
         SavioProjectExistingPIForm,
         SavioProjectNewPIForm,
+        SavioProjectPIDepartmentForm,
         SavioProjectICAExtraFieldsForm,
         SavioProjectRechargeExtraFieldsForm,
         SavioProjectPoolAllocationsForm,
@@ -321,12 +330,13 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         return {
             '1': view.show_allocation_period_form_condition,
             '3': view.show_new_pi_form_condition,
-            '4': view.show_ica_extra_fields_form_condition,
-            '5': view.show_recharge_extra_fields_form_condition,
-            '6': view.show_pool_allocations_form_condition,
-            '7': view.show_pooled_project_selection_form_condition,
-            '8': view.show_details_form_condition,
-            '9': view.show_billing_id_form_condition,
+            '4': view.show_pi_department_form_condition,
+            '5': view.show_ica_extra_fields_form_condition,
+            '6': view.show_recharge_extra_fields_form_condition,
+            '7': view.show_pool_allocations_form_condition,
+            '8': view.show_pooled_project_selection_form_condition,
+            '9': view.show_details_form_condition,
+            '10': view.show_billing_id_form_condition,
         }
 
     def show_allocation_period_form_condition(self):
@@ -373,6 +383,54 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         return cleaned_data.get('PI', None) is None
+
+    def show_pi_department_form_condition(self):
+        '''
+        Only show the form for selecting a PI's department if the user
+        departments feature is enabled and the PI does not have any
+        authoritative or non-authoritative departments set. The extra_data
+        variable prevents another LDAP lookup unless the user changes the PI.
+        '''
+        if not flag_enabled('USER_DEPARTMENTS_ENABLED'):
+            return False
+        extra_data = self.request.session \
+            ['wizard_savio_project_request_wizard']['extra_data']
+        has_entry_key = 'ldap_lookup_has_entry'
+        email_key = 'ldap_lookup_email'
+
+        # get email, fn, ln
+        email = fn = ln = None
+        step_name = 'new_pi'
+        step = str(self.step_numbers_by_form_name[step_name])
+        cleaned_data = self.get_cleaned_data_for_step(step) or {}
+        if cleaned_data:
+            email = cleaned_data['email']
+            fn = cleaned_data['first_name']
+            ln = cleaned_data['last_name']
+        else:
+            step_name = 'existing_pi'
+            step = str(self.step_numbers_by_form_name[step_name])
+            cleaned_data = self.get_cleaned_data_for_step(step) or {}
+            if cleaned_data.get('PI', None):
+                if UserDepartment.objects.filter(
+                        userprofile=cleaned_data['PI'].userprofile).exists():
+                    return False
+                email = cleaned_data['PI'].email
+                fn = cleaned_data['PI'].first_name
+                ln = cleaned_data['PI'].last_name
+        if not email:
+            return False
+
+        if has_entry_key in extra_data and email == extra_data[email_key]:
+            has_entry = extra_data[has_entry_key]
+        else:
+            departments = ldap_get_user_departments(email, fn, ln)
+            has_entry = departments is not None and bool(departments)
+            extra_data[has_entry_key] = has_entry
+            extra_data[email_key] = email
+            self.request.session.modified = True
+
+        return not has_entry
 
     def show_pool_allocations_form_condition(self):
         step_name = 'computing_allowance'
@@ -465,46 +523,61 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         step_number = self.step_numbers_by_form_name['existing_pi']
         data = form_data[step_number]
         if data['PI']:
-            return data['PI']
-
-        # Create a new User object intended to be a new PI.
-        step_number = self.step_numbers_by_form_name['new_pi']
-        data = form_data[step_number]
-        email = data['email']
-        try:
-            pi = User.objects.create(
-                username=email,
-                first_name=data['first_name'],
-                last_name=data['last_name'],
-                email=email,
-                is_active=True)
-        except IntegrityError as e:
-            self.logger.error(f'User {email} unexpectedly exists.')
-            raise e
-
-        # Set the user's middle name in the UserProfile; generate a PI request.
-        try:
+            pi = data['PI']
             pi_profile = pi.userprofile
-        except UserProfile.DoesNotExist as e:
-            self.logger.error(
-                f'User {email} unexpectedly has no UserProfile.')
-            raise e
-        pi_profile.middle_name = data['middle_name']
-        pi_profile.upgrade_request = utc_now_offset_aware()
-        pi_profile.save()
+        else:
+            # Create a new User object intended to be a new PI.
+            step_number = self.step_numbers_by_form_name['new_pi']
+            data = form_data[step_number]
 
-        # Create an unverified, primary EmailAddress for the new User object.
-        try:
-            EmailAddress.objects.create(
-                user=pi,
-                email=email,
-                verified=False,
-                primary=True)
-        except IntegrityError as e:
-            self.logger.error(
-                f'EmailAddress {email} unexpectedly already exists.')
-            raise e
+            try:
+                email = data['email']
+                pi = User.objects.create(
+                    username=email,
+                    first_name=data['first_name'],
+                    last_name=data['last_name'],
+                    email=email,
+                    is_active=False)
+            except IntegrityError as e:
+                self.logger.error(f'User {email} unexpectedly exists.')
+                raise e
 
+            # Set user's middle name in the UserProfile; generate a PI request.
+            try:
+                pi_profile = pi.userprofile
+            except UserProfile.DoesNotExist as e:
+                self.logger.error(
+                    f'User {email} unexpectedly has no UserProfile.')
+                raise e
+            pi_profile.middle_name = data['middle_name']
+            pi_profile.upgrade_request = utc_now_offset_aware()
+            pi_profile.save()
+
+            # Create an unverified, primary EmailAddress for the new User object.
+            try:
+                EmailAddress.objects.create(
+                    user=pi,
+                    email=email,
+                    verified=False,
+                    primary=True)
+            except IntegrityError as e:
+                self.logger.error(
+                    f'EmailAddress {email} unexpectedly already exists.')
+                raise e
+
+        if flag_enabled('USER_DEPARTMENTS_ENABLED'):
+            # Set the user's non-authoritative departments in the UserProfile.
+            step_number = self.step_numbers_by_form_name['pi_department']
+            data = form_data[step_number]
+            if data.get('departments', None):
+                for department in data['departments']:
+                    UserDepartment.objects.get_or_create(userprofile=pi_profile,
+                        department=department,
+                        defaults={'is_authoritative':False})
+            else:
+                # Set the user's authoritative departments in the UserProfile.
+                fetch_and_set_user_departments(pi, pi_profile)
+            
         return pi
 
     def __handle_recharge_allowance(self, form_data,
@@ -611,7 +684,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary.update({
                     'breadcrumb_pi': (
                         f'Existing PI: {pi.first_name} {pi.last_name} '
-                        f'({pi.email})')
+                        f'({pi.email})'),
                 })
             else:
                 first_name = new_pi_form_data['first_name']
@@ -621,6 +694,10 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                     'breadcrumb_pi': (
                         f'New PI: {first_name} {last_name} ({email})')
                 })
+            dictionary.update({
+                'department_display_name': \
+                    import_from_settings('DEPARTMENT_DISPLAY_NAME'),
+            })
 
         pool_allocations_step = \
             self.step_numbers_by_form_name['pool_allocations']
