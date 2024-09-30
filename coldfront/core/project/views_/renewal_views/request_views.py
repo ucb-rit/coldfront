@@ -1,5 +1,4 @@
 from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.allocation.models import AllocationStatusChoice
@@ -25,6 +24,7 @@ from coldfront.core.project.utils_.renewal_utils import has_non_denied_renewal_r
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_admin_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pi_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pooling_notification_email
+from coldfront.core.project.utils_.renewal_survey import get_renewal_survey_url
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
@@ -131,7 +131,7 @@ class AllocationRenewalMixin(object):
     @staticmethod
     def create_allocation_renewal_request(requester, pi, computing_allowance,
                                           allocation_period, pre_project,
-                                          post_project, renewal_survey_answers, 
+                                          post_project, 
                                           new_project_request=None):
         """Create a new AllocationRenewalRequest."""
         request_kwargs = dict()
@@ -142,7 +142,6 @@ class AllocationRenewalMixin(object):
         request_kwargs['status'] = \
             AllocationRenewalRequestStatusChoice.objects.get(
                 name='Under Review')
-        request_kwargs['renewal_survey_answers'] = renewal_survey_answers
         request_kwargs['pre_project'] = pre_project
         request_kwargs['post_project'] = post_project
         request_kwargs['new_project_request'] = new_project_request
@@ -270,6 +269,14 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         context = super().get_context_data(form=form, **kwargs)
         current_step = int(self.steps.current)
         self.__set_data_from_previous_steps(current_step, context)
+
+        if current_step == self.step_numbers_by_form_name['renewal_survey']:
+            context['renewal_survey_url'] = get_renewal_survey_url(
+                context['allocation_period'].name,
+                context['PI'].user,
+                context['requested_project'].name,
+                self.request.user)
+
         return context
 
     def get_form_kwargs(self, step=None):
@@ -318,6 +325,13 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             kwargs['computing_allowance'] = self.computing_allowance
         elif step == self.step_numbers_by_form_name['new_project_survey']:
             kwargs['computing_allowance'] = self.computing_allowance
+        elif step == self.step_numbers_by_form_name['renewal_survey']:
+            tmp = {}
+            self.__set_data_from_previous_steps(step, tmp)
+            kwargs['project_name'] = tmp['requested_project'].name
+            kwargs['allocation_period_name'] = tmp['allocation_period'].name
+            kwargs['pi_username'] = tmp['PI'].user.username
+
         return kwargs
 
     def get_template_names(self):
@@ -360,7 +374,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             request = self.create_allocation_renewal_request(
                 self.request.user, pi, self.computing_allowance,
                 allocation_period, tmp['current_project'], requested_project,
-                tmp['renewal_survey_answers'], 
                 new_project_request=new_project_request)
 
             self.send_emails(request)
@@ -374,6 +387,9 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
 
     @staticmethod
     def condition_dict():
+        """Return a mapping from a string index `i` into FORMS
+        (zero-indexed) to a function determining whether FORMS[int(i)]
+        should be included."""
         view = AllocationRenewalRequestView
         return {
             '3': view.show_project_selection_form_condition,
@@ -408,19 +424,8 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         return cleaned_data.get('preference', None) in preferences
 
     def show_renewal_survey_form_condition(self):
-        """Only show the renewal survey form for a particular period.
-
-        TODO: This period has been hard-coded for the short-term. A
-         longer-term solution without hard-coding must be applied prior
-         to the start of the period following it.
-        """
-        step_name = 'allocation_period'
-        step = str(self.step_numbers_by_form_name[step_name])
-        cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        allocation_period = cleaned_data.get('allocation_period', None)
-        expected_allocation_period = AllocationPeriod.objects.get(
-            name='Allowance Year 2024 - 2025')
-        return allocation_period == expected_allocation_period
+        """Only show the renewal survey form if a survey is required."""
+        return flag_enabled('RENEWAL_SURVEY_ENABLED')
 
     def __get_survey_data(self, form_data):
         """Return provided survey data."""
@@ -571,12 +576,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary.update(data)
                 dictionary['requested_project'] = data['name']
 
-        renewal_survey_form_step = self.step_numbers_by_form_name[
-            'renewal_survey']
-        if step > renewal_survey_form_step:
-            data = self.get_cleaned_data_for_step(str(renewal_survey_form_step))
-            dictionary['renewal_survey_answers'] = data or {}
-
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                                                UserPassesTestMixin,
@@ -612,13 +611,6 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         self.step_numbers_by_form_name = {
             name: i for i, (name, _) in enumerate(self.FORMS)}
 
-    @staticmethod
-    def condition_dict():
-        view = AllocationRenewalRequestUnderProjectView
-        return {
-            '2': view.show_renewal_survey_form_condition,
-        }
-
     def dispatch(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
         self.project_obj = get_object_or_404(Project, pk=pk)
@@ -647,8 +639,7 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
 
             request = self.create_allocation_renewal_request(
                 self.request.user, pi, self.computing_allowance,
-                allocation_period, self.project_obj, self.project_obj, 
-                tmp['renewal_survey_answers'])
+                allocation_period, self.project_obj, self.project_obj)
 
             self.send_emails(request)
         except Exception as e:
@@ -663,6 +654,14 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         context = super().get_context_data(form=form, **kwargs)
         current_step = int(self.steps.current)
         self.__set_data_from_previous_steps(current_step, context)
+
+        if current_step == self.step_numbers_by_form_name['renewal_survey']:
+            context['renewal_survey_url'] = get_renewal_survey_url(
+                context['allocation_period'].name,
+                context['PI'].user,
+                context['requested_project'].name,
+                self.request.user)
+
         return context
 
     def get_form_kwargs(self, step=None):
@@ -677,25 +676,16 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             kwargs['allocation_period_pk'] = getattr(
                 tmp.get('allocation_period', None), 'pk', None)
             kwargs['project_pks'] = [self.project_obj.pk]
+        elif step == self.step_numbers_by_form_name['renewal_survey']:
+            tmp = {}
+            self.__set_data_from_previous_steps(step, tmp)
+            kwargs['project_name'] = tmp['requested_project'].name
+            kwargs['allocation_period_name'] = tmp['allocation_period'].name
+            kwargs['pi_username'] = tmp['PI'].user.username
         return kwargs
 
     def get_template_names(self):
         return [self.TEMPLATES[self.FORMS[int(self.steps.current)][0]]]
-
-    def show_renewal_survey_form_condition(self):
-        """Only show the renewal survey form for a particular period.
-
-        TODO: This period has been hard-coded for the short-term. A
-         longer-term solution without hard-coding must be applied prior
-         to the start of the period following it.
-        """
-        step_name = 'allocation_period'
-        step = str(self.step_numbers_by_form_name[step_name])
-        cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        allocation_period = cleaned_data.get('allocation_period', None)
-        expected_allocation_period = AllocationPeriod.objects.get(
-            name='Allowance Year 2024 - 2025')
-        return allocation_period == expected_allocation_period
 
     def test_func(self):
         """Allow superusers and users who are active Managers or
@@ -718,6 +708,20 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             'You must be an active Manager or Principal Investigator of the '
             'Project.')
         messages.error(self.request, message)
+
+    @staticmethod
+    def condition_dict():
+        """Return a mapping from a string index `i` into FORMS
+        (zero-indexed) to a function determining whether FORMS[int(i)]
+        should be included."""
+        view = AllocationRenewalRequestUnderProjectView
+        return {
+            '2': view.show_renewal_survey_form_condition,
+        }
+
+    def show_renewal_survey_form_condition(self):
+        """Only show the renewal survey form if a survey is required."""
+        return flag_enabled('RENEWAL_SURVEY_ENABLED')
 
     def __set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""
@@ -748,9 +752,3 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                 dictionary['breadcrumb_pooling_preference'] = \
                     form_class.SHORT_DESCRIPTIONS.get(
                         pooling_preference, 'Unknown')
-
-        renewal_survey_form_step = self.step_numbers_by_form_name[
-            'renewal_survey']
-        if step > renewal_survey_form_step:
-            data = self.get_cleaned_data_for_step(str(renewal_survey_form_step))
-            dictionary['renewal_survey_answers'] = data or {}

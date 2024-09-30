@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinLengthValidator
 from django.core.validators import RegexValidator
+from django.utils.safestring import mark_safe
 
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.billing.utils.queries import get_billing_activity_from_full_id
@@ -66,7 +67,19 @@ class BillingIDValidationForm(BillingIDValidityMixin, forms.Form):
         self.validate_billing_id(
             billing_id, ignore_invalid=not self.enforce_validity)
         return billing_id
-
+    
+class BillingIDValidateManyForm(forms.Form):
+    billing_ids = forms.CharField(
+        help_text=mark_safe('Example:<br />123456-789<br />987654-321'),
+        label='Project IDs',
+        required=True,
+        widget=forms.Textarea(
+            attrs={'placeholder': 'Put each Project ID on its own line.'}
+        ))
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        return cleaned_data
 
 class BillingIDCreationForm(BillingIDValidityMixin, forms.Form):
 
