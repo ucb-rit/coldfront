@@ -49,14 +49,15 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                 self.request, 'You must sign the User Access Agreement before you can join a project.')
             return False
 
-        inactive_project_status = ProjectStatusChoice.objects.get(
-            name='Inactive')
-        if project_obj.status == inactive_project_status:
+        active_project_status = ProjectStatusChoice.objects.get(
+            name='Active')
+        if project_obj.status != active_project_status:
             message = (
-                f'Project {project_obj.name} is inactive, and may not be '
-                f'joined.')
+                f'Project {project_obj.name} is {project_obj.status.name}, '
+                f'and may not be joined.')
             messages.error(self.request, message)
             return False
+
 
         if project_users.exists():
             project_user = project_users.first()
@@ -202,7 +203,7 @@ class ProjectJoinListView(ProjectListView, UserPassesTestMixin):
 
         projects = Project.objects.prefetch_related(
             'field_of_science', 'status').filter(
-                status__name__in=['New', 'Active', ]
+                status__name__in=['Active', ]
         ).order_by(order_by)
         projects = annotate_queryset_with_cluster_name(projects)
 
