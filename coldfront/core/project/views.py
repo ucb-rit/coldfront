@@ -42,8 +42,9 @@ from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectUserStatusChoice,
                                            ProjectUserRemovalRequest,
                                            SavioProjectAllocationRequest)
-from coldfront.core.project.utils import (annotate_queryset_with_cluster_name,
-                                          is_primary_cluster_project)
+from coldfront.core.project.utils import annotate_queryset_with_cluster_name
+from coldfront.core.project.utils import is_primary_cluster_project
+from coldfront.core.project.utils import render_project_compute_usage
 from coldfront.core.project.utils_.addition_utils import can_project_purchase_service_units
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunnerFactory
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
@@ -445,12 +446,10 @@ class ProjectListView(LoginRequiredMixin, ListView):
 
         for project in project_list:
             try:
-                information = get_project_compute_allocation(
-                    project).get_information
-                information = information[len('Service Units: '):-len(' <br>')]
-                project.compute_allocation_information = information or 'N/A'
+                rendered_compute_usage = render_project_compute_usage(project)
             except Exception:
-                project.compute_allocation_information = 'N/A'
+                rendered_compute_usage = 'Unexpected error'
+            project.rendered_compute_usage = rendered_compute_usage
         context['project_list'] = project_list
 
         return context

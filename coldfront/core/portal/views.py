@@ -21,6 +21,7 @@ from coldfront.core.portal.utils import (generate_allocations_chart_data,
 from coldfront.core.project.models import Project, ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
+from coldfront.core.project.utils import render_project_compute_usage
 
 
 # from coldfront.core.publication.models import Publication
@@ -55,13 +56,10 @@ def home(request):
             resource_name = get_project_compute_resource_name(project)
             project.cluster_name = resource_name.replace(' Compute', '')
             try:
-                allocation = project.allocation_set.get(
-                    resources__name=resource_name)
-                information = allocation.get_information
-                information = information[len('Service Units: '):-len(' <br>')]
-                project.compute_allocation_information = information or 'N/A'
+                rendered_compute_usage = render_project_compute_usage(project)
             except Exception:
-                project.compute_allocation_information = 'N/A'
+                rendered_compute_usage = 'Unexpected error'
+            project.rendered_compute_usage = rendered_compute_usage
 
         allocation_list = Allocation.objects.filter(
            Q(status__name__in=['Active', 'New', 'Renewal Requested', ]) &

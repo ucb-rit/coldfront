@@ -142,7 +142,7 @@
         <td>{{ project.cluster_name|upper }}</td>
 <!--        <td>{{ project.field_of_science.description }}</td>-->
         <td>{{ project.status.name }}</td>
-        <td>{{ project.compute_allocation_information }}</td>
+        <td>{{ project.rendered_compute_usage }}</td>
       </tr>
       {% endfor %}
     </tbody>
