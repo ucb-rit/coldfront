@@ -40,7 +40,8 @@ from coldfront.core.allocation.models import (Allocation, AllocationAccount,
 from coldfront.core.allocation.signals import (allocation_activate_user,
                                                allocation_remove_user)
 from coldfront.core.allocation.utils import (generate_guauge_data_from_usage,
-                                             get_user_resources)
+                                             get_user_resources,
+                                             generate_user_su_pie_data)
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)
@@ -186,6 +187,9 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         context['ALLOCATION_ENABLE_ALLOCATION_RENEWAL'] = ALLOCATION_ENABLE_ALLOCATION_RENEWAL
 
         self._update_context(allocation_obj, attributes, context)
+
+        pie_data = generate_user_su_pie_data(allocation_user_su_usages.items())
+        context['pie_data'] = pie_data
 
         return context
 

@@ -33,6 +33,11 @@ Note that these steps must be run from the root directory of the repo.
    Notes:
      - This step may be performed multiple times.
      - The `main.yml` file does not need to be modified in any way, despite indications within it. Its pre-defined values will be overridden and added to based on the other YML files in the directory.
+     - Settings may be added or overridden by specifying them in an `overrides.yml` file in the directory.
+         - The following features may require additional configuration. Refer to the documentation for more information.
+             - Allowance renewal surveys
+             - MOU generation and storage on BRC deployments
+             - Vector-related requests on BRC deployments
 
 5. Generate a `.env` file with environment variables that will be passed to `docker-compose.yml`. You must provide a deployment name ("BRC" or "LRC"), as well as a port where the web service will be available ("8880", "8881", "8882", or "8883").
 
@@ -50,7 +55,7 @@ Note that these steps must be run from the root directory of the repo.
 
    ```bash
    export DOCKER_PROJECT_NAME=brc-dev
-   docker-compose \
+   docker compose \
        -f bootstrap/development/docker/docker-compose.yml \
        -p $DOCKER_PROJECT_NAME \
        up
@@ -75,6 +80,13 @@ Note that these steps must be run from the root directory of the repo.
    sh bootstrap/development/docker/scripts/docker_load_database_backup.sh $DOCKER_PROJECT_NAME $RELATIVE_CONTAINER_DUMP_FILE_PATH
    ```
 
+   Notes:
+     - This may take several minutes.
+     - The following error may appear in the output, but is not an issue:
+       ```
+       ERROR:  role "postgres" already exists
+       ```
+
 9. At this point, the web service should be functioning. Navigate to it from the browser at "http://localhost:WEB_PORT", where `WEB_PORT` is the one defined above.
 
 10. After authenticating for the first time, grant your user administrator privileges in Django:
@@ -82,7 +94,7 @@ Note that these steps must be run from the root directory of the repo.
     - Enter into the application shell container:
 
          ```bash
-         docker-compose -p $DOCKER_PROJECT_NAME exec app-shell bash
+         docker compose -p $DOCKER_PROJECT_NAME exec app-shell bash
          ```
 
     - From within the container, start a Django shell:
