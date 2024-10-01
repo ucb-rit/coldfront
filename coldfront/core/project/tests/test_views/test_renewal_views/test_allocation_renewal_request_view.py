@@ -1,3 +1,4 @@
+from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
@@ -22,20 +23,14 @@ class TestAllocationRenewalRequestView(TestBase):
         self.sign_user_access_agreement(self.user)
         self.client.login(username=self.user.username, password=self.password)
 
-    @staticmethod
-    def renew_pi_allocation_url():
-        """Return the URL for requesting to renew a PI's allocation."""
-        return reverse('renew-pi-allocation')
-
-    def test_post_sets_request_request_time(self):
-        """Test that a POST request sets the request_time of the renewal
-        request."""
+    def _create_project_to_renew(self):
+        """Create a Project for the user to renew. Return the created
+        Project along with a ProjectUser representing its PI."""
         computing_allowance_interface = ComputingAllowanceInterface()
         computing_allowance = self.get_predominant_computing_allowance()
         project_name_prefix = computing_allowance_interface.code_from_name(
             computing_allowance.name)
 
-        # Create a Project for the user to renew.
         project_name = f'{project_name_prefix}_project'
         active_project_status = ProjectStatusChoice.objects.get(name='Active')
         project = Project.objects.create(
@@ -51,45 +46,76 @@ class TestAllocationRenewalRequestView(TestBase):
             role=pi_role,
             status=active_project_user_status,
             user=self.user)
+        return project, project_user
 
-        pre_time = utc_now_offset_aware()
+    @staticmethod
+    def _renew_pi_allocation_url():
+        """Return the URL for requesting to renew a PI's allocation."""
+        return reverse('renew-pi-allocation')
 
-        allocation_period = get_current_allowance_year_period()
+    @staticmethod
+    def _request_view_name():
+        """Return the name of the request view."""
+        return 'allocation_renewal_request_view'
 
-        view_name = 'allocation_renewal_request_view'
+    def _send_post_requests(self, allocation_period, pi_project_user):
+        """Send the necessary POST requests to the view for the given
+        AllocationPeriod, Project, and PI ProjectUser. Optionally
+        include sample renewal survey answers."""
+        view_name = self._request_view_name()
         current_step_key = f'{view_name}-current_step'
+
+        form_data = []
 
         allocation_period_form_data = {
             '0-allocation_period': allocation_period.pk,
             current_step_key: '0',
         }
+        form_data.append(allocation_period_form_data)
+
         pi_selection_form_data = {
-            '1-PI': project_user.pk,
+            '1-PI': pi_project_user.pk,
             current_step_key: '1',
         }
+        form_data.append(pi_selection_form_data)
+
         pooling_preference_form_data = {
-            '2-preference':
-                AllocationRenewalRequest.UNPOOLED_TO_UNPOOLED,
+            '2-preference': AllocationRenewalRequest.UNPOOLED_TO_UNPOOLED,
             current_step_key: '2',
         }
-        review_and_submit_form_data = {
-            '6-confirmation': True,
+        form_data.append(pooling_preference_form_data)
+
+        renewal_survey_form_data = {
+            '6-was_survey_completed': True,
             current_step_key: '6',
         }
-        form_data = [
-            allocation_period_form_data,
-            pi_selection_form_data,
-            pooling_preference_form_data,
-            review_and_submit_form_data,
-        ]
+        form_data.append(renewal_survey_form_data)
 
-        url = self.renew_pi_allocation_url()
+        review_and_submit_form_data = {
+            '7-confirmation': True,
+            current_step_key: '7',
+        }
+        form_data.append(review_and_submit_form_data)
+
+        url = self._renew_pi_allocation_url()
         for i, data in enumerate(form_data):
             response = self.client.post(url, data)
             if i == len(form_data) - 1:
                 self.assertRedirects(response, reverse('home'))
             else:
                 self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test_post_sets_request_request_time(self):
+        """Test that a POST request sets the request_time of the renewal
+        request."""
+        project, pi_project_user = self._create_project_to_renew()
+
+        pre_time = utc_now_offset_aware()
+
+        allocation_period = get_current_allowance_year_period()
+
+        self._send_post_requests(
+            allocation_period, pi_project_user)
 
         post_time = utc_now_offset_aware()
 

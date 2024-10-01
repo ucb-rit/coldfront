@@ -1,0 +1,36 @@
+{% extends "common/base.html" %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+{% load static %}
+{% load feature_flags %}
+
+{% block title %}
+{{ mou_type }} Upload
+{% endblock %}
+
+{% block head %}
+{{ wizard.form.media }}
+{% endblock %}
+
+{% block content %}
+
+<h1>{{ request_type_long }} {{ mou_type }} Upload</h1>
+<hr>
+
+<script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
+
+<p>Upload a signed {{ mou_type | lower }} to be reviewed by our administrators.</p>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <table>
+  {{ form.as_table }}
+  </table>
+  <br>
+  <input class="btn btn-primary" type="submit" value="Submit" />
+  <a href="{{ return_url }}" class="btn btn-secondary">
+    Cancel
+  </a>
+</form>
+
+{% endblock %}

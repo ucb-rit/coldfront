@@ -56,6 +56,11 @@ DATABASES = {
 
 LOG_PATH = '{{ log_path }}/{{ portal_log_file }}'
 API_LOG_PATH = '{{ log_path }}/{{ api_log_file }}'
+{% if stream_logs_to_stdout is defined and stream_logs_to_stdout | bool %}
+STREAM_LOGS_TO_STDOUT = True
+{% else %}
+STREAM_LOGS_TO_STDOUT = False
+{% endif %}
 
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = {{ request_approval_cc_list }}
@@ -64,6 +69,68 @@ REQUEST_APPROVAL_CC_LIST = {{ request_approval_cc_list }}
 # Allow all jobs, bypassing all checks at job submission time.
 ALLOW_ALL_JOBS = True
 {% endif %}
+
+# Extra apps to be included.
+EXTRA_EXTRA_APPS = []
+# Extra middleware to be included.
+EXTRA_EXTRA_MIDDLEWARE = []
+
+#------------------------------------------------------------------------------
+# Django Cache settings
+#------------------------------------------------------------------------------
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://{{ redis_host }}:6379/0',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'DB': 0,
+            'PASSWORD': '{{ redis_passwd }}',
+        },
+        'TIMEOUT': 24 * 60 * 60,  # One day in seconds
+    }
+}
+
+#------------------------------------------------------------------------------
+# BRC Vector Settings
+#------------------------------------------------------------------------------
+
+# The username of the user to set as the PI for all Vector projects.
+VECTOR_PI_USERNAME = '{{ vector_pi_username }}'
+
+# The name of the Savio project to which all Vector users are given access.
+SAVIO_PROJECT_FOR_VECTOR_USERS = '{{ savio_project_for_vector_users }}'
+
+#------------------------------------------------------------------------------
+# File Storage Settings
+#------------------------------------------------------------------------------
+
+{% if django_media_root is defined and django_media_root %}
+# An absolute path to the local filesystem directory holding user-uploaded
+# files.
+MEDIA_ROOT = '{{ django_media_root }}'
+{% endif %}
+
+# A dict denoting where and how user-uploaded files (currently only MOUs) should
+# be stored.
+FILE_STORAGE = {
+    'backend': '{{ file_storage_backend }}',
+    'details': {
+        'NEW_PROJECT_REQUEST_MOU': {
+            'location': '{{ new_project_request_mou_path }}',
+            'filename_type': 'NewProject_MOU',
+        },
+        'SERVICE_UNITS_PURCHASE_REQUEST_MOU': {
+            'location': '{{ service_units_purchase_request_mou_path }}',
+            'filename_type': 'AllowancePurchase_MOU',
+        },
+        'SECURE_DIRECTORY_REQUEST_MOU': {
+            'location': '{{ secure_directory_request_mou_path }}',
+            'filename_type': 'SecureDirectory_RUA',
+        },
+    },
+}
 
 #------------------------------------------------------------------------------
 # Billing settings
@@ -79,6 +146,32 @@ ORACLE_BILLING_DB = {
     'user': '{{ oracle_billing_db_user }}',
     'password': '{{ oracle_billing_db_passwd }}',
 }
+{% endif %}
+
+#------------------------------------------------------------------------------
+# Renewal Survey settings
+#------------------------------------------------------------------------------
+{% if renewal_survey_backend == 'google_forms' %}
+# Use Google Forms as the backend for renewal surveys.
+RENEWAL_SURVEY = {
+    'backend': 'coldfront.core.project.utils_.renewal_survey.backends.google_forms.GoogleFormsRenewalSurveyBackend',
+    'details': {
+        # The path to a file containing credentials for the Google service
+        # account that has access to survey responses.
+        'credentials_file_path': '{{ renewal_survey_google_forms_service_account_credentials_file_path }}',
+        # The path to a file on local disk that contains data about each survey.
+        'survey_data_file_path': '{{ renewal_survey_google_forms_survey_data_file_path }}',
+        # The key to cache survey data from the above file under.
+        'survey_data_cache_key': '{{ renewal_survey_google_forms_survey_data_cache_key }}',
+    },
+}
+{% else %}
+# Permit renewal requests to be made without a survey response.
+RENEWAL_SURVEY = {
+    'backend': 'coldfront.core.project.utils_.renewal_survey.backends.permissive.PermissiveRenewalSurveyBackend',
+    'details': {},
+}
+
 {% endif %}
 
 #------------------------------------------------------------------------------
@@ -145,12 +238,22 @@ CONSTANCE_REDIS_CONNECTION = {
     'password': '{{ redis_passwd }}',
 }
 
+{% if enable_django_debug_toolbar %}
 #------------------------------------------------------------------------------
-# django debug toolbar settings
+# django-debug-toolbar settings
 #------------------------------------------------------------------------------
 
-# IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-EXTRA_INTERNAL_IPS = [
+EXTRA_EXTRA_APPS += [
+    'debug_toolbar'
+]
+
+EXTRA_EXTRA_MIDDLEWARE += [
+    'debug_toolbar.middleware.DebugToolbarMiddleware'
+]
+
+# IP addresses that can view the django debug toolbar.
+INTERNAL_IPS = [
+    '127.0.0.1',
 {% for ip in debug_toolbar_ips %}
     '{{ ip }}',
 {% endfor %}
@@ -177,6 +280,7 @@ DISABLE_PANELS = {
     'debug_toolbar.panels.redirects.RedirectsPanel',
     'debug_toolbar.panels.profiling.ProfilingPanel',
 }
+{% endif %}
 
 #------------------------------------------------------------------------------
 # django-flags settings
@@ -194,6 +298,8 @@ FLAGS = {
     'SECURE_DIRS_REQUESTABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': {{ flag_sso_enabled }}}],
+    'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': {{ flag_mou_generation_enabled }}}],
+    'RENEWAL_SURVEY_ENABLED': [{'condition': 'boolean', 'value': {{ flag_renewal_survey_enabled }}}],
 }
 
 # Enforce that boolean flags are consistent with each other.
@@ -211,6 +317,27 @@ if (not FLAGS['SSO_ENABLED'][0]['value'] and
     raise ImproperlyConfigured(
         'LINK_LOGIN_ENABLED should only be enabled when SSO_ENABLED is '
         'enabled.')
+
+{% if file_storage_backend == 'google_drive' %}
+#------------------------------------------------------------------------------
+# django-googledrive-storage settings
+#------------------------------------------------------------------------------
+
+# Note: This section appears because FILE_STORAGE['backend'] == 'google_drive'.
+
+EXTRA_EXTRA_APPS += [
+    'gdstorage',
+]
+
+# An absolute path to a private JSON key file for a Google service account.
+GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = '{{ google_drive_private_key_file_path }}'
+
+# The base path files will be uploaded to in Google Drive. (E.g., if the root is
+# '/a/b/', and the specified upload path is 'c/file.txt', the file will be
+# uploaded to '/a/b/c/file.txt'. The base path is ignored if the specified
+# upload path is absolute.
+GOOGLE_DRIVE_STORAGE_MEDIA_ROOT = '{{ google_drive_storage_media_root }}'
+{% endif %}
 
 #------------------------------------------------------------------------------
 # django-q settings

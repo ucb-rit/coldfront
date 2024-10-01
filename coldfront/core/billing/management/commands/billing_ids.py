@@ -23,7 +23,7 @@ from coldfront.core.utils.common import add_argparse_dry_run_argument
 
 class Command(BaseCommand):
 
-    help = 'Create and set billing IDs.'
+    help = 'Create, set, or validate billing IDs.'
 
     logger = logging.getLogger(__name__)
 
@@ -37,6 +37,7 @@ class Command(BaseCommand):
         self._add_create_subparser(subparsers)
         self._add_list_subparser(subparsers)
         self._add_set_subparser(subparsers)
+        self._add_validate_subparser(subparsers)
 
     def handle(self, *args, **options):
         """Call the handler for the provided subcommand."""
@@ -103,6 +104,18 @@ class Command(BaseCommand):
         add_billing_id_argument(user_account_parser)
         add_ignore_invalid_argument(user_account_parser)
         add_argparse_dry_run_argument(user_account_parser)
+
+    @staticmethod
+    def _add_validate_subparser(parsers):
+        parser = parsers.add_parser(
+            'validate', help=(
+                'Check whether one or more billing IDs are valid.'))
+        
+        parser.add_argument(
+            'billing_ids', 
+            help=('A space-separated list of billing IDs.'),
+            nargs='+',
+            type=str)
 
     @staticmethod
     def _get_billing_activity_or_error(full_id):
@@ -206,6 +219,10 @@ class Command(BaseCommand):
             line = f'project_default,{project_name},{full_id}'
             self.stdout.write(line)
 
+        # Only display a Recharge entry if the user has one of the following
+        # statuses on the project.
+        relevant_project_user_status_names = [
+            'Active', 'Pending - Add', 'Pending - Remove']
         for allocation_user_attribute in usages.recharge:
             pk = int(allocation_user_attribute.value)
             if billing_id:
@@ -217,6 +234,14 @@ class Command(BaseCommand):
                 full_id_by_billing_activity_pk[pk] = full_id
             project_name = allocation_user_attribute.allocation.project.name
             username = allocation_user_attribute.allocation_user.user.username
+
+            user_has_relevant_status_on_project = ProjectUser.objects.filter(
+                project=allocation_user_attribute.allocation.project,
+                user=allocation_user_attribute.allocation_user.user,
+                status__name__in=relevant_project_user_status_names).exists()
+            if not user_has_relevant_status_on_project:
+                continue
+
             line = f'recharge,{project_name},{username},{full_id}'
             self.stdout.write(line)
 
@@ -250,6 +275,17 @@ class Command(BaseCommand):
             user = self._get_user_or_error(options['username'])
             self._handle_set_user_account(
                 user, billing_activity, dry_run=dry_run)
+            
+    def _handle_validate(self, *args, **options):
+        """Handle the 'validate' subcommand."""
+        for full_id in options['billing_ids']:
+            if is_billing_id_well_formed(full_id):
+                if is_billing_id_valid(full_id):
+                    self.stdout.write(self.style.SUCCESS(full_id + ': Valid'))
+                else:
+                    self.stderr.write(self.style.ERROR(full_id + ': Invalid'))
+            else:
+                self.stderr.write(self.style.ERROR(full_id + ': Malformed'))
 
     def _handle_set_project_default(self, project, billing_activity,
                                     dry_run=False):

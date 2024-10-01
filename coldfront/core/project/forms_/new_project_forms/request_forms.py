@@ -51,9 +51,13 @@ class SavioProjectAllocationPeriodForm(forms.Form):
     def __init__(self, *args, **kwargs):
         computing_allowance = kwargs.pop('computing_allowance', None)
         super().__init__(*args, **kwargs)
-        display_timezone = pytz.timezone(settings.DISPLAY_TIME_ZONE)
-        queryset = self.allocation_period_choices(
-            computing_allowance, utc_now_offset_aware(), display_timezone)
+        if computing_allowance is not None:
+            computing_allowance = ComputingAllowance(computing_allowance)
+            display_timezone = pytz.timezone(settings.DISPLAY_TIME_ZONE)
+            queryset = self.allocation_period_choices(
+                computing_allowance, utc_now_offset_aware(), display_timezone)
+        else:
+            queryset = AllocationPeriod.objects.none()
         self.fields['allocation_period'] = AllocationPeriodChoiceField(
             computing_allowance=computing_allowance,
             label='Allocation Period',
@@ -87,32 +91,29 @@ class SavioProjectAllocationPeriodForm(forms.Form):
 
     def _allocation_period_choices_brc(self, computing_allowance, date, f,
                                        order_by):
-        """TODO"""
-        allowance_name = computing_allowance.name
+        allowance_name = computing_allowance.get_name()
         if allowance_name in (BRCAllowances.FCA, BRCAllowances.PCA):
             return self._allocation_period_choices_allowance_year(
-                date, f, order_by)
+                computing_allowance, date, f, order_by)
         elif allowance_name == BRCAllowances.ICA:
             num_days = self.NUM_DAYS_BEFORE_ICA
             f = f & Q(start_date__lte=date + timedelta(days=num_days))
-            f = f & (
-                Q(name__startswith='Fall Semester') |
-                Q(name__startswith='Spring Semester') |
-                Q(name__startswith='Summer Sessions'))
+            allowance_periods_q = computing_allowance.get_period_filters()
+            if allowance_periods_q is not None:
+                f = f & allowance_periods_q
             return AllocationPeriod.objects.filter(f).order_by(*order_by)
         return AllocationPeriod.objects.none()
 
     def _allocation_period_choices_lrc(self, computing_allowance, date, f,
                                        order_by):
-        """TODO"""
-        allowance_name = computing_allowance.name
+        allowance_name = computing_allowance.get_name()
         if allowance_name == LRCAllowances.PCA:
             return self._allocation_period_choices_allowance_year(
-                date, f, order_by)
+                computing_allowance, date, f, order_by)
         return AllocationPeriod.objects.none()
 
-    def _allocation_period_choices_allowance_year(self, date, f, order_by):
-        """TODO"""
+    def _allocation_period_choices_allowance_year(self, computing_allowance,
+                                                  date, f, order_by):
         if flag_enabled('ALLOCATION_RENEWAL_FOR_NEXT_PERIOD_REQUESTABLE'):
             # If projects for the next period may be requested, include it.
             started_before_date = (
@@ -126,13 +127,21 @@ class SavioProjectAllocationPeriodForm(forms.Form):
             # Otherwise, include only the current period.
             started_before_date = date
         f = f & Q(start_date__lte=started_before_date)
-        f = f & Q(name__startswith='Allowance Year')
+        allowance_periods_q = computing_allowance.get_period_filters()
+        if allowance_periods_q is not None:
+            f = f & allowance_periods_q
         return AllocationPeriod.objects.filter(f).order_by(*order_by)
+
+
+class ComputingAllowanceField(forms.ModelChoiceField):
+
+    def label_from_instance(self, obj):
+        return obj.name
 
 
 class ComputingAllowanceForm(forms.Form):
 
-    computing_allowance = forms.ModelChoiceField(
+    computing_allowance = ComputingAllowanceField(
         label='Computing Allowance',
         queryset=Resource.objects.filter(
             resource_type__name='Computing Allowance').order_by('pk'))
@@ -283,6 +292,45 @@ class NewProjectExtraFieldsFormFactory(object):
 
 class SavioProjectICAExtraFieldsForm(SavioProjectExtraFieldsForm):
 
+    course_name = forms.CharField(
+        help_text=(
+            'Specify the full name of the course (e.g. '
+            '"CHEM 121: Introduction to Computational Chemistry").'),
+        label = 'Course Name',
+        required=True,
+        validators=[
+            MinLengthValidator(5),
+        ]
+        )
+
+    course_department = forms.CharField(
+        help_text=(
+            'Specify the full name of the department that will be offering this'
+            ' course (e.g "Dept. of Chemistry", "Dept. of Economics").'),
+        label='Course Department',
+        required=True,
+        validators=[
+            MinLengthValidator(5),
+        ]
+    )
+
+    point_of_contact = forms.CharField(
+        help_text=(
+            'Specify the full name of the point of contact for this course, '
+            'e.g. "John Doe". The POC will attempt to resolve issues and '
+            'questions from students. Issues that cannot be resolved locally '
+            'by the POC or other staff will be raised by the POC through normal'
+            f' {settings.PROGRAM_NAME_SHORT} channels (e.g. '
+            f'{settings.CENTER_HELP_EMAIL}). The POC is also responsible for '
+            'monitoring activity against the allowance and '
+            'ensuring any policies about individual usage.'),
+        label='Point of Contact',
+        required=True,
+        validators=[
+            MinLengthValidator(5),
+        ]
+    )
+
     num_students = forms.IntegerField(
         help_text=(
             'Specify the number of students you anticipate having in this '
@@ -395,6 +443,7 @@ class SavioProjectRechargeExtraFieldsForm(SavioProjectExtraFieldsForm):
                 'min': '100',
                 'max': str(settings.ALLOCATION_MAX),
                 'step': '100'}))
+
     # The minimum and maximum lengths are loose bounds.
     campus_chartstring = forms.CharField(
         help_text=mark_safe(

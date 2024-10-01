@@ -1,0 +1,37 @@
+{% load crispy_forms_tags %}
+
+
+<div
+    id="survey-modal"
+    class="modal fade bd-example-modal-lg"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="survey-modal"
+    aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <p class="modal-title">Survey Responses</p>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <table class="table">
+          {% for question_and_answer in survey_response %}
+          <tr class="w-100">
+            <td>{{ question_and_answer.0 }}</td>
+            <td class="w-50 text-break">{{ question_and_answer.1 }}</td>
+          </tr>
+        {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  $("#view-survey").on("click", function() {
+    $("#survey-modal").modal("show");
+  });
+</script>

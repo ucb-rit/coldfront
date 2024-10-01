@@ -38,12 +38,6 @@ SESSION_COOKIE_AGE = 60 * 60
 # The ID of the Site object to use (probably 1).
 SITE_ID = 1
 
-# The username of the user to set as the PI for all Vector projects.
-VECTOR_PI_USERNAME = "hannsode"
-
-# The name of the Savio project to which all Vector users are given access to.
-SAVIO_PROJECT_FOR_VECTOR_USERS = "co_rosalind"
-
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = []
 
@@ -371,22 +365,6 @@ REST_FRAMEWORK = {
     ],
 }
 
-#------------------------------------------------------------------------------
-# Enable django debug toolbar
-#------------------------------------------------------------------------------
-
-EXTRA_APPS += [
-    'debug_toolbar'
-]
-
-EXTRA_MIDDLEWARE += [
-    'debug_toolbar.middleware.DebugToolbarMiddleware'
-]
-
-INTERNAL_IPS = [
-    '127.0.0.1'
-]
-
 # The number of hours for which a newly created authentication token will be
 # valid.
 TOKEN_EXPIRATION_HOURS = 24
@@ -455,8 +433,7 @@ SESAME_MAX_AGE = 300
 # Data import settings
 #------------------------------------------------------------------------------
 
-# The credentials needed to read from Google Sheets.
-GOOGLE_OAUTH2_KEY_FILE = "/tmp/credentials.json"
+
 
 # -----------------------------------------------------------------------------
 # Miscellaneous settings
@@ -493,12 +470,19 @@ except ImportError:
             except ImportError:
                 pass
 
-# Update internal IPs for debug toolbar based on potentially-updated variables.
-INTERNAL_IPS += EXTRA_INTERNAL_IPS
+# Update extra apps based on potentially-updated variables.
+EXTRA_APPS += EXTRA_EXTRA_APPS
+
+# Update extra middleware based on potentially-updated variables.
+EXTRA_MIDDLEWARE += EXTRA_EXTRA_MIDDLEWARE
 
 # Update logging settings based on potentially-updated variables.
 LOGGING['handlers']['file']['filename'] = LOG_PATH
 LOGGING['handlers']['api_file']['filename'] = API_LOG_PATH
+
+if STREAM_LOGS_TO_STDOUT:
+    LOGGING['handlers']['file'] = {'class': 'logging.StreamHandler'}
+    LOGGING['handlers']['api_file'] = {'class': 'logging.StreamHandler'}
 
 # Update allauth settings based on potentially-updated variables.
 SOCIALACCOUNT_PROVIDERS['cilogon']['APP']['client_id'] = CILOGON_APP_CLIENT_ID
