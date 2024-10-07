@@ -650,6 +650,7 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
                 messages.error(self.request, message)
                 return self.form_invalid(form)
 
+        self.request_obj.save()
         message = (
             f'Eligibility status for request {self.request_obj.pk} has been '
             f'set to {status}.')
