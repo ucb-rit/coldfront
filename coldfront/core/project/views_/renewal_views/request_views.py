@@ -34,6 +34,8 @@ from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAl
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.permissions import permissions_required, check_first_last_name
+
 
 from decimal import Decimal
 
@@ -60,6 +62,7 @@ class AllocationRenewalLandingView(LoginRequiredMixin, UserPassesTestMixin,
                                    TemplateView):
     template_name = 'project/project_renewal/request_landing.html'
 
+    @permissions_required(check_first_last_name)
     def test_func(self):
         if self.request.user.is_superuser:
             return True

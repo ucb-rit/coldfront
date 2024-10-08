@@ -56,3 +56,4 @@ tqdm==4.62.3
 urllib3==1.24.2
 user-agents==2.2.0
 wcwidth==0.1.7
+pytest-django

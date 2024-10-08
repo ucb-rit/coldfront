@@ -50,11 +50,11 @@ Note that these steps must be run from the root directory of the repo.
 6. Start the application stack. Specify a unique Docker [project name](https://docs.docker.com/compose/project-name/) so that resources are placed within a Docker namespace. Examples: "brc-dev", "lrc-dev".
 
    ```bash
-   export DOCKER_PROJECT_NAME=brc-dev
+`   export DOCKER_PROJECT_NAME=brc-dev
    docker-compose \
        -f bootstrap/development/docker/docker-compose.yml \
        -p $DOCKER_PROJECT_NAME \
-       up
+       up`
    ```
 
    Notes:

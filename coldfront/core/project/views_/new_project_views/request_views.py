@@ -34,6 +34,8 @@ from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.permissions import permissions_required, check_first_last_name
+
 
 from django.conf import settings
 from django.contrib import messages
@@ -58,6 +60,7 @@ class ProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
                          TemplateView):
     template_name = 'project/project_request/project_request.html'
 
+    @permissions_required(check_first_last_name)
     def test_func(self):
         if self.request.user.is_superuser:
             return True

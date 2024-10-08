@@ -29,6 +29,7 @@ from coldfront.core.project.utils import send_project_join_notification_email
 from coldfront.core.project.views import ProjectListView
 from coldfront.core.user.utils_.host_user_utils import is_lbl_employee
 from coldfront.core.user.utils_.host_user_utils import needs_host
+from coldfront.core.utils.permissions import permissions_required, check_first_last_name
 
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
 
     logger = logging.getLogger(__name__)
 
+    @permissions_required(check_first_last_name)
     def test_func(self):
         project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
         user_obj = self.request.user

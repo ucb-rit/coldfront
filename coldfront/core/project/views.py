@@ -56,6 +56,7 @@ from coldfront.core.user.utils import CombinedUserSearch, access_agreement_signe
 from coldfront.core.utils.common import (get_domain_url, import_from_settings)
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
 from coldfront.core.utils.mail import send_email, send_email_template
+from coldfront.core.utils.permissions import permissions_required, check_first_last_name
 
 from flags.state import flag_enabled
 
@@ -630,6 +631,7 @@ class ProjectCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     template_name_suffix = '_create_form'
     fields = ['title', 'description', 'field_of_science', ]
 
+    @permissions_required(check_first_last_name)
     def test_func(self):
         """ UserPassesTestMixin Tests"""
         if self.request.user.is_superuser:
