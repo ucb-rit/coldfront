@@ -11,7 +11,8 @@ from django.views.decorators.cache import cache_page
 from coldfront.core.allocation.models import (Allocation,
                                               AllocationUser,
                                               AllocationUserAttribute)
-from coldfront.core.allocation.utils import get_project_compute_resource_name
+from coldfront.core.allocation.utils import (get_project_compute_allocation,
+                                             get_project_compute_resource_name)
 # from coldfront.core.grant.models import Grant
 from coldfront.core.portal.utils import (generate_allocations_chart_data,
                                          generate_publication_by_year_chart_data,
@@ -20,6 +21,7 @@ from coldfront.core.portal.utils import (generate_allocations_chart_data,
 from coldfront.core.project.models import Project, ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
+from coldfront.core.project.utils import render_project_compute_usage
 
 
 # from coldfront.core.publication.models import Publication
@@ -53,6 +55,11 @@ def home(request):
 
             resource_name = get_project_compute_resource_name(project)
             project.cluster_name = resource_name.replace(' Compute', '')
+            try:
+                rendered_compute_usage = render_project_compute_usage(project)
+            except Exception:
+                rendered_compute_usage = 'Unexpected error'
+            project.rendered_compute_usage = rendered_compute_usage
 
         allocation_list = Allocation.objects.filter(
            Q(status__name__in=['Active', 'New', 'Renewal Requested', ]) &

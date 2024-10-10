@@ -42,8 +42,9 @@ from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectUserStatusChoice,
                                            ProjectUserRemovalRequest,
                                            SavioProjectAllocationRequest)
-from coldfront.core.project.utils import (annotate_queryset_with_cluster_name,
-                                          is_primary_cluster_project)
+from coldfront.core.project.utils import annotate_queryset_with_cluster_name
+from coldfront.core.project.utils import is_primary_cluster_project
+from coldfront.core.project.utils import render_project_compute_usage
 from coldfront.core.project.utils_.addition_utils import can_project_purchase_service_units
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunnerFactory
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
@@ -442,6 +443,14 @@ class ProjectListView(LoginRequiredMixin, ListView):
 
         context['user_agreement_signed'] = \
             access_agreement_signed(self.request.user)
+
+        for project in project_list:
+            try:
+                rendered_compute_usage = render_project_compute_usage(project)
+            except Exception:
+                rendered_compute_usage = 'Unexpected error'
+            project.rendered_compute_usage = rendered_compute_usage
+        context['project_list'] = project_list
 
         return context
 
