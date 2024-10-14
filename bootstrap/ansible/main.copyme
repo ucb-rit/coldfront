@@ -5,6 +5,7 @@
 # Types of Ansible tasks to run by default.
 provisioning_tasks: true
 common_tasks: true
+chmod_tasks: true # Can be false when a Windows FS is mounted
 
 ###############################################################################
 # General Settings
@@ -36,7 +37,7 @@ db_host: localhost
 # The credentials for the database admin user.
 # TODO: Replace the username and password.
 db_admin_user: admin
-db_admin_passwd: ''
+db_admin_passwd: root
 
 #------------------------------------------------------------------------------
 # Redis settings
@@ -44,8 +45,7 @@ db_admin_passwd: ''
 
 # The password for Redis.
 # TODO: Replace the password.
-redis_passwd: ''
-
+redis_passwd: root
 redis_host: localhost
 
 #------------------------------------------------------------------------------
@@ -133,7 +133,8 @@ flag_link_login_enabled: True
 # TODO: For LRC, disable BRC and enable LRC.
 flag_brc_enabled: True
 flag_lrc_enabled: False
-
+# TODO: For LRC, disable department functionality.
+flag_user_departments_enabled: True
 # The number of the month in which users should be able to request renewal for
 # the next allowance year.
 # TODO: For LRC, set the month number to 9 (September).
@@ -167,6 +168,8 @@ center_user_guide: "https://docs-research-it.berkeley.edu/services/high-performa
 center_login_guide: "https://docs-research-it.berkeley.edu/services/high-performance-computing/user-guide/logging-brc-clusters/#Logging-in"
 # TODO: For MyLRC, use "hpcshelp@lbl.gov".
 center_help_email: "brc-hpc-help@berkeley.edu"
+# TODO: For MyLRC, use "Division".
+department_display_name: "Department"
 
 #------------------------------------------------------------------------------
 # BRC Vector settings
@@ -421,16 +424,13 @@ sentry_dsn: ""
 # # Email settings.
 # email_host: localhost
 # email_port: 1025
-# # TODO: Set these addresses to yours.
-# from_email: you@email.com
-# admin_email: you@email.com
+# from_email: placeholder@dev.dev
+# admin_email: placeholder@dev.dev
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
 # # A list of admin email addresses to be notified about new requests and other
 # # events.
-# # TODO: Set these addresses to yours.
-# email_admin_list: ['you@email.com']
+# email_admin_list: ['placeholder@dev.dev']
 # # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: ['you@email.com']
+# request_approval_cc_list: ['placeholder@dev.dev']

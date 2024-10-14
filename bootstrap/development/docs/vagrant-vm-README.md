@@ -30,16 +30,14 @@ The application may be installed within a Vagrant VM that is running on Scientif
    # This produces two lines: condense them into one.
    openssl rand -base64 64
    ```
-8. Customize `main.yml`. In particular, uncomment everything under the `dev_settings` section, and fill in the below variables. Note that quotes need not be provided, except in the list variable.
-   ```
-   django_secret_key: secret_key_from_previous_step
-   db_admin_passwd: password_here
-   redis_passwd: password_here
-   from_email: you@email.com
-   admin_email: you@email.com
-   email_admin_list: ["you@email.com"]
-   request_approval_cc_list: ["you@email.com"]
-   ```
+8. In `main.yml`, uncomment everything under the dev_settings section,
+and customize the following variables with your own values.
+    ```
+    django_secret_key: secret_key_from_previous_step 
+    chmod_tasks: true # Can be false when a Windows FS is mounted
+    db_admin_passwd: root
+    redis_passwd: root
+    ```
 9. Provision the VM. This should run the Ansible playbook. Expect this to take a few minutes on the first run.
    ```
    vagrant up
