@@ -1,6 +1,5 @@
 from django.urls import path
 from django.views.generic import TemplateView
-from flags.urls import flagged_paths
 
 from flags.urls import flagged_paths
 
@@ -15,6 +14,7 @@ import coldfront.core.project.views_.removal_views as removal_views
 import coldfront.core.project.views_.renewal_views.approval_views as renewal_approval_views
 import coldfront.core.project.views_.renewal_views.request_views as renewal_request_views
 import coldfront.core.allocation.views_.secure_dir_views as secure_dir_views
+import coldfront.core.utils.views.mou_views as mou_views
 
 
 urlpatterns = [
@@ -35,7 +35,6 @@ urlpatterns = [
          name='project-review-complete'),
     path('project-review/<int:pk>/email', project_views.ProjectReivewEmailView.as_view(), name='project-review-email'),
 ]
-
 
 # Join Requests
 urlpatterns += [
@@ -84,6 +83,9 @@ urlpatterns += [
     path('new-project-request/<int:pk>/readiness/',
          new_project_approval_views.SavioProjectReviewReadinessView.as_view(),
          name='new-project-request-review-readiness'),
+    path('new-project-request/<int:pk>/notify-pi/',
+         new_project_approval_views.SavioProjectRequestNotifyPIView.as_view(),
+         name='new-project-request-notify-pi'),
     path('new-project-request/<int:pk>/memorandum-signed/',
          new_project_approval_views.SavioProjectReviewMemorandumSignedView.as_view(),
          name='new-project-request-review-memorandum-signed'),
@@ -96,6 +98,18 @@ urlpatterns += [
     path('new-project-request/<int:pk>/undeny',
          new_project_approval_views.SavioProjectUndenyRequestView.as_view(),
          name='new-project-undeny-request'),
+    path('new-project-request-edit-extra-fields/<int:pk>/',
+         new_project_approval_views.SavioProjectRequestEditExtraFieldsView.as_view(),
+         name='new-project-request-edit-extra-fields'),
+    path('new-project-request/<int:pk>/download-unsigned-mou/<str:request_type>/',
+         mou_views.UnsignedMOUDownloadView.as_view(),
+         name='new-project-request-download-unsigned-mou'),
+    path('new-project-request/<int:pk>/upload-mou/<str:request_type>/',
+         mou_views.MOUUploadView.as_view(),
+         name='new-project-request-upload-mou'),
+    path('new-project-request/<int:pk>/download-mou/<str:request_type>/',
+         mou_views.MOUDownloadView.as_view(),
+         name='new-project-request-download-mou')
 ]
 
 
@@ -160,7 +174,9 @@ urlpatterns += [
 # Allocation Renewal Requests
 urlpatterns += [
     path('<int:pk>/renew',
-         renewal_request_views.AllocationRenewalRequestUnderProjectView.as_view(),
+         renewal_request_views.AllocationRenewalRequestUnderProjectView.as_view(
+             condition_dict=renewal_request_views.AllocationRenewalRequestUnderProjectView.condition_dict(),
+         ),
          name='project-renew'),
     path('renew-pi-allocation-landing/',
          renewal_request_views.AllocationRenewalLandingView.as_view(),
@@ -220,6 +236,21 @@ with flagged_paths('SERVICE_UNITS_PURCHASABLE'):
         f_path('service-units-purchase-request/<int:pk>/deny',
                addition_approval_views.AllocationAdditionReviewDenyView.as_view(),
                name='service-units-purchase-request-review-deny'),
+        f_path('service-units-purchase-request/<int:pk>/download-unsigned-mou/<str:request_type>/',
+               mou_views.UnsignedMOUDownloadView.as_view(),
+               name='service-units-purchase-request-download-unsigned-mou'),
+        f_path('service-units-purchase-request/<int:pk>/upload-mou/<str:request_type>/',
+               mou_views.MOUUploadView.as_view(),
+               name='service-units-purchase-request-upload-mou'),
+        f_path('service-units-purchase-request/<int:pk>/download-mou/<str:request_type>/',
+               mou_views.MOUDownloadView.as_view(),
+               name='service-units-purchase-request-download-mou'),
+        f_path('service-units-purchase-request/<int:pk>/edit-extra-fields/',
+               addition_approval_views.AllocationAdditionEditExtraFieldsView.as_view(),
+               name='service-units-purchase-request-edit-extra-fields'),
+        f_path('service-units-purchase-request/<int:pk>/notify-pi/',
+               addition_approval_views.AllocationAdditionNotifyPIView.as_view(),
+               name='service-units-purchase-request-notify-pi'),
     ]
 
 # Request a secure directory

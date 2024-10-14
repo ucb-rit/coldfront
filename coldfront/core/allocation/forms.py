@@ -281,6 +281,10 @@ class AllocationPeriodChoiceField(forms.ModelChoiceField):
 
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
+        if (self.computing_allowance is not None and
+                not isinstance(self.computing_allowance, ComputingAllowance)):
+            self.computing_allowance = ComputingAllowance(
+                self.computing_allowance)
         self.interface = (
             # Short-circuit to avoid instantiating ComputingAllowanceInterface
             # if possible.
@@ -289,27 +293,28 @@ class AllocationPeriodChoiceField(forms.ModelChoiceField):
         super().__init__(*args, **kwargs)
 
     def label_from_instance(self, obj):
-        computing_allowance = ComputingAllowance(self.computing_allowance)
-        num_service_units = self.allocation_value()
-        if computing_allowance.are_service_units_prorated():
+        num_service_units = self.allocation_value(obj)
+        if self.computing_allowance.are_service_units_prorated():
             num_service_units = prorated_allocation_amount(
                 num_service_units, utc_now_offset_aware(), obj)
         return (
             f'{obj.name} ({obj.start_date} - {obj.end_date}) '
             f'({num_service_units} SUs)')
 
-    def allocation_value(self):
-        """Return the default allocation value (Decimal) to use based on
-        the allocation type."""
-        allowance_name = self.computing_allowance.name
+    def allocation_value(self, obj):
+        """Return the allocation value (Decimal) to use based on the
+        allocation type and the AllocationPeriod."""
+        allowance_name = self.computing_allowance.get_name()
         if flag_enabled('BRC_ONLY'):
             assert allowance_name in self._allowances_with_periods_brc()
             return Decimal(
-                self.interface.service_units_from_name(allowance_name))
+                self.interface.service_units_from_name(
+                    allowance_name, is_timed=True, allocation_period=obj))
         elif flag_enabled('LRC_ONLY'):
             assert allowance_name in self._allowances_with_periods_lrc()
             return Decimal(
-                self.interface.service_units_from_name(allowance_name))
+                self.interface.service_units_from_name(
+                    allowance_name, is_timed=True, allocation_period=obj))
         return settings.ALLOCATION_MIN
 
     @staticmethod

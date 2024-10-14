@@ -6,6 +6,7 @@ from coldfront.core.project.models import ProjectUserStatusChoice
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.tests.test_base import enable_deployment
 from coldfront.core.utils.tests.test_base import TestBase
 
 from decimal import Decimal
@@ -21,6 +22,7 @@ from http import HTTPStatus
 class TestAllocationAdditionRequestView(TestBase):
     """A class for testing AllocationAdditionRequestView."""
 
+    @enable_deployment('BRC')
     def setUp(self):
         """Set up test data."""
         super().setUp()
@@ -40,6 +42,7 @@ class TestAllocationAdditionRequestView(TestBase):
         given primary key."""
         return reverse('purchase-service-units', kwargs={'pk': pk})
 
+    @enable_deployment('BRC')
     def test_ineligible_projects_redirected(self):
         """Test that requests for ineligible Projects are redirected
         back to the Project's Detail view."""
@@ -62,6 +65,7 @@ class TestAllocationAdditionRequestView(TestBase):
                 self.assertEqual(len(messages), 1)
                 self.assertIn('ineligible', messages[0])
 
+    @enable_deployment('BRC')
     def test_permissions_get(self):
         """Test that the correct users have permissions to perform GET
         requests."""
@@ -110,6 +114,7 @@ class TestAllocationAdditionRequestView(TestBase):
             self.user.has_perm(f'allocation.{permission.codename}'))
         self.assert_has_access(url, self.user, has_access=False)
 
+    @enable_deployment('BRC')
     def test_project_with_under_review_request_redirected(self):
         """Test that, if the Project already has an 'Under Review'
         request, the request is redirected."""
@@ -137,6 +142,7 @@ class TestAllocationAdditionRequestView(TestBase):
                 self.assertEqual(response.status_code, HTTPStatus.OK)
                 self.assertContains(response, 'Submit')
 
+    @enable_deployment('BRC')
     def test_valid_post(self):
         """Test that a valid POST request creates an
         AllocationAdditionRequest and sends a notification email."""
@@ -148,7 +154,7 @@ class TestAllocationAdditionRequestView(TestBase):
         pre_time = utc_now_offset_aware()
 
         data = {
-            'num_service_units': '100',
+            'num_service_units': 100,
             'campus_chartstring': 'Campus Chartstring',
             'chartstring_account_type': 'Chartstring Account Type',
             'chartstring_contact_name': 'Chartstring Account Name',
@@ -173,12 +179,9 @@ class TestAllocationAdditionRequestView(TestBase):
             request.num_service_units, Decimal(data['num_service_units']))
         self.assertTrue(pre_time <= request.request_time <= post_time)
         extra_fields = request.extra_fields
-        self.assertEqual(len(extra_fields) + 1, len(data))
+        self.assertEqual(len(extra_fields), len(data))
         for field in data:
-            if field == 'num_service_units':
-                self.assertNotIn(field, extra_fields)
-            else:
-                self.assertEqual(data[field], extra_fields[field])
+            self.assertEqual(data[field], extra_fields[field])
 
         # A notification email should have been sent to admins.
         self.assertEqual(len(mail.outbox), 1)

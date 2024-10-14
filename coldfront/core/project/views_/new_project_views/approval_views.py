@@ -1,13 +1,13 @@
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.utils import annotate_queryset_with_allocation_period_not_started_bool
-from coldfront.core.allocation.utils import prorated_allocation_amount
+from coldfront.core.allocation.utils import calculate_service_units_to_allocate
 from coldfront.core.project.forms import MemorandumSignedForm
 from coldfront.core.project.forms import ReviewDenyForm
 from coldfront.core.project.forms import ReviewStatusForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import NewProjectExtraFieldsFormFactory
+from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
 from coldfront.core.project.forms_.new_project_forms.approval_forms import SavioProjectReviewSetupForm
 from coldfront.core.project.forms_.new_project_forms.approval_forms import VectorProjectReviewSetupForm
-from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.project.models import VectorProjectAllocationRequest
@@ -42,7 +42,7 @@ from django.views import View
 from django.views.generic import DetailView
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
-
+from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 from flags.state import flag_enabled
 
 import iso8601
@@ -56,7 +56,6 @@ import logging
 
 class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
     template_name = 'project/project_request/savio/project_request_list.html'
-    login_url = '/'
     # Show completed requests if True; else, show pending requests.
     completed = False
 
@@ -70,7 +69,7 @@ class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
                 direction = '-'
             order_by = direction + order_by
         else:
-            order_by = 'id'
+            order_by = '-request_time'
 
         return annotate_queryset_with_allocation_period_not_started_bool(
             SavioProjectAllocationRequest.objects.order_by(order_by))
@@ -114,7 +113,7 @@ class SavioProjectRequestMixin(object):
         assert isinstance(self.request_obj, SavioProjectAllocationRequest)
         assert isinstance(self.computing_allowance_obj, ComputingAllowance)
 
-    def get_extra_fields_form(self):
+    def get_extra_fields_form(self, disable_fields=True):
         """Return a form of extra fields for the request, based on its
         computing allowance, and populated with initial data."""
         self.assert_attributes_set()
@@ -122,10 +121,35 @@ class SavioProjectRequestMixin(object):
         extra_fields = self.request_obj.extra_fields
         kwargs = {
             'initial': extra_fields,
-            'disable_fields': True,
+            'disable_fields': disable_fields,
         }
         factory = NewProjectExtraFieldsFormFactory()
         return factory.get_form(computing_allowance, **kwargs)
+
+    def get_service_units_to_allocate(self):
+        """Return the possibly-prorated number of service units to
+        allocate to the project.
+
+        If the request was created as part of an allocation renewal, it
+        may be associated with at most one AllocationRenewalRequest. If
+        so, service units will be allocated when the latter request is
+        approved."""
+        if AllocationRenewalRequest.objects.filter(
+                new_project_request=self.request_obj).exists():
+            return settings.ALLOCATION_MIN
+        if self.computing_allowance_obj.are_service_units_user_specified():
+            num_service_units_int = self.request_obj.extra_fields[
+                'num_service_units']
+            num_service_units = Decimal(f'{num_service_units_int:.2f}')
+        else:
+            kwargs = {}
+            allocation_period = self.request_obj.allocation_period
+            if allocation_period:
+                kwargs['allocation_period'] = allocation_period
+            num_service_units = calculate_service_units_to_allocate(
+                self.computing_allowance_obj, self.request_obj.request_time,
+                **kwargs)
+        return num_service_units
 
     def get_survey_form(self):
         """Return a disabled form containing the survey answers for the
@@ -188,15 +212,82 @@ class SavioProjectRequestMixin(object):
         context['allowance_requires_funds_transfer'] = (
             self.computing_allowance_obj.is_recharge() and
             context['allowance_has_extra_fields'])
+        try:
+            context['allocation_amount'] = self.get_service_units_to_allocate()
+        except Exception as e:
+            context['allocation_amount'] = 'Failed to compute.'
         context['survey_form'] = SavioProjectSurveyForm(
             initial=self.request_obj.survey_answers, disable_fields=True)
 
+class SavioProjectRequestEditExtraFieldsView(LoginRequiredMixin,
+                                             UserPassesTestMixin,
+                                             SavioProjectRequestMixin,
+                                             TemplateView):
+    template_name = 'project/project_request/savio/project_request_edit_extra_fields.html'
+
+    logger = logging.getLogger(__name__)
+
+    error_message = 'Unexpected failure. Please contact an administrator.'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user.is_superuser:
+            return True
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        pk = self.kwargs.get('pk')
+        self.set_attributes(pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        context = {}
+        context['form'] = self.get_extra_fields_form(disable_fields=False)
+        context['savio_request'] = self.request_obj
+        context['notify_pi'] = False
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = NewProjectExtraFieldsFormFactory() \
+                        .get_form(self.computing_allowance_obj, request.POST)
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form):
+        """Save the form."""
+        self.request_obj.extra_fields = form.cleaned_data
+        self.request_obj.save()
+        message = 'The request has been updated.'
+        messages.success(self.request, message)
+        return HttpResponseRedirect(reverse('new-project-request-detail',
+                                            kwargs={'pk':self.request_obj.pk}))
+
+    def form_invalid(self, form):
+        """Handle invalid forms."""
+        message = 'Please correct the errors below.'
+        messages.error(self.request, message)
+        return self.render_to_response(
+            self.get_context_data(form=form))
+                                      
+class SavioProjectRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
+                                    SavioProjectRequestEditExtraFieldsView):
+    def email_pi(self):
+        super()._email_pi('Savio Project Request Ready To Be Signed',
+                         self.request_obj.pi.get_full_name(),
+                         reverse('new-project-request-detail',
+                                 kwargs={'pk': self.request_obj.pk}),
+                         'Memorandum of Understanding',
+                         f'{self.request_obj.project.name} project request',
+                         self.request_obj.pi.email)
 
 class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                                     SavioProjectRequestMixin, DetailView):
     model = SavioProjectAllocationRequest
     template_name = 'project/project_request/savio/project_request_detail.html'
-    login_url = '/'
 
     logger = logging.getLogger(__name__)
 
@@ -281,6 +372,31 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         context['is_checklist_complete'] = self.is_checklist_complete()
         context['is_allowed_to_manage_request'] = \
             self.request.user.is_superuser
+
+        context['mou_required'] = \
+            ComputingAllowance(self.request_obj.computing_allowance) \
+                .requires_memorandum_of_understanding()
+        if context['mou_required']:
+            context['can_download_mou'] = self.request_obj \
+                                        .state['notified']['status'] == 'Complete'
+            context['can_upload_mou'] = \
+                self.request_obj.status.name == 'Under Review'
+            context['mou_uploaded'] = bool(self.request_obj.mou_file)
+
+            context['unsigned_download_url'] = reverse('new-project-request-download-unsigned-mou',
+                                                        kwargs={'pk': self.request_obj.pk,
+                                                                'request_type': 'new-project'})
+            context['signed_download_url'] = reverse('new-project-request-download-mou',
+                                                        kwargs={'pk': self.request_obj.pk,
+                                                                'request_type': 'new-project'})
+            context['signed_upload_url'] = reverse('new-project-request-upload-mou',
+                                                        kwargs={'pk': self.request_obj.pk,
+                                                                'request_type': 'new-project'})
+            context['mou_type'] = 'Memorandum of Understanding'
+
+        context['is_recharge'] = \
+            ComputingAllowance(self.request_obj.computing_allowance) \
+                .is_recharge()
 
         return context
 
@@ -392,6 +508,20 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         mou_required = \
             self.computing_allowance_obj.requires_memorandum_of_understanding()
         if mou_required:
+            notified = state['notified']
+            task_text = (
+                'Confirm or edit allowance details, and '
+                'enable/notify the PI to sign the Memorandum of Understanding.')
+            checklist.append([
+                task_text,
+                notified['status'],
+                notified['timestamp'],
+                is_eligible and is_ready,
+                reverse('new-project-request-notify-pi',
+                        kwargs={'pk': pk})
+            ])
+            is_notified = notified['status'] == 'Complete'
+
             memorandum_signed = state['memorandum_signed']
             task_text = (
                 'Confirm that the Memorandum of Understanding has been '
@@ -404,11 +534,12 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
                 task_text,
                 memorandum_signed['status'],
                 memorandum_signed['timestamp'],
-                is_eligible and is_ready,
+                is_eligible and is_ready and is_notified,
                 reverse(
                     'new-project-request-review-memorandum-signed',
                     kwargs={'pk': pk})
             ])
+        is_notified = not mou_required or (state['notified']['status'] == 'Complete')
         is_memorandum_signed = (
             not mou_required or
             state['memorandum_signed']['status'] == 'Complete')
@@ -418,36 +549,11 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
             'Perform project setup on the cluster.',
             self.get_setup_status(),
             setup['timestamp'],
-            is_eligible and is_ready and is_memorandum_signed,
+            is_eligible and is_ready and is_notified and is_memorandum_signed,
             reverse('new-project-request-review-setup', kwargs={'pk': pk})
         ])
 
         return checklist
-
-    def get_service_units_to_allocate(self):
-        """Return the possibly-prorated number of service units to
-        allocate to the project.
-
-        If the request was created as part of an allocation renewal, it
-        may be associated with at most one AllocationRenewalRequest. If
-        so, service units will be allocated when the latter request is
-        approved."""
-        if AllocationRenewalRequest.objects.filter(
-                new_project_request=self.request_obj).exists():
-            return settings.ALLOCATION_MIN
-        if self.computing_allowance_obj.are_service_units_user_specified():
-            num_service_units_int = self.request_obj.extra_fields[
-                'num_service_units']
-            num_service_units = Decimal(f'{num_service_units_int:.2f}')
-        else:
-            allowance_name = self.request_obj.computing_allowance.name
-            num_service_units = Decimal(
-                self.interface.service_units_from_name(allowance_name))
-            if self.computing_allowance_obj.are_service_units_prorated():
-                num_service_units = prorated_allocation_amount(
-                    num_service_units, self.request_obj.request_time,
-                    self.request_obj.allocation_period)
-        return num_service_units
 
     def get_setup_status(self):
         """Return one of the following statuses for the 'setup' step of
@@ -484,7 +590,6 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
     form_class = ReviewStatusForm
     template_name = (
         'project/project_request/savio/project_review_eligibility.html')
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -552,7 +657,6 @@ class SavioProjectReviewReadinessView(LoginRequiredMixin, UserPassesTestMixin,
     form_class = ReviewStatusForm
     template_name = (
         'project/project_request/savio/project_review_readiness.html')
-    login_url = '/'
 
     logger = logging.getLogger(__name__)
 
@@ -630,7 +734,6 @@ class SavioProjectReviewMemorandumSignedView(LoginRequiredMixin,
     form_class = MemorandumSignedForm
     template_name = (
         'project/project_request/savio/project_review_memorandum_signed.html')
-    login_url = '/'
 
     logger = logging.getLogger(__name__)
 
@@ -699,7 +802,6 @@ class SavioProjectReviewSetupView(LoginRequiredMixin, UserPassesTestMixin,
                                   SavioProjectRequestMixin, FormView):
     form_class = SavioProjectReviewSetupForm
     template_name = 'project/project_request/savio/project_review_setup.html'
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -785,7 +887,6 @@ class SavioProjectReviewDenyView(LoginRequiredMixin, UserPassesTestMixin,
     form_class = ReviewDenyForm
     template_name = (
         'project/project_request/savio/project_review_deny.html')
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -844,7 +945,6 @@ class SavioProjectReviewDenyView(LoginRequiredMixin, UserPassesTestMixin,
 
 class SavioProjectUndenyRequestView(LoginRequiredMixin, UserPassesTestMixin,
                                     SavioProjectRequestMixin, View):
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -905,7 +1005,6 @@ class SavioProjectUndenyRequestView(LoginRequiredMixin, UserPassesTestMixin,
 
 class VectorProjectRequestListView(LoginRequiredMixin, TemplateView):
     template_name = 'project/project_request/vector/project_request_list.html'
-    login_url = '/'
     # Show completed requests if True; else, show pending requests.
     completed = False
 
@@ -919,7 +1018,7 @@ class VectorProjectRequestListView(LoginRequiredMixin, TemplateView):
                 direction = '-'
             order_by = direction + order_by
         else:
-            order_by = 'id'
+            order_by = '-modified'
         return VectorProjectAllocationRequest.objects.order_by(order_by)
 
     def get_context_data(self, **kwargs):
@@ -995,7 +1094,6 @@ class VectorProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
     model = VectorProjectAllocationRequest
     template_name = (
         'project/project_request/vector/project_request_detail.html')
-    login_url = '/'
     context_object_name = 'vector_request'
 
     logger = logging.getLogger(__name__)
@@ -1125,7 +1223,6 @@ class VectorProjectReviewEligibilityView(LoginRequiredMixin,
     form_class = ReviewStatusForm
     template_name = (
         'project/project_request/vector/project_review_eligibility.html')
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -1190,7 +1287,6 @@ class VectorProjectReviewSetupView(LoginRequiredMixin, UserPassesTestMixin,
                                    VectorProjectRequestMixin, FormView):
     form_class = VectorProjectReviewSetupForm
     template_name = 'project/project_request/vector/project_review_setup.html'
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -1272,7 +1368,6 @@ class VectorProjectReviewSetupView(LoginRequiredMixin, UserPassesTestMixin,
 
 class VectorProjectUndenyRequestView(LoginRequiredMixin, UserPassesTestMixin,
                                      VectorProjectRequestMixin, View):
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""

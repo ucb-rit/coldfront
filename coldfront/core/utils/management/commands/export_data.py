@@ -6,15 +6,18 @@ from sys import stdout, stderr
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Value, F, CharField, Func, \
     DurationField, ExpressionWrapper
+from django.contrib.auth.models import User
 
 from coldfront.core.allocation.models import AllocationAttributeType, \
-    AllocationUserAttribute
+    AllocationUserAttribute, AllocationRenewalRequest, AllocationPeriod
 from coldfront.core.statistics.models import Job
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
+from coldfront.core.project.forms_.renewal_forms.request_forms import DeprecatedProjectRenewalSurveyForm
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
+from django import forms
 
 """An admin command that exports the results of useful database queries
 in user-friendly formats."""
@@ -32,6 +35,7 @@ class Command(BaseCommand):
             self.allowance_prefixes.append(
                 self.computing_allowance_interface.code_from_name(
                     allowance.name))
+        self.allocation_periods = [period for period in AllocationPeriod.objects.values_list('name', flat=True)]
 
     def add_arguments(self, parser):
         """Define subcommands with different functions."""
@@ -131,14 +135,29 @@ class Command(BaseCommand):
                                                     help='Export results in the given format.',
                                                     type=str)
 
-        survey_responses_subparser = subparsers.add_parser('survey_responses',
-                                                           help='Export survey responses')
-        survey_responses_subparser.add_argument('--format', help='Format to dump survey responses in',
+        new_project_survey_responses_subparser = subparsers.add_parser('new_project_survey_responses',
+                                                           help='Export survey responses for new projects')
+        new_project_survey_responses_subparser.add_argument('--format', help='Format to dump new project survey responses in',
                                                 type=str, required=True, choices=['json', 'csv'])
-        survey_responses_subparser.add_argument('--allowance_type',
+        new_project_survey_responses_subparser.add_argument('--allowance_type',
                                                 help='Dump responses for Projects with given prefix',
                                                 type=str, required=False, default='',
                                                 choices=self.allowance_prefixes)
+        
+        renewal_survey_responses_subparser = subparsers.add_parser('renewal_survey_responses',
+                                                           help='Export survey responses for project renewals')
+        renewal_survey_responses_subparser.add_argument('--format', help='Format to dump renewal survey responses in',
+                                                type=str, required=True, choices=['json', 'csv'])
+        renewal_survey_responses_subparser.add_argument('--allocation_period',
+                                                help='Dump responses for Projects in given allocation period. i.e. \
+                                                \'Allowance Year 2024 - 2025\'',
+                                                type=str, required=True, default='',
+                                                choices=self.allocation_periods)
+        renewal_survey_responses_subparser.add_argument('--allowance_type',
+                                                help='Dump responses for Projects with given prefix',
+                                                type=str, required=False, default='',
+                                                choices=self.allowance_prefixes)
+
 
     def handle(self, *args, **options):
         """Call the handler for the provided subcommand."""
@@ -414,7 +433,7 @@ class Command(BaseCommand):
                          output=kwargs.get('stdout', stdout),
                          error=kwargs.get('stderr', stderr))
 
-    def handle_survey_responses(self, *args, **kwargs):
+    def handle_new_project_survey_responses(self, *args, **kwargs):
         format = kwargs['format']
         allowance_type = kwargs['allowance_type']
         allocation_requests = SavioProjectAllocationRequest.objects.all()
@@ -452,13 +471,113 @@ class Command(BaseCommand):
                 surveys.append({
                     'project_name': project.name,
                     'project_title': project.title,
-                    'survey_responses': survey
+                    'new_project_survey_responses': survey
                 })
 
             surveys = list(sorted(surveys, key=lambda x: x['project_name'], reverse=True))
             self.to_json(surveys,
                          output=kwargs.get('stdout', stdout),
                          error=kwargs.get('stderr', stderr))
+    
+    def handle_renewal_survey_responses(self, *args, **kwargs):
+        def _swap_form_answer_id_for_text(_survey, _multiple_choice_fields):
+            '''
+            Takes a survey, a dict mapping survey question IDs to answer IDs.
+            Uses multiple_choice_fields to swap answer IDs for answer text, then 
+            question IDs for question text.
+            Returns the modified survey.
+
+            Parameters
+            ----------
+            _survey : survey to modify
+            _multiple_choice_fields : mapping of {question ID : {answer ID : answer text}}
+            '''
+            for question, answer in _survey.items():
+                if question in _multiple_choice_fields.keys():
+                    sub_map = _multiple_choice_fields[question]
+                    if (isinstance(answer, list)):
+                        # Multiple choice, array
+                        _survey[question] = [sub_map.get(i,i) for i in answer]
+                    elif answer != "":
+                        # Single choice replacement 
+                        _survey[question] = sub_map[answer]
+            # Change keys of survey (question IDs) to be the human-readable text
+            for id, text in form.fields.items():
+                _survey[text.label] = _survey.pop(id)
+            return _survey
+        format = kwargs['format']
+        allowance_type = kwargs['allowance_type']
+        allocation_requests = AllocationRenewalRequest.objects.all()
+        allocation_period = kwargs['allocation_period']
+
+
+        if allowance_type:
+            allocation_requests = allocation_requests.filter(
+                post_project__name__istartswith=allowance_type)
+            
+        if allocation_period:
+             allocation_requests = allocation_requests.filter(
+                 allocation_period__name=allocation_period)
+
+        _surveys = list(allocation_requests.values_list('renewal_survey_answers', flat=True))
+        _surveys = [i for i in _surveys if i != {}]
+        if len(_surveys) == 0:
+            raise Exception("There are no valid renewal requests in the specified allocation period.")
+        
+        if {} in _surveys:
+            raise Exception("This allocation period does not have an associated survey.")
+        surveys = []
+        # Create dict of multiple choice fields to replace field IDs with text. ID : text
+        multiple_choice_fields = {}
+        form = DeprecatedProjectRenewalSurveyForm()
+        for k, v in form.fields.items():
+            # Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices 
+            if (isinstance(v, forms.MultipleChoiceField)) or (isinstance(v, forms.ChoiceField)):
+                multiple_choice_fields[k] = {_k: _v for _k, _v in form.fields[k].choices}
+
+        if format == 'csv':
+            for allocation_request, survey in zip(allocation_requests, _surveys):
+                survey = _swap_form_answer_id_for_text(survey, multiple_choice_fields)
+                surveys.append({
+                    'project_name': allocation_request.post_project.name,
+                    'project_title': allocation_request.post_project.title,
+                    'project_pi': allocation_request.pi.username,
+                    **survey
+                })
+
+            surveys = list(sorted(surveys, key=lambda x: x['project_name'], reverse=True))
+            try:
+                headers = {}
+                for field in surveys[0].keys():
+                    if field in form.fields:
+                        headers[field] = form.fields[field].label
+                    else:
+                        headers[field] = field
+                writer = csv.DictWriter(kwargs.get('stdout', stdout), headers, extrasaction="ignore")
+                writer.writerow(headers)
+
+                for survey in surveys:
+                    writer.writerow(survey)
+
+            except Exception as e:
+                kwargs.get('stderr', stderr).write(str(e))
+
+        elif format == 'json':
+            for allocation_request, survey in zip(allocation_requests, _surveys):
+                survey = _swap_form_answer_id_for_text(survey, multiple_choice_fields)
+                surveys.append({
+                    'project_name': allocation_request.post_project.name,
+                    'project_title': allocation_request.post_project.title,
+                    'project_pi': allocation_request.pi.username,
+                    'renewal_survey_responses': survey
+                })
+
+            surveys = list(sorted(surveys, key=lambda x: x['project_name'], reverse=True))
+            self.to_json(surveys,
+                         output=kwargs.get('stdout', stdout),
+                         error=kwargs.get('stderr', stderr))
+            
+        
 
     @staticmethod
     def to_csv(query_set, header=None, output=stdout, error=stderr):
@@ -509,7 +628,7 @@ class Command(BaseCommand):
 
         try:
             json_output = json.dumps(list(query_set), indent=4, default=str)
-            output.writelines(json_output)
+            output.writelines(json_output + '\n')
         except Exception as e:
             error.write(str(e))
 

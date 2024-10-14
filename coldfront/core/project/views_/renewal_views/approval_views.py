@@ -1,6 +1,6 @@
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.utils import annotate_queryset_with_allocation_period_not_started_bool
-from coldfront.core.allocation.utils import prorated_allocation_amount
+from coldfront.core.allocation.utils import calculate_service_units_to_allocate
 from coldfront.core.project.forms import ReviewDenyForm
 from coldfront.core.project.forms import ReviewStatusForm
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
@@ -10,15 +10,14 @@ from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcess
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_denial_reason
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_latest_update_timestamp
 from coldfront.core.project.utils_.renewal_utils import allocation_renewal_request_state_status
+from coldfront.core.project.utils_.renewal_survey import get_renewal_survey_response
+from coldfront.core.project.utils_.renewal_utils import set_allocation_renewal_request_eligibility
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import format_date_month_name_day_year
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
-
-from decimal import Decimal
 
 from django.conf import settings
 from django.contrib import messages
@@ -34,6 +33,8 @@ from django.views.generic import DetailView
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
 
+from flags.state import flag_enabled
+
 import iso8601
 import logging
 
@@ -43,7 +44,6 @@ logger = logging.getLogger(__name__)
 
 class AllocationRenewalRequestListView(LoginRequiredMixin, TemplateView):
     template_name = 'project/project_renewal/project_renewal_request_list.html'
-    login_url = '/'
     completed = False
 
     def get_queryset(self):
@@ -56,7 +56,8 @@ class AllocationRenewalRequestListView(LoginRequiredMixin, TemplateView):
                 direction = '-'
             order_by = direction + order_by
         else:
-            order_by = 'id'
+            order_by = '-request_time'
+
         return annotate_queryset_with_allocation_period_not_started_bool(
             AllocationRenewalRequest.objects.order_by(order_by))
 
@@ -98,6 +99,13 @@ class AllocationRenewalRequestMixin(object):
             logger.exception(e)
             messages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
+        if flag_enabled('RENEWAL_SURVEY_ENABLED'):
+            context['survey_response'] = get_renewal_survey_response(
+                self.request_obj.allocation_period.name,
+                self.request_obj.post_project.name,
+                self.request_obj.pi.username)
+        context['has_survey_answers'] = bool(
+            context.get('survey_response', None))
         return context
 
     @staticmethod
@@ -106,14 +114,11 @@ class AllocationRenewalRequestMixin(object):
             'pi-allocation-renewal-request-detail', kwargs={'pk': pk})
 
     def get_service_units_to_allocate(self):
-        """Return the number of service units to allocate to the project
-        if it were to be approved now."""
-        num_service_units = Decimal(
-            ComputingAllowanceInterface().service_units_from_name(
-                self.computing_allowance_obj.get_name()))
-        return prorated_allocation_amount(
-            num_service_units, self.request_obj.request_time,
-            self.allocation_period_obj)
+        """Return the number of service units to allocate to the
+        project."""
+        return calculate_service_units_to_allocate(
+            self.computing_allowance_obj, self.request_obj.request_time,
+            allocation_period=self.allocation_period_obj)
 
     def set_common_context_data(self, context):
         """Given a dictionary of context variables to include in the
@@ -138,7 +143,6 @@ class AllocationRenewalRequestDetailView(LoginRequiredMixin,
     model = AllocationRenewalRequest
     template_name = (
         'project/project_renewal/project_renewal_request_detail.html')
-    login_url = '/'
 
     error_message = 'Unexpected failure. Please contact an administrator.'
     request_obj = None
@@ -335,7 +339,6 @@ class AllocationRenewalRequestReviewEligibilityView(LoginRequiredMixin,
                                                     FormView):
     form_class = ReviewStatusForm
     template_name = 'project/project_renewal/review_eligibility.html'
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -366,15 +369,9 @@ class AllocationRenewalRequestReviewEligibilityView(LoginRequiredMixin,
         form_data = form.cleaned_data
         status = form_data['status']
         justification = form_data['justification']
-        timestamp = utc_now_offset_aware().isoformat()
-        self.request_obj.state['eligibility'] = {
-            'status': status,
-            'justification': justification,
-            'timestamp': timestamp,
-        }
-        self.request_obj.status = allocation_renewal_request_state_status(
-            self.request_obj)
-        self.request_obj.save()
+
+        set_allocation_renewal_request_eligibility(
+            self.request_obj, status, justification)
 
         if status == 'Denied':
             runner = AllocationRenewalDenialRunner(self.request_obj)
@@ -411,7 +408,6 @@ class AllocationRenewalRequestReviewDenyView(LoginRequiredMixin,
                                              FormView):
     form_class = ReviewDenyForm
     template_name = 'project/project_renewal/review_deny.html'
-    login_url = '/'
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -488,7 +484,6 @@ class AllocationRenewalRequestReviewDenyView(LoginRequiredMixin,
 #                                          UserPassesTestMixin,
 #                                          AllocationRenewalRequestMixin,
 #                                          View):
-#     login_url = '/'
 #
 #     def test_func(self):
 #         """UserPassesTestMixin tests."""

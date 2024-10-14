@@ -131,13 +131,16 @@ Project Detail
     <p class="card-text text-justify">
       <strong>Requests to Join: </strong>
       User requests to join the project must be approved by a PI.
-      {% if is_allowed_to_update_project %}
-        <a href="{% url 'project-update' project.pk %}">
-          <span class="accessibility-link-text">Update Project settings</span>
-          <i class="fas fa-edit" aria-hidden="true"></i>
-        </a>
-      {% endif %}
     </p>
+
+    <!-- show survey answers if available -->
+    {% if survey_answers %}
+      <p class="card-text text-justify">
+        <strong>Survey Responses: </strong>
+        <button id="view-survey" class="btn btn-primary" role="button">View</button>
+      </p>
+    {% endif %}
+
   </div>
 </div>
 
@@ -466,4 +469,5 @@ $("[id^=email_notifications_for_user_id_]").change(function() {
 
 </script>
 
+{% include 'project/project_request/savio/project_request_surveys_modal.html' with survey_answers=survey_answers %}
 {% endblock %}

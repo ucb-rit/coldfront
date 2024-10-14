@@ -22,8 +22,12 @@ class TestBillingIds(TestBillingBase):
         """Set up test data."""
         super().setUp()
 
+        self.original_billing_activity = get_billing_activity_from_full_id(
+            '000000-000')
+
         self.command = BillingIdsCommand()
 
+    @enable_deployment('LRC')
     def test_create_billing_id_existent(self):
         """Test that, when the given billing ID already exists, the
         'create' subcommand raises an error."""
@@ -40,6 +44,7 @@ class TestBillingIds(TestBillingBase):
             self.command.create(billing_id)
         self.assertIn('already exists', str(cm.exception))
 
+    @enable_deployment('LRC')
     def test_create_dry_run(self):
         """Test that, when the --dry_run flag is given to the 'create'
         subcommand, changes are displayed, but not performed."""
@@ -52,6 +57,7 @@ class TestBillingIds(TestBillingBase):
 
         self.assertIsNone(get_billing_activity_from_full_id(billing_id))
 
+    @enable_deployment('LRC')
     def test_create_billing_id_invalid(self):
         """Test that, when the given billing ID is invalid, the 'create'
         subcommand raises an error, unless the --ignore_invalid flag is
@@ -73,6 +79,7 @@ class TestBillingIds(TestBillingBase):
         billing_activity = get_billing_activity_from_full_id(billing_id)
         self.assertTrue(isinstance(billing_activity, BillingActivity))
 
+    @enable_deployment('LRC')
     def test_create_billing_id_malformed(self):
         """Test that, when the given billing ID is malformed, the
         'create' subcommand raises an error."""
@@ -86,6 +93,7 @@ class TestBillingIds(TestBillingBase):
 
         self.assertIsNone(get_billing_activity_from_full_id(billing_id))
 
+    @enable_deployment('LRC')
     def test_create_success(self):
         """Test that the 'create' subcommand successfully creates a
         billing ID."""
@@ -98,6 +106,31 @@ class TestBillingIds(TestBillingBase):
         billing_activity = get_billing_activity_from_full_id(billing_id)
         self.assertTrue(isinstance(billing_activity, BillingActivity))
 
+    def test_validate_success(self):
+        """Test that, given a variety of billing IDs, the
+        'validate' outputs correctly."""
+
+        malformed_billing_id = '12345-67'
+        self.assertFalse(is_billing_id_well_formed(malformed_billing_id))
+
+        invalid_billing_id = '123456-789'
+        self.assertTrue(is_billing_id_well_formed(invalid_billing_id))
+        self.assertFalse(is_billing_id_valid(invalid_billing_id))
+
+        valid_billing_id = '123456-788'
+        self.assertTrue(is_billing_id_well_formed(valid_billing_id))
+        self.assertTrue(is_billing_id_valid(valid_billing_id))
+
+        output, error = self.command.validate(
+            [malformed_billing_id, invalid_billing_id, valid_billing_id])
+
+        self.assertIn(malformed_billing_id + ': Malformed', error)
+        self.assertIn(invalid_billing_id + ': Invalid', error)
+        self.assertIn(valid_billing_id + ': Valid', output)
+
+    # TODO: test_list
+
+    @enable_deployment('LRC')
     def test_set_billing_id_invalid(self):
         """Test that, when the given billing ID is invalid, each of the
         subcommands of the 'set' subcommand raises an error, unless the
@@ -132,11 +165,13 @@ class TestBillingIds(TestBillingBase):
             manager = call['manager']
             args = call['args']
 
-            self.assertIsNone(manager.billing_activity)
+            self.assertEqual(
+                manager.billing_activity, self.original_billing_activity)
             with self.assertRaises(CommandError) as cm:
                 command(*args)
             self.assertIn('is invalid', str(cm.exception))
-            self.assertIsNone(manager.billing_activity)
+            self.assertEqual(
+                manager.billing_activity, self.original_billing_activity)
 
             output, error = command(*args, ignore_invalid=True)
             self.assertIn('is invalid', output)
@@ -146,6 +181,7 @@ class TestBillingIds(TestBillingBase):
 
             self.assertEqual(manager.billing_activity, billing_activity)
 
+    @enable_deployment('LRC')
     def test_set_billing_id_malformed(self):
         """Test that, when the given billing ID is malformed, each of
         the subcommands of the 'set' subcommand raises an error."""
@@ -166,12 +202,15 @@ class TestBillingIds(TestBillingBase):
             manager = call['manager']
             args = call['args']
 
-            self.assertIsNone(manager.billing_activity)
+            self.assertEqual(
+                manager.billing_activity, self.original_billing_activity)
             with self.assertRaises(CommandError) as cm:
                 command(*args)
             self.assertIn('is malformed', str(cm.exception))
-            self.assertIsNone(manager.billing_activity)
+            self.assertEqual(
+                manager.billing_activity, self.original_billing_activity)
 
+    @enable_deployment('LRC')
     def test_set_billing_id_nonexistent(self):
         """Test that, when the given billing ID does not already exist,
         each of the subcommands of the 'set' subcommand raises an
@@ -203,12 +242,15 @@ class TestBillingIds(TestBillingBase):
             manager = call['manager']
             args = call['args']
 
-            self.assertIsNone(manager.billing_activity)
+            self.assertEqual(
+                manager.billing_activity, self.original_billing_activity)
             with self.assertRaises(CommandError) as cm:
                 command(*args)
             self.assertIn('does not exist', str(cm.exception))
-            self.assertIsNone(manager.billing_activity)
+            self.assertEqual(
+                manager.billing_activity, self.original_billing_activity)
 
+    @enable_deployment('LRC')
     def test_set_project_default_dry_run(self):
         """Test that, when the --dry_run flag is given to the
         'project_default' subcommand of the 'set' subcommand, changes
@@ -217,15 +259,18 @@ class TestBillingIds(TestBillingBase):
         self.command.create(billing_id)
 
         manager = ProjectBillingActivityManager(self.project)
-        self.assertIsNone(manager.billing_activity)
+        self.assertEqual(
+            manager.billing_activity, self.original_billing_activity)
 
         output, error = self.command.set_project_default(
             self.project_name, billing_id, dry_run=True)
         self.assertIn('Would update', output)
         self.assertFalse(error)
 
-        self.assertIsNone(manager.billing_activity)
+        self.assertEqual(
+            manager.billing_activity, self.original_billing_activity)
 
+    @enable_deployment('LRC')
     def test_set_project_default_success(self):
         """Test that the 'project_default' subcommand of the 'set'
         subcommand successfully sets a billing ID for a Project."""
@@ -234,7 +279,8 @@ class TestBillingIds(TestBillingBase):
         billing_activity = get_billing_activity_from_full_id(billing_id)
 
         manager = ProjectBillingActivityManager(self.project)
-        self.assertIsNone(manager.billing_activity)
+        self.assertEqual(
+            manager.billing_activity, self.original_billing_activity)
 
         output, error = self.command.set_project_default(
             self.project_name, billing_id)
@@ -255,6 +301,7 @@ class TestBillingIds(TestBillingBase):
 
         self.assertEqual(manager.billing_activity, other_billing_activity)
 
+    @enable_deployment('LRC')
     def test_set_recharge_dry_run(self):
         """Test that, when the --dry_run flag is given to the 'recharge'
         subcommand of the 'set' subcommand, changes are displayed, but
@@ -263,15 +310,18 @@ class TestBillingIds(TestBillingBase):
         self.command.create(billing_id)
 
         manager = ProjectUserBillingActivityManager(self.project_user)
-        self.assertIsNone(manager.billing_activity)
+        self.assertEqual(
+            manager.billing_activity, self.original_billing_activity)
 
         output, error = self.command.set_recharge(
             self.project_name, self.user.username, billing_id, dry_run=True)
         self.assertIn('Would update', output)
         self.assertFalse(error)
 
-        self.assertIsNone(manager.billing_activity)
+        self.assertEqual(
+            manager.billing_activity, self.original_billing_activity)
 
+    @enable_deployment('LRC')
     def test_set_recharge_success(self):
         """Test that the 'recharge' subcommand of the 'set' subcommand
         successfully sets a billing ID for a ProjectUser."""
@@ -280,7 +330,8 @@ class TestBillingIds(TestBillingBase):
         billing_activity = get_billing_activity_from_full_id(billing_id)
 
         manager = ProjectUserBillingActivityManager(self.project_user)
-        self.assertIsNone(manager.billing_activity)
+        self.assertEqual(
+            manager.billing_activity, self.original_billing_activity)
 
         output, error = self.command.set_recharge(
             self.project_name, self.user.username, billing_id)
@@ -301,6 +352,7 @@ class TestBillingIds(TestBillingBase):
 
         self.assertEqual(manager.billing_activity, other_billing_activity)
 
+    @enable_deployment('LRC')
     def test_set_user_account_dry_run(self):
         """Test that, when the --dry_run flag is given to the
         'user_account' subcommand of the 'set' subcommand, changes are
@@ -309,15 +361,18 @@ class TestBillingIds(TestBillingBase):
         self.command.create(billing_id)
 
         manager = UserBillingActivityManager(self.user)
-        self.assertIsNone(manager.billing_activity)
+        self.assertEqual(
+            manager.billing_activity, self.original_billing_activity)
 
         output, error = self.command.set_user_account(
             self.user.username, billing_id, dry_run=True)
         self.assertIn('Would update', output)
         self.assertFalse(error)
 
-        self.assertIsNone(manager.billing_activity)
+        self.assertEqual(
+            manager.billing_activity, self.original_billing_activity)
 
+    @enable_deployment('LRC')
     def test_set_user_account_success(self):
         """Test that the 'user_account' subcommand of the 'set'
         subcommand successfully sets a billing ID for a User."""
@@ -326,7 +381,8 @@ class TestBillingIds(TestBillingBase):
         billing_activity = get_billing_activity_from_full_id(billing_id)
 
         manager = UserBillingActivityManager(self.user)
-        self.assertIsNone(manager.billing_activity)
+        self.assertEqual(
+            manager.billing_activity, self.original_billing_activity)
 
         output, error = self.command.set_user_account(
             self.user.username, billing_id)
@@ -366,6 +422,15 @@ class BillingIdsCommand(object):
         """Call the 'create' subcommand with the given billing ID, and
         flag values."""
         args = ['create', billing_id]
+        self._add_flags_to_args(args, **flags)
+        return self.call_subcommand(*args)
+    
+    def validate(self, billing_ids, **flags):
+        """Call the 'validate' subcommand with the given billing IDs, and
+        flag values."""
+        args = ['validate']
+        for billing_id in billing_ids:
+            args.append(billing_id)
         self._add_flags_to_args(args, **flags)
         return self.call_subcommand(*args)
 

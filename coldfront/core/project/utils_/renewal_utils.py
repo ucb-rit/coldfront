@@ -6,6 +6,7 @@ from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.utils import get_project_compute_allocation
+from coldfront.core.allocation.utils import prorated_allocation_amount
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import ProjectStatusChoice
@@ -585,6 +586,33 @@ def allocation_renewal_request_state_status(request):
     # The request has not been denied, so it is under review.
     return AllocationRenewalRequestStatusChoice.objects.get(
         name='Under Review')
+
+
+def set_allocation_renewal_request_eligibility(request, status, justification,
+                                               timestamp=None):
+    """Update the given AllocationRenewalRequest to note whether the PI
+    of the request is eligible for renewal, with the following:
+        - A str 'status' denoting eligibility (one of 'Pending',
+          'Approved', 'Denied'),
+        - A str 'justification' with admin comments, and
+        - An optional str ISO 8601 'timestamp'. If one is not given, the
+          current time is used.
+
+    Based on 'status', also update the status of the request (e.g., if
+    the PI is ineligible, the request's status should have status
+    'Denied'.
+    """
+    if timestamp is not None:
+        assert isinstance(timestamp, str)
+    else:
+        timestamp = utc_now_offset_aware().isoformat()
+    request.state['eligibility'] = {
+        'status': status,
+        'justification': justification,
+        'timestamp': timestamp,
+    }
+    request.status = allocation_renewal_request_state_status(request)
+    request.save()
 
 
 class AllocationRenewalRunnerBase(object):

@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 from coldfront.core.allocation.models import AllocationAdditionRequest
 from coldfront.core.project.forms import MemorandumSignedForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectRechargeExtraFieldsForm
@@ -22,6 +20,10 @@ from django.views.generic import DetailView
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
 
+from copy import deepcopy
+from decimal import Decimal
+from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
+
 import iso8601
 import logging
 import os
@@ -40,7 +42,6 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
 
     model = AllocationAdditionRequest
     template_name = 'project/project_allocation_addition/request_detail.html'
-    login_url = '/'
     context_object_name = 'addition_request'
 
     request_obj = None
@@ -64,13 +65,28 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
         timestamp, is "Manage" button available, URL of "Manage"
         button]."""
         checklist = []
+        notified = self.request_obj.state['notified']
+        task_text = (
+            'Confirm or edit allowance details, and '
+            'enable/notify the PI to sign the Memorandum of Understanding.')
+        checklist.append([
+            task_text,
+            notified['status'],
+            notified['timestamp'],
+            True,
+            reverse(
+                'service-units-purchase-request-notify-pi',
+                kwargs={'pk': self.request_obj.pk})
+        ])
+        is_notified = notified['status'] == 'Complete'
+        
         memorandum_signed = self.request_obj.state['memorandum_signed']
         checklist.append([
             ('Confirm that the Memorandum of Understanding has been signed '
              'and that funds have been transferred.'),
             memorandum_signed['status'],
             memorandum_signed['timestamp'],
-            True,
+            is_notified,
             reverse(
                 'service-units-purchase-request-review-memorandum-signed',
                 kwargs={'pk': self.request_obj.pk})
@@ -132,6 +148,26 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
         context['review_controls_visible'] = (
             self.request.user.is_superuser and
             self.request_obj.status.name not in ('Denied', 'Complete'))
+
+        context['addition_request'] = self.request_obj
+
+        context['is_superuser'] = self.request.user.is_superuser
+        context['can_download_mou'] = self.request_obj \
+                                    .state['notified']['status'] == 'Complete'
+        context['can_upload_mou'] = \
+            self.request_obj.status.name == 'Under Review'
+        context['mou_uploaded'] = bool(self.request_obj.mou_file)
+
+        context['unsigned_download_url'] = reverse('service-units-purchase-request-download-unsigned-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+        context['signed_download_url'] = reverse('service-units-purchase-request-download-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+        context['signed_upload_url'] = reverse('service-units-purchase-request-upload-mou',
+                                                    kwargs={'pk': self.request_obj.pk,
+                                                            'request_type': 'service-units-purchase'})
+        context['mou_type'] = 'Memorandum of Understanding'
 
         return context
 
@@ -196,7 +232,6 @@ class AllocationAdditionRequestListView(LoginRequiredMixin,
     Service Units under Projects."""
 
     template_name = 'project/project_allocation_addition/request_list.html'
-    login_url = '/'
     completed = False
 
     def get_context_data(self, **kwargs):
@@ -242,7 +277,7 @@ class AllocationAdditionRequestListView(LoginRequiredMixin,
                 direction = '-'
             order_by = direction + order_by
         else:
-            order_by = 'id'
+            order_by = '-modified'
         return order_by
 
     def test_func(self):
@@ -271,7 +306,6 @@ class AllocationAdditionReviewBase(LoginRequiredMixin, UserPassesTestMixin,
     """A base class for views for reviewing an
     AllocationAdditionRequest."""
 
-    login_url = '/'
 
     error_message = 'Unexpected failure. Please contact an administrator.'
     request_obj = None
@@ -417,3 +451,63 @@ class AllocationAdditionReviewMemorandumSignedView(AllocationAdditionReviewBase)
     def get_template_names(self):
         return [
             os.path.join(self.template_dir, 'review_memorandum_signed.html')]
+
+class AllocationAdditionEditExtraFieldsView(LoginRequiredMixin,
+                                            UserPassesTestMixin,
+                                            FormView):
+    template_name = 'project/project_allocation_addition/request_edit_extra_fields.html'
+    form_class = SavioProjectRechargeExtraFieldsForm
+    request_obj = None
+
+    logger = logging.getLogger(__name__)
+
+    error_message = 'Unexpected failure. Please contact an administrator.'
+
+    def test_func(self):
+        """UserPassesTestMixin tests."""
+        if self.request.user.is_superuser:
+            return True
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        pk = self.kwargs.get('pk')
+        self.request_obj = get_object_or_404(AllocationAdditionRequest, pk=pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'].initial = self.request_obj.extra_fields
+        context['addition_request'] = self.request_obj
+        context['notify_pi'] = False
+        return context
+
+    def form_valid(self, form):
+        """Save the form."""
+        self.request_obj.extra_fields = form.cleaned_data
+        if form.cleaned_data['num_service_units'] != str(self.request_obj.num_service_units):
+            self.request_obj.num_service_units = Decimal(form.cleaned_data['num_service_units'])
+        self.request_obj.save()
+        message = 'The request has been updated.'
+        messages.success(self.request, message)
+        return HttpResponseRedirect(reverse('service-units-purchase-request-detail',
+                                            kwargs={'pk':self.request_obj.pk}))
+
+    def form_invalid(self, form):
+        """Handle invalid forms."""
+        message = 'Please correct the errors below.'
+        messages.error(self.request, message)
+        return self.render_to_response(
+            self.get_context_data(form=form))
+
+class AllocationAdditionNotifyPIView(MOURequestNotifyPIViewMixIn,
+                                     AllocationAdditionEditExtraFieldsView):
+    def email_pi(self):
+        super()._email_pi('Service Units Purchase Request Ready To Be Signed',
+                         self.request_obj.requester.get_full_name(),
+                         reverse('service-units-purchase-request-detail',
+                                 kwargs={'pk': self.request_obj.pk}),
+                         'Memorandum of Understanding',
+                         f'{self.request_obj.project.name} service units purchase request',
+                         self.request_obj.requester.email)

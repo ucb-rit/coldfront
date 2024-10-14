@@ -5,6 +5,7 @@ dist
 build
 *._*
 *.DS_Store
+.env
 *.swp
 env/
 venv/
@@ -24,7 +25,18 @@ coldfront.db*
 db.json
 coldfront.db.self.broken
 main.yml
+secrets.yml
+cilogon.yml
 *.dump
 .vagrant
 .coverage
 htmlcov
+secrets
+redis.conf
+id_*
+fetch_database_backup.sh
+google-drive-key.json
+overrides.yml
+New Project Request MOUs
+Secure Directory Request MOUs
+Service Units Purchase Request MOUs

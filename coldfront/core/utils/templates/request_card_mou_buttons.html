@@ -1,0 +1,28 @@
+{% if can_download_mou %}
+    <p class="card-text text-justify">
+    <strong>Unsigned {{ mou_type }}: </strong>
+    <a href="{{ unsigned_download_url }}" class="btn btn-primary">
+        <i class="fas fa-download" aria-hidden="true"></i>
+        Download
+    </a>
+    </p>
+    {% if can_upload_mou or mou_uploaded %}
+    <p class="card-text text-justify">
+        <strong>Signed {{ mou_type }}: </strong>
+        {% if mou_uploaded %}
+        <a href="{{ signed_download_url }}" class="btn btn-primary">
+            <i class="fas fa-download" aria-hidden="true"></i>
+            Download
+        </a>
+        {% endif %}
+        {% if can_upload_mou %}
+        <a href="{{ signed_upload_url }}"
+        class="btn {% if mou_uploaded %} btn-secondary {% else %} btn-primary {% endif %}">
+            <i class="fas fa-upload" aria-hidden="true"></i>
+            Upload {% if mou_uploaded %} new {% endif %}
+        </a>
+        {% if not mou_uploaded %} <span style="color: red; font-weight: bold;">*</span> {% endif %}
+        {% endif %}
+    </p>
+    {% endif %}
+{% endif %}

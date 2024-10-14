@@ -44,7 +44,6 @@ class AllocationAdditionRequestLandingView(LoginRequiredMixin,
     Recharge."""
 
     template_name = 'project/project_allocation_addition/request_landing.html'
-    login_url = '/'
 
     project_obj = None
 
@@ -131,7 +130,6 @@ class AllocationAdditionRequestView(LoginRequiredMixin, UserPassesTestMixin,
 
     form_class = SavioProjectRechargeExtraFieldsForm
     template_name = 'project/project_allocation_addition/request_form.html'
-    login_url = '/'
 
     project_obj = None
 
@@ -171,7 +169,7 @@ class AllocationAdditionRequestView(LoginRequiredMixin, UserPassesTestMixin,
             extra_fields = savio_project_request_recharge_extra_fields_schema()
             for field in extra_fields:
                 extra_fields[field] = form_data[field]
-            num_service_units = extra_fields.pop('num_service_units')
+            num_service_units = extra_fields['num_service_units']
 
             request_kwargs = {
                 'requester': requester,
