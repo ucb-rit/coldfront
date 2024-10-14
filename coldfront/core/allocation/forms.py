@@ -285,7 +285,11 @@ class AllocationPeriodChoiceField(forms.ModelChoiceField):
                 not isinstance(self.computing_allowance, ComputingAllowance)):
             self.computing_allowance = ComputingAllowance(
                 self.computing_allowance)
-        self.interface = ComputingAllowanceInterface()
+        self.interface = (
+            # Short-circuit to avoid instantiating ComputingAllowanceInterface
+            # if possible.
+            kwargs.pop('computing_allowance_interface', None) or
+            ComputingAllowanceInterface())
         super().__init__(*args, **kwargs)
 
     def label_from_instance(self, obj):

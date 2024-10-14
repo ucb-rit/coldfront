@@ -232,7 +232,8 @@ def non_denied_renewal_request_statuses():
 
 
 def pis_with_renewal_requests_pks(allocation_period, computing_allowance=None,
-                                  request_status_names=[]):
+                                  request_status_names=[],
+                                  computing_allowance_interface=None):
     """Return a list of primary keys of PIs of allocation renewal
     requests for the given AllocationPeriod that match the given filters.
 
@@ -243,6 +244,9 @@ def pis_with_renewal_requests_pks(allocation_period, computing_allowance=None,
                                           allowance to filter with
         - request_status_names (list[str]): A list of names of request
                                             statuses to filter with
+        - computing_allowance_interface (ComputingAllowanceInterface):
+              An optional ComputingAllowanceInterface instance to
+              perform lookups with
 
     Returns:
         - A list of integers representing primary keys of matching PIs.
@@ -254,9 +258,13 @@ def pis_with_renewal_requests_pks(allocation_period, computing_allowance=None,
     """
     assert isinstance(allocation_period, AllocationPeriod)
     f = Q(allocation_period=allocation_period)
+    if computing_allowance_interface is not None:
+        assert isinstance(
+            computing_allowance_interface, ComputingAllowanceInterface)
     if computing_allowance is not None:
         assert isinstance(computing_allowance, Resource)
-        interface = ComputingAllowanceInterface()
+        interface = (
+            computing_allowance_interface or ComputingAllowanceInterface())
         project_prefix = interface.code_from_name(computing_allowance.name)
         f = f & Q(post_project__name__startswith=project_prefix)
     if request_status_names:

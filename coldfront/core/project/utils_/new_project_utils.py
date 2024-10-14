@@ -82,7 +82,8 @@ def pis_with_new_project_requests_pks(allocation_period,
             f).values_list('pi__pk', flat=True))
 
 
-def project_pi_pks(computing_allowance=None, project_status_names=[]):
+def project_pi_pks(computing_allowance=None, project_status_names=[],
+                   computing_allowance_interface=None):
     """Return a list of primary keys of PI Users of Projects that match
     the given filters.
 
@@ -91,6 +92,9 @@ def project_pi_pks(computing_allowance=None, project_status_names=[]):
                                           allowance to filter with
         - project_status_names (list[str]): A list of names of Project
                                             statuses to filter with
+        - computing_allowance_interface (ComputingAllowanceInterface):
+              An optional ComputingAllowanceInterface instance to
+              perform lookups with
 
     Returns:
         - A list of integers representing primary keys of matching PIs.
@@ -101,9 +105,13 @@ def project_pi_pks(computing_allowance=None, project_status_names=[]):
           cannot be retrieved.
     """
     project_prefix = ''
+    if computing_allowance_interface is not None:
+        assert isinstance(
+            computing_allowance_interface, ComputingAllowanceInterface)
     if computing_allowance is not None:
         assert isinstance(computing_allowance, Resource)
-        interface = ComputingAllowanceInterface()
+        interface = (
+            computing_allowance_interface or ComputingAllowanceInterface())
         project_prefix = interface.code_from_name(computing_allowance.name)
     return set(
         ProjectUser.objects.filter(

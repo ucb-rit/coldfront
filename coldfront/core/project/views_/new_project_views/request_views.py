@@ -29,6 +29,7 @@ from coldfront.core.project.utils_.new_project_utils import send_new_project_req
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
+from coldfront.core.resource.utils_.allowance_utils.interface import cached_computing_allowance_interface
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
@@ -178,6 +179,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         # Define a lookup table from form name to step number.
         self.step_numbers_by_form_name = {
             name: i for i, (name, _) in enumerate(self.FORMS)}
+        self.computing_allowance_interface = \
+            cached_computing_allowance_interface()
 
     def test_func(self):
         if self.request.user.is_superuser:
@@ -223,6 +226,17 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         step_name = step_names_by_step_number[step_number]
         for key in required_keys_by_step_name[step_name]:
             kwargs[key] = data.get(key, None)
+
+        step_names_requiring_computing_allowance_interface = {
+            'allocation_period',
+            'existing_pi',
+            'pooled_project_selection',
+            'details',
+        }
+        if step_name in step_names_requiring_computing_allowance_interface:
+            kwargs['computing_allowance_interface'] = \
+                self.computing_allowance_interface
+
         return kwargs
 
     def get_template_names(self):

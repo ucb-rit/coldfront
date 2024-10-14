@@ -50,6 +50,11 @@ class SavioProjectAllocationPeriodForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         computing_allowance = kwargs.pop('computing_allowance', None)
+        computing_allowance_interface = (
+            # Short-circuit to avoid instantiating ComputingAllowanceInterface
+            # if possible.
+            kwargs.pop('computing_allowance_interface', None) or
+            ComputingAllowanceInterface())
         super().__init__(*args, **kwargs)
         if computing_allowance is not None:
             computing_allowance = ComputingAllowance(computing_allowance)
@@ -60,6 +65,7 @@ class SavioProjectAllocationPeriodForm(forms.Form):
             queryset = AllocationPeriod.objects.none()
         self.fields['allocation_period'] = AllocationPeriodChoiceField(
             computing_allowance=computing_allowance,
+            computing_allowance_interface=computing_allowance_interface,
             label='Allocation Period',
             queryset=queryset,
             required=True)
@@ -164,6 +170,11 @@ class SavioProjectExistingPIForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
         self.allocation_period = kwargs.pop('allocation_period', None)
+        self.interface = (
+            # Short-circuit to avoid instantiating ComputingAllowanceInterface
+            # if possible.
+            kwargs.pop('computing_allowance_interface', None) or
+            ComputingAllowanceInterface())
         super().__init__(*args, **kwargs)
         if self.computing_allowance is not None:
             self.computing_allowance = ComputingAllowance(
@@ -196,7 +207,8 @@ class SavioProjectExistingPIForm(forms.Form):
             disable_user_pks.update(
                 project_pi_pks(
                     computing_allowance=resource,
-                    project_status_names=project_status_names))
+                    project_status_names=project_status_names,
+                    computing_allowance_interface=self.interface))
             new_project_request_status_names = list(
                 non_denied_new_project_request_statuses().values_list(
                     'name', flat=True))
@@ -212,7 +224,8 @@ class SavioProjectExistingPIForm(forms.Form):
                 pis_with_renewal_requests_pks(
                     self.allocation_period,
                     computing_allowance=resource,
-                    request_status_names=renewal_request_status_names))
+                    request_status_names=renewal_request_status_names,
+                    computing_allowance_interface=self.interface))
 
         if flag_enabled('LRC_ONLY'):
             # On LRC, PIs must be LBL employees.
@@ -528,7 +541,11 @@ class SavioProjectPooledProjectSelectionForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
-        self.interface = ComputingAllowanceInterface()
+        self.interface = (
+            # Short-circuit to avoid instantiating ComputingAllowanceInterface
+            # if possible.
+            kwargs.pop('computing_allowance_interface', None) or
+            ComputingAllowanceInterface())
         super().__init__(*args, **kwargs)
 
         f = Q(status__name__in=['Pending - Add', 'New', 'Active'])
@@ -587,7 +604,11 @@ class SavioProjectDetailsForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
-        self.interface = ComputingAllowanceInterface()
+        self.interface = (
+            # Short-circuit to avoid instantiating ComputingAllowanceInterface
+            # if possible.
+            kwargs.pop('computing_allowance_interface', None) or
+            ComputingAllowanceInterface())
         super().__init__(*args, **kwargs)
         if self.computing_allowance is not None:
             self.computing_allowance = ComputingAllowance(

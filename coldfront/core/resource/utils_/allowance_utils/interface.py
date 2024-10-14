@@ -1,6 +1,13 @@
+from base64 import b64decode
+from base64 import b64encode
+
+from django.core.cache import cache
+
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.models import ResourceType
+
+import pickle
 
 
 class ComputingAllowanceInterface(object):
@@ -135,3 +142,20 @@ class ComputingAllowanceInterface(object):
 class ComputingAllowanceInterfaceError(Exception):
     """An exception to be raised by the ComputingAllowanceInterface."""
     pass
+
+
+def cached_computing_allowance_interface():
+    """Return an instance of ComputingAllowanceInterface. If one is
+    already in the cache, return it. Otherwise, create one, store it in
+    the cache, and return it."""
+    cache_key = 'computing_allowance_interface'
+    if cache_key in cache:
+        cache_value = cache.get(cache_key)
+        computing_allowance_interface = pickle.loads(
+            b64decode(cache_value.encode('utf-8')))
+    else:
+        computing_allowance_interface = ComputingAllowanceInterface()
+        cache_value = b64encode(
+            pickle.dumps(computing_allowance_interface)).decode('utf-8')
+        cache.set(cache_key, cache_value)
+    return computing_allowance_interface
