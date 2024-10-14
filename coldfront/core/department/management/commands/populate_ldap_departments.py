@@ -1,6 +1,6 @@
 from django.core.management import BaseCommand
 from coldfront.core.department.models import Department
-from coldfront.core.department.utils.ldap import LDAP_URL
+from coldfront.core.department.utils.ldap import LDAP_URL, ldap_search_all_departments
 from coldfront.core.department.utils.ldap import DEPARTMENT_OU
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 from ldap3 import Connection
@@ -36,14 +36,8 @@ class Command(BaseCommand):
             self.log(
                 f'Created Department {department.pk}, Other (OTH)', dry_run)
 
-        # auto_range=True is needed for large searches
-        conn = Connection(LDAP_URL, auto_bind=True, auto_range=True)
-        conn.search(
-            DEPARTMENT_OU,
-            '(berkeleyEduOrgUnitHierarchyString=*-*-*-*)',
-            attributes=['berkeleyEduOrgUnitHierarchyString', 'description'])
-        
-        for entry in conn.entries[1:]:
+        department_entries = ldap_search_all_departments()
+        for entry in department_entries:
             hierarchy = entry.berkeleyEduOrgUnitHierarchyString.value
             # filter L4 hierarchies
             if hierarchy.count('-') == 3:

@@ -1,7 +1,8 @@
 from django.core.management import BaseCommand
 from django.contrib.auth.models import User
-from coldfront.core.department.utils.ldap import fetch_and_set_user_departments
+from coldfront.core.department.utils.queries import fetch_and_set_user_departments
 from coldfront.core.utils.common import add_argparse_dry_run_argument
+from coldfront.core.department.models import Department
 import logging
 
 class Command(BaseCommand):
@@ -23,6 +24,8 @@ class Command(BaseCommand):
             users = users.filter(userprofile__is_pi=True)
         else:
             users = users.all()
+
+        l4_department_code_cache = {department.code: department.code for department in Department.objects.all()}
         for user in users:
             userprofile = user.userprofile
-            fetch_and_set_user_departments(user, userprofile, dry_run)
+            l4_department_code_cache = fetch_and_set_user_departments(user, userprofile, dry_run, l4_department_code_cache)

@@ -1,5 +1,3 @@
-from coldfront.core.department.models import Department
-from coldfront.core.department.models import UserDepartment
 from ldap3 import Connection
 import logging
 
@@ -9,9 +7,22 @@ LDAP_URL = 'ldap.berkeley.edu'
 PEOPLE_OU = 'ou=people,dc=berkeley,dc=edu'
 DEPARTMENT_OU = 'ou=org units,dc=berkeley,dc=edu'
 
+def ldap_search_all_departments():
+    """Return all departments in LDAP.
 
-def ldap_search_user(email, first_name, last_name):
-    """Search for a user in LDAP.
+    Returns:
+        (list) List of LDAP entries for departments
+    """
+    # auto_range=True is needed for large searches
+    conn = Connection(LDAP_URL, auto_bind=True, auto_range=True)
+    conn.search(
+        DEPARTMENT_OU,
+        '(berkeleyEduOrgUnitHierarchyString=*-*-*-*)',
+        attributes=['berkeleyEduOrgUnitHierarchyString', 'description'])
+    return conn.entries
+
+def ldap_get_user_departments(email, first_name, last_name):
+    """Search for a user in LDAP and return their departments.
 
     Parameters:
         email (str): Email address of user
@@ -23,13 +34,12 @@ def ldap_search_user(email, first_name, last_name):
     conn = Connection(LDAP_URL, auto_bind=True)
     if conn.search(PEOPLE_OU, f'(&(objectClass=person)(mail={email}))',
                                             attributes=['departmentNumber']):
-        return conn.entries[0]
+        return conn.entries[0].departmentNumber.values
     elif conn.search(PEOPLE_OU, '(&(objectClass=person)'
             f'(givenName={first_name})(sn={last_name}))',
             attributes=['departmentNumber']) and len(conn.entries) == 1:
-        return conn.entries[0]
+        return conn.entries[0].departmentNumber.values
     return None
-
 
 def get_L4_code_from_department_code(code):
     """Return the L4 code for a department from a L4+ code.
@@ -66,53 +76,3 @@ def get_department_name_from_code(code):
                 f'(&(objectClass=organizationalUnit)(ou={code}))',
                 attributes=['description'])
     return conn.entries[0].description.value
-
-
-def fetch_and_set_user_departments(user, userprofile, dry_run=False):
-    """Fetch a user's departments from LDAP and set them in the
-    database.
-
-    Parameters:
-        user (User): Django User object
-        userprofile (UserProfile): Coldfront UserProfile object
-        dry_run (bool): If True, don't actually make changes
-                        (default: False)
-    Returns:
-        None
-    """
-    if dry_run:
-        logger.info = print
-    user_entry = ldap_search_user(user.email, user.first_name, user.last_name)
-    ldap_departments = user_entry.departmentNumber.values if user_entry else []
-    for department_code in ldap_departments:
-        department_code = get_L4_code_from_department_code(department_code)
-        if department_code is None:
-            logger.warning(f'Could not find L4 code for department {department_code}')
-            continue
-        # If a Department doesn't exist, create it.
-        name = None if Department.objects.filter(code=department_code).exists()\
-            else get_department_name_from_code(department_code)
-        if dry_run:
-            department = Department(code=department_code, name=name)
-            userdepartment = UserDepartment(userprofile=userprofile,
-                                department=department, is_authoritative=True)
-            created = name is not None
-        else:
-            department, created = Department.objects.get_or_create(
-                                                    code=department_code,
-                                                    defaults={'name': name})
-        if created:
-            logger.info(f'Created Department {department}')
-
-        # Create a UserDepartment association, updating is_authoritative if
-        # needed.
-        if not UserDepartment.objects.filter(userprofile=userprofile,
-                                             department__code=department_code,
-                                             is_authoritative=True).exists():
-            if dry_run:
-                print(f'Created UserDepartment {userdepartment}')
-            else:
-                UserDepartment.objects.update_or_create(userprofile=userprofile,
-                                        department=department,
-                                        defaults={'is_authoritative': True})
-

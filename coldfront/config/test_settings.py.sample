@@ -69,6 +69,16 @@ EXTRA_EXTRA_APPS = []
 EXTRA_EXTRA_MIDDLEWARE = []
 
 #------------------------------------------------------------------------------
+# Django Cache settings
+#------------------------------------------------------------------------------
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
+
+#------------------------------------------------------------------------------
 # File Storage Settings
 #------------------------------------------------------------------------------
 
@@ -90,6 +100,16 @@ FILE_STORAGE = {
             'filename_type': 'SecureDirectory_RUA',
         },
     },
+}
+
+#------------------------------------------------------------------------------
+# Renewal Survey settings
+#------------------------------------------------------------------------------
+
+# Permit renewal requests to be made without a survey response.
+RENEWAL_SURVEY = {
+    'backend': 'coldfront.core.project.utils_.renewal_survey.backends.permissive.PermissiveRenewalSurveyBackend',
+    'details': {},
 }
 
 #------------------------------------------------------------------------------
@@ -131,4 +151,5 @@ FLAGS = {
     'SSO_ENABLED': [{'condition': 'boolean', 'value': False}],
     'USER_DEPARTMENTS_ENABLED': [{'condition': 'boolean', 'value': True}],
     'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': False}],
+    'RENEWAL_SURVEY_ENABLED': [{'condition': 'boolean', 'value': True}],
 }

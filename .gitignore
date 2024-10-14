@@ -31,8 +31,12 @@ cilogon.yml
 .vagrant
 .coverage
 htmlcov
+secrets
+redis.conf
 id_*
 fetch_database_backup.sh
 google-drive-key.json
-secrets
-redis.conf
+overrides.yml
+New Project Request MOUs
+Secure Directory Request MOUs
+Service Units Purchase Request MOUs

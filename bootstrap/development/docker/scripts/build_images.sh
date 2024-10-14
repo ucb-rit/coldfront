@@ -7,7 +7,12 @@ else
 fi
 
 docker build \
+    -f bootstrap/development/docker/images/os.Dockerfile \
+    -t coldfront-os:$IMAGE_TAG .
+
+docker build \
     -f bootstrap/development/docker/images/app-config.Dockerfile \
+    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
     -t coldfront-app-config:$IMAGE_TAG bootstrap/development/docker
 
 docker build \

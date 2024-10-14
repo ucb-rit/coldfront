@@ -1,8 +1,11 @@
-FROM ubuntu:latest
-
-RUN apt-get update && \
-    apt-get install -y python3 python3-dev python3-pip
-
-RUN pip3 install jinja2 pyyaml
+ARG BASE_IMAGE_TAG=latest
+FROM coldfront-os:${BASE_IMAGE_TAG}
 
 WORKDIR /app
+
+RUN python3 -m venv /app/venv
+
+RUN /app/venv/bin/pip install --upgrade pip setuptools wheel && \
+    /app/venv/bin/pip install jinja2 pyyaml
+
+ENV PATH="/app/venv/bin:$PATH"

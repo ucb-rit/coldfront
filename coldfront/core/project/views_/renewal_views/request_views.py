@@ -9,6 +9,7 @@ from coldfront.core.project.forms_.new_project_forms.request_forms import SavioP
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalPISelectionForm
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalPoolingPreferenceForm
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalProjectSelectionForm
+from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalSurveyForm
 from coldfront.core.project.forms_.renewal_forms.request_forms import ProjectRenewalReviewAndSubmitForm
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
@@ -23,6 +24,7 @@ from coldfront.core.project.utils_.renewal_utils import has_non_denied_renewal_r
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_admin_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pi_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pooling_notification_email
+from coldfront.core.project.utils_.renewal_survey import get_renewal_survey_url
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
@@ -129,7 +131,7 @@ class AllocationRenewalMixin(object):
     @staticmethod
     def create_allocation_renewal_request(requester, pi, computing_allowance,
                                           allocation_period, pre_project,
-                                          post_project,
+                                          post_project, 
                                           new_project_request=None):
         """Create a new AllocationRenewalRequest."""
         request_kwargs = dict()
@@ -201,6 +203,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ('project_selection', ProjectRenewalProjectSelectionForm),
         ('new_project_details', SavioProjectDetailsForm),
         ('new_project_survey', SavioProjectSurveyForm),
+        ('renewal_survey', ProjectRenewalSurveyForm),
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
     ]
 
@@ -214,6 +217,8 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             'project/project_renewal/new_project_details.html',
         'new_project_survey':
             'project/project_renewal/new_project_survey.html',
+        'renewal_survey':
+            'project/project_renewal/project_renewal_survey.html',
         'review_and_submit': 'project/project_renewal/review_and_submit.html',
     }
 
@@ -224,6 +229,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ProjectRenewalProjectSelectionForm,
         SavioProjectDetailsForm,
         SavioProjectSurveyForm,
+        ProjectRenewalSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
     ]
 
@@ -263,6 +269,14 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         context = super().get_context_data(form=form, **kwargs)
         current_step = int(self.steps.current)
         self.__set_data_from_previous_steps(current_step, context)
+
+        if current_step == self.step_numbers_by_form_name['renewal_survey']:
+            context['renewal_survey_url'] = get_renewal_survey_url(
+                context['allocation_period'].name,
+                context['PI'].user,
+                context['requested_project'].name,
+                self.request.user)
+
         return context
 
     def get_form_kwargs(self, step=None):
@@ -311,6 +325,13 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             kwargs['computing_allowance'] = self.computing_allowance
         elif step == self.step_numbers_by_form_name['new_project_survey']:
             kwargs['computing_allowance'] = self.computing_allowance
+        elif step == self.step_numbers_by_form_name['renewal_survey']:
+            tmp = {}
+            self.__set_data_from_previous_steps(step, tmp)
+            kwargs['project_name'] = tmp['requested_project'].name
+            kwargs['allocation_period_name'] = tmp['allocation_period'].name
+            kwargs['pi_username'] = tmp['PI'].user.username
+
         return kwargs
 
     def get_template_names(self):
@@ -366,11 +387,15 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
 
     @staticmethod
     def condition_dict():
+        """Return a mapping from a string index `i` into FORMS
+        (zero-indexed) to a function determining whether FORMS[int(i)]
+        should be included."""
         view = AllocationRenewalRequestView
         return {
             '3': view.show_project_selection_form_condition,
             '4': view.show_new_project_forms_condition,
             '5': view.show_new_project_forms_condition,
+            '6': view.show_renewal_survey_form_condition,
         }
 
     def show_new_project_forms_condition(self):
@@ -397,6 +422,10 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             form_class.POOLED_TO_UNPOOLED_OLD,
         )
         return cleaned_data.get('preference', None) in preferences
+
+    def show_renewal_survey_form_condition(self):
+        """Only show the renewal survey form if a survey is required."""
+        return flag_enabled('RENEWAL_SURVEY_ENABLED')
 
     def __get_survey_data(self, form_data):
         """Return provided survey data."""
@@ -556,18 +585,21 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
     FORMS = [
         ('allocation_period', SavioProjectAllocationPeriodForm),
         ('pi_selection', ProjectRenewalPISelectionForm),
+        ('renewal_survey', ProjectRenewalSurveyForm),
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
     ]
 
     TEMPLATES = {
         'allocation_period': 'project/project_renewal/allocation_period.html',
         'pi_selection': 'project/project_renewal/pi_selection.html',
+        'renewal_survey': 'project/project_renewal/project_renewal_survey.html',
         'review_and_submit': 'project/project_renewal/review_and_submit.html',
     }
 
     form_list = [
         SavioProjectAllocationPeriodForm,
         ProjectRenewalPISelectionForm,
+        ProjectRenewalSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
     ]
 
@@ -622,6 +654,14 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         context = super().get_context_data(form=form, **kwargs)
         current_step = int(self.steps.current)
         self.__set_data_from_previous_steps(current_step, context)
+
+        if current_step == self.step_numbers_by_form_name['renewal_survey']:
+            context['renewal_survey_url'] = get_renewal_survey_url(
+                context['allocation_period'].name,
+                context['PI'].user,
+                context['requested_project'].name,
+                self.request.user)
+
         return context
 
     def get_form_kwargs(self, step=None):
@@ -636,6 +676,12 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             kwargs['allocation_period_pk'] = getattr(
                 tmp.get('allocation_period', None), 'pk', None)
             kwargs['project_pks'] = [self.project_obj.pk]
+        elif step == self.step_numbers_by_form_name['renewal_survey']:
+            tmp = {}
+            self.__set_data_from_previous_steps(step, tmp)
+            kwargs['project_name'] = tmp['requested_project'].name
+            kwargs['allocation_period_name'] = tmp['allocation_period'].name
+            kwargs['pi_username'] = tmp['PI'].user.username
         return kwargs
 
     def get_template_names(self):
@@ -662,6 +708,20 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             'You must be an active Manager or Principal Investigator of the '
             'Project.')
         messages.error(self.request, message)
+
+    @staticmethod
+    def condition_dict():
+        """Return a mapping from a string index `i` into FORMS
+        (zero-indexed) to a function determining whether FORMS[int(i)]
+        should be included."""
+        view = AllocationRenewalRequestUnderProjectView
+        return {
+            '2': view.show_renewal_survey_form_condition,
+        }
+
+    def show_renewal_survey_form_condition(self):
+        """Only show the renewal survey form if a survey is required."""
+        return flag_enabled('RENEWAL_SURVEY_ENABLED')
 
     def __set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""

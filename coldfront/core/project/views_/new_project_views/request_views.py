@@ -37,8 +37,8 @@ from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.department.utils.ldap import ldap_search_user
-from coldfront.core.department.utils.ldap import fetch_and_set_user_departments
+from coldfront.core.department.utils.ldap import ldap_get_user_departments
+from coldfront.core.department.utils.queries import fetch_and_set_user_departments
 
 from django.conf import settings
 from django.contrib import messages
@@ -323,6 +323,9 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
     @staticmethod
     def condition_dict():
+        """Return a mapping from a string index `i` into FORMS
+        (zero-indexed) to a function determining whether FORMS[int(i)]
+        should be included."""
         view = SavioProjectRequestWizard
         return {
             '1': view.show_allocation_period_form_condition,
@@ -382,6 +385,12 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         return cleaned_data.get('PI', None) is None
 
     def show_pi_department_form_condition(self):
+        '''
+        Only show the form for selecting a PI's department if the user
+        departments feature is enabled and the PI does not have any
+        authoritative or non-authoritative departments set. The extra_data
+        variable prevents another LDAP lookup unless the user changes the PI.
+        '''
         if not flag_enabled('USER_DEPARTMENTS_ENABLED'):
             return False
         extra_data = self.request.session \
@@ -415,8 +424,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         if has_entry_key in extra_data and email == extra_data[email_key]:
             has_entry = extra_data[has_entry_key]
         else:
-            entry = ldap_search_user(email, fn, ln)
-            has_entry = entry is not None and bool(entry.departmentNumber)
+            departments = ldap_get_user_departments(email, fn, ln)
+            has_entry = departments is not None and bool(departments)
             extra_data[has_entry_key] = has_entry
             extra_data[email_key] = email
             self.request.session.modified = True

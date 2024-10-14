@@ -1,15 +1,14 @@
-FROM ubuntu:focal
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && \
-    apt update && \
-    apt -y install python3.8 && \
-    apt-get install -y python3.8-dev python3-pip && \
-    # Necessary for mod-wsgi requirement
-    apt-get install -y apache2-dev
-
-COPY requirements.txt .
-RUN python3 -m pip install -r requirements.txt
+ARG BASE_IMAGE_TAG=latest
+FROM coldfront-os:${BASE_IMAGE_TAG}
 
 WORKDIR /var/www/coldfront_app/coldfront
+
+RUN python3 -m venv /var/www/coldfront_app/venv
+
+COPY requirements.txt .
+# Pin setuptools to avoid ImportError. Source: https://stackoverflow.com/a/78387663
+RUN /var/www/coldfront_app/venv/bin/pip install --upgrade pip wheel && \
+    /var/www/coldfront_app/venv/bin/pip install setuptools==68.2.2 && \
+    /var/www/coldfront_app/venv/bin/pip install -r requirements.txt
+
+ENV PATH="/var/www/coldfront_app/venv/bin:$PATH"
