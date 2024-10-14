@@ -5,8 +5,11 @@ from django.core.validators import MinLengthValidator
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
+import coldfront.core.project.forms_.new_project_forms.request_forms as request_forms
 from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectUserRoleChoice)
+from coldfront.core.user.models import UserProfile
+from django.contrib.auth.models import User 
 from coldfront.core.user.utils_.host_user_utils import eligible_host_project_users
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.resource.utils import get_compute_resource_names
@@ -209,8 +212,15 @@ class ReviewDenyForm(forms.Form):
         widget=forms.Textarea(attrs={'rows': 3}))
 
 
-class ReviewStatusForm(forms.Form):
+class ReviewStatusForm(request_forms.SavioProjectNewPIForm,
+                       request_forms.SavioProjectExistingPIForm):
 
+    # PI = SavioProjectExistingPIForm.PI
+    # first_name = forms.CharField(max_length=30, required=True)
+    # middle_name = forms.CharField(max_length=30, required=False)
+    # last_name = forms.CharField(max_length=150, required=True)
+    # email = forms.EmailField(max_length=100, required=True)
+    
     status = forms.ChoiceField(
         choices=(
             ('', 'Select one.'),
@@ -230,6 +240,21 @@ class ReviewStatusForm(forms.Form):
         validators=[MinLengthValidator(10)],
         required=False,
         widget=forms.Textarea(attrs={'rows': 3}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['PI'].label_from_instance = self.label_from_instance
+        self.fields['PI'].empty_label = 'New PI'
+        self.fields['PI'].help_text = (
+            'Please confirm the PI for this project. If the PI is not listed, '
+            'select "New PI" and provide the PI\'s information below.')
+        self.fields['first_name'].required = False
+        self.fields['last_name'].required = False
+        self.fields['email'].required = False
+
+    @staticmethod
+    def label_from_instance(obj):
+        return f'{obj.first_name} {obj.last_name} ({obj.email})'
 
     def clean(self):
         cleaned_data = super().clean()
