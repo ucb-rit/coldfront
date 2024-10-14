@@ -1,4 +1,5 @@
-FROM coldfront-os
+ARG BASE_IMAGE_TAG=latest
+FROM coldfront-os:${BASE_IMAGE_TAG}
 
 WORKDIR /app
 
