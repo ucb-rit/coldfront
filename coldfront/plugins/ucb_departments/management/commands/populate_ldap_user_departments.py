@@ -1,9 +1,9 @@
 from django.core.management import BaseCommand
 from django.contrib.auth.models import User
-from coldfront.core.department.utils.queries import fetch_and_set_user_departments
+from coldfront.plugins.ucb_departments.utils.queries import fetch_and_set_user_departments
 from coldfront.core.utils.common import add_argparse_dry_run_argument
-from coldfront.core.department.models import Department
-import logging
+from coldfront.plugins.ucb_departments.models import Department
+
 
 class Command(BaseCommand):
 

@@ -4,7 +4,7 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
-from coldfront.core.department.models import UserDepartment
+from coldfront.plugins.ucb_departments.models import UserDepartment
 from coldfront.core.project.forms_.new_project_forms.request_forms import ComputingAllowanceForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectAllocationPeriodForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectDetailsForm
@@ -37,8 +37,9 @@ from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.department.utils.ldap import ldap_get_user_departments
-from coldfront.core.department.utils.queries import fetch_and_set_user_departments
+
+from coldfront.plugins.ucb_departments.utils.ldap import ldap_get_user_departments
+from coldfront.plugins.ucb_departments.utils.queries import fetch_and_set_user_departments
 
 from django.conf import settings
 from django.contrib import messages

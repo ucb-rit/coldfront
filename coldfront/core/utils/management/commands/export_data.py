@@ -6,7 +6,6 @@ from sys import stdout, stderr
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Value, F, CharField, Func, \
     DurationField, ExpressionWrapper
-from django.contrib.auth.models import User
 
 from coldfront.core.allocation.models import AllocationAttributeType, \
     AllocationUserAttribute, AllocationRenewalRequest, AllocationPeriod
@@ -14,7 +13,7 @@ from coldfront.core.statistics.models import Job
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
 from django.contrib.auth.models import User
-from coldfront.core.department.models import UserDepartment
+from coldfront.plugins.ucb_departments.models import UserDepartment
 from coldfront.core.project.forms_.renewal_forms.request_forms import DeprecatedProjectRenewalSurveyForm
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime

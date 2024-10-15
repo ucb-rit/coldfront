@@ -1,5 +1,5 @@
 from django.contrib import admin
-from coldfront.core.department.models import Department, UserDepartment
+from coldfront.plugins.ucb_departments.models import Department, UserDepartment
 
 # Register your models here.
 

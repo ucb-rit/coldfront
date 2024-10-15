@@ -8,7 +8,7 @@ import simple_history.models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('department', '0001_initial'),
+        ('ucb_departments', '0001_initial'),
         ('user', '0012_historicaluserprofile'),
     ]
 
@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='userprofile',
             name='departments',
-            field=models.ManyToManyField(through='department.UserDepartment', to='department.Department'),
+            field=models.ManyToManyField(through='ucb_departments.UserDepartment', to='ucb_departments.Department'),
         ),
         migrations.AlterField(
             model_name='historicaluserprofile',
@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigIntegerField(auto_created=True, blank=True, db_index=True, verbose_name='ID')),
                 ('is_authoritative', models.BooleanField(default=False)),
                 ('m2m_history_id', models.AutoField(primary_key=True, serialize=False)),
-                ('department', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='department.department')),
+                ('department', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='ucb_departments.department')),
                 ('history', models.ForeignKey(db_constraint=False, on_delete=django.db.models.deletion.DO_NOTHING, to='user.historicaluserprofile')),
                 ('userprofile', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='user.userprofile')),
             ],

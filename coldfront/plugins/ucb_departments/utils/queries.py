@@ -1,8 +1,8 @@
-from coldfront.core.department.models import Department
-from coldfront.core.department.models import UserDepartment
-from coldfront.core.department.utils.ldap import (ldap_get_user_departments,
-                                            get_L4_code_from_department_code,
-                                            get_department_name_from_code)
+from coldfront.plugins.ucb_departments.models import Department
+from coldfront.plugins.ucb_departments.models import UserDepartment
+from coldfront.plugins.ucb_departments.utils.ldap import (ldap_get_user_departments,
+                                                          get_L4_code_from_department_code,
+                                                          get_department_name_from_code)
 import logging
 
 logger = logging.getLogger(__name__)

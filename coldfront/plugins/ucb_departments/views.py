@@ -1,10 +1,9 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.edit import FormView
-from django.shortcuts import render
 from django.urls import reverse
 
-from coldfront.core.department.models import UserDepartment
-from coldfront.core.department.forms import DepartmentSelectionForm
+from coldfront.plugins.ucb_departments.models import UserDepartment
+from coldfront.plugins.ucb_departments.forms import DepartmentSelectionForm
 from coldfront.core.utils.common import import_from_settings
 
 # Create your views here.

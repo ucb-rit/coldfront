@@ -1,9 +1,7 @@
 from django.core.management import BaseCommand
-from coldfront.core.department.models import Department
-from coldfront.core.department.utils.ldap import LDAP_URL, ldap_search_all_departments
-from coldfront.core.department.utils.ldap import DEPARTMENT_OU
+from coldfront.plugins.ucb_departments.models import Department
+from coldfront.plugins.ucb_departments.utils.ldap import ldap_search_all_departments
 from coldfront.core.utils.common import add_argparse_dry_run_argument
-from ldap3 import Connection
 import logging
 
 

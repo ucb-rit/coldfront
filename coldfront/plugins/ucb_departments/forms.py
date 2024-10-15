@@ -1,7 +1,7 @@
 from django import forms
-from coldfront.core.department.models import Department
-from coldfront.core.department.models import UserDepartment
-from coldfront.core.department.utils.queries import fetch_and_set_user_departments
+from coldfront.plugins.ucb_departments.models import Department
+from coldfront.plugins.ucb_departments.models import UserDepartment
+from coldfront.plugins.ucb_departments.utils.queries import fetch_and_set_user_departments
 
 class DepartmentSelectionForm(forms.Form):
     """Form prompting for the departments of a new PI if one is not found
