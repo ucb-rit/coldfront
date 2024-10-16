@@ -20,8 +20,16 @@ class DepartmentSelectionForm(forms.Form):
 
         fetch_and_set_user_departments(self.user, self.userprofile)
         self.exclude_department_choices()
+
+        # TODO: Double check logic.
+        user_department_pks = list(
+            UserDepartment.objects.filter(
+                userprofile=self.userprofile).values_list(
+                'department__pk', flat=True))
         self.fields['departments'].initial = Department.objects.filter(
-                                                userprofile=self.userprofile)
+            pk__in=user_department_pks)
+        # self.fields['departments'].initial = Department.objects.filter(
+        #                                         userprofile=self.userprofile)
 
     def exclude_department_choices(self):
         department_pks = UserDepartment.objects.filter(
