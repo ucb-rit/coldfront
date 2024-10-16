@@ -11,9 +11,11 @@ class Department(models.Model):
         return f'{self.name} ({self.code})'
 
 class UserDepartment(models.Model):
+    # TODO: Evaluate whether this comment is still true, given that `through` is
+    #  no longer in use.
     # This field must be named 'userprofile' because django-simple-history uses
-    # the lowercase name of the UserProfile model to filter UserDepartents.
-    # https://github.com/jazzband/django-simple-history/blob/master/simple_history/models.py#L671
+    # the lowercase name of the UserProfile model to filter UserDepartments.
+    # https://github.com/jazzband/django-simple-history/blob/9efbfabd47c8d9ce7dae44b9ffa1b088b6121aed/simple_history/models.py#L671
     userprofile = models.ForeignKey('user.UserProfile', on_delete=models.CASCADE)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     is_authoritative = models.BooleanField(default=False)

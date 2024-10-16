@@ -1,6 +1,4 @@
 from coldfront.core.billing.models import BillingActivity
-from coldfront.plugins.ucb_departments import Department
-from coldfront.plugins.ucb_departments import UserDepartment
 from django.contrib.auth.models import User
 from django.core.validators import EmailValidator
 from django.core.validators import MinLengthValidator
@@ -42,9 +40,7 @@ class UserProfile(models.Model):
         User, related_name='host_user', blank=True, null=True,
         on_delete=models.SET_NULL)
 
-    departments = models.ManyToManyField(Department, through=UserDepartment)
-
-    history = HistoricalRecords(m2m_fields=[departments])
+    history = HistoricalRecords()
 
 class EmailAddress(models.Model):
     user = models.ForeignKey(
