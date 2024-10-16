@@ -19,6 +19,7 @@ from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAl
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
 from django import forms
+from flags.state import flag_enabled
 
 """An admin command that exports the results of useful database queries
 in user-friendly formats."""
@@ -105,17 +106,19 @@ class Command(BaseCommand):
             '--partition',
             help='Filter jobs by the partition they requested.',
             type=str)
-        
-        user_subparser = subparsers.add_parser('users',
-                                                  help='Export users data')
-        user_subparser.add_argument('--format',
-                                       choices=['csv', 'json'],
-                                       required=True,
-                                       help='Export results in the given format.',
-                                       type=str)
-        user_subparser.add_argument('--pi_only',
-                                    help = 'Only return PI users',
-                                    action='store_true')
+
+        user_subparser = subparsers.add_parser(
+            'users', help='Export user data.')
+        user_subparser.add_argument(
+            '--format',
+            choices=['csv', 'json'],
+            required=True,
+            help='Export results in the given format.',
+            type=str)
+        user_subparser.add_argument(
+            '--pi_only',
+            help='Only return PI users.',
+            action='store_true')
 
         project_subparser = subparsers.add_parser('projects',
                                                   help='Export projects data')
@@ -318,48 +321,66 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(time_str))
 
     def handle_users(self, *args, **kwargs):
-        # return list of PI's and their departments
-        format = kwargs['format']
+
+        def _get_department_fields_for_user(_user):
+            """Return a list of two strs representing the given User's
+            authoritative and non-authoritative departments. Each str is
+            a semicolon-separated list of departments."""
+            authoritative_names = []
+            non_authoritative_names = []
+            user_department_data = list(
+                UserDepartment.objects
+                    .select_related('department')
+                    .filter(userprofile=_user.userprofile)
+                    .values_list('is_authoritative', 'department__name')
+                    .order_by('department__name'))
+            for is_authoritative, department_name in user_department_data:
+                if is_authoritative:
+                    authoritative_names.append(department_name)
+                else:
+                    non_authoritative_names.append(department_name)
+            authoritative_str = ';'.join(authoritative_names)
+            non_authoritative_str = ';'.join(non_authoritative_names)
+            return [authoritative_str, non_authoritative_str]
+
+        _format = kwargs['format']
         pi_only = kwargs['pi_only']
 
-        users = User.objects.all()
+        users = User.objects.order_by('pk')
         if pi_only:
             users = users.filter(userprofile__is_pi=True)
 
-        department_table = []
+        include_departments = flag_enabled('USER_DEPARTMENTS_ENABLED')
+
+        fields = [
+            'id', 'username', 'first_name', 'last_name', 'email', 'is_active']
+
+        all_user_data = []
         for user in users:
-            departments = list(UserDepartment.objects.select_related('department') \
-                                    .filter(userprofile=user.userprofile) \
-                                    .order_by('department__name') \
-                                    .values_list('department__name', flat=True))
-            department_table.append(departments)
-        
-        header = ['id', 'is_active', 'username', 'first_name', 'last_name', 'email']
-        query_set_ = users.values_list(*header)
+            user_data = [getattr(user, field) for field in fields]
+            if include_departments:
+                user_data.extend(_get_department_fields_for_user(user))
+            all_user_data.append(user_data)
 
-        query_set = []
-        for index, user in enumerate(query_set_):
-            user = list(user)
-            user.append(department_table[index])
-            query_set.append(user)
-            
-        header.append('department')
-        if format == 'csv':
-            self.to_csv(query_set,
-                        header=header,
-                        output=kwargs.get('stdout', stdout),
-                        error=kwargs.get('stderr', stderr))
+        if include_departments:
+            department_fields = [
+                'authoritative_departments', 'non_authoritative_departments']
+            fields.extend(department_fields)
 
-        elif format == 'json':
-            query_set_ = query_set
-            query_set = []
-            for user in query_set_:
-                user = dict(zip(header, user))
-                query_set.append(user)
-            self.to_json(query_set,
-                         output=kwargs.get('stdout', stdout),
-                         error=kwargs.get('stderr', stderr))
-            
+        if _format == 'csv':
+            self.to_csv(
+                all_user_data,
+                header=fields,
+                output=kwargs.get('stdout', stdout),
+                error=kwargs.get('stderr', stderr))
+        elif _format == 'json':
+            json_objects = []
+            for user_data in all_user_data:
+                json_objects.append(dict(zip(fields, user_data)))
+            self.to_json(
+                json_objects,
+                output=kwargs.get('stdout', stdout),
+                error=kwargs.get('stderr', stderr))
 
     def handle_projects(self, *args, **kwargs):
         format = kwargs['format']
@@ -632,8 +653,6 @@ class Command(BaseCommand):
             self.to_json(surveys,
                          output=kwargs.get('stdout', stdout),
                          error=kwargs.get('stderr', stderr))
-            
-        
 
     @staticmethod
     def to_csv(query_set, header=None, output=stdout, error=stderr):
