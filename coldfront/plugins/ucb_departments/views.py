@@ -2,15 +2,16 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.edit import FormView
 from django.urls import reverse
 
-from coldfront.plugins.ucb_departments.models import UserDepartment
-from coldfront.plugins.ucb_departments.forms import DepartmentSelectionForm
 from coldfront.core.utils.common import import_from_settings
 
-# Create your views here.
+from coldfront.plugins.ucb_departments.models import UserDepartment
+from coldfront.plugins.ucb_departments.forms import NonAuthoritativeDepartmentSelectionForm
+from coldfront.plugins.ucb_departments.utils.queries import fetch_and_set_user_departments
+
 
 class UpdateDepartmentsView(LoginRequiredMixin, FormView):
 
-    form_class = DepartmentSelectionForm
+    form_class = NonAuthoritativeDepartmentSelectionForm
     template_name = 'user_update_departments.html'
     login_url = '/'
 
@@ -33,10 +34,13 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
         
         return super().form_valid(form)
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
+    def get(self, *args, **kwargs):
+        """TODO"""
+        user = self.request.user
+        # TODO: Should this be done on a GET? When/where else would the
+        #  authoritative ones get set?
+        fetch_and_set_user_departments(user, user.userprofile)
+        return super().get(*args, **kwargs)
 
     def get_context_data(self, viewed_username=None, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -49,6 +53,11 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
                     is_authoritative=True) \
             .order_by('department__name')]
         return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def get_success_url(self):
         return reverse('user-profile')

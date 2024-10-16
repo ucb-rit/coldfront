@@ -11,7 +11,6 @@ from coldfront.core.project.forms_.new_project_forms.request_forms import SavioP
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectExistingPIForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectICAExtraFieldsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectNewPIForm
-from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPIDepartmentForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPoolAllocationsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectPooledProjectSelectionForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectRechargeExtraFieldsForm
@@ -38,6 +37,7 @@ from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
 
+from coldfront.plugins.ucb_departments.forms import NonAuthoritativeDepartmentSelectionForm
 from coldfront.plugins.ucb_departments.utils.ldap import ldap_get_user_departments
 from coldfront.plugins.ucb_departments.utils.queries import fetch_and_set_user_departments
 
@@ -131,7 +131,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         ('allocation_period', SavioProjectAllocationPeriodForm),
         ('existing_pi', SavioProjectExistingPIForm),
         ('new_pi', SavioProjectNewPIForm),
-        ('pi_department', SavioProjectPIDepartmentForm),
+        ('pi_department', NonAuthoritativeDepartmentSelectionForm),
         ('ica_extra_fields', SavioProjectICAExtraFieldsForm),
         ('recharge_extra_fields', SavioProjectRechargeExtraFieldsForm),
         ('pool_allocations', SavioProjectPoolAllocationsForm),
@@ -171,7 +171,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         SavioProjectAllocationPeriodForm,
         SavioProjectExistingPIForm,
         SavioProjectNewPIForm,
-        SavioProjectPIDepartmentForm,
+        NonAuthoritativeDepartmentSelectionForm,
         SavioProjectICAExtraFieldsForm,
         SavioProjectRechargeExtraFieldsForm,
         SavioProjectPoolAllocationsForm,

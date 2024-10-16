@@ -1,40 +1,55 @@
 from django import forms
+
 from coldfront.plugins.ucb_departments.models import Department
 from coldfront.plugins.ucb_departments.models import UserDepartment
-from coldfront.plugins.ucb_departments.utils.queries import fetch_and_set_user_departments
 
-class DepartmentSelectionForm(forms.Form):
-    """Form prompting for the departments of a new PI if one is not found
-    through LDAP. Has user select one or more from the dozens of departments
-    present in Department.objects.all()"""
+
+class NonAuthoritativeDepartmentSelectionForm(forms.Form):
+    """A form that allows the user to select the departments that they
+    are non-authoritatively associated with."""
 
     departments = forms.ModelMultipleChoiceField(
         label='Departments',
         queryset=Department.objects.order_by('name').all(),
-        required=False)
+        required=True)
 
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user', None)
-        self.userprofile = self.user.userprofile
+        user = kwargs.pop('user', None)
+        if user is None:
+            raise ValueError('No user provided.')
+        self.user_profile = user.userprofile
+
         super().__init__(*args, **kwargs)
 
-        fetch_and_set_user_departments(self.user, self.userprofile)
-        self.exclude_department_choices()
+        self._disable_department_choices()
+        self._set_initial_departments()
 
-        # TODO: Double check logic.
-        user_department_pks = list(
-            UserDepartment.objects.filter(
-                userprofile=self.userprofile).values_list(
+    def _disable_department_choices(self):
+        """Prevent certain Departments, which should be displayed, from
+        being selected."""
+        disable_department_pks = set()
+
+        # Disable any Department that the User is authoritatively associated
+        # with.
+        authoritative_user_departments = UserDepartment.objects.filter(
+            userprofile=self.user_profile,
+            is_authoritative=True)
+        authoritative_department_pks = set(
+            authoritative_user_departments.values_list(
+                'department__pk', flat=True))
+        disable_department_pks.update(authoritative_department_pks)
+
+        self.fields['departments'].widget.disabled_choices = \
+            disable_department_pks
+
+    def _set_initial_departments(self):
+        """Pre-select the Departments that the user is non-
+        authoritatively associated with."""
+        non_authoritative_user_departments = UserDepartment.objects.filter(
+            userprofile=self.user_profile,
+            is_authoritative=False)
+        non_authoritative_department_pks = list(
+            non_authoritative_user_departments.values_list(
                 'department__pk', flat=True))
         self.fields['departments'].initial = Department.objects.filter(
-            pk__in=user_department_pks)
-        # self.fields['departments'].initial = Department.objects.filter(
-        #                                         userprofile=self.userprofile)
-
-    def exclude_department_choices(self):
-        department_pks = UserDepartment.objects.filter(
-                userprofile=self.userprofile,
-                is_authoritative=True).values_list('department__pk', flat=True)
-
-        self.fields['departments'].queryset = Department.objects.exclude( \
-            pk__in=department_pks)
+            pk__in=non_authoritative_department_pks)
