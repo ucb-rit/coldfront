@@ -62,3 +62,29 @@ def fetch_and_set_user_departments(user, userprofile, dry_run=False, l4_departme
                                         department=department,
                                         defaults={'is_authoritative': True})
     return l4_department_code_cache
+
+
+def get_departments_for_user(user, strs_only=False):
+    """Return two lists: Departments the given User is (a)
+    authoritatively and (b) non-authoritatively associated with. Each
+    list is sorted by ascending name.
+
+    Optionally return the str representation of each Department instead
+    of the Department itself.
+    """
+    user_departments = (
+        UserDepartment.objects
+            .filter(userprofile=user.userprofile)
+            .select_related('department')
+            .order_by('department__name'))
+
+    authoritative, non_authoritative = [], []
+    for user_department in user_departments:
+        department = user_department.department
+        entry = str(department) if strs_only else department
+        if user_department.is_authoritative:
+            authoritative.append(entry)
+        else:
+            non_authoritative.append(entry)
+
+    return authoritative, non_authoritative

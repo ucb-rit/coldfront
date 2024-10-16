@@ -13,10 +13,11 @@ from coldfront.core.statistics.models import Job
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
 from django.contrib.auth.models import User
-from coldfront.plugins.ucb_departments.models import UserDepartment
 from coldfront.core.project.forms_.renewal_forms.request_forms import DeprecatedProjectRenewalSurveyForm
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
+
+from coldfront.plugins.ucb_departments.utils.queries import get_departments_for_user
 
 from django import forms
 from flags.state import flag_enabled
@@ -325,22 +326,14 @@ class Command(BaseCommand):
         def _get_department_fields_for_user(_user):
             """Return a list of two strs representing the given User's
             authoritative and non-authoritative departments. Each str is
-            a semicolon-separated list of departments."""
-            authoritative_names = []
-            non_authoritative_names = []
-            user_department_data = list(
-                UserDepartment.objects
-                    .select_related('department')
-                    .filter(userprofile=_user.userprofile)
-                    .values_list('is_authoritative', 'department__name')
-                    .order_by('department__name'))
-            for is_authoritative, department_name in user_department_data:
-                if is_authoritative:
-                    authoritative_names.append(department_name)
-                else:
-                    non_authoritative_names.append(department_name)
-            authoritative_str = ';'.join(authoritative_names)
-            non_authoritative_str = ';'.join(non_authoritative_names)
+            a semicolon-separated list of str representations of
+            departments."""
+            authoritative_department_strs, non_authoritative_department_strs = \
+                get_departments_for_user(_user)
+            authoritative_str = ';'.join(
+                [s for s in authoritative_department_strs])
+            non_authoritative_str = ';'.join(
+                [s for s in non_authoritative_department_strs])
             return [authoritative_str, non_authoritative_str]
 
         _format = kwargs['format']
