@@ -9,6 +9,8 @@
 
 
 {% block content %}
+<script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
+<script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
 <h1>Review Eligibility</h1>
 <hr>
 
@@ -40,10 +42,10 @@
         Cancel
       </a>
     <script>
-      $('select').selectize({
+      $('#id_PI').selectize({
         create: false,
         sortField: 'text',
-        placeholder: 'Type to search. If your PI is not listed or selectable, please review the instructions above.'
+        placeholder: 'Type to search.'
       })
     </script>
     </form>
@@ -52,12 +54,4 @@
 
 {% include 'project/project_request/savio/project_request_extra_fields_modal.html' with extra_fields_form=extra_fields_form %}
 {% include 'project/project_request/savio/project_request_survey_modal.html' with survey_form=survey_form %}
-
-<script>
-  $('select').selectize({
-    create: false,
-    sortField: 'text'
-  })
-</script>
-
 {% endblock %}
