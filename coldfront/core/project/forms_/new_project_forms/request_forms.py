@@ -1,5 +1,6 @@
 from coldfront.core.allocation.forms import AllocationPeriodChoiceField
 from coldfront.core.allocation.models import AllocationPeriod
+from coldfront.core.project.forms import DisabledChoicesSelectWidget
 from coldfront.core.project.models import Project
 from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses
 from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
@@ -145,25 +146,6 @@ class PIChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return f'{obj.first_name} {obj.last_name} ({obj.email})'
 
-
-class DisabledChoicesSelectWidget(forms.Select):
-
-    def __init__(self, *args, **kwargs):
-        self.disabled_choices = kwargs.pop('disabled_choices', set())
-        super().__init__(*args, **kwargs)
-
-    def create_option(self, name, value, label, selected, index, subindex=None,
-                      attrs=None):
-        option = super().create_option(
-            name, value, label, selected, index, subindex=subindex,
-            attrs=attrs)
-        try:
-            if int(str(value)) in self.disabled_choices:
-                option['attrs']['disabled'] = True
-        except Exception:
-            pass
-        return option
-
 class SavioProjectExistingPIForm(forms.Form):
 
     PI = PIChoiceField(
@@ -251,9 +233,8 @@ class SavioProjectNewPIForm(forms.Form):
     def clean_email(self):
         cleaned_data = super().clean()
         email = cleaned_data['email'].lower()
-        # "email and" for project.forms.ReviewStatusForm
-        if email and (User.objects.filter(username=email).exists() or
-                User.objects.filter(email=email).exists()):
+        if User.objects.filter(username=email).exists() or \
+                User.objects.filter(email=email).exists():
             raise forms.ValidationError(
                 'A user with that email address already exists.')
 

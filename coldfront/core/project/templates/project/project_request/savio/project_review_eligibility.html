@@ -39,11 +39,25 @@
       <a href="{% url 'new-project-request-detail' savio_request.pk %}" class="btn btn-secondary">
         Cancel
       </a>
+    <script>
+      $('select').selectize({
+        create: false,
+        sortField: 'text',
+        placeholder: 'Type to search. If your PI is not listed or selectable, please review the instructions above.'
+      })
+    </script>
     </form>
   </div>
 </div>
 
 {% include 'project/project_request/savio/project_request_extra_fields_modal.html' with extra_fields_form=extra_fields_form %}
 {% include 'project/project_request/savio/project_request_survey_modal.html' with survey_form=survey_form %}
+
+<script>
+  $('select').selectize({
+    create: false,
+    sortField: 'text'
+  })
+</script>
 
 {% endblock %}

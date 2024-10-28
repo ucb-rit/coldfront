@@ -1,18 +1,21 @@
-import datetime
-
 from django import forms
 from django.core.validators import MinLengthValidator
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
-import coldfront.core.project.forms_.new_project_forms.request_forms as request_forms
 from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectUserRoleChoice)
+from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses, pis_with_new_project_requests_pks, project_pi_pks
+from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_request_statuses, pis_with_renewal_requests_pks
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.user.models import UserProfile
 from django.contrib.auth.models import User 
 from coldfront.core.user.utils_.host_user_utils import eligible_host_project_users
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.resource.utils import get_compute_resource_names
+
+import datetime
+from flags.state import flag_enabled
 
 
 EMAIL_DIRECTOR_PENDING_PROJECT_REVIEW_EMAIL = import_from_settings(
@@ -211,16 +214,20 @@ class ReviewDenyForm(forms.Form):
         required=True,
         widget=forms.Textarea(attrs={'rows': 3}))
 
+class ReviewDenyForm(forms.Form):
 
-class ReviewStatusForm(request_forms.SavioProjectNewPIForm,
-                       request_forms.SavioProjectExistingPIForm):
+    justification = forms.CharField(
+        help_text=(
+            'Provide reasoning for your decision. It will be included in the '
+            'notification email.'),
+        label='Justification',
+        validators=[MinLengthValidator(10)],
+        required=True,
+        widget=forms.Textarea(attrs={'rows': 3}))
 
-    # PI = SavioProjectExistingPIForm.PI
-    # first_name = forms.CharField(max_length=30, required=True)
-    # middle_name = forms.CharField(max_length=30, required=False)
-    # last_name = forms.CharField(max_length=150, required=True)
-    # email = forms.EmailField(max_length=100, required=True)
-    
+
+class ReviewStatusForm(forms.Form):
+
     status = forms.ChoiceField(
         choices=(
             ('', 'Select one.'),
@@ -241,16 +248,112 @@ class ReviewStatusForm(request_forms.SavioProjectNewPIForm,
         required=False,
         widget=forms.Textarea(attrs={'rows': 3}))
 
+    def clean(self):
+        cleaned_data = super().clean()
+        status = cleaned_data.get('status', 'Pending')
+        # Require justification for denials.
+        if status == 'Denied':
+            justification = cleaned_data.get('justification', '')
+            if not justification.strip():
+                raise forms.ValidationError(
+                    'Please provide a justification for your decision.')
+        return cleaned_data
+
+
+# note: from coldfront\core\project\forms_\new_project_forms\request_forms.py
+class PIChoiceField(forms.ModelChoiceField):
+
+    def label_from_instance(self, obj):
+        return f'{obj.first_name} {obj.last_name} ({obj.email})'
+
+class ReviewEligibilityForm(ReviewStatusForm):
+
+    PI = PIChoiceField(
+        label='Principal Investigator',
+        queryset=User.objects.none(),
+        required=False,
+        widget=DisabledChoicesSelectWidget(),
+        empty_label='New PI',
+        help_text= 'Please confirm the PI for this project. If the PI is ' \
+                   'listed, select them from the dropdown and do not fill ' \
+                   'out the PI information fields. If the PI is not ' \
+                   'listed, select "New PI" and provide the PI\'s ' \
+                   'information below.')
+    first_name = forms.CharField(max_length=30, required=False)
+    middle_name = forms.CharField(max_length=30, required=False)
+    last_name = forms.CharField(max_length=150, required=False)
+    email = forms.EmailField(max_length=100, required=False)
+
+    field_order=['PI', 'first_name', 'middle_name', 'last_name', 'email',
+                 'status', 'justification']
+
     def __init__(self, *args, **kwargs):
+        self.computing_allowance = kwargs.pop('computing_allowance', None)
+        self.allocation_period = kwargs.pop('allocation_period', None)
         super().__init__(*args, **kwargs)
-        self.fields['PI'].label_from_instance = self.label_from_instance
-        self.fields['PI'].empty_label = 'New PI'
-        self.fields['PI'].help_text = (
-            'Please confirm the PI for this project. If the PI is not listed, '
-            'select "New PI" and provide the PI\'s information below.')
-        self.fields['first_name'].required = False
-        self.fields['last_name'].required = False
-        self.fields['email'].required = False
+        if self.computing_allowance is not None:
+            self.computing_allowance = ComputingAllowance(
+                self.computing_allowance)
+            self.disable_pi_choices()
+        self.exclude_pi_choices()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pi = self.cleaned_data['PI']
+        if pi is not None and pi not in self.fields['PI'].queryset:
+            raise forms.ValidationError(f'Invalid selection {pi.username}.')
+        return cleaned_data
+
+    def disable_pi_choices(self):
+        """Prevent certain Users, who should be displayed, from being
+        selected as PIs."""
+        disable_user_pks = set()
+
+        if self.computing_allowance.is_one_per_pi() and self.allocation_period:
+            # Disable any PI who has:
+            #     (a) an existing Project with the allowance*,
+            #     (b) a new project request for a Project with the allowance
+            #         during the AllocationPeriod*, or
+            #     (c) an allowance renewal request for a Project with the
+            #         allowance during the AllocationPeriod*.
+            # * Projects/requests must have ineligible statuses.
+            resource = self.computing_allowance.get_resource()
+            project_status_names = ['New', 'Active', 'Inactive']
+            disable_user_pks.update(
+                project_pi_pks(
+                    computing_allowance=resource,
+                    project_status_names=project_status_names))
+            new_project_request_status_names = list(
+                non_denied_new_project_request_statuses().values_list(
+                    'name', flat=True))
+            disable_user_pks.update(
+                pis_with_new_project_requests_pks(
+                    self.allocation_period,
+                    computing_allowance=resource,
+                    request_status_names=new_project_request_status_names))
+            renewal_request_status_names = list(
+                non_denied_renewal_request_statuses().values_list(
+                    'name', flat=True))
+            disable_user_pks.update(
+                pis_with_renewal_requests_pks(
+                    self.allocation_period,
+                    computing_allowance=resource,
+                    request_status_names=renewal_request_status_names))
+
+        if flag_enabled('LRC_ONLY'):
+            # On LRC, PIs must be LBL employees.
+            non_lbl_employees = set(
+                [user.pk for user in User.objects.all()
+                 if not is_lbl_employee(user)])
+            disable_user_pks.update(non_lbl_employees)
+
+        self.fields['PI'].widget.disabled_choices = disable_user_pks
+
+    def exclude_pi_choices(self):
+        """Exclude certain Users from being displayed as PI options."""
+        # Exclude any user that does not have an email address or is inactive.
+        self.fields['PI'].queryset = User.objects.exclude(
+            Q(email__isnull=True) | Q(email__exact='') | Q(is_active=False))
 
     @staticmethod
     def label_from_instance(obj):

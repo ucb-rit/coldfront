@@ -64,11 +64,12 @@
     {% endif %}
   </table>
 
-    <script>
-    $('select').selectize({
+  <script>
+    $('#id_PI').selectize({
       create: false,
       sortField: 'text',
       placeholder: 'Type to search. If your PI is not listed or selectable, please review the instructions above.'
+
     })
   </script>
 
@@ -95,12 +96,5 @@
 <br>
 
 <p>Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}</p>
-
-<script>
-  $('select').selectize({
-    create: false,
-    sortField: 'text'
-  })
-</script>
 
 {% endblock %}
