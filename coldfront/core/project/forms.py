@@ -273,11 +273,10 @@ class ReviewEligibilityForm(ReviewStatusForm):
         queryset=User.objects.none(),
         required=False,
         widget=DisabledChoicesSelectWidget(),
-        empty_label='New PI',
         help_text= 'Please confirm the PI for this project. If the PI is ' \
                    'listed, select them from the dropdown and do not fill ' \
                    'out the PI information fields. If the PI is not ' \
-                   'listed, select "New PI" and provide the PI\'s ' \
+                   'listed, empty the field and provide the PI\'s ' \
                    'information below.')
     first_name = forms.CharField(max_length=30, required=False)
     middle_name = forms.CharField(max_length=30, required=False)

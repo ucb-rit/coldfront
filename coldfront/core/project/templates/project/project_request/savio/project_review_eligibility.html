@@ -11,6 +11,7 @@
 {% block content %}
 <script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
 <script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
+<link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
 <h1>Review Eligibility</h1>
 <hr>
 
@@ -45,7 +46,7 @@
       $('#id_PI').selectize({
         create: false,
         sortField: 'text',
-        placeholder: 'Type to search.'
+        placeholder: 'Type to search or fill out the PI information below.'
       })
     </script>
     </form>
