@@ -1,7 +1,7 @@
 from django import forms
 
-from coldfront.plugins.ucb_departments.models import Department
-from coldfront.plugins.ucb_departments.models import UserDepartment
+from coldfront.plugins.departments.models import Department
+from coldfront.plugins.departments.models import UserDepartment
 
 
 class NonAuthoritativeDepartmentSelectionForm(forms.Form):

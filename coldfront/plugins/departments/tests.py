@@ -1,7 +1,7 @@
 from coldfront.core.utils.tests.test_base import TestBase
-from coldfront.plugins.ucb_departments.models import Department
-from coldfront.plugins.ucb_departments.models import UserDepartment
-from coldfront.plugins.ucb_departments.models import HistoricalUserDepartment
+from coldfront.plugins.departments.models import Department
+from coldfront.plugins.departments.models import UserDepartment
+from coldfront.plugins.departments.models import HistoricalUserDepartment
 from django.urls import reverse
 
 from http import HTTPStatus

@@ -1,6 +1,6 @@
 from django.core.management import BaseCommand
-from coldfront.plugins.ucb_departments.models import Department
-from coldfront.plugins.ucb_departments.utils.ldap import ldap_search_all_departments
+from coldfront.plugins.departments.models import Department
+from coldfront.plugins.departments.utils.ldap import ldap_search_all_departments
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 import logging
 
@@ -36,6 +36,7 @@ class Command(BaseCommand):
 
         department_entries = ldap_search_all_departments()
         for entry in department_entries:
+            # TODO: Move LDAP things like this into the ldap module.
             hierarchy = entry.berkeleyEduOrgUnitHierarchyString.value
             # filter L4 hierarchies
             if hierarchy.count('-') == 3:

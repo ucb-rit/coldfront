@@ -42,7 +42,7 @@ from coldfront.core.user.utils_.host_user_utils import is_lbl_employee
 from coldfront.core.utils.common import (import_from_settings,
                                          utc_now_offset_aware)
 
-from coldfront.plugins.ucb_departments.utils.queries import get_departments_for_user
+from coldfront.plugins.departments.utils.queries import get_departments_for_user
 
 from flags.state import flag_enabled
 

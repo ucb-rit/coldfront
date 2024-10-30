@@ -17,7 +17,7 @@ from coldfront.core.project.forms_.renewal_forms.request_forms import Deprecated
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
-from coldfront.plugins.ucb_departments.utils.queries import get_departments_for_user
+from coldfront.plugins.departments.utils.queries import get_departments_for_user
 
 from django import forms
 from flags.state import flag_enabled

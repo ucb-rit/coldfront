@@ -7,6 +7,7 @@ LDAP_URL = 'ldap.berkeley.edu'
 PEOPLE_OU = 'ou=people,dc=berkeley,dc=edu'
 DEPARTMENT_OU = 'ou=org units,dc=berkeley,dc=edu'
 
+# TODO: This is only called by populate_ldap_departments, so just fold in the extra LDAP logic there into this.
 def ldap_search_all_departments():
     """Return all departments in LDAP.
 
@@ -19,8 +20,18 @@ def ldap_search_all_departments():
         DEPARTMENT_OU,
         '(berkeleyEduOrgUnitHierarchyString=*-*-*-*)',
         attributes=['berkeleyEduOrgUnitHierarchyString', 'description'])
+
+    for entry in conn.entries:
+        hierarchy = entry.berkeleyEduOrgUnitHierarchyString.value
+        # filter L4 hierarchies
+        if hierarchy.count('-') == 3:
+            # TODO: Don't use this specific language: "code"
+            code = hierarchy.split('-')[3]
+            name = entry.description.value
+
     return conn.entries
 
+# TODO: Two calls.
 def ldap_get_user_departments(email, first_name, last_name):
     """Search for a user in LDAP and return their departments.
 
@@ -41,6 +52,7 @@ def ldap_get_user_departments(email, first_name, last_name):
         return conn.entries[0].departmentNumber.values
     return None
 
+# TODO: There is also only one call to this. PRIVATE
 def get_L4_code_from_department_code(code):
     """Return the L4 code for a department from a L4+ code.
     L4 are departments like "Integrative Biology (IBIBI)"
@@ -62,6 +74,9 @@ def get_L4_code_from_department_code(code):
     return hierarchy.split('-')[3]
 
 
+# TODO: Again, only one call. PRIVATE
+#  Though it seems like we don't want to call this if we don't have to. Some are already cached.
+#  Include code_to_name cache in the method for getting user departments? Then check if there, otherwise lookup. Return (code, ame) pairs.
 def get_department_name_from_code(code):
     """Return the name of a department from its code (any level but ideally only L4).
     Example: "IBIBI" -> "Integrative Biology"

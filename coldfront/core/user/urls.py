@@ -9,7 +9,7 @@ from django.urls import path, reverse_lazy
 from flags.urls import flagged_paths
 
 import coldfront.core.user.views as user_views
-import coldfront.plugins.ucb_departments.views as department_views
+import coldfront.plugins.departments.views as department_views
 import coldfront.core.user.views_.link_login_views as link_login_views
 import coldfront.core.user.views_.request_hub_views as request_hub_views
 from coldfront.core.user.forms import VerifiedEmailAddressPasswordResetForm

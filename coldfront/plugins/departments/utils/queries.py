@@ -1,8 +1,8 @@
-from coldfront.plugins.ucb_departments.models import Department
-from coldfront.plugins.ucb_departments.models import UserDepartment
-from coldfront.plugins.ucb_departments.utils.ldap import (ldap_get_user_departments,
-                                                          get_L4_code_from_department_code,
-                                                          get_department_name_from_code)
+from coldfront.plugins.departments.models import Department
+from coldfront.plugins.departments.models import UserDepartment
+from coldfront.plugins.departments.utils.ldap import ldap_get_user_departments
+from coldfront.plugins.departments.utils.ldap import get_L4_code_from_department_code
+from coldfront.plugins.departments.utils.ldap import get_department_name_from_code
 import logging
 
 logger = logging.getLogger(__name__)
@@ -42,6 +42,7 @@ def fetch_and_set_user_departments(user, userprofile, dry_run=False, l4_departme
                                 department=department, is_authoritative=True)
             created = name is not None
         else:
+            # TODO: Couldn't name be None here?
             department, created = Department.objects.get_or_create(
                                                     code=department_code,
                                                     defaults={'name': name})

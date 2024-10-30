@@ -4,9 +4,9 @@ from django.urls import reverse
 
 from coldfront.core.utils.common import import_from_settings
 
-from coldfront.plugins.ucb_departments.models import UserDepartment
-from coldfront.plugins.ucb_departments.forms import NonAuthoritativeDepartmentSelectionForm
-from coldfront.plugins.ucb_departments.utils.queries import fetch_and_set_user_departments
+from coldfront.plugins.departments.models import UserDepartment
+from coldfront.plugins.departments.forms import NonAuthoritativeDepartmentSelectionForm
+from coldfront.plugins.departments.utils.queries import fetch_and_set_user_departments
 
 
 class UpdateDepartmentsView(LoginRequiredMixin, FormView):
