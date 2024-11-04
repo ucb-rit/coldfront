@@ -132,11 +132,6 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
                   ("UCBKL-AVCIS-VRIST-JJCNS", "Sample Description 2"),
             - An empty list otherwise
         """
-
-        # TODO: The CalNet LDAP docs discuss a limit of 500 entries returned by a search:
-        #  https://calnet.berkeley.edu/calnet-technologists/ldap-directory-service/how-ldap-organized/org-unit-ou
-        #  Is this search problematic?
-
         search_base = self.ORG_UNITS_OU
         hierarchy_string_attr = 'berkeleyEduOrgUnitHierarchyString'
         description_attr = 'description'
