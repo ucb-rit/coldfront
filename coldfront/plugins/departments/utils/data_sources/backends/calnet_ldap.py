@@ -25,16 +25,15 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
         super().__init__(*args, **kwargs)
         self._connection = Connection(
             self.DIRECTORY_URL, auto_bind=True, auto_range=True)
+        # A mapping from the name of an "org units" OU to a tuple of the
+        # identifier and description for the OU's department.
+        self._cache_department_data_by_ou = {}
 
     def fetch_departments(self):
         """Return a generator of UC Berkeley departments, represented as
         tuples.
 
         Departments are org units at level 4 (L4) of the org tree.
-
-        Returns:
-            - Generator of tuples of the form (department identifier
-              (str), department description (str))
         """
         identifier_attr = 'berkeleyEduOrgUnitHierarchyString'
         # This search filter returns any org unit at L4 and above
@@ -62,20 +61,9 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
         the person. Look up and return the corresponding L4 org units
         from the "org units" OU.
 
-        Parameters:
-            - user_data (dict): A dict with the following format:
-                {
-                    'first_name': 'user first name',
-                    'last_name': 'user last name',
-                    'emails': [
-                        'email1@berkeley.edu',
-                        'email2@berkeley.edu',
-                    ]
-                }
-
-        Returns:
-            - Generator of tuples of the form (department identifier
-              (str), department description (str))
+        A mapping from department number to the corresponding L4 org
+        units is cached within the instance to reduce redundant LDAP
+        lookups.
         """
         # Due to short-circuiting, if the email lookup produces results, the
         # name lookup is skipped.
@@ -87,10 +75,43 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
                 user_data['first_name'], user_data['last_name']))
 
         for department_number in results:
-            identifier, description = self._lookup_department_info_for_org_unit(
-                department_number)
+            if department_number not in self._cache_department_data_by_ou:
+                identifier, description = \
+                    self._lookup_department_info_for_org_unit(department_number)
+                self._cache_department_data_by_ou[department_number] = (
+                    identifier, description)
+            identifier, description = self._cache_department_data_by_ou[
+                department_number]
             if identifier is not None and description is not None:
                 yield identifier, description
+
+    def _lookup_department_info_for_org_unit(self, ou):
+        """Given the identifier for an org unit at the department (L4)
+        level or above (higher levels are deeper in the org tree),
+        return the identifier and description for its department. Return
+        None for both if no matching OU is found.
+
+        Parameters:
+            - ou (str): The identifier for an org unit (e.g., "JICCS")
+
+        Returns:
+            - Two strs denoting the identifier and description for the
+              department that the org unit is (a) under or (b) identical
+              to
+            - None, None if no matching OU is found
+
+        Raises:
+            - ValueError, if the provided OU is not at least as deep as
+              the department (L4) level.
+        """
+        search_filter = f'(&(objectClass=organizationalUnit)(ou={ou}))'
+        for identifier, description in self._lookup_org_units(search_filter):
+            if identifier.count('-') < 3:
+                raise ValueError(
+                    f'Org unit "{ou}" is broader than the department level.')
+            # There should only be one result.
+            return identifier.split('-')[3], description
+        return None, None
 
     def _lookup_org_units(self, search_filter):
         """Given an LDAP search filter for the "org units" OU, return a
@@ -129,35 +150,6 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
             hierarchy_string = getattr(entry, hierarchy_string_attr).value
             description = getattr(entry, description_attr).value
             yield hierarchy_string, description
-
-    # TODO: Caching?
-    def _lookup_department_info_for_org_unit(self, ou):
-        """Given the identifier for an org unit at the department (L4)
-        level or above (higher levels are deeper in the org tree),
-        return the identifier and description for its department. Return
-        None for both if no matching OU is found.
-
-        Parameters:
-            - ou (str): The identifier for an org unit (e.g., "JICCS")
-
-        Returns:
-            - Two strs denoting the identifier and description for the
-              department that the org unit is (a) under or (b) identical
-              to
-            - None, None if no matching OU is found
-
-        Raises:
-            - ValueError, if the provided OU is not at least as deep as
-              the department (L4) level.
-        """
-        search_filter = f'(&(objectClass=organizationalUnit)(ou={ou}))'
-        for identifier, description in self._lookup_org_units(search_filter):
-            if identifier.count('-') < 3:
-                raise ValueError(
-                    f'Org unit "{ou}" is broader than the department level.')
-            # There should only be one result.
-            return identifier.split('-')[3], description
-        return None, None
 
     def _lookup_person_department_numbers(self, search_filter,
                                           assert_one_person=False):
