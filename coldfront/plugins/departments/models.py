@@ -3,12 +3,15 @@ from django.db import models
 from simple_history.models import HistoricalRecords
 
 # Create your models here.
+
+
 class Department(models.Model):
-    name = models.CharField(max_length=128)  # The full name
-    code = models.CharField(max_length=5, unique=True)  # The five letter code
+    name = models.CharField(max_length=128)
+    code = models.CharField(max_length=5, unique=True)
 
     def __str__(self):
         return f'{self.name} ({self.code})'
+
 
 class UserDepartment(models.Model):
     # TODO: Evaluate whether this comment is still true, given that `through` is

@@ -4,7 +4,7 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
-from coldfront.plugins.ucb_departments.models import UserDepartment
+
 from coldfront.core.project.forms_.new_project_forms.request_forms import ComputingAllowanceForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectAllocationPeriodForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectDetailsForm
@@ -37,9 +37,11 @@ from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
 
-from coldfront.plugins.ucb_departments.forms import NonAuthoritativeDepartmentSelectionForm
-from coldfront.plugins.ucb_departments.utils.ldap import ldap_get_user_departments
-from coldfront.plugins.ucb_departments.utils.queries import fetch_and_set_user_departments
+from coldfront.plugins.departments.forms import NonAuthoritativeDepartmentSelectionForm
+from coldfront.plugins.departments.models import UserDepartment
+from coldfront.plugins.departments.utils.data_sources import fetch_departments_for_user
+from coldfront.plugins.departments.utils.queries import create_or_update_department
+from coldfront.plugins.departments.utils.queries import get_departments_for_user
 
 from django.conf import settings
 from django.contrib import messages
@@ -257,6 +259,9 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 allocation_period = self.__get_allocation_period(form_data)
                 pi = self.__handle_pi_data(form_data)
 
+                if self.__department_required():
+                    self.__handle_pi_departments(form_data, pi)
+
                 if computing_allowance_wrapper.is_instructional():
                     self.__handle_ica_allowance(
                         form_data, computing_allowance_wrapper, request_kwargs)
@@ -380,58 +385,54 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             computing_allowance.requires_extra_information())
 
     def show_new_pi_form_condition(self):
+        """Only show the form for providing details about a new PI if
+        the user did not select an existing PI."""
         step_name = 'existing_pi'
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         return cleaned_data.get('PI', None) is None
 
     def show_pi_department_form_condition(self):
-        '''
-        Only show the form for selecting a PI's department if the user
-        departments feature is enabled and the PI does not have any
-        authoritative or non-authoritative departments set. The extra_data
-        variable prevents another LDAP lookup unless the user changes the PI.
-        '''
-        if not flag_enabled('USER_DEPARTMENTS_ENABLED'):
-            return False
-        extra_data = self.request.session \
-            ['wizard_savio_project_request_wizard']['extra_data']
-        has_entry_key = 'ldap_lookup_has_entry'
-        email_key = 'ldap_lookup_email'
+        """Only show the form for providing department(s) for the PI
+        when all the following are true:
+            - Department information is required.
+            - The PI does not already have any departments set.
+            - A lookup fails to find any.
 
-        # get email, fn, ln
-        email = fn = ln = None
+        This method performs a lookup against a third-party service to
+        find departments for the specified PI. The result is cached in
+        the request session until the requester specifies another PI.
+        """
+        if not self.__department_required():
+            return False
+
         step_name = 'new_pi'
         step = str(self.step_numbers_by_form_name[step_name])
         cleaned_data = self.get_cleaned_data_for_step(step) or {}
         if cleaned_data:
-            email = cleaned_data['email']
-            fn = cleaned_data['first_name']
-            ln = cleaned_data['last_name']
+            emails = [cleaned_data['email']]
+            first_name = cleaned_data['first_name']
+            last_name = cleaned_data['last_name']
         else:
             step_name = 'existing_pi'
             step = str(self.step_numbers_by_form_name[step_name])
             cleaned_data = self.get_cleaned_data_for_step(step) or {}
-            if cleaned_data.get('PI', None):
-                if UserDepartment.objects.filter(
-                        userprofile=cleaned_data['PI'].userprofile).exists():
-                    return False
-                email = cleaned_data['PI'].email
-                fn = cleaned_data['PI'].first_name
-                ln = cleaned_data['PI'].last_name
-        if not email:
-            return False
+            pi = cleaned_data['PI']
 
-        if has_entry_key in extra_data and email == extra_data[email_key]:
-            has_entry = extra_data[has_entry_key]
-        else:
-            departments = ldap_get_user_departments(email, fn, ln)
-            has_entry = departments is not None and bool(departments)
-            extra_data[has_entry_key] = has_entry
-            extra_data[email_key] = email
-            self.request.session.modified = True
+            authoritative_departments, non_authoritative_departments = \
+                get_departments_for_user(pi)
+            if authoritative_departments or non_authoritative_departments:
+                return False
 
-        return not has_entry
+            emails = list(
+                EmailAddress.objects.filter(
+                    user=pi).values_list('email', flat=True))
+            first_name = pi.first_name
+            last_name = pi.last_name
+
+        return not self.__pi_departments_found(emails, first_name, last_name)
+
+
 
     def show_pool_allocations_form_condition(self):
         step_name = 'computing_allowance'
@@ -463,9 +464,16 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
     @staticmethod
     def __billing_id_required():
         """Return whether a billing ID should be requested from the
-        user. Ultimately, the form will only be included if pooling is
-        not requested."""
+        user. The form for requesting it will be included based on
+        additional factors."""
         return flag_enabled('LRC_ONLY')
+
+    @staticmethod
+    def __department_required():
+        """Return whether departments should be requested from the
+        user. The form for requesting it will be included based on
+        additional factors."""
+        return flag_enabled('USER_DEPARTMENTS_ENABLED')
 
     def __get_allocation_period(self, form_data):
         """Return the AllocationPeriod the user selected."""
@@ -566,20 +574,47 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                     f'EmailAddress {email} unexpectedly already exists.')
                 raise e
 
-        if flag_enabled('USER_DEPARTMENTS_ENABLED'):
-            # Set the user's non-authoritative departments in the UserProfile.
+        return pi
+
+    def __handle_pi_departments(self, form_data, pi):
+        """TODO"""
+        try:
             step_number = self.step_numbers_by_form_name['pi_department']
             data = form_data[step_number]
             if data.get('departments', None):
+                # Set the departments the user selected as non-authoritative,
+                # without overriding any authoritative departments.
                 for department in data['departments']:
-                    UserDepartment.objects.get_or_create(userprofile=pi_profile,
+                    UserDepartment.objects.get_or_create(
+                        userprofile=pi.userprofile,
                         department=department,
-                        defaults={'is_authoritative':False})
+                        defaults={
+                            'is_authoritative': False})
             else:
-                # Set the user's authoritative departments in the UserProfile.
-                fetch_and_set_user_departments(pi, pi_profile)
-            
-        return pi
+                # Attempt to fetch the user's departments. Create authoritative
+                # associations for these, or update existing ones.
+                # TODO: This is duplicated. Make a function.
+                user_data = {
+                    'emails': list(
+                        EmailAddress.objects.filter(
+                            user=pi).values_list('email', flat=True)),
+                    'first_name': pi.first_name,
+                    'last_name': pi.last_name,
+                }
+                user_department_data = fetch_departments_for_user(user_data)
+
+                for code, name in user_department_data:
+                    department, department_created = \
+                        create_or_update_department(code, name)
+                    user_department, user_department_created = \
+                        UserDepartment.objects.update_or_create(
+                            userprofile=pi.userprofile,
+                            department=department.pk,
+                            defaults={
+                                'is_authoritative': True,
+                            })
+        except Exception as e:
+            self.logger.exception(e)
 
     def __handle_recharge_allowance(self, form_data,
                                     computing_allowance_wrapper,
@@ -651,6 +686,41 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             raise e
 
         return project
+
+    def __pi_departments_found(self, emails, first_name, last_name):
+        """TODO"""
+        import hashlib
+
+        pi_identifier_parts = (first_name, last_name, *sorted(emails))
+        pi_identifier = hashlib.md5(
+            ','.join(pi_identifier_parts).encode('utf-8')).hexdigest()
+
+        cached_pi_department_lookup_result_key = \
+            'cached_pi_department_lookup_result'
+        if cached_pi_department_lookup_result_key in self.storage.extra_data:
+            cached_pi_identifier, departments_found = self.storage.extra_data[
+                cached_pi_department_lookup_result_key]
+            if cached_pi_identifier == pi_identifier and departments_found:
+                return True
+
+        user_data = {
+            'emails': emails,
+            'first_name': first_name,
+            'last_name': last_name,
+        }
+        user_departments = fetch_departments_for_user(user_data)
+
+        try:
+            next(user_departments)
+        except StopIteration:
+            departments_found = False
+        else:
+            departments_found = True
+
+        self.storage.extra_data[cached_pi_department_lookup_result_key] = (
+            pi_identifier, departments_found)
+
+        return departments_found
 
     def __set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""

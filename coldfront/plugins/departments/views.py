@@ -2,11 +2,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.edit import FormView
 from django.urls import reverse
 
+from allauth.account.models import EmailAddress
+
 from coldfront.core.utils.common import import_from_settings
 
 from coldfront.plugins.departments.models import UserDepartment
 from coldfront.plugins.departments.forms import NonAuthoritativeDepartmentSelectionForm
-from coldfront.plugins.departments.utils.queries import fetch_and_set_user_departments
+from coldfront.plugins.departments.utils.data_sources import fetch_departments_for_user
+from coldfront.plugins.departments.utils.queries import create_or_update_department
 
 
 class UpdateDepartmentsView(LoginRequiredMixin, FormView):
@@ -31,16 +34,29 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
                                                 is_authoritative=False):
             if ud.department not in new_departments:
                 ud.delete()
-        
-        return super().form_valid(form)
 
-    def get(self, *args, **kwargs):
-        """TODO"""
-        user = self.request.user
-        # TODO: Should this be done on a GET? When/where else would the
-        #  authoritative ones get set?
-        fetch_and_set_user_departments(user, user.userprofile)
-        return super().get(*args, **kwargs)
+        # TODO: This is duplicated. Make a function.
+        user_data = {
+            'emails': list(
+                EmailAddress.objects.filter(user=user).values_list(
+                    'email', flat=True)),
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+        }
+        user_department_data = fetch_departments_for_user(user_data)
+
+        for code, name in user_department_data:
+            department, department_created = create_or_update_department(
+                code, name)
+            user_department, user_department_created = \
+                UserDepartment.objects.update_or_create(
+                    userprofile=user.userprofile,
+                    department=department.pk,
+                    defaults={
+                        'is_authoritative': True,
+                    })
+
+        return super().form_valid(form)
 
     def get_context_data(self, viewed_username=None, **kwargs):
         context = super().get_context_data(**kwargs)
