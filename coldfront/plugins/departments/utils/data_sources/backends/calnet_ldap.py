@@ -36,13 +36,14 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
         Departments are org units at level 4 (L4) of the org tree.
         """
         identifier_attr = 'berkeleyEduOrgUnitHierarchyString'
-        # This search filter returns any org unit at L4 and above
-        # (higher levels are deeper in the org tree).
-        search_filter = f'({identifier_attr}=*-*-*-*)'
+        # This search filter returns L4 org units.
+        # The first portion includes org units with at least three hyphens (L4
+        # and above).
+        # The second portion excludes org units with at least four hyphens (L5
+        # and above).
+        search_filter = (
+            f'({identifier_attr}=*-*-*-*)(!({identifier_attr}=*-*-*-*-*)))')
         for identifier, description in self._lookup_org_units(search_filter):
-            # Filter out org units at higher levels (L5, L6, L7).
-            if identifier.count('-') != 3:
-                continue
             yield identifier.split('-')[3], description
 
     def fetch_departments_for_user(self, user_data):
