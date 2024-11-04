@@ -6,21 +6,16 @@ from django.db import transaction
 
 from flags.state import flag_enabled
 
-from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationPeriod
-from coldfront.core.allocation.models import AllocationAttribute
-from coldfront.core.allocation.models import AllocationAttributeType
-from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.allocation.utils import calculate_service_units_to_allocate
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice
 from coldfront.core.project.utils import is_primary_cluster_project
+from coldfront.core.project.utils_.new_project_utils import create_project_with_compute_allocation
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunnerFactory
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalApprovalRunner
@@ -29,9 +24,8 @@ from coldfront.core.project.utils_.renewal_utils import set_allocation_renewal_r
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource_name
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.statistics.models import ProjectTransaction
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import add_argparse_dry_run_argument
-from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 
@@ -141,10 +135,9 @@ class Command(BaseCommand):
          specified.
         """
         with transaction.atomic():
-            project = Project.objects.create(
-                name=project_name,
-                title=project_name,
-                status=ProjectStatusChoice.objects.get(name='Active'))
+            project = create_project_with_compute_allocation(project_name, 
+                                                             compute_resource, 
+                                                             settings.ALLOCATION_MAX)
 
             project_users = []
             for pi_user in pi_users:
@@ -155,25 +148,6 @@ class Command(BaseCommand):
                         name='Principal Investigator'),
                     status=ProjectUserStatusChoice.objects.get(name='Active'))
                 project_users.append(project_user)
-
-            allocation = Allocation.objects.create(
-                project=project,
-                status=AllocationStatusChoice.objects.get(name='Active'),
-                start_date=display_time_zone_current_date(),
-                end_date=None)
-            allocation.resources.add(compute_resource)
-
-            num_service_units = settings.ALLOCATION_MAX
-            AllocationAttribute.objects.create(
-                allocation_attribute_type=AllocationAttributeType.objects.get(
-                    name='Service Units'),
-                allocation=allocation,
-                value=str(num_service_units))
-
-            ProjectTransaction.objects.create(
-                project=project,
-                date_time=utc_now_offset_aware(),
-                allocation=num_service_units)
 
             runner_factory = NewProjectUserRunnerFactory()
             for project_user in project_users:
