@@ -61,7 +61,7 @@ class Command(BaseCommand):
 
                 user_department, user_department_created = \
                     UserDepartment.objects.update_or_create(
-                        userprofile=user.userprofile,
+                        user=user,
                         department=department_pk,
                         defaults={
                             'is_authoritative': True,

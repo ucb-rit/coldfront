@@ -17,7 +17,7 @@ class NonAuthoritativeDepartmentSelectionForm(forms.Form):
         user = kwargs.pop('user', None)
         if user is None:
             raise ValueError('No user provided.')
-        self.user_profile = user.userprofile
+        self.user = user
 
         super().__init__(*args, **kwargs)
 
@@ -32,7 +32,7 @@ class NonAuthoritativeDepartmentSelectionForm(forms.Form):
         # Disable any Department that the User is authoritatively associated
         # with.
         authoritative_user_departments = UserDepartment.objects.filter(
-            userprofile=self.user_profile,
+            user=self.user,
             is_authoritative=True)
         authoritative_department_pks = set(
             authoritative_user_departments.values_list(
@@ -46,7 +46,7 @@ class NonAuthoritativeDepartmentSelectionForm(forms.Form):
         """Pre-select the Departments that the user is non-
         authoritatively associated with."""
         non_authoritative_user_departments = UserDepartment.objects.filter(
-            userprofile=self.user_profile,
+            user=self.user,
             is_authoritative=False)
         non_authoritative_department_pks = list(
             non_authoritative_user_departments.values_list(

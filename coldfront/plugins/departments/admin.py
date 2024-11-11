@@ -3,6 +3,7 @@ from coldfront.plugins.departments.models import Department, UserDepartment
 
 # Register your models here.
 
+
 class DepartmentHasUsersFilter(admin.SimpleListFilter):
     title = 'Has Users'
     parameter_name = 'has_users'
@@ -31,6 +32,7 @@ class DepartmentHasUsersFilter(admin.SimpleListFilter):
         if self.value() == 'no':
             return queryset.filter(userdepartment__isnull=True)
 
+
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
     list_display = ('name', 'code')
@@ -38,24 +40,25 @@ class DepartmentAdmin(admin.ModelAdmin):
     search_fields = ['name', 'code']
     list_filter = (DepartmentHasUsersFilter,)
 
+
 @admin.register(UserDepartment)
 class UserDepartmentAdmin(admin.ModelAdmin):
     list_display = ('department', 'username', 'first_name', 'last_name', 'is_authoritative')
-    ordering = ('department', 'is_authoritative', 'userprofile__user__username')
-    list_filter = ('userprofile__is_pi', 'is_authoritative')
+    ordering = ('department', 'is_authoritative', 'user__username')
+    list_filter = ('user__userprofile__is_pi', 'is_authoritative')
     search_fields = ['department__name', 'department__code',
-                     'userprofile__user__username',
-                     'userprofile__user__first_name',
-                     'userprofile__user__last_name',
-                     'userprofile__user__email']
-    fields = ('userprofile', 'department', 'is_authoritative')
-    readonly_fields = ('userprofile', 'username' )
+                     'user__username',
+                     'user__first_name',
+                     'user__last_name',
+                     'user__email']
+    fields = ('user', 'department', 'is_authoritative')
+    readonly_fields = ('user', 'username')
 
     def username(self, obj):
-        return obj.userprofile.user.username
+        return obj.user.username
 
     def first_name(self, obj):
-        return obj.userprofile.user.first_name
+        return obj.user.first_name
 
     def last_name(self, obj):
-        return obj.userprofile.user.last_name
+        return obj.user.last_name

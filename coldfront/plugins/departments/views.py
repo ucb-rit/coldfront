@@ -24,14 +24,14 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
         user = self.request.user
         form_data = form.cleaned_data
         new_departments = form_data['departments']
-        userprofile = user.userprofile
         for department in new_departments:
-            UserDepartment.objects.get_or_create(userprofile=userprofile,
-                                            department=department,
-                                            defaults={'is_authoritative':False})
+            UserDepartment.objects.get_or_create(
+                user=user,
+                department=department,
+                defaults={'is_authoritative': False})
         
-        for ud in UserDepartment.objects.filter(userprofile=userprofile,
-                                                is_authoritative=False):
+        for ud in UserDepartment.objects.filter(
+                user=user, is_authoritative=False):
             if ud.department not in new_departments:
                 ud.delete()
 
@@ -50,7 +50,7 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
                 code, name)
             user_department, user_department_created = \
                 UserDepartment.objects.update_or_create(
-                    userprofile=user.userprofile,
+                    user=user,
                     department=department.pk,
                     defaults={
                         'is_authoritative': True,
@@ -65,8 +65,7 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
         context['auth_department_list'] = \
             [f'{ud.department.name} ({ud.department.code})'
             for ud in UserDepartment.objects.select_related('department') \
-            .filter(userprofile=self.request.user.userprofile,
-                    is_authoritative=True) \
+            .filter(user=self.request.user, is_authoritative=True) \
             .order_by('department__name')]
         return context
 

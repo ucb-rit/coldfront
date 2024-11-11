@@ -586,7 +586,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 # without overriding any authoritative departments.
                 for department in data['departments']:
                     UserDepartment.objects.get_or_create(
-                        userprofile=pi.userprofile,
+                        user=pi,
                         department=department,
                         defaults={
                             'is_authoritative': False})
@@ -608,7 +608,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                         create_or_update_department(code, name)
                     user_department, user_department_created = \
                         UserDepartment.objects.update_or_create(
-                            userprofile=pi.userprofile,
+                            user=pi,
                             department=department.pk,
                             defaults={
                                 'is_authoritative': True,

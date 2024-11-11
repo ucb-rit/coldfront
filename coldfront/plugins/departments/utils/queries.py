@@ -21,7 +21,7 @@ def get_departments_for_user(user, strs_only=False):
     """
     user_departments = (
         UserDepartment.objects
-            .filter(userprofile=user.userprofile)
+            .filter(user=user)
             .select_related('department')
             .order_by('department__name'))
 
