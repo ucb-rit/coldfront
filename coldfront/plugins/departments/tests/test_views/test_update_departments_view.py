@@ -8,9 +8,8 @@ from coldfront.plugins.departments.models import HistoricalUserDepartment
 from coldfront.plugins.departments.models import UserDepartment
 
 
-class TestAddDepartments(TestBase):
-    """A class for testing the "Update Departments" section of the User
-    Profile."""
+class TestUpdateDepartmentsView(TestBase):
+    """A class for testing UpdateDepartmentsView."""
 
     def setUp(self):
         """Set up test data."""
