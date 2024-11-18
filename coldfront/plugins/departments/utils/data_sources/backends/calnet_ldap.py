@@ -42,7 +42,7 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
         # The second portion excludes org units with at least four hyphens (L5
         # and above).
         search_filter = (
-            f'({identifier_attr}=*-*-*-*)(!({identifier_attr}=*-*-*-*-*)))')
+            f'(&({identifier_attr}=*-*-*-*)(!({identifier_attr}=*-*-*-*-*)))')
         for identifier, description in self._lookup_org_units(search_filter):
             yield identifier.split('-')[3], description
 
@@ -138,7 +138,7 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
         attributes = [hierarchy_string_attr, description_attr]
 
         results_found = self._connection.search(
-            search_base, search_filter, attributes=[attributes])
+            search_base, search_filter, attributes=attributes)
         if not results_found:
             return []
 
@@ -175,7 +175,7 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
         attributes = [department_number_attr]
 
         results_found = self._connection.search(
-            search_base, search_filter, attributes=[attributes])
+            search_base, search_filter, attributes=attributes)
         if not results_found:
             return set()
 
@@ -233,7 +233,7 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
               identifiers for L4 org units (e.g., {"JICCS", "JJCNS"})
         """
         results = set()
-        search_filter = f'(givenName={first_name})(sn={last_name}))'
+        search_filter = f'(&(givenName={first_name})(sn={last_name}))'
         try:
             department_numbers = self._lookup_person_department_numbers(
                 search_filter, assert_one_person=True)
