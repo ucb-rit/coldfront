@@ -609,7 +609,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                     user_department, user_department_created = \
                         UserDepartment.objects.update_or_create(
                             user=pi,
-                            department=department.pk,
+                            department=department,
                             defaults={
                                 'is_authoritative': True,
                             })
