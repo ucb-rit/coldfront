@@ -1,15 +1,17 @@
+import logging
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.edit import FormView
 from django.urls import reverse
 
-from allauth.account.models import EmailAddress
-
 from coldfront.core.utils.common import import_from_settings
 
-from coldfront.plugins.departments.models import UserDepartment
 from coldfront.plugins.departments.forms import NonAuthoritativeDepartmentSelectionForm
-from coldfront.plugins.departments.utils.data_sources import fetch_departments_for_user
-from coldfront.plugins.departments.utils.queries import create_or_update_department
+from coldfront.plugins.departments.utils.queries import get_departments_for_user
+from coldfront.plugins.departments.utils.queries import UserDepartmentUpdater
+
+
+logger = logging.getLogger(__name__)
 
 
 class UpdateDepartmentsView(LoginRequiredMixin, FormView):
@@ -22,51 +24,26 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         user = self.request.user
-        form_data = form.cleaned_data
-        new_departments = form_data['departments']
-        for department in new_departments:
-            UserDepartment.objects.get_or_create(
-                user=user,
-                department=department,
-                defaults={'is_authoritative': False})
-        
-        for ud in UserDepartment.objects.filter(
-                user=user, is_authoritative=False):
-            if ud.department not in new_departments:
-                ud.delete()
+        non_authoritative_departments = form.cleaned_data['departments']
 
-        # TODO: This is duplicated. Make a function.
-        user_data = {
-            'emails': list(
-                EmailAddress.objects.filter(user=user).values_list(
-                    'email', flat=True)),
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-        }
-        user_department_data = fetch_departments_for_user(user_data)
-
-        for code, name in user_department_data:
-            department, department_created = create_or_update_department(
-                code, name)
-            user_department, user_department_created = \
-                UserDepartment.objects.update_or_create(
-                    user=user,
-                    department=department.pk,
-                    defaults={
-                        'is_authoritative': True,
-                    })
+        user_department_updater = UserDepartmentUpdater(
+            user, non_authoritative_departments)
+        user_department_updater.run(skip_authoritative=False)
 
         return super().form_valid(form)
 
     def get_context_data(self, viewed_username=None, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['department_display_name'] = \
-                                import_from_settings('DEPARTMENT_DISPLAY_NAME')
-        context['auth_department_list'] = \
-            [f'{ud.department.name} ({ud.department.code})'
-            for ud in UserDepartment.objects.select_related('department') \
-            .filter(user=self.request.user, is_authoritative=True) \
-            .order_by('department__name')]
+
+        context['department_display_name'] = import_from_settings(
+            'DEPARTMENT_DISPLAY_NAME')
+
+        # TODO: Account for viewed_username or not?
+
+        authoritative_department_strs, _ = get_departments_for_user(
+            self.request.user, strs_only=True)
+        context['auth_department_list'] = authoritative_department_strs
+
         return context
 
     def get_form_kwargs(self):
