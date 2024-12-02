@@ -113,18 +113,6 @@ class SlurmJobListView(LoginRequiredMixin,
         context['filter_parameters'] = filter_parameters
         context['filter_parameters_with_order_by'] = filter_parameters_with_order_by
 
-        job_list = context['job_list']
-        paginator = Paginator(job_list, self.paginate_by)
-
-        page = self.request.GET.get('page')
-
-        try:
-            job_list = paginator.page(page)
-        except PageNotAnInteger:
-            job_list = paginator.page(1)
-        except EmptyPage:
-            job_list = paginator.page(paginator.num_pages)
-
         context['inline_fields'] = ['submitdate', 'submit_modifier',
                                     'startdate', 'start_modifier',
                                     'enddate', 'end_modifier']
@@ -143,6 +131,17 @@ class SlurmJobListView(LoginRequiredMixin,
             self.request.user.has_perm('statistics.view_job')
 
         context['show_username'] = (self.request.user.is_superuser or self.request.user.has_perm('statistics.view_job')) or is_pi
+
+        if self.object_list.count() < 100000:
+            total_service_units = 0
+            for job in self.object_list.iterator():
+                total_service_units += job.amount
+                if total_service_units > 1000000:
+                    total_service_units = '1000000+'
+                    break
+            context['total_service_units'] = str(total_service_units)
+        else:
+            context['total_service_units'] = ''
 
         return context
 
