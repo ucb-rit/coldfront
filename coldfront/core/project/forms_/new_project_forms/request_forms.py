@@ -152,7 +152,6 @@ class PIChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return f'{obj.first_name} {obj.last_name} ({obj.email})'
 
-
 class SavioProjectExistingPIForm(forms.Form):
 
     PI = PIChoiceField(
@@ -240,8 +239,8 @@ class SavioProjectNewPIForm(forms.Form):
     def clean_email(self):
         cleaned_data = super().clean()
         email = cleaned_data['email'].lower()
-        if (User.objects.filter(username=email).exists() or
-                User.objects.filter(email=email).exists()):
+        if User.objects.filter(username=email).exists() or \
+                User.objects.filter(email=email).exists():
             raise forms.ValidationError(
                 'A user with that email address already exists.')
 
