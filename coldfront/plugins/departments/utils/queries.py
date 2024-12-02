@@ -4,6 +4,7 @@ from allauth.account.models import EmailAddress
 
 from coldfront.plugins.departments.models import Department
 from coldfront.plugins.departments.models import UserDepartment
+from coldfront.plugins.departments.utils import UserInfoDict
 from coldfront.plugins.departments.utils.data_sources import fetch_departments_for_user
 
 
@@ -81,13 +82,7 @@ class UserDepartmentUpdater(object):
 
     def _fetch_authoritative_user_departments(self):
         """Fetch department data for the User from the data source."""
-        user_data = {
-            'emails': list(
-                EmailAddress.objects.filter(user=self._user).values_list(
-                    'email', flat=True)),
-            'first_name': self._user.first_name,
-            'last_name': self._user.last_name,
-        }
+        user_data = UserInfoDict.from_user(self._user)
         return fetch_departments_for_user(user_data)
 
     def _update_all_user_departments(self):

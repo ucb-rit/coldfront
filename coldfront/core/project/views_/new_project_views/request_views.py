@@ -39,6 +39,7 @@ from coldfront.core.utils.common import utc_now_offset_aware
 
 from coldfront.plugins.departments.forms import NonAuthoritativeDepartmentSelectionForm
 from coldfront.plugins.departments.models import UserDepartment
+from coldfront.plugins.departments.utils import UserInfoDict
 from coldfront.plugins.departments.utils.data_sources import fetch_departments_for_user
 from coldfront.plugins.departments.utils.queries import create_or_update_department
 from coldfront.plugins.departments.utils.queries import get_departments_for_user
@@ -420,9 +421,11 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             return True
 
         if new_pi_cleaned_data:
-            emails = [new_pi_cleaned_data['email']]
-            first_name = new_pi_cleaned_data['first_name']
-            last_name = new_pi_cleaned_data['last_name']
+            user_info_dict = UserInfoDict({
+                'emails': [new_pi_cleaned_data['email']],
+                'first_name': new_pi_cleaned_data['first_name'],
+                'last_name': new_pi_cleaned_data['last_name'],
+            })
         else:
             pi = existing_pi_cleaned_data['PI']
 
@@ -431,13 +434,9 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             if authoritative_departments or non_authoritative_departments:
                 return False
 
-            emails = list(
-                EmailAddress.objects.filter(
-                    user=pi).values_list('email', flat=True))
-            first_name = pi.first_name
-            last_name = pi.last_name
+            user_info_dict = UserInfoDict.from_user(pi)
 
-        return not self.__pi_departments_found(emails, first_name, last_name)
+        return not self.__pi_departments_found(user_info_dict)
 
     def show_pool_allocations_form_condition(self):
         step_name = 'computing_allowance'
@@ -599,14 +598,9 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 # Attempt to fetch the user's departments. Create authoritative
                 # associations for these, or update existing ones.
                 # TODO: This is duplicated. Make a function.
-                user_data = {
-                    'emails': list(
-                        EmailAddress.objects.filter(
-                            user=pi).values_list('email', flat=True)),
-                    'first_name': pi.first_name,
-                    'last_name': pi.last_name,
-                }
-                user_department_data = fetch_departments_for_user(user_data)
+                user_info_dict = UserInfoDict.from_user(pi)
+                user_department_data = fetch_departments_for_user(
+                    user_info_dict)
 
                 for code, name in user_department_data:
                     department, department_created = \
@@ -692,14 +686,17 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
         return project
 
-    def __pi_departments_found(self, emails, first_name, last_name):
+    def __pi_departments_found(self, user_info_dict):
         """Return whether any departments can be found in the data
-        source for the user with the given emails, first name, and last
-        name.
+        source for the user identified by the given UserInfoDict.
 
         Cache the result of the lookup for the given inputs in the
         request session.
         """
+        first_name = user_info_dict['first_name']
+        last_name = user_info_dict['last_name']
+        emails = user_info_dict['emails']
+
         pi_identifier_parts = (first_name, last_name, *sorted(emails))
         pi_identifier = hashlib.md5(
             ','.join(pi_identifier_parts).encode('utf-8')).hexdigest()
@@ -711,12 +708,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             if cached_pi_identifier == pi_identifier and departments_found:
                 return True
 
-        user_data = {
-            'emails': emails,
-            'first_name': first_name,
-            'last_name': last_name,
-        }
-        user_departments = fetch_departments_for_user(user_data)
+        user_departments = fetch_departments_for_user(user_info_dict)
 
         try:
             next(user_departments)

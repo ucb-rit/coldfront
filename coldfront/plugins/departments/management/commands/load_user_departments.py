@@ -6,6 +6,7 @@ from allauth.account.models import EmailAddress
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 
 from coldfront.plugins.departments.models import UserDepartment
+from coldfront.plugins.departments.utils import UserInfoDict
 from coldfront.plugins.departments.utils.data_sources import fetch_departments_for_user
 from coldfront.plugins.departments.utils.data_sources import get_data_source
 from coldfront.plugins.departments.utils.queries import create_or_update_department
@@ -41,13 +42,7 @@ class Command(BaseCommand):
 
         for user in users:
             # TODO: This is going to get duplicated. Make a function.
-            user_data = {
-                'emails': list(
-                    EmailAddress.objects.filter(
-                        user=user).values_list('email', flat=True)),
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-            }
+            user_data = UserInfoDict.from_user(user)
             user_department_data = fetch_departments_for_user(
                 user_data, data_source=data_source)
 
