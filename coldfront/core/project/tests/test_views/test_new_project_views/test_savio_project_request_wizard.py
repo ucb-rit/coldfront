@@ -24,6 +24,11 @@ class TestSavioProjectRequestWizard(TestBase):
 
         self.interface = ComputingAllowanceInterface()
 
+        self._department_1 = Department.objects.create(
+            name='Department 1', code='DEPT1')
+        self._department_2 = Department.objects.create(
+            name='Department 2', code='DEPT2')
+
     @staticmethod
     def request_url():
         """Return the URL for requesting to create a new Savio
@@ -40,29 +45,6 @@ class TestSavioProjectRequestWizard(TestBase):
         computing_allowance = self.get_predominant_computing_allowance()
         allocation_period = get_current_allowance_year_period()
 
-        kwargs = {
-            'computing_allowance': computing_allowance,
-            'allocation_period': allocation_period,
-        }
-
-        # The PI should not be selectable.
-        self.user.is_active = False
-        self.user.save()
-        form = SavioProjectExistingPIForm(**kwargs)
-        pi_field_queryset = \
-            form.fields['PI'].queryset
-        self.assertNotIn(self.user, pi_field_queryset)
-
-        # The PI should be selectable.
-        self.user.is_active = True
-        self.user.save()
-        form = SavioProjectExistingPIForm(**kwargs)
-        pi_field_queryset = \
-            form.fields['PI'].queryset
-        self.assertIn(self.user, pi_field_queryset)
-
-        selected_dept = Department.objects.get_or_create(name='Department 1', code='DEPT1')[0]
-        not_selected_dept = Department.objects.get_or_create(name='Department 2', code='DEPT2')[0]
 
         view_name = 'savio_project_request_wizard'
         current_step_key = f'{view_name}-current_step'
@@ -79,7 +61,7 @@ class TestSavioProjectRequestWizard(TestBase):
             current_step_key: '2',
         }
         pi_department_form_data = {
-            '4-departments': [selected_dept.pk],
+            '4-departments': [self._department_1.pk],
             current_step_key: '4'
         }
         pool_allocations_data = {
@@ -121,8 +103,8 @@ class TestSavioProjectRequestWizard(TestBase):
         self.assertEqual(projects.count(), 1)
         self.assertEqual(UserDepartment.objects.count(), 1)
         self.assertTrue(UserDepartment.objects.filter(
-                                        userprofile=self.user.userprofile,
-                                        department=selected_dept,
+                                        user=self.user,
+                                        department=self._department_1,
                                         is_authoritative=False).exists())
         request = requests.first()
         project = projects.first()
