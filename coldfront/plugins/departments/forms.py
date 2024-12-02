@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.models import User
 
 from coldfront.plugins.departments.models import Department
 from coldfront.plugins.departments.models import UserDepartment
@@ -14,15 +15,15 @@ class NonAuthoritativeDepartmentSelectionForm(forms.Form):
         required=True)
 
     def __init__(self, *args, **kwargs):
+        """If a User object is provided, tailor choices to the user."""
         user = kwargs.pop('user', None)
-        if user is None:
-            raise ValueError('No user provided.')
         self.user = user
 
         super().__init__(*args, **kwargs)
 
-        self._disable_department_choices()
-        self._set_initial_departments()
+        if isinstance(self.user, User):
+            self._disable_department_choices()
+            self._set_initial_departments()
 
     def _disable_department_choices(self):
         """Prevent certain Departments, which should be displayed, from
