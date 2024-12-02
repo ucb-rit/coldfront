@@ -59,6 +59,7 @@ from django.views.generic.edit import FormView
 from flags.state import flag_enabled
 from formtools.wizard.views import SessionWizardView
 
+import hashlib
 import logging
 
 
@@ -406,18 +407,24 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         if not self.__department_required():
             return False
 
-        step_name = 'new_pi'
-        step = str(self.step_numbers_by_form_name[step_name])
-        cleaned_data = self.get_cleaned_data_for_step(step) or {}
-        if cleaned_data:
-            emails = [cleaned_data['email']]
-            first_name = cleaned_data['first_name']
-            last_name = cleaned_data['last_name']
+        new_pi_step = str(self.step_numbers_by_form_name['new_pi'])
+        new_pi_cleaned_data = self.get_cleaned_data_for_step(new_pi_step) or {}
+
+        existing_pi_step = str(self.step_numbers_by_form_name['existing_pi'])
+        existing_pi_cleaned_data = self.get_cleaned_data_for_step(
+            existing_pi_step) or {}
+
+        if not (new_pi_cleaned_data or existing_pi_cleaned_data):
+            # Earlier steps in the form do not have either. The return value is
+            # irrelevant for these steps.
+            return True
+
+        if new_pi_cleaned_data:
+            emails = [new_pi_cleaned_data['email']]
+            first_name = new_pi_cleaned_data['first_name']
+            last_name = new_pi_cleaned_data['last_name']
         else:
-            step_name = 'existing_pi'
-            step = str(self.step_numbers_by_form_name[step_name])
-            cleaned_data = self.get_cleaned_data_for_step(step) or {}
-            pi = cleaned_data['PI']
+            pi = existing_pi_cleaned_data['PI']
 
             authoritative_departments, non_authoritative_departments = \
                 get_departments_for_user(pi)
@@ -431,8 +438,6 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             last_name = pi.last_name
 
         return not self.__pi_departments_found(emails, first_name, last_name)
-
-
 
     def show_pool_allocations_form_condition(self):
         step_name = 'computing_allowance'
@@ -688,18 +693,21 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         return project
 
     def __pi_departments_found(self, emails, first_name, last_name):
-        """TODO"""
-        import hashlib
+        """Return whether any departments can be found in the data
+        source for the user with the given emails, first name, and last
+        name.
 
+        Cache the result of the lookup for the given inputs in the
+        request session.
+        """
         pi_identifier_parts = (first_name, last_name, *sorted(emails))
         pi_identifier = hashlib.md5(
             ','.join(pi_identifier_parts).encode('utf-8')).hexdigest()
 
-        cached_pi_department_lookup_result_key = \
-            'cached_pi_department_lookup_result'
-        if cached_pi_department_lookup_result_key in self.storage.extra_data:
+        cache_key = 'cached_pi_department_lookup_result'
+        if cache_key in self.storage.extra_data:
             cached_pi_identifier, departments_found = self.storage.extra_data[
-                cached_pi_department_lookup_result_key]
+                cache_key]
             if cached_pi_identifier == pi_identifier and departments_found:
                 return True
 
@@ -717,8 +725,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         else:
             departments_found = True
 
-        self.storage.extra_data[cached_pi_department_lookup_result_key] = (
-            pi_identifier, departments_found)
+        self.storage.extra_data[cache_key] = (pi_identifier, departments_found)
 
         return departments_found
 
