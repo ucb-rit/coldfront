@@ -34,11 +34,12 @@ class Command(BaseCommand):
             department, created = Department.objects.get_or_create(
                 code='OTH', name='Other')
         if created:
-            message = f'Created Department {department.pk}, Other (OTH)'
+            message = f'Created Department {department}.'
             self.log(message, dry_run)
 
         department_entries = fetch_departments()
         for code, name in department_entries:
+            department = Department()
             if dry_run:
                 created = not Department.objects.filter(code=code).exists()
                 department.name = name
@@ -47,5 +48,5 @@ class Command(BaseCommand):
                 department, created = Department.objects.get_or_create(
                     name=name, code=code)
             if created:
-                message = f'Created Department {department.pk}, {department}'
+                message = f'Created Department {department}.'
                 self.log(message, dry_run)

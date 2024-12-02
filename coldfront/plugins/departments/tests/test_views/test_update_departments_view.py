@@ -249,6 +249,23 @@ class TestUpdateDepartmentsView(TestBase):
         self._assert_user_departments(
             self.user, expected_departments_name_and_is_authoritative)
 
+        # The user is already associated with Department F. The user attempts
+        # to set F as non-authoritative.
+        form_data = {
+            'departments': [self.department1.pk, department_f.pk],
+        }
+        response = self.client.post(self._request_url(), form_data)
+        self._assert_redirects(response)
+
+        # F is still set authoritatively.
+        expected_departments_name_and_is_authoritative = {
+            'Department 1': False,
+            'Department F': True,
+            'Department L': True,
+        }
+        self._assert_user_departments(
+            self.user, expected_departments_name_and_is_authoritative)
+
     @override_settings(
         DEPARTMENT_DATA_SOURCE=(
             'coldfront.plugins.departments.utils.data_sources.backends.dummy.'

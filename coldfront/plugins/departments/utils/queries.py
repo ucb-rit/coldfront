@@ -1,6 +1,6 @@
 import logging
 
-from allauth.account.models import EmailAddress
+from django.db import transaction
 
 from coldfront.plugins.departments.models import Department
 from coldfront.plugins.departments.models import UserDepartment
@@ -47,55 +47,73 @@ def get_departments_for_user(user, strs_only=False):
 
 
 class UserDepartmentUpdater(object):
-    """A class that updates a User's non-authoritative and authoritative
-    Department associations."""
+    """A class that updates a User's authoritative and/or
+    non-authoritative Department associations."""
 
     def __init__(self, user, non_authoritative_departments):
         self._user = user
         self._non_authoritative_departments = set(non_authoritative_departments)
         self._authoritative_departments = set()
 
-    def run(self, skip_authoritative=False):
+    def run(self, authoritative=True, non_authoritative=True):
         """Update associations. Fetch and update authoritative ones,
-        unless skipped. If any error occurs during fetching, skip
-        updating authoritative ones."""
-        if skip_authoritative:
-            self._update_non_authoritative_user_departments()
-            return
+        unless indicated. Update non-authoritative ones to those
+        provided during instantiation, unless indicated. If any error
+        occurs during fetching, skip updating authoritative ones."""
+        if authoritative:
+            try:
+                authoritative_user_department_data = \
+                    self._fetch_authoritative_user_departments()
+            except Exception as e:
+                authoritative = False
 
+        with transaction.atomic():
+            if authoritative:
+                self._process_authoritative_user_departments(
+                    authoritative_user_department_data)
+            if authoritative and non_authoritative:
+                # The order of updates should not matter since the two sets of
+                # Departments should be mutually exclusive.
+                self._update_non_authoritative_user_departments()
+                self._update_authoritative_user_departments()
+            elif authoritative:
+                self._update_authoritative_user_departments()
+            elif non_authoritative:
+                self._update_non_authoritative_user_departments()
+
+    def _fetch_authoritative_user_departments(self):
+        """Fetch department data for the User from the data source."""
         try:
-            authoritative_user_department_data = \
-                self._fetch_authoritative_user_departments()
+            user_data = UserInfoDict.from_user(self._user)
+            return fetch_departments_for_user(user_data)
         except Exception as e:
             logger.error(
                 f'Failed to fetch department data for User {self._user.pk}. '
                 f'Details:')
             logger.exception(e)
-            self._update_non_authoritative_user_departments()
-        else:
-            for code, name in authoritative_user_department_data:
-                department, department_created = \
-                    create_or_update_department(code, name)
-                self._authoritative_departments.add(department)
-                self._non_authoritative_departments.discard(department)
-            self._update_all_user_departments()
+            raise e
 
-    def _fetch_authoritative_user_departments(self):
-        """Fetch department data for the User from the data source."""
-        user_data = UserInfoDict.from_user(self._user)
-        return fetch_departments_for_user(user_data)
+    def _process_authoritative_user_departments(self,
+                                                authoritative_user_department_data):
+        """Given department data for the User, fetched from the data
+        source:
+            1. Create Department objects as needed.
+            2. Mark the Department as being authoritative, and NOT
+               non-authoritative.
+        """
+        for code, name in authoritative_user_department_data:
+            department, department_created = create_or_update_department(
+                code, name)
+            if department_created:
+                logger.info(f'Created Department {department}.')
+            self._authoritative_departments.add(department)
+            self._non_authoritative_departments.discard(department)
 
-    def _update_all_user_departments(self):
-        """Update authoritative and non-authoritative associations to
-        those set in this instance. Delete any other existing
-        associations."""
-        to_delete = (
-            UserDepartment.objects
-                .filter(user=self._user)
-                .exclude(department__in=[
-                    *self._authoritative_departments,
-                    *self._non_authoritative_departments])
-        )
+    def _update_authoritative_user_departments(self):
+        """Update authoritative associations to those set in this
+        instance. Delete any other existing authoritative associations.
+        This may involve updating non-authoritative associations to be
+        authoritative."""
         for department in self._authoritative_departments:
             UserDepartment.objects.update_or_create(
                 user=self._user,
@@ -103,13 +121,14 @@ class UserDepartmentUpdater(object):
                 defaults={
                     'is_authoritative': True,
                 })
-        for department in self._non_authoritative_departments:
-            UserDepartment.objects.update_or_create(
-                user=self._user,
-                department=department,
-                defaults={
-                    'is_authoritative': False,
-                })
+
+        to_delete = (
+            UserDepartment.objects
+                .filter(
+                    user=self._user,
+                    is_authoritative=True)
+                .exclude(department__in=self._authoritative_departments)
+        )
         to_delete.delete()
 
     def _update_non_authoritative_user_departments(self):
@@ -133,9 +152,9 @@ class UserDepartmentUpdater(object):
 
         to_delete = (
             UserDepartment.objects
-            .filter(
-                user=self._user,
-                is_authoritative=False)
-            .exclude(department__in=self._non_authoritative_departments)
+                .filter(
+                    user=self._user,
+                    is_authoritative=False)
+                .exclude(department__in=self._non_authoritative_departments)
         )
         to_delete.delete()
