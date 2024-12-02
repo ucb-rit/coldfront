@@ -26,10 +26,12 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
         user = self.request.user
         non_authoritative_departments = form.cleaned_data['departments']
 
-        # TODO: Note that this also updates authoritative.
+        # Update non-authoritative UserDepartments to those selected by the
+        # user. Also fetch and set authoritative UserDepartments from the data
+        # source.
         user_department_updater = UserDepartmentUpdater(
             user, non_authoritative_departments)
-        user_department_updater.run()
+        user_department_updater.run(authoritative=True, non_authoritative=True)
 
         return super().form_valid(form)
 
