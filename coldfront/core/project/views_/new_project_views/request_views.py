@@ -396,47 +396,24 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
     def show_pi_department_form_condition(self):
         """Only show the form for providing department(s) for the PI
-        when all the following are true:
+        when the following are true:
             - Department information is required.
             - The PI does not already have any departments set.
-            - A lookup fails to find any.
-
-        This method performs a lookup against a third-party service to
-        find departments for the specified PI. The result is cached in
-        the request session until the requester specifies another PI.
         """
         if not self.__department_required():
             return False
 
-        new_pi_step = str(self.step_numbers_by_form_name['new_pi'])
-        new_pi_cleaned_data = self.get_cleaned_data_for_step(new_pi_step) or {}
-
         existing_pi_step = str(self.step_numbers_by_form_name['existing_pi'])
         existing_pi_cleaned_data = self.get_cleaned_data_for_step(
             existing_pi_step) or {}
-
-        if not (new_pi_cleaned_data or existing_pi_cleaned_data):
-            # Earlier steps in the form do not have either. The return value is
-            # irrelevant for these steps.
-            return True
-
-        if new_pi_cleaned_data:
-            user_info_dict = UserInfoDict({
-                'emails': [new_pi_cleaned_data['email']],
-                'first_name': new_pi_cleaned_data['first_name'],
-                'last_name': new_pi_cleaned_data['last_name'],
-            })
-        else:
+        if existing_pi_cleaned_data:
             pi = existing_pi_cleaned_data['PI']
-
             authoritative_departments, non_authoritative_departments = \
                 get_departments_for_user(pi)
             if authoritative_departments or non_authoritative_departments:
                 return False
 
-            user_info_dict = UserInfoDict.from_user(pi)
-
-        return not self.__pi_departments_found(user_info_dict)
+        return True
 
     def show_pool_allocations_form_condition(self):
         step_name = 'computing_allowance'
@@ -685,41 +662,6 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             raise e
 
         return project
-
-    def __pi_departments_found(self, user_info_dict):
-        """Return whether any departments can be found in the data
-        source for the user identified by the given UserInfoDict.
-
-        Cache the result of the lookup for the given inputs in the
-        request session.
-        """
-        first_name = user_info_dict['first_name']
-        last_name = user_info_dict['last_name']
-        emails = user_info_dict['emails']
-
-        pi_identifier_parts = (first_name, last_name, *sorted(emails))
-        pi_identifier = hashlib.md5(
-            ','.join(pi_identifier_parts).encode('utf-8')).hexdigest()
-
-        cache_key = 'cached_pi_department_lookup_result'
-        if cache_key in self.storage.extra_data:
-            cached_pi_identifier, departments_found = self.storage.extra_data[
-                cache_key]
-            if cached_pi_identifier == pi_identifier and departments_found:
-                return True
-
-        user_departments = fetch_departments_for_user(user_info_dict)
-
-        try:
-            next(user_departments)
-        except StopIteration:
-            departments_found = False
-        else:
-            departments_found = True
-
-        self.storage.extra_data[cache_key] = (pi_identifier, departments_found)
-
-        return departments_found
 
     def __set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""
