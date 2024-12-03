@@ -1,8 +1,11 @@
 import logging
 
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.edit import FormView
 from django.urls import reverse
+
+from django_q.tasks import async_task
 
 from coldfront.core.utils.common import import_from_settings
 
@@ -26,12 +29,14 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
         user = self.request.user
         non_authoritative_departments = form.cleaned_data['departments']
 
-        # Update non-authoritative UserDepartments to those selected by the
-        # user. Also fetch and set authoritative UserDepartments from the data
-        # source.
         user_department_updater = UserDepartmentUpdater(
             user, non_authoritative_departments)
-        user_department_updater.run(authoritative=True, non_authoritative=True)
+        user_department_updater.run(authoritative=False, non_authoritative=True)
+
+        func = (
+            'coldfront.plugins.departments.tasks.'
+            'fetch_and_set_user_authoritative_departments')
+        async_task(func, user.pk, sync=settings.Q_CLUSTER.get('sync', False))
 
         return super().form_valid(form)
 

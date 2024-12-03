@@ -38,11 +38,8 @@ from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
 
 from coldfront.plugins.departments.forms import NonAuthoritativeDepartmentSelectionForm
-from coldfront.plugins.departments.models import UserDepartment
-from coldfront.plugins.departments.utils import UserInfoDict
-from coldfront.plugins.departments.utils.data_sources import fetch_departments_for_user
-from coldfront.plugins.departments.utils.queries import create_or_update_department
 from coldfront.plugins.departments.utils.queries import get_departments_for_user
+from coldfront.plugins.departments.utils.queries import UserDepartmentUpdater
 
 from django.conf import settings
 from django.contrib import messages
@@ -57,6 +54,7 @@ from django.urls import reverse
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 
+from django_q.tasks import async_task
 from flags.state import flag_enabled
 from formtools.wizard.views import SessionWizardView
 
@@ -301,6 +299,20 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 request_kwargs['request_time'] = utc_now_offset_aware()
                 request = SavioProjectAllocationRequest.objects.create(
                     **request_kwargs)
+
+            try:
+                # Enqueue a task to update the PI's authoritative departments.
+                # This is purposefully placed outside the transaction to prevent
+                # it from closing during processing (when processing is
+                # synchronous).
+                if self.__department_required():
+                    func = (
+                        'coldfront.plugins.departments.tasks.'
+                        'fetch_and_set_user_authoritative_departments')
+                    async_task(
+                        func, pi.pk, sync=settings.Q_CLUSTER.get('sync', False))
+            except Exception as e:
+                self.logger.exception(e)
 
             # Send a notification email to admins.
             try:
@@ -558,39 +570,15 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         return pi
 
     def __handle_pi_departments(self, form_data, pi):
-        """TODO"""
-        try:
-            step_number = self.step_numbers_by_form_name['pi_department']
-            data = form_data[step_number]
-            if data.get('departments', None):
-                # Set the departments the user selected as non-authoritative,
-                # without overriding any authoritative departments.
-                for department in data['departments']:
-                    UserDepartment.objects.get_or_create(
-                        user=pi,
-                        department=department,
-                        defaults={
-                            'is_authoritative': False})
-            else:
-                # Attempt to fetch the user's departments. Create authoritative
-                # associations for these, or update existing ones.
-                # TODO: This is duplicated. Make a function.
-                user_info_dict = UserInfoDict.from_user(pi)
-                user_department_data = fetch_departments_for_user(
-                    user_info_dict)
+        """Update the PI's non-authoritative departments to the
+        specified ones."""
+        step_number = self.step_numbers_by_form_name['pi_department']
+        data = form_data[step_number]
+        non_authoritative_departments = data['departments']
 
-                for code, name in user_department_data:
-                    department, department_created = \
-                        create_or_update_department(code, name)
-                    user_department, user_department_created = \
-                        UserDepartment.objects.update_or_create(
-                            user=pi,
-                            department=department,
-                            defaults={
-                                'is_authoritative': True,
-                            })
-        except Exception as e:
-            self.logger.exception(e)
+        user_department_updater = UserDepartmentUpdater(
+            pi, non_authoritative_departments)
+        user_department_updater.run(authoritative=False, non_authoritative=True)
 
     def __handle_recharge_allowance(self, form_data,
                                     computing_allowance_wrapper,

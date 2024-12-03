@@ -1,16 +1,23 @@
+from copy import deepcopy
 from http import HTTPStatus
 from unittest.mock import patch
 
+from django.conf import settings
 from django.test import override_settings
 from django.urls import reverse
 
-from coldfront.core.utils.tests.test_base import TestBase
+from coldfront.core.utils.tests.test_base import TransactionTestBase
 from coldfront.plugins.departments.models import Department
 from coldfront.plugins.departments.models import HistoricalUserDepartment
 from coldfront.plugins.departments.models import UserDepartment
 
 
-class TestUpdateDepartmentsView(TestBase):
+Q_CLUSTER_COPY = deepcopy(settings.Q_CLUSTER)
+Q_CLUSTER_COPY['sync'] = True
+
+
+@override_settings(Q_CLUSTER=Q_CLUSTER_COPY)
+class TestUpdateDepartmentsView(TransactionTestBase):
     """A class for testing UpdateDepartmentsView."""
 
     def setUp(self):

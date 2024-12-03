@@ -1,17 +1,27 @@
+from copy import deepcopy
+from http import HTTPStatus
+
+from django.conf import settings
+from django.test import override_settings
+from django.urls import reverse
+
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
-from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectExistingPIForm
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.utils.tests.test_base import enable_deployment
+from coldfront.core.utils.tests.test_base import TransactionTestBase
+
 from coldfront.plugins.departments.models import Department
 from coldfront.plugins.departments.models import UserDepartment
-from coldfront.core.utils.tests.test_base import enable_deployment
-from coldfront.core.utils.tests.test_base import TestBase
-from django.urls import reverse
-from http import HTTPStatus
 
 
-class TestSavioProjectRequestWizard(TestBase):
+Q_CLUSTER_COPY = deepcopy(settings.Q_CLUSTER)
+Q_CLUSTER_COPY['sync'] = True
+
+
+@override_settings(Q_CLUSTER=Q_CLUSTER_COPY)
+class TestSavioProjectRequestWizard(TransactionTestBase):
     """A class for testing SavioProjectRequestWizard."""
 
     @enable_deployment('BRC')
@@ -30,66 +40,74 @@ class TestSavioProjectRequestWizard(TestBase):
             name='Department 2', code='DEPT2')
 
     @staticmethod
-    def request_url():
+    def _request_url():
         """Return the URL for requesting to create a new Savio
         project."""
         return reverse('new-project-request')
 
-    @enable_deployment('BRC')
-    def test_post_creates_request(self):
-        """Test that a POST request creates a
-        SavioProjectAllocationRequest."""
-        self.assertEqual(SavioProjectAllocationRequest.objects.count(), 0)
-        self.assertEqual(Project.objects.count(), 0)
+    def _send_post_data(self, computing_allowance, allocation_period,
+                        details_data, survey_data, new_pi_details=None,
+                        existing_pi=None, pi_departments=None):
+        """Send a POST request to the view with the given parameters.
 
-        computing_allowance = self.get_predominant_computing_allowance()
-        allocation_period = get_current_allowance_year_period()
-
+        TODO: Some POST data should be made configurable (e.g., new PI
+         details, pooling, etc.).
+        """
+        form_data = []
 
         view_name = 'savio_project_request_wizard'
         current_step_key = f'{view_name}-current_step'
+
         computing_allowance_form_data = {
             '0-computing_allowance': computing_allowance.pk,
             current_step_key: '0',
         }
+        form_data.append(computing_allowance_form_data)
+
         allocation_period_form_data = {
             '1-allocation_period': allocation_period.pk,
             current_step_key: '1',
         }
-        existing_pi_form_data = {
-            '2-PI': self.user.pk,
-            current_step_key: '2',
-        }
-        pi_department_form_data = {
-            '4-departments': [self._department_1.pk],
-            current_step_key: '4'
-        }
+        form_data.append(allocation_period_form_data)
+
+        if existing_pi is not None:
+            existing_pi_form_data = {
+                '2-PI': existing_pi.pk,
+                current_step_key: '2',
+            }
+            form_data.append(existing_pi_form_data)
+
+        # TODO: Account for new_pi_details.
+
+        if pi_departments is not None:
+            pi_department_form_data = {
+                '4-departments': [
+                    department.pk for department in pi_departments],
+                current_step_key: '4'
+            }
+            form_data.append(pi_department_form_data)
+
         pool_allocations_data = {
             '7-pool': False,
             current_step_key: '7',
         }
-        details_data = {
-            '9-name': 'name',
-            '9-title': 'title',
-            '9-description': 'a' * 20,
+        form_data.append(pool_allocations_data)
+
+        details_data_copy = {
             current_step_key: '9',
         }
-        survey_data = {
-            '11-scope_and_intent': 'b' * 20,
-            '11-computational_aspects': 'c' * 20,
+        for key in details_data:
+            details_data_copy[f'9-{key}'] = details_data[key]
+        form_data.append(details_data_copy)
+
+        survey_data_copy = {
             current_step_key: '11',
         }
-        form_data = [
-            computing_allowance_form_data,
-            allocation_period_form_data,
-            existing_pi_form_data,
-            pi_department_form_data,
-            pool_allocations_data,
-            details_data,
-            survey_data,
-        ]
+        for key in survey_data:
+            survey_data_copy[f'11-{key}'] = survey_data[key]
+        form_data.append(survey_data_copy)
 
-        url = self.request_url()
+        url = self._request_url()
         for i, data in enumerate(form_data):
             response = self.client.post(url, data)
             if i == len(form_data) - 1:
@@ -97,15 +115,33 @@ class TestSavioProjectRequestWizard(TestBase):
             else:
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
+    @enable_deployment('BRC')
+    def test_post_creates_request_and_project(self):
+        """Test that a POST request creates a
+        SavioProjectAllocationRequest and a Project."""
+        self.assertEqual(SavioProjectAllocationRequest.objects.count(), 0)
+        self.assertEqual(Project.objects.count(), 0)
+
+        computing_allowance = self.get_predominant_computing_allowance()
+        allocation_period = get_current_allowance_year_period()
+        details_data = {
+            'name': 'name',
+            'title': 'title',
+            'description': 'a' * 20,
+        }
+        survey_data = {
+            'scope_and_intent': 'b' * 20,
+            'computational_aspects': 'c' * 20,
+        }
+
+        self._send_post_data(
+            computing_allowance, allocation_period, details_data, survey_data,
+            existing_pi=self.user, pi_departments=[self._department_1])
+
         requests = SavioProjectAllocationRequest.objects.all()
         self.assertEqual(requests.count(), 1)
         projects = Project.objects.all()
         self.assertEqual(projects.count(), 1)
-        self.assertEqual(UserDepartment.objects.count(), 1)
-        self.assertTrue(UserDepartment.objects.filter(
-                                        user=self.user,
-                                        department=self._department_1,
-                                        is_authoritative=False).exists())
         request = requests.first()
         project = projects.first()
         self.assertEqual(request.requester, self.user)
@@ -116,19 +152,61 @@ class TestSavioProjectRequestWizard(TestBase):
         self.assertEqual(request.allocation_period, allocation_period)
         self.assertEqual(request.pi, self.user)
         self.assertEqual(request.project, project)
-        self.assertEqual(project.name, f'fc_{details_data["9-name"]}')
-        self.assertEqual(project.title, details_data['9-title'])
-        self.assertEqual(project.description, details_data['9-description'])
+
+        details_data['name'] = f'fc_{details_data["name"]}'
+        for key in details_data:
+            self.assertEqual(getattr(project, key), details_data[key])
+
         self.assertFalse(request.pool)
-        self.assertEqual(
-            request.survey_answers['scope_and_intent'],
-            survey_data['11-scope_and_intent'])
-        self.assertEqual(
-            request.survey_answers['computational_aspects'],
-            survey_data['11-computational_aspects'])
+
+        for key in survey_data:
+            self.assertEqual(request.survey_answers[key], survey_data[key])
+
         self.assertEqual(request.status.name, 'Under Review')
 
+    @override_settings(
+        DEPARTMENT_DATA_SOURCE=(
+            'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
+            'DummyDataSourceBackend'))
+    def test_post_sets_user_departments(self):
+        """Test that a POST request sets authoritative and
+        non-authoritative UserDepartments for the PI."""
+        self.user.first_name = 'First'
+        self.user.last_name = 'Last'
+        self.user.save()
 
+        self.assertFalse(UserDepartment.objects.filter(user=self.user).exists())
 
-    
+        computing_allowance = self.get_predominant_computing_allowance()
+        allocation_period = get_current_allowance_year_period()
+        details_data = {
+            'name': 'name',
+            'title': 'title',
+            'description': 'a' * 20,
+        }
+        survey_data = {
+            'scope_and_intent': 'b' * 20,
+            'computational_aspects': 'c' * 20,
+        }
+        self._send_post_data(
+            computing_allowance, allocation_period, details_data, survey_data,
+            existing_pi=self.user, pi_departments=[self._department_1])
+
+        self.assertEqual(UserDepartment.objects.count(), 3)
+        self.assertTrue(
+            UserDepartment.objects.filter(
+                user=self.user,
+                department=self._department_1,
+                is_authoritative=False).exists())
+        self.assertTrue(
+            UserDepartment.objects.filter(
+                user=self.user,
+                department=Department.objects.get(name='Department F'),
+                is_authoritative=True).exists())
+        self.assertTrue(
+            UserDepartment.objects.filter(
+                user=self.user,
+                department=Department.objects.get(name='Department L'),
+                is_authoritative=True).exists())
+
     # TODO
