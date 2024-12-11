@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 SECURE_DIRECTORY_NAME_PREFIX = 'pl1_'
 
 
-def create_secure_dirs(project, subdirectory_name, scratch_or_groups):
+def create_secure_directory(project, subdirectory_name, scratch_or_groups):
     """
     Creates one secure directory allocation: either a group directory or a
     scratch2 directory, depending on scratch_or_groups. Additionally creates
@@ -186,11 +186,11 @@ class SecureDirRequestRunner(object):
                 f'directory.')
 
         with transaction.atomic():
-            self._request_obj = self._create_secure_dir_request_obj()
+            self._request_obj = self._create_secure_directory_request_obj()
 
         self._send_emails_safe()
 
-    def _create_secure_dir_request_obj(self):
+    def _create_secure_directory_request_obj(self):
         """Create a SecureDirRequest object from provided arguments, and
         return it."""
         return SecureDirRequest.objects.create(**self._request_kwargs)
@@ -290,157 +290,188 @@ class SecureDirRequestDenialRunner(object):
     """An object that performs necessary database changes when a new
     secure directory request is denied."""
 
+    # TODO: The structure of this class and SecureDirRequestApprovalRunner are
+    #  quite similar. Consider refactoring to avoid redundant logic.
+
     def __init__(self, request_obj):
-        self.request_obj = request_obj
+        self._request_obj = request_obj
+        self._success_messages = []
+        self._error_messages = []
+
+    def get_messages(self):
+        return self._success_messages, self._error_messages
 
     def run(self):
-        self.deny_request()
-        self.send_email()
+        try:
+            with transaction.atomic():
+                self._deny_request()
+        except Exception as e:
+            log_message = (
+                f'Failed to deny secure directory request '
+                f'{self._request_obj.pk}. Details:\n{e}')
+            logger.exception(log_message)
+            message = 'Unexpected failure. Please contact an administrator.'
+            self._error_messages.append(message)
+        else:
+            message = 'Successfully denied the request.'
+            self._success_messages.append(message)
 
-    def deny_request(self):
+            self._send_emails_safe()
+
+    def _deny_request(self):
         """Set the status of the request to 'Denied'."""
-        self.request_obj.status = \
+        self._request_obj.status = \
             SecureDirRequestStatusChoice.objects.get(name='Denied')
-        self.request_obj.save()
+        self._request_obj.save()
 
-    def send_email(self):
-        """Send a notification email to the requester and PI."""
-        if settings.EMAIL_ENABLED:
-            pis = self.request_obj.project.projectuser_set.filter(
-                role__name='Principal Investigator',
-                status__name='Active',
-                enable_notifications=True)
-            users_to_notify = [x.user for x in pis]
-            users_to_notify.append(self.request_obj.requester)
-            users_to_notify = set(users_to_notify)
+    def _send_emails_to_users(self):
+        """Send notification emails to the requester and/or PI."""
+        if not settings.EMAIL_ENABLED:
+            return
 
-            for user in users_to_notify:
-                try:
-                    context = {
-                        'user_first_name': user.first_name,
-                        'user_last_name': user.last_name,
-                        'project': self.request_obj.project.name,
-                        'reason': self.request_obj.denial_reason().justification,
-                        'signature': settings.EMAIL_SIGNATURE,
-                        'support_email': settings.CENTER_HELP_EMAIL,
-                    }
+        requester = self._request_obj.requester
 
-                    send_email_template(
-                        f'Secure Directory Request Denied',
-                        'email/secure_dir_request/secure_dir_request_denied.txt',
-                        context,
-                        settings.EMAIL_SENDER,
-                        [user.email])
+        context = {
+            'user_first_name': requester.first_name,
+            'user_last_name': requester.last_name,
+            'project': self._request_obj.project.name,
+            'reason': self._request_obj.denial_reason().justification,
+            'signature': settings.EMAIL_SIGNATURE,
+            'support_email': settings.CENTER_HELP_EMAIL,
+        }
 
-                except Exception as e:
-                    logger.error('Failed to send notification email. Details:\n')
-                    logger.exception(e)
+        subject = 'Secure Directory Request Denied'
+        template_name = 'email/secure_dir_request/secure_dir_request_denied.txt'
+        sender = settings.EMAIL_SENDER
+        receiver_list = [requester.email]
+
+        kwargs = {}
+        pi = self._request_obj.pi
+        if pi != requester:
+            kwargs['cc'] = [pi.email]
+
+        send_email_template(
+            subject, template_name, context, sender, receiver_list, **kwargs)
+
+    def _send_emails_safe(self):
+        """Send emails. Catch and log exceptions."""
+        try:
+            self._send_emails_to_users()
+        except Exception as e:
+            logger.exception(
+                f'Failed to send notification emails. Details:\n{e}')
+            self._error_messages.append(
+                'Failed to send notification emails to users.')
+        else:
+            self._success_messages.append(
+                'Successfully sent notification emails to users.')
 
 
 class SecureDirRequestApprovalRunner(object):
     """An object that performs necessary database changes when a new
-    secure directory request is approved and completed."""
+    secure directory request is approved."""
+
+    # TODO: The structure of this class and SecureDirRequestDenialRunner are
+    #  quite similar. Consider refactoring to avoid redundant logic.
 
     def __init__(self, request_obj):
-        self.request_obj = request_obj
-        self.success_messages = []
-        self.error_messages = []
+        self._request_obj = request_obj
+        self._success_messages = []
+        self._error_messages = []
 
     def get_messages(self):
-        return self.success_messages, self.error_messages
+        return self._success_messages, self._error_messages
 
     def run(self):
-        self.approve_request()
-        groups_alloc, scratch_alloc = self.call_create_secure_dir()
-        if groups_alloc and scratch_alloc:
-            self.send_email(groups_alloc, scratch_alloc)
-            message = f'The secure directory for ' \
-                      f'{self.request_obj.project.name} ' \
-                      f'was successfully created.'
-            self.success_messages.append(message)
+        try:
+            with transaction.atomic():
+                self._approve_request()
+                groups_allocation, scratch_allocation = \
+                    self._create_secure_directories()
+        except Exception as e:
+            log_message = (
+                f'Failed to approve secure directory request '
+                f'{self._request_obj.pk}. Details:\n{e}')
+            logger.exception(log_message)
+            message = 'Unexpected failure. Please contact an administrator.'
+            self._error_messages.append(message)
+        else:
+            message = (
+                f'Successfully approved the request and created secure '
+                f'directories for {self._request_obj.project.name}.')
+            self._success_messages.append(message)
 
-    def approve_request(self):
+            self._send_emails_safe(groups_allocation, scratch_allocation)
+
+    def _approve_request(self):
         """Set the status of the request to 'Approved - Complete'."""
-        self.request_obj.status = \
+        self._request_obj.status = \
             SecureDirRequestStatusChoice.objects.get(name='Approved - Complete')
-        self.request_obj.completion_time = utc_now_offset_aware()
-        self.request_obj.save()
+        self._request_obj.completion_time = utc_now_offset_aware()
+        self._request_obj.save()
 
-    def call_create_secure_dir(self):
-        """Creates the groups and scratch secure directories."""
+    def _create_secure_directories(self):
+        """Create the groups and scratch secure directories and return
+        the corresponding Allocation objects in that order."""
+        subdirectory_name = self._request_obj.directory_name
+        groups_allocation = create_secure_directory(
+            self._request_obj.project, subdirectory_name, 'groups')
+        scratch_allocation = create_secure_directory(
+            self._request_obj.project, subdirectory_name, 'scratch')
+        return groups_allocation, scratch_allocation
 
-        groups_alloc, scratch_alloc = None, None
-        subdirectory_name = self.request_obj.directory_name
+    def _send_emails_to_users(self, groups_allocation, scratch_allocation):
+        """Send notification emails to the requester and/or the PI."""
+        if not settings.EMAIL_ENABLED:
+            return
+
+        requester = self._request_obj.requester
+
+        allocation_attribute_type = AllocationAttributeType.objects.get(
+            name='Cluster Directory Access')
+        groups_dir_path = AllocationAttribute.objects.get(
+            allocation_attribute_type=allocation_attribute_type,
+            allocation=groups_allocation).value
+        scratch_dir_path = AllocationAttribute.objects.get(
+            allocation_attribute_type=allocation_attribute_type,
+            allocation=scratch_allocation).value
+
+        context = {
+            'user_first_name': requester.first_name,
+            'user_last_name': requester.last_name,
+            'project': self._request_obj.project.name,
+            'groups_dir_path': groups_dir_path,
+            'scratch_dir_path': scratch_dir_path,
+            'signature': settings.EMAIL_SIGNATURE,
+            'support_email': settings.CENTER_HELP_EMAIL,
+        }
+
+        subject = 'Secure Directory Request Approved'
+        template_name = (
+            'email/secure_dir_request/secure_dir_request_approved.txt')
+        sender = settings.EMAIL_SENDER
+        receiver_list = [requester.email]
+
+        kwargs = {}
+        pi = self._request_obj.pi
+        if pi != requester:
+            kwargs['cc'] = [pi.email]
+
+        send_email_template(
+            subject, template_name, context, sender, receiver_list, **kwargs)
+
+    def _send_emails_safe(self, groups_allocation, scratch_allocation):
+        """Send emails. Catch and log exceptions."""
         try:
-            groups_alloc = \
-                create_secure_dirs(self.request_obj.project,
-                                   subdirectory_name,
-                                   'groups')
+            self._send_emails_to_users(groups_allocation, scratch_allocation)
         except Exception as e:
-            message = f'Failed to create groups secure directory for ' \
-                      f'{self.request_obj.project.name}.'
-            self.error_messages.append(message)
-            logger.error(message)
-            logger.exception(e)
-
-        try:
-            scratch_alloc = \
-                create_secure_dirs(self.request_obj.project,
-                                   subdirectory_name,
-                                   'scratch')
-        except Exception as e:
-            message = f'Failed to create scratch secure directory for ' \
-                      f'{self.request_obj.project.name}.'
-            self.error_messages.append(message)
-            logger.error(message)
-            logger.exception(e)
-
-        return groups_alloc, scratch_alloc
-
-    def send_email(self, groups_alloc, scratch_alloc):
-        """Send a notification email to the requester and PI."""
-        if settings.EMAIL_ENABLED:
-            pis = self.request_obj.project.projectuser_set.filter(
-                role__name='Principal Investigator',
-                status__name='Active',
-                enable_notifications=True)
-            users_to_notify = [x.user for x in pis]
-            users_to_notify.append(self.request_obj.requester)
-            users_to_notify = set(users_to_notify)
-
-            allocation_attribute_type = AllocationAttributeType.objects.get(
-                name='Cluster Directory Access')
-
-            groups_dir = AllocationAttribute.objects.get(
-                allocation_attribute_type=allocation_attribute_type,
-                allocation=groups_alloc).value
-
-            scratch_dir = AllocationAttribute.objects.get(
-                allocation_attribute_type=allocation_attribute_type,
-                allocation=scratch_alloc).value
-
-            for user in users_to_notify:
-                try:
-                    context = {
-                        'user_first_name': user.first_name,
-                        'user_last_name': user.last_name,
-                        'project': self.request_obj.project.name,
-                        'groups_dir': groups_dir,
-                        'scratch_dir': scratch_dir,
-                        'signature': settings.EMAIL_SIGNATURE,
-                        'support_email': settings.CENTER_HELP_EMAIL,
-                    }
-
-                    send_email_template(
-                        f'Secure Directory Request Approved',
-                        'email/secure_dir_request/secure_dir_request_approved.txt',
-                        context,
-                        settings.EMAIL_SENDER,
-                        [user.email])
-
-                except Exception as e:
-                    logger.error('Failed to send notification email. Details:\n')
-                    logger.exception(e)
+            logger.exception(
+                f'Failed to send notification emails. Details:\n{e}')
+            self._error_messages.append(
+                'Failed to send notification emails to users.')
+        else:
+            self._success_messages.append(
+                'Successfully sent notification emails to users.')
 
 
 def get_secure_dir_allocations(project=None):

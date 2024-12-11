@@ -8,14 +8,14 @@ from coldfront.core.allocation.models import AllocationAttributeType, \
     SecureDirAddUserRequest, SecureDirAddUserRequestStatusChoice, \
     SecureDirRemoveUserRequest, SecureDirRemoveUserRequestStatusChoice
 from coldfront.core.allocation.utils_.secure_dir_utils import \
-    create_secure_dirs, get_secure_dir_manage_user_request_objects
+    create_secure_directory, get_secure_dir_manage_user_request_objects
 from coldfront.core.resource.models import Resource
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.tests.test_base import TestBase
 
 
 class TestCreateSecureDir(TestBase):
-    """A class for testing create_secure_dirs."""
+    """A class for testing create_secure_directory."""
 
     def setUp(self):
         """Set up test data."""
@@ -32,8 +32,8 @@ class TestCreateSecureDir(TestBase):
 
         self.subdirectory_name = 'pl1_test_dir'
         call_command('add_directory_defaults')
-        create_secure_dirs(self.project1, self.subdirectory_name, 'groups')
-        create_secure_dirs(self.project1, self.subdirectory_name, 'scratch')
+        create_secure_directory(self.project1, self.subdirectory_name, 'groups')
+        create_secure_directory(self.project1, self.subdirectory_name, 'scratch')
 
     def test_allocation_objects_created(self):
         """Testing that allocation objects are created"""

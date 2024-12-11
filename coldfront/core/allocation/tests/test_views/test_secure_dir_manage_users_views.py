@@ -21,7 +21,7 @@ from coldfront.core.allocation.models import (Allocation,
                                               AllocationUserStatusChoice,
                                               AllocationAttributeType,
                                               AllocationUserAttribute)
-from coldfront.core.allocation.utils_.secure_dir_utils import create_secure_dirs
+from coldfront.core.allocation.utils_.secure_dir_utils import create_secure_directory
 from coldfront.core.project.models import (ProjectUser,
                                            ProjectUserStatusChoice,
                                            ProjectUserRoleChoice, Project,
@@ -112,9 +112,9 @@ class TestSecureDirBase(TestBase):
         self.subdirectory_name = 'test_dir'
         call_command('add_directory_defaults')
         self.groups_allocation = \
-            create_secure_dirs(self.project1, self.subdirectory_name, 'groups')
+            create_secure_directory(self.project1, self.subdirectory_name, 'groups')
         self.scratch_allocation = \
-            create_secure_dirs(self.project1, self.subdirectory_name, 'scratch')
+            create_secure_directory(self.project1, self.subdirectory_name, 'scratch')
 
         for alloc in [self.groups_allocation, self.scratch_allocation]:
             AllocationUser.objects.create(

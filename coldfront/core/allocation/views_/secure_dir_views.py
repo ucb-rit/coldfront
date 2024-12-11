@@ -1330,12 +1330,11 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
             return HttpResponseRedirect(
                 reverse('secure-dir-request-detail', kwargs={'pk': pk}))
 
-        # Approve the request and send emails to the PI and requester.
+        # Approve the request.
         runner = SecureDirRequestApprovalRunner(self.request_obj)
         runner.run()
 
         success_messages, error_messages = runner.get_messages()
-
         for message in success_messages:
             messages.success(self.request, message)
         for message in error_messages:
@@ -1596,25 +1595,24 @@ class SecureDirRequestReviewDenyView(LoginRequiredMixin, UserPassesTestMixin,
 
     def form_valid(self, form):
         form_data = form.cleaned_data
+
         justification = form_data['justification']
         timestamp = utc_now_offset_aware().isoformat()
         self.request_obj.state['other'] = {
             'justification': justification,
             'timestamp': timestamp,
         }
-        self.request_obj.status = \
-            secure_dir_request_state_status(self.request_obj)
+        self.request_obj.save()
 
+        # Deny the request.
         runner = SecureDirRequestDenialRunner(self.request_obj)
         runner.run()
 
-        self.request_obj.save()
-
-        message = (
-            f'Status for {self.request_obj.project.name}\'s '
-            f'secure directory request has been set to '
-            f'{self.request_obj.status}.')
-        messages.success(self.request, message)
+        success_messages, error_messages = runner.get_messages()
+        for message in success_messages:
+            messages.success(self.request, message)
+        for message in error_messages:
+            messages.error(self.request, message)
 
         return super().form_valid(form)
 
