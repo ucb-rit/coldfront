@@ -796,7 +796,7 @@ class SecureDirManageUsersDenyRequestView(LoginRequiredMixin,
 
 class NewSecureDirRequestViewAccessibilityMixin(UserPassesTestMixin):
     """A mixin for determining whether views related to requesting new
-    secure directories is accessible.
+    secure directories are accessible.
 
     Inheriting views must take a Project primary key via a "pk" URL
     argument."""
@@ -1755,9 +1755,9 @@ class SecureDirRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
                                    SecureDirRequestEditDepartmentView):
     def email_pi(self):
         super()._email_pi('Secure Directory Request Ready To Be Signed',
-                         self.request_obj.requester.get_full_name(),
+                         self.request_obj.pi.get_full_name(),
                          reverse('secure-dir-request-detail',
                                  kwargs={'pk': self.request_obj.pk}),
                          'Researcher Use Agreement',
                          f'{self.request_obj.project.name} secure directory request',
-                         self.request_obj.requester.email)
+                         self.request_obj.pi.email)
