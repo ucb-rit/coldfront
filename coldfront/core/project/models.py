@@ -161,18 +161,26 @@ We do not have information about your research. Please provide a detailed descri
         #
         # return False
 
-    def pis(self):
+    def pis(self, active_only=False):
         """Return a queryset of User objects that are PIs on this
-        project, ordered by username."""
+        project, ordered by username. Optionally return only active
+        PIs."""
+        kwargs = {'role__name': 'Principal Investigator'}
+        if active_only:
+            kwargs['status__name'] = 'Active'
         pi_user_pks = self.projectuser_set.filter(
-            role__name='Principal Investigator').values_list('user', flat=True)
+            **kwargs).values_list('user', flat=True)
         return User.objects.filter(pk__in=pi_user_pks).order_by('username')
 
-    def managers(self):
+    def managers(self, active_only=False):
         """Return a queryset of User objects that are Managers on this
-        project, ordered by username."""
+        project, ordered by username. Optionally return only active
+        Managers."""
+        kwargs = {'role__name': 'Manager'}
+        if active_only:
+            kwargs['status__name'] = 'Active'
         manager_user_pks = self.projectuser_set.filter(
-            role__name='Manager').values_list('user', flat=True)
+            **kwargs).values_list('user', flat=True)
         return User.objects.filter(
             pk__in=manager_user_pks).order_by('username')
 
