@@ -42,6 +42,7 @@ from coldfront.core.allocation.signals import (allocation_activate_user,
 from coldfront.core.allocation.utils import (generate_guauge_data_from_usage,
                                              get_user_resources,
                                              generate_user_su_pie_data)
+from coldfront.core.allocation.utils_.secure_dir_utils import can_manage_secure_directory
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)
@@ -99,13 +100,9 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         pk = self.kwargs.get('pk')
         allocation_obj = get_object_or_404(Allocation, pk=pk)
 
-        is_pi = allocation_obj.project.projectuser_set.filter(
-            user=self.request.user,
-            role__name='Principal Investigator',
-            status__name='Active').exists()
-
-        if is_pi:
-            return True
+        if self._is_secure_dir_allocation(allocation_obj):
+            if can_manage_secure_directory(allocation_obj, self.request.user):
+                return True
 
         user_can_access_project = allocation_obj.project.projectuser_set.filter(
             user=self.request.user, status__name__in=['Active', 'New', ]).exists()
@@ -187,9 +184,6 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         context['ALLOCATION_ENABLE_ALLOCATION_RENEWAL'] = ALLOCATION_ENABLE_ALLOCATION_RENEWAL
 
         self._update_context(allocation_obj, attributes, context)
-
-        pie_data = generate_user_su_pie_data(allocation_user_su_usages.items())
-        context['pie_data'] = pie_data
 
         return context
 
@@ -362,16 +356,12 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
             status__name='Removed')
 
         # Add additional context for compute allocations.
-        is_compute_allocation = allocation_obj.resources.filter(
-            name__endswith=' Compute').exists()
-        if is_compute_allocation:
+        if self._is_compute_allocation(allocation_obj):
             self._add_compute_specific_context(
                 allocation_obj, allocation_users, context)
 
         # Add additional context for secure directory allocations.
-        is_secure_dir_allocation = allocation_obj.resources.filter(
-            name__endswith=' Directory').exists()
-        if is_secure_dir_allocation:
+        if self._is_secure_dir_allocation(allocation_obj):
             self._add_secure_dir_specific_context(allocation_obj, context)
 
     @staticmethod
@@ -399,6 +389,9 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                 usage = '0.00'
             allocation_user_su_usages[allocation_user.user.username] = usage
         context['allocation_user_su_usages'] = allocation_user_su_usages
+
+        pie_data = generate_user_su_pie_data(allocation_user_su_usages.items())
+        context['pie_data'] = pie_data
 
         # For LRC deployments, display the billing ID associated with each user.
         # TODO: Consider only displaying this for Recharge projects.
@@ -434,17 +427,24 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         """Update the given context, given that the Allocation is a
         secure directory allocation."""
         # Allow users to be added/removed by privileged users.
-        add_remove_users_buttons_visible = False
-        if self.request.user.is_superuser:
-            add_remove_users_buttons_visible = True
-        # TODO
-        if allocation_obj.project.projectuser_set.filter(
-                user=self.request.user,
-                role__name='Principal Investigator',
-                status__name='Active').exists():
-            add_remove_users_buttons_visible = True
+        add_remove_users_buttons_visible = can_manage_secure_directory(
+            allocation_obj, self.request.user)
         context['add_remove_users_buttons_visible'] = \
             add_remove_users_buttons_visible
+
+    @staticmethod
+    def _is_compute_allocation(allocation_obj):
+        """Return whether the Allocation represents access to compute
+        resources."""
+        return allocation_obj.resources.filter(
+            name__endswith=' Compute').exists()
+
+    @staticmethod
+    def _is_secure_dir_allocation(allocation_obj):
+        """Return whether the Allocation represents access to a secure
+        directory."""
+        return allocation_obj.resources.filter(
+            name__endswith=' P2/P3 Directory').exists()
 
 
 class AllocationListView(LoginRequiredMixin, UserPassesTestMixin, ListView):

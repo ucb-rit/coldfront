@@ -615,3 +615,30 @@ def set_sec_dir_context(context_dict, request_obj):
         os.path.join(groups_path, context_dict['proposed_directory_name'])
     context_dict['proposed_scratch_path'] = \
         os.path.join(scratch_path, context_dict['proposed_directory_name'])
+
+
+def can_manage_secure_directory(allocation, user):
+    """Return whether the given User has permissions to manage the given
+    secure directory (Allocation). The following users do:
+        - Superusers
+        - Active PIs of the project, regardless of whether they have
+          been added to the directory
+        - Active managers of the project who have been added to the
+          directory
+    """
+    if user.is_superuser:
+        return True
+
+    project = allocation.project
+    if user in project.pis(active_only=True):
+        return True
+
+    if user in project.managers(active_only=True):
+        user_on_allocation = AllocationUser.objects.filter(
+            allocation=allocation,
+            user=user,
+            status__name='Active')
+        if user_on_allocation:
+            return True
+
+    return False

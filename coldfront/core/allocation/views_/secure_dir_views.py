@@ -46,6 +46,7 @@ from coldfront.core.allocation.models import SecureDirRequestStatusChoice
 
 from coldfront.core.allocation.utils import has_cluster_access
 
+from coldfront.core.allocation.utils_.secure_dir_utils import can_manage_secure_directory
 from coldfront.core.allocation.utils_.secure_dir_utils import get_default_secure_dir_paths
 from coldfront.core.allocation.utils_.secure_dir_utils import get_secure_dir_allocations
 from coldfront.core.allocation.utils_.secure_dir_utils import get_secure_dir_manage_user_request_objects
@@ -78,18 +79,10 @@ class SecureDirManageUsersView(LoginRequiredMixin,
     template_name = 'secure_dir/secure_dir_manage_users.html'
 
     def test_func(self):
-        """Allow the following users to manage users of a secure
-        directory:
-            - Superusers
-            - Active PIs and Managers of the project
-        """
-        if self.request.user.is_superuser:
-            return True
-
+        """Allow users with permissions to manage the directory to
+        manage users."""
         alloc_obj = get_object_or_404(Allocation, pk=self.kwargs.get('pk'))
-        if is_user_manager_or_pi_of_project(
-                self.request.user, alloc_obj.project):
-            return True
+        return can_manage_secure_directory(alloc_obj, self.request.user)
 
     def dispatch(self, request, *args, **kwargs):
         alloc_obj = get_object_or_404(Allocation, pk=self.kwargs.get('pk'))
