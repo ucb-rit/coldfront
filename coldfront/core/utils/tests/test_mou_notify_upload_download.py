@@ -294,20 +294,21 @@ class SecureDirMOUNotifyUploadDownload(MOUTestBase):
         """Setup test data"""
         super().setUp()
         self.project = self.create_active_project_with_pi('fc_testproject', self.user)
-        self.request = self.create_secure_dir_request(self.project, self.user)
-
+        self.request = self.create_secure_directory_request(self.project, self.user, self.user)
 
     @staticmethod
-    def create_secure_dir_request(project, requester):
+    def create_secure_directory_request(project, requester, pi):
         """Create an 'Under Review' request for the given Project by the
-        given requester."""
+        given requester under the given PI."""
         return SecureDirRequest.objects.create(
-            directory_name = 'test_dir',
-            data_description = 'test description',
+            directory_name='test_dir',
+            data_description='test description',
             requester=requester,
+            pi=pi,
             project=project,
             status=SecureDirRequestStatusChoice.objects.get(
                 name='Under Review'))
+
     @staticmethod
     def rdm_consultation_url(pk):
         return reverse('secure-dir-request-review-rdm-consultation', kwargs={'pk': pk})
@@ -317,7 +318,7 @@ class SecureDirMOUNotifyUploadDownload(MOUTestBase):
         return reverse(f'secure-dir-request-edit-department', kwargs={'pk': pk})
 
     @enable_deployment('BRC')
-    def test_allocation_addition(self):
+    def test_secure_dir(self):
         """Test that the MOU notification task, MOU upload, and MOU download
         features work as expected."""
         request_type = 'secure-dir'
