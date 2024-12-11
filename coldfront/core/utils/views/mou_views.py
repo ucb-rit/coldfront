@@ -165,8 +165,11 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
         elif self.request_type == 'secure-dir':
             request_type = 'secure-dir'
             mou_kwargs['department'] = self.request_obj.department
-        
+
         if self.request_type == 'new-project':
+            first_name = self.request_obj.pi.first_name
+            last_name = self.request_obj.pi.last_name
+        elif self.request_type == 'secure-dir':
             first_name = self.request_obj.pi.first_name
             last_name = self.request_obj.pi.last_name
         else:
