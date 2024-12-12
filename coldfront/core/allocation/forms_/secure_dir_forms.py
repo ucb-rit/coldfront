@@ -1,8 +1,8 @@
 from django import forms
 from django.core.validators import MinLengthValidator
 
-from coldfront.core.allocation.utils_.secure_dir_utils import is_secure_directory_name_suffix_available
-from coldfront.core.allocation.utils_.secure_dir_utils import SECURE_DIRECTORY_NAME_PREFIX
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import is_secure_directory_name_suffix_available
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import SECURE_DIRECTORY_NAME_PREFIX
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice

@@ -20,7 +20,7 @@ from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirManageUse
 from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirManageUsersSearchForm
 from coldfront.core.allocation.models import AllocationUser
 from coldfront.core.allocation.models import AllocationUserStatusChoice
-from coldfront.core.allocation.utils_.secure_dir_utils import get_secure_dir_manage_user_request_objects
+from coldfront.core.allocation.utils_.secure_dir_utils.user_management import get_secure_dir_manage_user_request_objects
 
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.mail import send_email_template

@@ -24,7 +24,7 @@ from coldfront.core.allocation.utils import get_allocation_user_cluster_access_s
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.allocation.utils import get_project_compute_resource_name
 # from coldfront.core.grant.models import Grant
-from coldfront.core.allocation.utils_.secure_dir_utils import is_project_eligible_for_secure_dirs
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import is_project_eligible_for_secure_dirs
 from coldfront.core.billing.utils.queries import is_project_billing_id_required_and_missing
 from coldfront.core.project.forms import (ProjectAddUserForm,
                                           ProjectAddUsersToAllocationForm,

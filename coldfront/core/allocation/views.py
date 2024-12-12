@@ -42,7 +42,7 @@ from coldfront.core.allocation.signals import (allocation_activate_user,
 from coldfront.core.allocation.utils import (generate_guauge_data_from_usage,
                                              get_user_resources,
                                              generate_user_su_pie_data)
-from coldfront.core.allocation.utils_.secure_dir_utils import can_manage_secure_directory
+from coldfront.core.allocation.utils_.secure_dir_utils.user_management import can_manage_secure_directory
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)

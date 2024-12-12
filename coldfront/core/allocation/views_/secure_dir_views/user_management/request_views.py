@@ -18,8 +18,8 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import SecureDirAddUserRequest
 from coldfront.core.allocation.models import SecureDirRemoveUserRequest
 from coldfront.core.allocation.utils import has_cluster_access
-from coldfront.core.allocation.utils_.secure_dir_utils import can_manage_secure_directory
-from coldfront.core.allocation.utils_.secure_dir_utils import get_secure_dir_manage_user_request_objects
+from coldfront.core.allocation.utils_.secure_dir_utils.user_management import can_manage_secure_directory
+from coldfront.core.allocation.utils_.secure_dir_utils.user_management import get_secure_dir_manage_user_request_objects
 
 from coldfront.core.project.models import ProjectUser
 

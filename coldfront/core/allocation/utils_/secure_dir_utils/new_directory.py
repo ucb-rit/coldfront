@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 from urllib.parse import urljoin
 
@@ -9,21 +9,25 @@ from django.db.models import Q
 from django.urls import reverse
 
 from coldfront.config import settings
-from coldfront.core.allocation.models import Allocation, AllocationStatusChoice, \
-    AllocationAttributeType, AllocationAttribute, SecureDirAddUserRequest, \
-    SecureDirRemoveUserRequest, SecureDirAddUserRequestStatusChoice, \
-    SecureDirRemoveUserRequestStatusChoice, SecureDirRequest, \
-    SecureDirRequestStatusChoice, AllocationUser, AllocationUserStatusChoice
+from coldfront.core.allocation.models import Allocation
+from coldfront.core.allocation.models import AllocationAttribute
+from coldfront.core.allocation.models import AllocationAttributeType
+from coldfront.core.allocation.models import AllocationStatusChoice
+from coldfront.core.allocation.models import SecureDirRequest
+from coldfront.core.allocation.models import SecureDirRequestStatusChoice
+
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
-from coldfront.core.project.models import ProjectUser
+
 from coldfront.core.resource.models import Resource, ResourceAttribute
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterfaceError
+
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
 from coldfront.core.utils.mail import send_email_template
+
 
 logger = logging.getLogger(__name__)
 
@@ -88,46 +92,6 @@ def create_secure_directory(project, subdirectory_name, scratch_or_groups):
         value=os.path.join(p2p3_path.value, subdirectory_name))
 
     return allocation
-
-
-def get_secure_dir_manage_user_request_objects(self, action):
-    """
-    Sets attributes pertaining to a secure directory based on the
-    action being performed.
-
-    Parameters:
-        - self (object): object to set attributes for
-        - action (str): the action being performed, either 'add' or 'remove'
-
-    Raises:
-        - TypeError, if the 'self' object is not an object
-        - ValueError, if action is not one of 'add' or 'remove'
-    """
-
-    action = action.lower()
-    if not isinstance(self, object):
-        raise TypeError(f'Invalid self {self}.')
-    if action not in ['add', 'remove']:
-        raise ValueError(f'Invalid action {action}.')
-
-    add_bool = action == 'add'
-
-    request_obj = SecureDirAddUserRequest \
-        if add_bool else SecureDirRemoveUserRequest
-    request_status_obj = SecureDirAddUserRequestStatusChoice \
-        if add_bool else SecureDirRemoveUserRequestStatusChoice
-
-    language_dict = {
-        'preposition': 'to' if add_bool else 'from',
-        'noun': 'addition' if add_bool else 'removal',
-        'verb': 'add' if add_bool else 'remove'
-    }
-
-    setattr(self, 'action', action.lower())
-    setattr(self, 'add_bool', add_bool)
-    setattr(self, 'request_obj', request_obj)
-    setattr(self, 'request_status_obj', request_status_obj)
-    setattr(self, 'language_dict', language_dict)
 
 
 def secure_dir_request_state_status(secure_dir_request):
@@ -646,30 +610,3 @@ def set_sec_dir_context(context_dict, request_obj):
         os.path.join(groups_path, context_dict['proposed_directory_name'])
     context_dict['proposed_scratch_path'] = \
         os.path.join(scratch_path, context_dict['proposed_directory_name'])
-
-
-def can_manage_secure_directory(allocation, user):
-    """Return whether the given User has permissions to manage the given
-    secure directory (Allocation). The following users do:
-        - Superusers
-        - Active PIs of the project, regardless of whether they have
-          been added to the directory
-        - Active managers of the project who have been added to the
-          directory
-    """
-    if user.is_superuser:
-        return True
-
-    project = allocation.project
-    if user in project.pis(active_only=True):
-        return True
-
-    if user in project.managers(active_only=True):
-        user_on_allocation = AllocationUser.objects.filter(
-            allocation=allocation,
-            user=user,
-            status__name='Active')
-        if user_on_allocation:
-            return True
-
-    return False

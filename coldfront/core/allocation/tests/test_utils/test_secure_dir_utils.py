@@ -7,8 +7,8 @@ from coldfront.core.allocation.models import AllocationAttributeType, \
     Allocation, AllocationStatusChoice, AllocationAttribute, \
     SecureDirAddUserRequest, SecureDirAddUserRequestStatusChoice, \
     SecureDirRemoveUserRequest, SecureDirRemoveUserRequestStatusChoice
-from coldfront.core.allocation.utils_.secure_dir_utils import \
-    create_secure_directory, get_secure_dir_manage_user_request_objects
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import create_secure_directory, 
+from coldfront.core.allocation.utils_.secure_dir_utils.user_management import get_secure_dir_manage_user_request_objects
 from coldfront.core.resource.models import Resource
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.tests.test_base import TestBase

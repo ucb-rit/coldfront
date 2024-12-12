@@ -18,15 +18,13 @@ from django.views.generic.base import View
 from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirRDMConsultationReviewForm
 from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirRequestEditDepartmentForm
 from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirSetupForm
-
 from coldfront.core.allocation.models import SecureDirRequest
 from coldfront.core.allocation.models import SecureDirRequestStatusChoice
-
-from coldfront.core.allocation.utils_.secure_dir_utils import get_secure_dir_allocations
-from coldfront.core.allocation.utils_.secure_dir_utils import secure_dir_request_state_status
-from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirRequestApprovalRunner
-from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirRequestDenialRunner
-from coldfront.core.allocation.utils_.secure_dir_utils import set_sec_dir_context
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import get_secure_dir_allocations
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import secure_dir_request_state_status
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import SecureDirRequestApprovalRunner
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import SecureDirRequestDenialRunner
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import set_sec_dir_context
 
 from coldfront.core.project.forms import ReviewStatusForm, ReviewDenyForm
 

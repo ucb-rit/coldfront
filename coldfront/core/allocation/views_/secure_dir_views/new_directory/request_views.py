@@ -13,10 +13,10 @@ from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirDataDescr
 from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirDirectoryNamesForm
 from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirPISelectionForm
 from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirRDMConsultationForm
-from coldfront.core.allocation.utils_.secure_dir_utils import get_default_secure_dir_paths
-from coldfront.core.allocation.utils_.secure_dir_utils import is_project_eligible_for_secure_dirs
-from coldfront.core.allocation.utils_.secure_dir_utils import SECURE_DIRECTORY_NAME_PREFIX
-from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirRequestRunner
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import get_default_secure_dir_paths
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import is_project_eligible_for_secure_dirs
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import SECURE_DIRECTORY_NAME_PREFIX
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import SecureDirRequestRunner
 
 from coldfront.core.project.models import Project
 from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
