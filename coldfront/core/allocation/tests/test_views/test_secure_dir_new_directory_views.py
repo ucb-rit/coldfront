@@ -477,6 +477,7 @@ class TestSecureDirRequestDetailView(TestSecureDirRequestBase):
         # The email should be sent to the requester, with active PIs CC'ed.
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
+        self.assertIn('Secure Directory Request Approved', email.subject)
         self.assertEqual(email.to, [self.user0.email])
         self.assertEqual(email.cc, [self.pi0.email, self.pi1.email])
         self.assertEqual(email.from_email, settings.EMAIL_SENDER)
@@ -628,6 +629,7 @@ class TestSecureDirRequestReviewDenyView(TestSecureDirRequestBase):
         # The email should be sent to the requester, with active PIs CC'ed.
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
+        self.assertIn('Secure Directory Request Denied', email.subject)
         self.assertEqual(email.to, [self.user0.email])
         self.assertEqual(email.cc, [self.pi0.email, self.pi1.email])
         self.assertEqual(email.from_email, settings.EMAIL_SENDER)
