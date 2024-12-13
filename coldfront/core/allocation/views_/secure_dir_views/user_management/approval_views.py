@@ -7,6 +7,7 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.paginator import EmptyPage
 from django.core.paginator import PageNotAnInteger
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
@@ -262,6 +263,10 @@ class SecureDirManageUsersCompleteStatusView(LoginRequiredMixin,
     template_name = \
         'secure_dir/secure_dir_manage_user_request_update_status.html'
 
+    # TODO: Much of the code in this and the denial view is duplicated.
+    #  Some uncommitted utility classes are in the progress of being
+    #  written to house the business logic and minimize duplication.
+
     def test_func(self):
         """UserPassesTestMixin tests."""
         if self.request.user.is_superuser:
@@ -299,35 +304,34 @@ class SecureDirManageUsersCompleteStatusView(LoginRequiredMixin,
         status = form_data.get('status')
         complete = 'Complete' in status
 
-        secure_dir_status_choice = \
-            self.request_status_obj.objects.filter(
-                name__icontains=status).first()
-        self.secure_dir_request.status = secure_dir_status_choice
-        if complete:
-            self.secure_dir_request.completion_time = utc_now_offset_aware()
-        self.secure_dir_request.save()
+        with transaction.atomic():
+            secure_dir_status_choice = \
+                self.request_status_obj.objects.filter(
+                    name__icontains=status).first()
+            self.secure_dir_request.status = secure_dir_status_choice
+            if complete:
+                self.secure_dir_request.completion_time = utc_now_offset_aware()
+            self.secure_dir_request.save()
 
-        if complete:
-            # Creates an allocation user with an active status is the request
-            # was an addition request.
-            active_allocation_user_status = \
-                AllocationUserStatusChoice.objects.get(name='Active')
-            alloc_user, created = \
-                AllocationUser.objects.get_or_create(
+            if complete:
+                if self.add_bool:
+                    active_allocation_user_status = \
+                        AllocationUserStatusChoice.objects.get(name='Active')
+                else:
+                    active_allocation_user_status = \
+                        AllocationUserStatusChoice.objects.get(name='Removed')
+                AllocationUser.objects.update_or_create(
                     allocation=self.secure_dir_request.allocation,
                     user=self.secure_dir_request.user,
-                    status=active_allocation_user_status)
+                    defaults={'status': active_allocation_user_status})
 
-            # Sets the allocation user status to removed if the request
-            # was a removal request.
-            if not self.add_bool:
-                alloc_user.status = \
-                    AllocationUserStatusChoice.objects.get(name='Removed')
-                alloc_user.save()
-
-            # Send notification email to PIs and the user that the
-            # request has been completed.
-            self._send_emails()
+            try:
+                self._send_emails()
+            except Exception as e:
+                logger.exception(
+                    f'Failed to send notification emails. Details:\n{e}')
+                message = 'Failed to send notification emails to users.'
+                messages.error(self.request, message)
 
         message = (
             f'Secure directory {self.language_dict["noun"]} request for user '
@@ -357,7 +361,11 @@ class SecureDirManageUsersCompleteStatusView(LoginRequiredMixin,
                        kwargs={'action': self.action, 'status': 'pending'})
 
     def _send_emails(self):
-        """TODO"""
+        """Send notification emails to the user and relevant project
+        administrators."""
+        if not settings.EMAIL_ENABLED:
+            return
+
         managed_user = self.secure_dir_request.user
 
         context = {
@@ -382,7 +390,7 @@ class SecureDirManageUsersCompleteStatusView(LoginRequiredMixin,
         sender = settings.EMAIL_SENDER
         receiver_list = [managed_user.email]
 
-        kwargs = {}
+        # Include project administrators on the email.
         users_to_cc = set()
         allocation = self.secure_dir_request.allocation
         project = allocation.project
@@ -398,6 +406,8 @@ class SecureDirManageUsersCompleteStatusView(LoginRequiredMixin,
                 status=active_allocation_user_status).exists()
             if manager_in_directory:
                 users_to_cc.add(manager)
+
+        kwargs = {}
         if users_to_cc:
             kwargs['cc'] = [user.email for user in users_to_cc]
 
@@ -408,6 +418,12 @@ class SecureDirManageUsersCompleteStatusView(LoginRequiredMixin,
 class SecureDirManageUsersDenyRequestView(LoginRequiredMixin,
                                           UserPassesTestMixin,
                                           View):
+
+    # TODO: Much of the code in this and the complete view is
+    #  duplicated. Some uncommitted utility classes are in the progress
+    #  of being written to house the business logic and minimize
+    #  duplication.
+
     def test_func(self):
         """UserPassesTestMixin tests."""
         if self.request.user.is_superuser:
@@ -448,52 +464,68 @@ class SecureDirManageUsersDenyRequestView(LoginRequiredMixin,
             f'denied.')
         messages.success(request, message)
 
-        if settings.EMAIL_ENABLED:
-            # Send notification email to PIs and the user that the
-            # request has been denied.
-            pis = \
-                self.secure_dir_request.allocation.project. \
-                    projectuser_set.filter(
-                    role__name='Principal Investigator',
-                    status__name='Active',
-                    enable_notifications=True)
-            users_to_notify = [x.user for x in pis]
-            users_to_notify.append(self.secure_dir_request.user)
-
-            for user in users_to_notify:
-                try:
-                    context = {
-                        'user_first_name': user.first_name,
-                        'user_last_name': user.last_name,
-                        'managed_user_first_name':
-                            self.secure_dir_request.user.first_name,
-                        'managed_user_last_name':
-                            self.secure_dir_request.user.last_name,
-                        'managed_user_username':
-                            self.secure_dir_request.user.username,
-                        'verb': self.language_dict['verb'],
-                        'preposition': self.language_dict['preposition'],
-                        'directory': self.secure_dir_request.directory,
-                        'reason': reason,
-                        'signature': settings.EMAIL_SIGNATURE,
-                        'support_email': settings.CENTER_HELP_EMAIL,
-                    }
-
-                    send_email_template(
-                        f'Secure Directory '
-                        f'{self.language_dict["noun"].title()} Request Denied',
-                        f'email/secure_dir_request/'
-                        f'secure_dir_manage_user_request_denied.txt',
-                        context,
-                        settings.EMAIL_SENDER,
-                        [user.email])
-
-                except Exception as e:
-                    message = 'Failed to send notification email.'
-                    messages.error(self.request, message)
-                    logger.error(message)
-                    logger.exception(e)
+        try:
+            self._send_emails(reason)
+        except Exception as e:
+            logger.exception(
+                f'Failed to send notification emails. Details:\n{e}')
+            message = 'Failed to send notification emails to users.'
+            messages.error(self.request, message)
 
         return HttpResponseRedirect(
             reverse(f'secure-dir-manage-users-request-list',
                     kwargs={'action': self.action, 'status': 'pending'}))
+
+    def _send_emails(self, denial_reason):
+        """Send notification emails to the user and relevant project
+        administrators."""
+        if not settings.EMAIL_ENABLED:
+            return
+
+        managed_user = self.secure_dir_request.user
+
+        context = {
+            'center_name': settings.CENTER_NAME,
+            'managed_user_str': (
+                f'{managed_user.first_name} {managed_user.last_name} '
+                f'({managed_user.username})'),
+            'verb': self.language_dict['verb'],
+            'preposition': self.language_dict['preposition'],
+            'directory': self.secure_dir_request.directory,
+            'reason': denial_reason,
+            'signature': settings.EMAIL_SIGNATURE,
+            'support_email': settings.CENTER_HELP_EMAIL,
+        }
+
+        subject = (
+            f'Secure Directory {self.language_dict["noun"].title()} Request '
+            f'Denied')
+        template_name = (
+            'email/secure_dir_request/'
+            'secure_dir_manage_user_request_denied.txt')
+        sender = settings.EMAIL_SENDER
+        receiver_list = [managed_user.email]
+
+        # Include project administrators on the email.
+        users_to_cc = set()
+        allocation = self.secure_dir_request.allocation
+        project = allocation.project
+        pis = project.pis(active_only=True)
+        users_to_cc.update(set(pis))
+        managers = project.managers(active_only=True)
+        active_allocation_user_status = \
+            AllocationUserStatusChoice.objects.get(name='Active')
+        for manager in managers:
+            manager_in_directory = AllocationUser.objects.filter(
+                allocation=allocation,
+                user=manager,
+                status=active_allocation_user_status).exists()
+            if manager_in_directory:
+                users_to_cc.add(manager)
+
+        kwargs = {}
+        if users_to_cc:
+            kwargs['cc'] = [user.email for user in users_to_cc]
+
+        send_email_template(
+            subject, template_name, context, sender, receiver_list, **kwargs)
