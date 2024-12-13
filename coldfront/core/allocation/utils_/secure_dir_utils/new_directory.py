@@ -289,7 +289,8 @@ class SecureDirRequestDenialRunner(object):
         self._request_obj.save()
 
     def _send_emails_to_users(self):
-        """Send notification emails to the requester and/or PI."""
+        """Send notification emails to the requester, CCing all active
+        PIs on the project."""
         if not settings.EMAIL_ENABLED:
             return
 
@@ -310,9 +311,11 @@ class SecureDirRequestDenialRunner(object):
         receiver_list = [requester.email]
 
         kwargs = {}
-        pi = self._request_obj.pi
-        if pi != requester:
-            kwargs['cc'] = [pi.email]
+        pis_to_cc = [
+            pi for pi in self._request_obj.project.pis(active_only=True)
+            if pi != requester]
+        if pis_to_cc:
+            kwargs['cc'] = [pi.email for pi in pis_to_cc]
 
         send_email_template(
             subject, template_name, context, sender, receiver_list, **kwargs)
@@ -385,7 +388,8 @@ class SecureDirRequestApprovalRunner(object):
         return groups_allocation, scratch_allocation
 
     def _send_emails_to_users(self, groups_allocation, scratch_allocation):
-        """Send notification emails to the requester and/or the PI."""
+        """Send notification emails to the requester, CCing all active
+        PIs on the project."""
         if not settings.EMAIL_ENABLED:
             return
 
@@ -417,9 +421,11 @@ class SecureDirRequestApprovalRunner(object):
         receiver_list = [requester.email]
 
         kwargs = {}
-        pi = self._request_obj.pi
-        if pi != requester:
-            kwargs['cc'] = [pi.email]
+        pis_to_cc = [
+            pi for pi in self._request_obj.project.pis(active_only=True)
+            if pi != requester]
+        if pis_to_cc:
+            kwargs['cc'] = [user.email for user in pis_to_cc]
 
         send_email_template(
             subject, template_name, context, sender, receiver_list, **kwargs)
