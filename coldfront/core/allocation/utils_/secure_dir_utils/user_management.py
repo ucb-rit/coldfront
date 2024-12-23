@@ -1,6 +1,5 @@
 import logging
 
-from coldfront.core.allocation.models import AllocationUser
 from coldfront.core.allocation.models import SecureDirAddUserRequest
 from coldfront.core.allocation.models import SecureDirAddUserRequestStatusChoice
 from coldfront.core.allocation.models import SecureDirRemoveUserRequest
@@ -48,30 +47,3 @@ def get_secure_dir_manage_user_request_objects(self, action):
     setattr(self, 'request_obj', request_obj)
     setattr(self, 'request_status_obj', request_status_obj)
     setattr(self, 'language_dict', language_dict)
-
-
-def can_manage_secure_directory(allocation, user):
-    """Return whether the given User has permissions to manage the given
-    secure directory (Allocation). The following users do:
-        - Superusers
-        - Active PIs of the project, regardless of whether they have
-          been added to the directory
-        - Active managers of the project who have been added to the
-          directory
-    """
-    if user.is_superuser:
-        return True
-
-    project = allocation.project
-    if user in project.pis(active_only=True):
-        return True
-
-    if user in project.managers(active_only=True):
-        user_on_allocation = AllocationUser.objects.filter(
-            allocation=allocation,
-            user=user,
-            status__name='Active')
-        if user_on_allocation:
-            return True
-
-    return False

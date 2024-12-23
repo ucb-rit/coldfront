@@ -5,23 +5,17 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import User
-from django.db.models import Q
 from django.forms import formset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.shortcuts import render
 from django.urls import reverse
 from django.views.generic.base import TemplateView
 
 from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirManageUsersForm
 from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.models import SecureDirAddUserRequest
-from coldfront.core.allocation.models import SecureDirRemoveUserRequest
-from coldfront.core.allocation.utils import has_cluster_access
-from coldfront.core.allocation.utils_.secure_dir_utils.user_management import can_manage_secure_directory
+from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirectory
 from coldfront.core.allocation.utils_.secure_dir_utils.user_management import get_secure_dir_manage_user_request_objects
 
-from coldfront.core.project.models import ProjectUser
 
 from coldfront.core.utils.mail import send_email_template
 
@@ -38,12 +32,19 @@ class SecureDirManageUsersView(LoginRequiredMixin,
         """Allow users with permissions to manage the directory to
         manage users."""
         alloc_obj = get_object_or_404(Allocation, pk=self.kwargs.get('pk'))
-        return can_manage_secure_directory(alloc_obj, self.request.user)
+        secure_directory = SecureDirectory(alloc_obj)
+        return secure_directory.user_can_manage(self.request.user)
 
     def dispatch(self, request, *args, **kwargs):
+        # TODO: Store this so that get_context_data, post can use it without
+        #  performing another lookup.
         alloc_obj = get_object_or_404(Allocation, pk=self.kwargs.get('pk'))
         get_secure_dir_manage_user_request_objects(self,
                                                    self.kwargs.get('action'))
+
+        # TODO: This is accessible from the allocation, which is already stored
+        #  in the SecureDirAddUserRequest and SecureDirRemoveUserRequest models.
+        #  Why do this?
         self.directory = \
             alloc_obj.allocationattribute_set.get(
                 allocation_attribute_type__name='Cluster Directory Access').value
@@ -58,101 +59,19 @@ class SecureDirManageUsersView(LoginRequiredMixin,
         else:
             return super().dispatch(request, *args, **kwargs)
 
-    def get_users_to_add(self, alloc_obj):
-        # Users in any projects that the PI runs should be available to add.
-        alloc_pis = [proj_user.user for proj_user in
-                     alloc_obj.project.projectuser_set.filter(
-                         Q(role__name__in=['Manager',
-                                           'Principal Investigator']) &
-                         Q(status__name='Active'))]
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
 
-        projects = [proj_user.project for proj_user in
-                    ProjectUser.objects.filter(
-                        Q(role__name__in=['Manager',
-                                          'Principal Investigator']) &
-                        Q(status__name='Active') &
-                        Q(user__in=alloc_pis))]
-
-        # Users must have active cluster access to be added.
-        users_to_add = set([proj_user.user for proj_user in
-                            ProjectUser.objects.filter(project__in=projects,
-                                                       status__name='Active')
-                            if has_cluster_access(proj_user.user)])
-
-        # Excluding active users that are already part of the allocation.
-        users_to_exclude = set(alloc_user.user for alloc_user in
-                               alloc_obj.allocationuser_set.filter(
-                                   status__name='Active'))
-
-        # Excluding users that have active join requests.
-        users_to_exclude |= \
-            set(request.user for request in
-                SecureDirAddUserRequest.objects.filter(
-                    allocation=alloc_obj,
-                    status__name__in=['Pending',
-                                      'Processing']))
-
-        # Excluding users that have active removal requests.
-        users_to_exclude |= \
-            set(request.user for request in
-                SecureDirRemoveUserRequest.objects.filter(
-                    allocation=alloc_obj,
-                    status__name__in=['Pending',
-                                      'Processing']))
-
-        users_to_add -= users_to_exclude
-
-        user_data_list = []
-        for user in users_to_add:
-            user_data = {
-                'username': user.username,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'email': user.email
-            }
-            user_data_list.append(user_data)
-
-        return user_data_list
-
-    def get_users_to_remove(self, alloc_obj):
-        users_to_remove = set(alloc_user.user for alloc_user in
-                              alloc_obj.allocationuser_set.filter(
-                                  status__name='Active'))
-
-        # Exclude users that have active removal requests.
-        users_to_remove -= set(request.user for request in
-                               SecureDirRemoveUserRequest.objects.filter(
-                                   allocation=alloc_obj,
-                                   status__name__in=['Pending',
-                                                     'Processing']))
-
-        # PIs cannot request to remove themselves from their
-        # own secure directories.
-        users_to_remove -= set(proj_user.user for proj_user in
-                               alloc_obj.project.projectuser_set.filter(
-                                   role__name='Principal Investigator',
-                                   status__name='Active'))
-
-        user_data_list = []
-        for user in users_to_remove:
-            user_data = {
-                'username': user.username,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'email': user.email
-            }
-            user_data_list.append(user_data)
-
-        return user_data_list
-
-    def get(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
         alloc_obj = get_object_or_404(Allocation, pk=pk)
 
+        secure_directory = SecureDirectory(alloc_obj)
+
         if self.add_bool:
-            user_list = self.get_users_to_add(alloc_obj)
+            users = secure_directory.get_addable_users()
         else:
-            user_list = self.get_users_to_remove(alloc_obj)
+            users = secure_directory.get_removable_users()
+        user_list = self._get_user_data(users)
 
         context = {}
 
@@ -167,7 +86,6 @@ class SecureDirManageUsersView(LoginRequiredMixin,
         context['can_manage_users'] = False
         if self.request.user.is_superuser:
             context['can_manage_users'] = True
-
         if alloc_obj.project.projectuser_set.filter(
                 user=self.request.user,
                 role__name='Principal Investigator',
@@ -183,7 +101,7 @@ class SecureDirManageUsersView(LoginRequiredMixin,
 
         context['preposition'] = self.language_dict['preposition']
 
-        return render(request, self.template_name, context)
+        return context
 
     def post(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
@@ -207,9 +125,9 @@ class SecureDirManageUsersView(LoginRequiredMixin,
                 reverse('allocation-detail', kwargs={'pk': pk}))
 
         if self.add_bool:
-            user_list = self.get_users_to_add(alloc_obj)
+            user_list = self._get_users_to_add(alloc_obj)
         else:
-            user_list = self.get_users_to_remove(alloc_obj)
+            user_list = self._get_users_to_remove(alloc_obj)
 
         formset = formset_factory(
             SecureDirManageUsersForm, max_num=len(user_list))
@@ -287,3 +205,18 @@ class SecureDirManageUsersView(LoginRequiredMixin,
 
         return HttpResponseRedirect(
             reverse('allocation-detail', kwargs={'pk': pk}))
+
+    @staticmethod
+    def _get_user_data(users):
+        """Given a queryset of Users, return a list of dicts containing
+        data about each User."""
+        user_data_list = []
+        for user in users:
+            user_data = {
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email
+            }
+            user_data_list.append(user_data)
+        return user_data_list

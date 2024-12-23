@@ -42,7 +42,7 @@ from coldfront.core.allocation.signals import (allocation_activate_user,
 from coldfront.core.allocation.utils import (generate_guauge_data_from_usage,
                                              get_user_resources,
                                              generate_user_su_pie_data)
-from coldfront.core.allocation.utils_.secure_dir_utils.user_management import can_manage_secure_directory
+from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirectory
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)
@@ -99,9 +99,10 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
 
         pk = self.kwargs.get('pk')
         allocation_obj = get_object_or_404(Allocation, pk=pk)
+        secure_directory = SecureDirectory(allocation_obj)
 
         if self._is_secure_dir_allocation(allocation_obj):
-            if can_manage_secure_directory(allocation_obj, self.request.user):
+            if secure_directory.user_can_manage(self.request.user):
                 return True
 
         user_can_access_project = allocation_obj.project.projectuser_set.filter(
@@ -426,9 +427,10 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
     def _add_secure_dir_specific_context(self, allocation_obj, context):
         """Update the given context, given that the Allocation is a
         secure directory allocation."""
+        secure_directory = SecureDirectory(allocation_obj)
         # Allow users to be added/removed by privileged users.
-        add_remove_users_buttons_visible = can_manage_secure_directory(
-            allocation_obj, self.request.user)
+        add_remove_users_buttons_visible = secure_directory.user_can_manage(
+            self.request.user)
         context['add_remove_users_buttons_visible'] = \
             add_remove_users_buttons_visible
 
