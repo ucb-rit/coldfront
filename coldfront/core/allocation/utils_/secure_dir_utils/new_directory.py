@@ -17,6 +17,7 @@ from coldfront.core.allocation.models import SecureDirAddUserRequest
 from coldfront.core.allocation.models import SecureDirAddUserRequestStatusChoice
 from coldfront.core.allocation.models import SecureDirRequest
 from coldfront.core.allocation.models import SecureDirRequestStatusChoice
+from coldfront.core.allocation.utils import has_cluster_access
 from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirectory
 
 from coldfront.core.project.models import Project
@@ -467,11 +468,10 @@ class SecureDirRequestApprovalRunner(object):
         """Return whether requests should be made to add the requester
         to the newly-created secure directories.
 
-        Only do so if the requester has or will have access to the
-        cluster, under any project.
+        The requester must meet the following criteria:
+            - Has cluster access under any project
         """
-        # TODO
-        return False
+        return has_cluster_access(self._request_obj.requester)
 
 
 def get_secure_dir_allocations(project=None):
