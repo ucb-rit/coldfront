@@ -13,8 +13,11 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationAttribute
 from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationStatusChoice
+from coldfront.core.allocation.models import SecureDirAddUserRequest
+from coldfront.core.allocation.models import SecureDirAddUserRequestStatusChoice
 from coldfront.core.allocation.models import SecureDirRequest
 from coldfront.core.allocation.models import SecureDirRequestStatusChoice
+from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirectory
 
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
@@ -343,6 +346,8 @@ class SecureDirRequestApprovalRunner(object):
 
     def __init__(self, request_obj):
         self._request_obj = request_obj
+        self._groups_directory = None
+        self._scratch_directory = None
         self._success_messages = []
         self._error_messages = []
 
@@ -353,8 +358,9 @@ class SecureDirRequestApprovalRunner(object):
         try:
             with transaction.atomic():
                 self._approve_request()
-                groups_allocation, scratch_allocation = \
-                    self._create_secure_directories()
+                self._create_secure_directories()
+                if self._should_add_requester_to_directories():
+                   self._add_requester_to_directories()
         except Exception as e:
             log_message = (
                 f'Failed to approve secure directory request '
@@ -368,7 +374,24 @@ class SecureDirRequestApprovalRunner(object):
                 f'directories for {self._request_obj.project.name}.')
             self._success_messages.append(message)
 
-            self._send_emails_safe(groups_allocation, scratch_allocation)
+            self._send_emails_safe()
+
+    def _add_requester_to_directories(self):
+        """Create requests to add the requester to the newly-created
+        directories."""
+        requester = self._request_obj.requester
+        pending_status = SecureDirAddUserRequestStatusChoice.objects.get(
+            name='Pending')
+
+        for secure_directory in (
+                self._groups_directory, self._scratch_directory):
+            allocation = secure_directory.allocation
+            directory_path = secure_directory.get_path()
+            SecureDirAddUserRequest.objects.create(
+                user=requester,
+                allocation=allocation,
+                directory=directory_path,
+                status=pending_status)
 
     def _approve_request(self):
         """Set the status of the request to 'Approved - Complete'."""
@@ -378,16 +401,19 @@ class SecureDirRequestApprovalRunner(object):
         self._request_obj.save()
 
     def _create_secure_directories(self):
-        """Create the groups and scratch secure directories and return
-        the corresponding Allocation objects in that order."""
+        """Create Allocations representing the groups and scratch secure
+        directories. Store corresponding SecureDirectory objects in the
+        instance."""
         subdirectory_name = self._request_obj.directory_name
         groups_allocation = create_secure_directory(
             self._request_obj.project, subdirectory_name, 'groups')
         scratch_allocation = create_secure_directory(
             self._request_obj.project, subdirectory_name, 'scratch')
-        return groups_allocation, scratch_allocation
 
-    def _send_emails_to_users(self, groups_allocation, scratch_allocation):
+        self._groups_directory = SecureDirectory(groups_allocation)
+        self._scratch_directory = SecureDirectory(scratch_allocation)
+
+    def _send_emails_to_users(self):
         """Send notification emails to the requester, CCing all active
         PIs on the project."""
         if not settings.EMAIL_ENABLED:
@@ -395,14 +421,8 @@ class SecureDirRequestApprovalRunner(object):
 
         requester = self._request_obj.requester
 
-        allocation_attribute_type = AllocationAttributeType.objects.get(
-            name='Cluster Directory Access')
-        groups_dir_path = AllocationAttribute.objects.get(
-            allocation_attribute_type=allocation_attribute_type,
-            allocation=groups_allocation).value
-        scratch_dir_path = AllocationAttribute.objects.get(
-            allocation_attribute_type=allocation_attribute_type,
-            allocation=scratch_allocation).value
+        groups_dir_path = self._groups_directory.get_path()
+        scratch_dir_path = self._scratch_directory.get_path()
 
         context = {
             'user_first_name': requester.first_name,
@@ -430,10 +450,10 @@ class SecureDirRequestApprovalRunner(object):
         send_email_template(
             subject, template_name, context, sender, receiver_list, **kwargs)
 
-    def _send_emails_safe(self, groups_allocation, scratch_allocation):
+    def _send_emails_safe(self):
         """Send emails. Catch and log exceptions."""
         try:
-            self._send_emails_to_users(groups_allocation, scratch_allocation)
+            self._send_emails_to_users()
         except Exception as e:
             logger.exception(
                 f'Failed to send notification emails. Details:\n{e}')
@@ -442,6 +462,16 @@ class SecureDirRequestApprovalRunner(object):
         else:
             self._success_messages.append(
                 'Successfully sent notification emails to users.')
+
+    def _should_add_requester_to_directories(self):
+        """Return whether requests should be made to add the requester
+        to the newly-created secure directories.
+
+        Only do so if the requester has or will have access to the
+        cluster, under any project.
+        """
+        # TODO
+        return False
 
 
 def get_secure_dir_allocations(project=None):

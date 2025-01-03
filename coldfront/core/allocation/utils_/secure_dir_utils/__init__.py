@@ -19,6 +19,12 @@ class SecureDirectory(object):
 
     def __init__(self, allocation_obj):
         self._allocation_obj = allocation_obj
+        self._cached_path = None
+
+    @property
+    def allocation(self):
+        """Return the underlying Allocation object."""
+        return self._allocation_obj
 
     # TODO: Double check logic.
     # TODO: Order by?
@@ -73,11 +79,15 @@ class SecureDirectory(object):
 
         return User.objects.filter(pk__in=eligible_user_pks)
 
-    # TODO: Double check logic.
     def get_path(self):
-        """Return the path to the secure directory."""
-        return self._allocation_obj.allocationattribute_set.get(
-            allocation_attribute_type__name='Cluster Directory Access').value
+        """Return the path to the secure directory. Cache the path in
+        the instance to avoid repeat database lookups."""
+        if self._cached_path is None:
+            allocation_attribute = \
+                self._allocation_obj.allocationattribute_set.get(
+                    allocation_attribute_type__name='Cluster Directory Access')
+            self._cached_path = allocation_attribute.value
+        return self._cached_path
 
     # TODO: Double check logic.
     # TODO: Order by?
