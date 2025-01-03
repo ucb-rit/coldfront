@@ -232,6 +232,7 @@ class SecureDirRDMConsultationReviewForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={'rows': 3}))
 
+
 class SecureDirRequestEditDepartmentForm(forms.Form):
 
     department = forms.CharField(

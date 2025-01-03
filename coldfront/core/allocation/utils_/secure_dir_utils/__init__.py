@@ -74,6 +74,12 @@ class SecureDirectory(object):
         return User.objects.filter(pk__in=eligible_user_pks)
 
     # TODO: Double check logic.
+    def get_path(self):
+        """Return the path to the secure directory."""
+        return self._allocation_obj.allocationattribute_set.get(
+            allocation_attribute_type__name='Cluster Directory Access').value
+
+    # TODO: Double check logic.
     # TODO: Order by?
     def get_removable_users(self):
         """Return a list of users that are eligible to be removed from the
