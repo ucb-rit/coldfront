@@ -12,7 +12,7 @@ from coldfront.core.allocation.models import SecureDirAddUserRequest
 from coldfront.core.allocation.models import SecureDirAddUserRequestStatusChoice
 from coldfront.core.allocation.models import SecureDirRemoveUserRequest
 from coldfront.core.allocation.models import SecureDirRemoveUserRequestStatusChoice
-from coldfront.core.allocation.utils_.secure_dir_utils.secure_dir import SecureDirectory
+from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirectory
 
 from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
 from coldfront.core.utils.mail import send_email_template
@@ -134,8 +134,9 @@ class SecureDirectoryAddUserRequestRunner(SecureDirectoryManageUserRequestRunner
     request_status_model = SecureDirAddUserRequestStatusChoice
 
     def _send_email_to_admins(self):
-        user_str = f'{
-            self._user.first_name} {self._user.last_name} ({self._user.email})'
+        user_str = (
+            f'{self._user.first_name} {self._user.last_name} '
+            f'({self._user.email})')
         review_url = reverse(
             'secure-dir-manage-users-request-list',
             kwargs={'action': 'add', 'status': 'pending'})
@@ -161,8 +162,9 @@ class SecureDirectoryRemoveUserRequestRunner(SecureDirectoryManageUserRequestRun
     request_status_model = SecureDirRemoveUserRequestStatusChoice
 
     def _send_email_to_admins(self):
-        user_str = f'{
-            self._user.first_name} {self._user.last_name} ({self._user.email})'
+        user_str = (
+            f'{self._user.first_name} {self._user.last_name} '
+            f'({self._user.email})')
         review_url = reverse(
             'secure-dir-manage-users-request-list',
             kwargs={'action': 'remove', 'status': 'pending'})
