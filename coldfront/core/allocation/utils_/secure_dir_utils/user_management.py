@@ -133,6 +133,9 @@ class SecureDirectoryAddUserRequestRunner(SecureDirectoryManageUserRequestRunner
     request_model = SecureDirAddUserRequest
     request_status_model = SecureDirAddUserRequestStatusChoice
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     def _send_email_to_admins(self):
         user_str = (
             f'{self._user.first_name} {self._user.last_name} '
@@ -160,6 +163,9 @@ class SecureDirectoryRemoveUserRequestRunner(SecureDirectoryManageUserRequestRun
 
     request_model = SecureDirRemoveUserRequest
     request_status_model = SecureDirRemoveUserRequestStatusChoice
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def _send_email_to_admins(self):
         user_str = (

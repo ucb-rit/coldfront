@@ -51,16 +51,17 @@ class SecureDirectory(object):
                 status__name='Active'
             ).values_list('project__pk', flat=True).distinct())
 
-        eligible_user_pks = {
-            ProjectUser.objects.filter(
-                project__in=pi_project_pks,
-                status__name='Active'
-            ).values_list('user__pk', flat=True).distinct()}
+        pi_project_users = ProjectUser.objects.filter(
+            project__in=pi_project_pks,
+            status__name='Active')
+
+        eligible_users = {
+            project_user.user for project_user in pi_project_users}
 
         eligible_user_pks = {
-            user_pk
-            for user_pk in eligible_user_pks
-            if has_cluster_access(user_pk)}
+            user.pk
+            for user in eligible_users
+            if has_cluster_access(user)}
 
         for allocation_user in self._allocation_obj.allocationuser_set.filter(
                 status__name='Active'):
@@ -100,10 +101,13 @@ class SecureDirectory(object):
               directory
             - Is not a PI of the project that owns the directory
         """
-        eligible_user_pks = (
-            self._allocation_obj.allocationuser_set.filter(
-                status__name='Active'
-            ).values_list('user__pk', flat=True).distinct())
+        allocation_users = self._allocation_obj.allocationuser_set.filter(
+            status__name='Active')
+
+        eligible_users = {
+            allocation_user.user for allocation_user in allocation_users}
+
+        eligible_user_pks = {user.pk for user in eligible_users}
 
         pending_management_request_kwargs = {
             'allocation': self._allocation_obj,

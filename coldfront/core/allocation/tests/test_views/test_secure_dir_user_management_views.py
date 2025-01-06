@@ -299,12 +299,13 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
         SecureDirManageUsersView."""
 
         # Adding users to allocation
+        active_status = AllocationUserStatusChoice.objects.get(name='Active')
         for i in range(2, 5):
             temp_user = User.objects.create(username=f'user{i}')
             AllocationUser.objects.create(
                 allocation=self.groups_allocation,
                 user=temp_user,
-                status=AllocationUserStatusChoice.objects.get(name='Active'))
+                status=active_status)
             setattr(self, f'user{i}', temp_user)
 
         # Users with a pending SecureDirRemoveUserRequest should not be shown
@@ -316,31 +317,23 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
 
         # Testing users shown on groups_allocation remove users page
         kwargs = {'pk': self.groups_allocation.pk, 'action': 'remove'}
-        response = self.get_response(self.pi,
-                                     self.url,
-                                     kwargs=kwargs)
-        html = response.content.decode('utf-8')
-        self.assertIn(self.user3.username, html)
-        self.assertIn(self.user4.username, html)
-
-        self.assertNotIn(self.user0.username, html)
-        self.assertNotIn(self.user1.username, html)
-        self.assertNotIn(self.user2.username, html)
-        self.assertNotIn(self.admin.username, html)
+        response = self.get_response(self.pi, self.url, kwargs=kwargs)
+        self.assertContains(response, self.user3.username)
+        self.assertContains(response, self.user4.username)
+        self.assertNotContains(response, self.user0.username)
+        self.assertNotContains(response, self.user1.username)
+        self.assertNotContains(response, self.user2.username)
+        self.assertNotContains(response, self.admin.username)
 
         # Testing users shown on scratch_allocation remove users page
         kwargs = {'pk': self.scratch_allocation.pk, 'action': 'remove'}
-        response = self.get_response(self.pi,
-                                     self.url,
-                                     kwargs=kwargs)
-        html = response.content.decode('utf-8')
-
-        self.assertNotIn(self.user0.username, html)
-        self.assertNotIn(self.user1.username, html)
-        self.assertNotIn(self.user2.username, html)
-        self.assertNotIn(self.user3.username, html)
-        self.assertNotIn(self.user4.username, html)
-        self.assertNotIn(self.admin.username, html)
+        response = self.get_response(self.pi, self.url, kwargs=kwargs)
+        self.assertNotContains(response, self.user0.username)
+        self.assertNotContains(response, self.user1.username)
+        self.assertNotContains(response, self.user2.username)
+        self.assertNotContains(response, self.user3.username)
+        self.assertNotContains(response, self.user4.username)
+        self.assertNotContains(response, self.admin.username)
 
     def test_add_users(self):
         """Test that the correct SecureDirAddUserRequest is created"""
@@ -381,17 +374,21 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
 
         # Test that the correct email is sent.
         recipients = settings.EMAIL_ADMIN_LIST
-        email_body = [f'There is 1 new secure '
-                      f'directory user addition request for '
-                      f'{self.scratch_path}.',
-                      'Please process this request here.']
+        email_body = [
+            'There is a new request to add user',
+            self.scratch_path,
+            'Please handle the request here',
+        ]
 
-        self.assertEqual(len(recipients), len(mail.outbox))
-        for email in mail.outbox:
+        added_user_emails = [self.user0.email]
+        self.assertEqual(len(mail.outbox), len(added_user_emails))
+        for i in range(len(mail.outbox)):
+            sent_email_obj = mail.outbox[i]
+            self.assertEqual(sent_email_obj.to, recipients)
+            self.assertEqual(sent_email_obj.from_email, settings.EMAIL_SENDER)
             for section in email_body:
-                self.assertIn(section, email.body)
-            self.assertIn(email.to[0], recipients)
-            self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+                self.assertIn(section, sent_email_obj.body)
+            self.assertIn(added_user_emails[i], sent_email_obj.body)
 
     def test_remove_users(self):
         """Test that the correct SecureDirRemoveUserRequest is created"""
@@ -439,17 +436,21 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
 
         # Test that the correct email is sent.
         recipients = settings.EMAIL_ADMIN_LIST
-        email_body = [f'There are 2 new secure '
-                      f'directory user removal requests for '
-                      f'{self.groups_path}.',
-                      'Please process these requests here.']
+        email_body = [
+            'There is a new request to remove user',
+            self.groups_path,
+            'Please handle the request here',
+        ]
 
-        self.assertEqual(len(recipients), len(mail.outbox))
-        for email in mail.outbox:
+        removed_user_emails = [self.user0.email, self.user1.email]
+        self.assertEqual(len(mail.outbox), len(removed_user_emails))
+        for i in range(len(mail.outbox)):
+            sent_email_obj = mail.outbox[i]
+            self.assertEqual(sent_email_obj.to, recipients)
+            self.assertEqual(sent_email_obj.from_email, settings.EMAIL_SENDER)
             for section in email_body:
-                self.assertIn(section, email.body)
-            self.assertIn(email.to[0], recipients)
-            self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+                self.assertIn(section, sent_email_obj.body)
+            self.assertIn(removed_user_emails[i], sent_email_obj.body)
 
     def test_content(self):
         """Test that the correct variables are displayed."""

@@ -102,9 +102,10 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
 
         secure_directory = SecureDirectory(alloc_obj)
         if self.add_bool:
-            user_list = secure_directory.get_addable_users()
+            users = secure_directory.get_addable_users()
         else:
-            user_list = secure_directory.get_removable_users()
+            users = secure_directory.get_removable_users()
+        user_list = self._get_user_data(users)
 
         formset = formset_factory(
             SecureDirManageUsersForm, max_num=len(user_list))
@@ -179,10 +180,10 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
 
         with transaction.atomic():
             for user_obj in user_objs:
-                runner = \
-                    SecureDirectoryManageUserRequestRunnerFactory.get_runner(
-                        self.action, secure_directory, user_obj,
-                        email_strategy=email_strategy)
+                runner_factory = SecureDirectoryManageUserRequestRunnerFactory()
+                runner = runner_factory.get_runner(
+                    self.action, secure_directory, user_obj,
+                    email_strategy=email_strategy)
                 runner.run()
 
         try:
