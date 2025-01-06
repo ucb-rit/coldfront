@@ -121,7 +121,7 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
                 message = 'Unexpected failure. Please contact an administrator.'
                 messages.error(request, message)
             else:
-                num_users = len(formset)
+                num_users = len(selected_user_objs)
                 message = (
                     f'Successfully requested to {self.action} {num_users} '
                     f'user(s) {self.language_dict["preposition"]} the secure '
