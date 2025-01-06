@@ -124,9 +124,7 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
                 message = (
                     f'Successfully requested to {self.action} {num_users} '
                     f'user(s) {self.language_dict["preposition"]} the secure '
-                    f'directory {secure_directory.get_path()}. Administrators '
-                    f'have been notified, and will review and process the '
-                    f'requests.')
+                    f'directory {secure_directory.get_path()}.')
                 messages.success(request, message)
         else:
             for error in formset.errors:
@@ -178,6 +176,7 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
         Only send emails if all succeeded.
         """
         email_strategy = EnqueueEmailStrategy()
+
         with transaction.atomic():
             for user_obj in user_objs:
                 runner = \
@@ -185,4 +184,8 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
                         self.action, secure_directory, user_obj,
                         email_strategy=email_strategy)
                 runner.run()
-        email_strategy.send_queued_emails()
+
+        try:
+            email_strategy.send_queued_emails()
+        except Exception as e:
+            logger.exception(e)

@@ -13,12 +13,11 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationAttribute
 from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationStatusChoice
-from coldfront.core.allocation.models import SecureDirAddUserRequest
-from coldfront.core.allocation.models import SecureDirAddUserRequestStatusChoice
 from coldfront.core.allocation.models import SecureDirRequest
 from coldfront.core.allocation.models import SecureDirRequestStatusChoice
 from coldfront.core.allocation.utils import has_cluster_access
 from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirectory
+from coldfront.core.allocation.utils_.secure_dir_utils.user_management import SecureDirectoryAddUserRequestRunner
 
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
@@ -261,8 +260,11 @@ class SecureDirRequestDenialRunner(object):
     # TODO: The structure of this class and SecureDirRequestApprovalRunner are
     #  quite similar. Consider refactoring to avoid redundant logic.
 
-    def __init__(self, request_obj):
+    def __init__(self, request_obj, email_strategy=None):
         self._request_obj = request_obj
+        self._email_strategy = validate_email_strategy_or_get_default(
+            email_strategy=email_strategy)
+
         self._success_messages = []
         self._error_messages = []
 
@@ -324,18 +326,25 @@ class SecureDirRequestDenialRunner(object):
         send_email_template(
             subject, template_name, context, sender, receiver_list, **kwargs)
 
+    def _send_emails(self):
+        """Send email notifications."""
+        # To users
+        email_method = self._send_emails_to_users
+        email_args = ()
+        self._email_strategy.process_email(email_method, *email_args)
+
     def _send_emails_safe(self):
         """Send emails. Catch and log exceptions."""
         try:
-            self._send_emails_to_users()
+            self._send_emails()
         except Exception as e:
+            # TODO: Some email strategies do not send the email directly, so
+            #  this failure message would not be apt.
+            # TODO: The language in this message and in the function names
+            #  should be updated to something more general (i.e., notifying
+            #  users).
             logger.exception(
                 f'Failed to send notification emails. Details:\n{e}')
-            self._error_messages.append(
-                'Failed to send notification emails to users.')
-        else:
-            self._success_messages.append(
-                'Successfully sent notification emails to users.')
 
 
 class SecureDirRequestApprovalRunner(object):
@@ -345,10 +354,14 @@ class SecureDirRequestApprovalRunner(object):
     # TODO: The structure of this class and SecureDirRequestDenialRunner are
     #  quite similar. Consider refactoring to avoid redundant logic.
 
-    def __init__(self, request_obj):
+    def __init__(self, request_obj, email_strategy=None):
         self._request_obj = request_obj
+        self._email_strategy = validate_email_strategy_or_get_default(
+            email_strategy=email_strategy)
+
         self._groups_directory = None
         self._scratch_directory = None
+
         self._success_messages = []
         self._error_messages = []
 
@@ -381,18 +394,14 @@ class SecureDirRequestApprovalRunner(object):
         """Create requests to add the requester to the newly-created
         directories."""
         requester = self._request_obj.requester
-        pending_status = SecureDirAddUserRequestStatusChoice.objects.get(
-            name='Pending')
 
         for secure_directory in (
                 self._groups_directory, self._scratch_directory):
-            allocation = secure_directory.allocation
-            directory_path = secure_directory.get_path()
-            SecureDirAddUserRequest.objects.create(
-                user=requester,
-                allocation=allocation,
-                directory=directory_path,
-                status=pending_status)
+
+            runner = SecureDirectoryAddUserRequestRunner(
+                secure_directory, requester,
+                email_strategy=self._email_strategy)
+            runner.run()
 
     def _approve_request(self):
         """Set the status of the request to 'Approved - Complete'."""
@@ -451,18 +460,25 @@ class SecureDirRequestApprovalRunner(object):
         send_email_template(
             subject, template_name, context, sender, receiver_list, **kwargs)
 
+    def _send_emails(self):
+        """Send email notifications."""
+        # To users
+        email_method = self._send_emails_to_users
+        email_args = ()
+        self._email_strategy.process_email(email_method, *email_args)
+
     def _send_emails_safe(self):
         """Send emails. Catch and log exceptions."""
         try:
-            self._send_emails_to_users()
+            self._send_emails()
         except Exception as e:
+            # TODO: Some email strategies do not send the email directly, so
+            #  this failure message would not be apt.
+            # TODO: The language in this message and in the function names
+            #  should be updated to something more general (i.e., notifying
+            #  users).
             logger.exception(
                 f'Failed to send notification emails. Details:\n{e}')
-            self._error_messages.append(
-                'Failed to send notification emails to users.')
-        else:
-            self._success_messages.append(
-                'Successfully sent notification emails to users.')
 
     def _should_add_requester_to_directories(self):
         """Return whether requests should be made to add the requester

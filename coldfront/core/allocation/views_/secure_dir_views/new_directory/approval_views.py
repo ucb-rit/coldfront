@@ -29,6 +29,7 @@ from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import set_
 from coldfront.core.project.forms import ReviewStatusForm, ReviewDenyForm
 
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
 from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 
 
@@ -307,20 +308,19 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
 
     def post(self, request, *args, **kwargs):
         """Approve the request."""
+        pk = self.request_obj.pk
+        redirect_to_detail = HttpResponseRedirect(
+            reverse('secure-dir-request-detail', kwargs={'pk': pk}))
+
         if not self.request.user.is_superuser:
             message = 'You do not have permission to access this page.'
             messages.error(request, message)
-            pk = self.request_obj.pk
-
-            return HttpResponseRedirect(
-                reverse('secure-dir-request-detail', kwargs={'pk': pk}))
+            return redirect_to_detail
 
         if not self.is_checklist_complete():
             message = 'Please complete the checklist before final activation.'
             messages.error(request, message)
-            pk = self.request_obj.pk
-            return HttpResponseRedirect(
-                reverse('secure-dir-request-detail', kwargs={'pk': pk}))
+            return redirect_to_detail
 
         # Check that the project does not have any Secure Directories yet.
         sec_dir_allocations = get_secure_dir_allocations()
@@ -328,13 +328,19 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
             message = f'The project {self.request_obj.project.name} already ' \
                       f'has a secure directory associated with it.'
             messages.error(self.request, message)
-            pk = self.request_obj.pk
-            return HttpResponseRedirect(
-                reverse('secure-dir-request-detail', kwargs={'pk': pk}))
+            return redirect_to_detail
+
+        email_strategy = EnqueueEmailStrategy()
 
         # Approve the request.
-        runner = SecureDirRequestApprovalRunner(self.request_obj)
+        runner = SecureDirRequestApprovalRunner(
+            self.request_obj, email_strategy=email_strategy)
         runner.run()
+
+        try:
+            email_strategy.send_queued_emails()
+        except Exception as e:
+            logger.exception(e)
 
         success_messages, error_messages = runner.get_messages()
         for message in success_messages:

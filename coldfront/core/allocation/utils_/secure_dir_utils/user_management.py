@@ -108,7 +108,7 @@ class SecureDirectoryManageUserRequestRunner(ABC):
         """Send email notifications."""
         # To cluster admins
         email_method = self._send_email_to_admins
-        email_args = (self._request_obj, )
+        email_args = ()
         self._email_strategy.process_email(email_method, *email_args)
 
     def _send_emails_safe(self):
