@@ -10,6 +10,11 @@
   {% if formset %}
     <div class="card border-light">
       <div class="card-body">
+        {% if action == 'add' %}
+        <p>
+          <b>Note:</b> Any project managers who have been added to the directory will also be able to add and remove users to and from the directory.
+        </p>
+        {% endif %}
         <form action="{{ manage_users_url }}" method="post">
           {% csrf_token %}
           <div class="table-responsive">
