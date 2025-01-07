@@ -424,8 +424,8 @@ class SecureDirRequestApprovalRunner(object):
         self._scratch_directory = SecureDirectory(scratch_allocation)
 
     def _send_emails_to_users(self):
-        """Send notification emails to the requester, CCing all active
-        PIs on the project."""
+        """Send notification emails to the requester, CCing relevant PIs
+        on the project."""
         if not settings.EMAIL_ENABLED:
             return
 
@@ -452,8 +452,9 @@ class SecureDirRequestApprovalRunner(object):
 
         kwargs = {}
         pis_to_cc = [
-            pi for pi in self._request_obj.project.pis(active_only=True)
-            if pi != requester]
+            project_user.user
+            for project_user in self._request_obj.project.pis_to_email()
+            if project_user.user != requester]
         if pis_to_cc:
             kwargs['cc'] = [user.email for user in pis_to_cc]
 

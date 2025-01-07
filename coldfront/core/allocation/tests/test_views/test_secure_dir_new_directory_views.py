@@ -71,8 +71,9 @@ class TestSecureDirRequestBase(TestBase):
                     user=getattr(self, f'user{j}'), project=project,
                     role=non_pi_role, status=project_user_status)
                 ProjectUser.objects.create(
-                    user=getattr(self, f'pi{j}'), project=project, role=pi_role,
-                    status=project_user_status)
+                    user=getattr(self, f'pi{j}'), project=project,
+                    role=pi_role, status=project_user_status,
+                    enable_notifications=True)
 
             # Create a compute allocation for the Project.
             allocation = Decimal(f'{i + 1}000.00')

@@ -98,6 +98,7 @@ class TestSecureDirBase(TestBase):
                                          name='Active'))
         pi.role = ProjectUserRoleChoice.objects.get(name='Principal '
                                                          'Investigator')
+        pi.enable_notifications = True
         pi.save()
 
         # Create superuser

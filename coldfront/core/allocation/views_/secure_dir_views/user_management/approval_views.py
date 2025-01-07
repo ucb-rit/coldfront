@@ -394,7 +394,7 @@ class SecureDirManageUsersCompleteStatusView(LoginRequiredMixin,
         users_to_cc = set()
         allocation = self.secure_dir_request.allocation
         project = allocation.project
-        pis = project.pis(active_only=True)
+        pis = [project_user.user for project_user in project.pis_to_email()]
         users_to_cc.update(set(pis))
         managers = project.managers(active_only=True)
         active_allocation_user_status = \
@@ -510,7 +510,7 @@ class SecureDirManageUsersDenyRequestView(LoginRequiredMixin,
         users_to_cc = set()
         allocation = self.secure_dir_request.allocation
         project = allocation.project
-        pis = project.pis(active_only=True)
+        pis = [project_user.user for project_user in project.pis_to_email()]
         users_to_cc.update(set(pis))
         managers = project.managers(active_only=True)
         active_allocation_user_status = \

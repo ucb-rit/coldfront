@@ -209,6 +209,14 @@ We do not have information about your research. Please provide a detailed descri
         return self.projectuser_set.filter(
             pi_condition | manager_condition).distinct()
 
+    def pis_to_email(self):
+        """Return a queryset of Active PI ProjectUsers who have
+        enable_notifications=True."""
+        pi_condition = Q(
+            role__name='Principal Investigator', status__name='Active',
+            enable_notifications=True)
+        return self.projectuser_set.filter(pi_condition).distinct()
+
     def __str__(self):
         return self.name
 
