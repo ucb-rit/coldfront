@@ -41,6 +41,24 @@
         {{ wizard.form|crispy }}
       {% endif %}
     </table>
+    {% if wizard.steps.prev %}
+      <button
+              class="btn btn-secondary"
+              formnovalidate="formnovalidate"
+              name="wizard_goto_step"
+              type="submit"
+              value="{{ wizard.steps.first }}">
+        First Step
+      </button>
+      <button
+              class="btn btn-secondary"
+              formnovalidate="formnovalidate"
+              name="wizard_goto_step"
+              type="submit"
+              value="{{ wizard.steps.prev }}">
+        Previous Step
+      </button>
+    {% endif %}
     <input class="btn btn-primary" type="submit" value="Next Step"/>
   </form>
   <br>
