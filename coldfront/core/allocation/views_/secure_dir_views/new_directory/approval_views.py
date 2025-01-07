@@ -272,8 +272,8 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
         
         notified = state['notified']
         task_text = (
-            'Confirm or edit allowance details, and '
-            'enable/notify the PI to sign the Researcher Use Agreement.')
+            'Confirm or edit directory details, and enable/notify the PI to '
+            'sign the Researcher Use Agreement.')
         checklist.append([
             task_text,
             notified['status'],
