@@ -60,16 +60,15 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
             return True
         if self.request.user == self.request_obj.requester:
             return True
-        if (self.request_type == 'service-units-purchase' and
-                is_user_manager_or_pi_of_project(
-                    self.request.user, self.request_obj.project)):
-            return True
-        if (self.request_type == 'secure-dir' and
-                self.request.user in self.request_obj.project.pis()):
-            return True
-        if (self.request_type == 'new-project' and
-                self.request.user == self.request_obj.pi):
-            return True
+        if self.request_type == 'service-units-purchase':
+            return is_user_manager_or_pi_of_project(
+                self.request.user, self.request_obj.project)
+        elif self.request_type == 'secure-dir':
+            return (
+                self.request.user == self.request_obj.requester or
+                self.request.user == self.request_obj.pi)
+        elif self.request_type == 'new-project':
+            return self.request.user == self.request_obj.pi
         return False
 
     def dispatch(self, request, *args, **kwargs):
