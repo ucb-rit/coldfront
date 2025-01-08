@@ -1,0 +1,3 @@
+There is a new request to add user {{ user_str }} to the secure directory {{ directory_name }}.
+
+Please handle the request here: {{ review_url }}.
