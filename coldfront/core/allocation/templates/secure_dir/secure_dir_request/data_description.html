@@ -20,11 +20,11 @@
 
   <h1>Secure Directory: Data Description</h1><hr>
 
-  {% if breadcrumb_project %}
-    <ol class="breadcrumb">
-        <li>{{ breadcrumb_project }}</li>
-    </ol>
-  {% endif %}
+  <ol class="breadcrumb">
+    <li>{{ breadcrumb_project }}</li>
+    <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+    <li>{{ breadcrumb_pi }}</li>
+  </ol>
 
   <p>Please respond to the following questions to provide us with more information about your data.</p>
 
@@ -41,6 +41,24 @@
         {{ wizard.form|crispy }}
       {% endif %}
     </table>
+    {% if wizard.steps.prev %}
+      <button
+              class="btn btn-secondary"
+              formnovalidate="formnovalidate"
+              name="wizard_goto_step"
+              type="submit"
+              value="{{ wizard.steps.first }}">
+        First Step
+      </button>
+      <button
+              class="btn btn-secondary"
+              formnovalidate="formnovalidate"
+              name="wizard_goto_step"
+              type="submit"
+              value="{{ wizard.steps.prev }}">
+        Previous Step
+      </button>
+    {% endif %}
     <input class="btn btn-primary" type="submit" value="Next Step"/>
   </form>
   <br>

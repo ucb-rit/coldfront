@@ -38,12 +38,6 @@ SESSION_COOKIE_AGE = 60 * 60
 # The ID of the Site object to use (probably 1).
 SITE_ID = 1
 
-# The username of the user to set as the PI for all Vector projects.
-VECTOR_PI_USERNAME = "hannsode"
-
-# The name of the Savio project to which all Vector users are given access to.
-SAVIO_PROJECT_FOR_VECTOR_USERS = "co_rosalind"
-
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = []
 

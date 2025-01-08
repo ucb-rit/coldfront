@@ -1,8 +1,11 @@
 from django import forms
 from django.core.validators import MinLengthValidator
 
-from coldfront.core.allocation.utils_.secure_dir_utils import is_secure_directory_name_suffix_available
-from coldfront.core.allocation.utils_.secure_dir_utils import SECURE_DIRECTORY_NAME_PREFIX
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import is_secure_directory_name_suffix_available
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import SECURE_DIRECTORY_NAME_PREFIX
+from coldfront.core.project.models import ProjectUser
+from coldfront.core.project.models import ProjectUserRoleChoice
+from coldfront.core.project.models import ProjectUserStatusChoice
 
 
 class SecureDirNameField(forms.CharField):
@@ -72,6 +75,31 @@ class SecureDirManageUsersRequestCompletionForm(forms.Form):
         widget=forms.Select())
 
 
+class SecureDirPISelectionForm(forms.Form):
+
+    pi = forms.ModelChoiceField(
+        label='Principal Investigator',
+        queryset=ProjectUser.objects.none(),
+        required=True,
+        widget=forms.Select())
+
+    def __init__(self, *args, **kwargs):
+        self._project_pk = kwargs.pop('project_pk', None)
+        super().__init__(*args, **kwargs)
+
+        if not self._project_pk:
+            return
+        self._set_pi_queryset()
+
+    def _set_pi_queryset(self):
+        """Set the 'pi' choices to active PIs on the project."""
+        pi_role = ProjectUserRoleChoice.objects.get(
+            name='Principal Investigator')
+        active_status = ProjectUserStatusChoice.objects.get(name='Active')
+        self.fields['pi'].queryset = ProjectUser.objects.filter(
+            project__pk=self._project_pk, role=pi_role, status=active_status)
+
+
 class SecureDirDataDescriptionForm(forms.Form):
     department = forms.CharField(
         label=('Specify the full name of the department that this directory ' 
@@ -96,10 +124,6 @@ class SecureDirDataDescriptionForm(forms.Form):
               'the Information Security and Policy team) about your data?',
         required=False)
 
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('breadcrumb_project', None)
-        super().__init__(*args, **kwargs)
-
 
 class SecureDirRDMConsultationForm(forms.Form):
     rdm_consultants = forms.CharField(
@@ -109,10 +133,6 @@ class SecureDirRDMConsultationForm(forms.Form):
         validators=[MinLengthValidator(3)],
         required=True,
         widget=forms.Textarea(attrs={'rows': 3}))
-
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('breadcrumb_project', None)
-        super().__init__(*args, **kwargs)
 
 
 class SecureDirDirectoryNamesForm(forms.Form):
@@ -124,11 +144,6 @@ class SecureDirDirectoryNamesForm(forms.Form):
         label='Subdirectory Name',
         required=True,
         widget=forms.Textarea(attrs={'rows': 1}))
-
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('breadcrumb_rdm_consultation', None)
-        kwargs.pop('breadcrumb_project', None)
-        super().__init__(*args, **kwargs)
 
 
 class SecureDirSetupForm(forms.Form):
@@ -216,6 +231,7 @@ class SecureDirRDMConsultationReviewForm(forms.Form):
         validators=[MinLengthValidator(10)],
         required=False,
         widget=forms.Textarea(attrs={'rows': 3}))
+
 
 class SecureDirRequestEditDepartmentForm(forms.Form):
 

@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import mail
 from django.db import transaction
+from django.test import override_settings
 
 from coldfront.api.statistics.utils import create_project_allocation
 from coldfront.core.allocation.models import Allocation
@@ -367,6 +368,7 @@ class TestBRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
         super().setUp()
         self._deployment_name = 'BRC'
 
+    @override_settings(SAVIO_PROJECT_FOR_VECTOR_USERS='co_project')
     @enable_deployment('BRC')
     def test_add_vector_user_to_designated_savio_project_failure(self):
         """Test that, if adding a Vector user to the designated Savio
@@ -416,6 +418,7 @@ class TestBRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
 
         self.assertEqual(len(mail.outbox), 2)
 
+    @override_settings(SAVIO_PROJECT_FOR_VECTOR_USERS='co_project')
     @enable_deployment('BRC')
     def test_add_vector_user_to_designated_savio_project_success(self):
         """Test that, for a Vector project, the user is also added to
