@@ -1,11 +1,12 @@
 {% extends "common/base.html" %}
 {% load feature_flags %}
 {% load crispy_forms_tags %}
+{% load common_tags %}
 {% load static %}
 
 
 {% block title %}
-{{ PRIMARY_CLUSTER_NAME }} Project Request - PI {{ department_display_name }}
+{{ PRIMARY_CLUSTER_NAME }} Project Request - PI {% settings_value 'DEPARTMENTS_DEPARTMENT_DISPLAY_NAME' %}
 {% endblock %}
 
 
@@ -29,7 +30,8 @@
   <li>{{ breadcrumb_pi }}</li>
 </ol>
 
-<p>Select one or more {{ department_display_name | lower}}s for the Principal Investigator of the project. You may search for the {{ department_display_name | lower }}(s) in the selection field.</p>
+{% settings_value 'DEPARTMENTS_DEPARTMENT_DISPLAY_NAME' as department_display_name %}
+<p>Select one or more {{ department_display_name | lower }}s for the Principal Investigator of the project. You may search for the {{ department_display_name | lower }}(s) in the selection field.</p>
 <p>
   {% flag_enabled 'BRC_ONLY' as brc_only %}
   {% if brc_only %} Non-Berkeley {% else %} Non-Lab {% endif %}

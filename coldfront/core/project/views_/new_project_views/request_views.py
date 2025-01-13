@@ -694,10 +694,6 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                     'breadcrumb_pi': (
                         f'New PI: {first_name} {last_name} ({email})')
                 })
-            dictionary.update({
-                'department_display_name': \
-                    import_from_settings('DEPARTMENT_DISPLAY_NAME'),
-            })
 
         pool_allocations_step = \
             self.step_numbers_by_form_name['pool_allocations']

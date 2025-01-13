@@ -153,7 +153,7 @@ class UserProfile(TemplateView):
         context['auth_department_list'] = authoritative_department_strs
         context['non_auth_department_list'] = non_authoritative_department_strs
         context['department_display_name'] = import_from_settings(
-            'DEPARTMENT_DISPLAY_NAME')
+            'DEPARTMENTS_DEPARTMENT_DISPLAY_NAME')
 
     def _update_context_with_email_and_account_data(self, context,
                                                     viewed_user):
