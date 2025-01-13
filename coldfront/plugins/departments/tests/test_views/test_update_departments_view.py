@@ -2,7 +2,7 @@ from copy import deepcopy
 from http import HTTPStatus
 from unittest.mock import patch
 
-from django.conf import settings
+from django.conf import settings as django_settings
 from django.test import override_settings
 from django.urls import reverse
 
@@ -12,7 +12,7 @@ from coldfront.plugins.departments.models import HistoricalUserDepartment
 from coldfront.plugins.departments.models import UserDepartment
 
 
-Q_CLUSTER_COPY = deepcopy(settings.Q_CLUSTER)
+Q_CLUSTER_COPY = deepcopy(django_settings.Q_CLUSTER)
 Q_CLUSTER_COPY['sync'] = True
 
 
@@ -166,7 +166,7 @@ class TestUpdateDepartmentsView(TransactionTestBase):
             self.user, self.department3, ['+', '-'])
 
     @override_settings(
-        DEPARTMENT_DATA_SOURCE=(
+        DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
             'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
             'DummyDataSourceBackend'))
     def test_creates_data_source_departments_and_sets_authoritatively(self):
@@ -201,7 +201,7 @@ class TestUpdateDepartmentsView(TransactionTestBase):
             self.user, expected_departments_name_and_is_authoritative)
 
     @override_settings(
-        DEPARTMENT_DATA_SOURCE=(
+        DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
             'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
             'DummyDataSourceBackend'))
     def test_no_departments_found_in_data_source(self):
@@ -226,7 +226,7 @@ class TestUpdateDepartmentsView(TransactionTestBase):
             self.user, expected_departments_name_and_is_authoritative)
 
     @override_settings(
-        DEPARTMENT_DATA_SOURCE=(
+        DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
             'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
             'DummyDataSourceBackend'))
     def test_authoritative_not_overridden_as_non_authoritative(self):
@@ -274,7 +274,7 @@ class TestUpdateDepartmentsView(TransactionTestBase):
             self.user, expected_departments_name_and_is_authoritative)
 
     @override_settings(
-        DEPARTMENT_DATA_SOURCE=(
+        DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
             'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
             'DummyDataSourceBackend'))
     def test_outdated_authoritative_departments_unset(self):
@@ -306,7 +306,7 @@ class TestUpdateDepartmentsView(TransactionTestBase):
             self.user, expected_departments_name_and_is_authoritative)
 
     @override_settings(
-        DEPARTMENT_DATA_SOURCE=(
+        DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
             'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
             'DummyDataSourceBackend'))
     def test_data_source_error_authoritative_unaffected(self):

@@ -1,14 +1,13 @@
 import logging
 
-from django.conf import settings
+from django.conf import settings as django_settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.edit import FormView
 from django.urls import reverse
 
 from django_q.tasks import async_task
 
-from coldfront.core.utils.common import import_from_settings
-
+from coldfront.plugins.departments.conf import settings
 from coldfront.plugins.departments.forms import NonAuthoritativeDepartmentSelectionForm
 from coldfront.plugins.departments.utils.queries import get_departments_for_user
 from coldfront.plugins.departments.utils.queries import UserDepartmentUpdater
@@ -36,15 +35,15 @@ class UpdateDepartmentsView(LoginRequiredMixin, FormView):
         func = (
             'coldfront.plugins.departments.tasks.'
             'fetch_and_set_user_authoritative_departments')
-        async_task(func, user.pk, sync=settings.Q_CLUSTER.get('sync', False))
+        async_task(
+            func, user.pk, sync=django_settings.Q_CLUSTER.get('sync', False))
 
         return super().form_valid(form)
 
     def get_context_data(self, viewed_username=None, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context['department_display_name'] = import_from_settings(
-            'DEPARTMENT_DISPLAY_NAME')
+        context['department_display_name'] = settings.DEPARTMENT_DISPLAY_NAME
 
         # TODO: Account for viewed_username or not?
 

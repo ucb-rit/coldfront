@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 
+from coldfront.plugins.departments.conf import settings
 from coldfront.plugins.departments.models import Department
 from coldfront.plugins.departments.models import UserDepartment
 
@@ -24,6 +25,9 @@ class NonAuthoritativeDepartmentSelectionForm(forms.Form):
         if isinstance(self.user, User):
             self._disable_department_choices()
             self._set_initial_departments()
+
+        self.fields['departments'].label = (
+            f'{settings.DEPARTMENT_DISPLAY_NAME}s')
 
     def _disable_department_choices(self):
         """Prevent certain Departments, which should be displayed, from
