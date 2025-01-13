@@ -123,7 +123,7 @@ cilogon_app_secret: ""
 # Django Flags settings
 #------------------------------------------------------------------------------
 
-# # Note: Use uppercase True/False so that Python interprets these as booleans.
+# Note: Use uppercase True/False so that Python interprets these as booleans.
 
 # TODO: For LRC, disable link login.
 flag_basic_auth_enabled: False
@@ -149,6 +149,15 @@ flag_mou_generation_enabled: False
 
 # Whether to include a survey as part of the allowance renewal request process.
 flag_renewal_survey_enabled: True
+
+#------------------------------------------------------------------------------
+# Plugin: departments
+#------------------------------------------------------------------------------
+
+# TODO: Enable for BRC, disable for LRC.
+plugin_departments_enabled: true
+plugin_departments_department_display_name: "Department"
+plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.calnet_ldap.CalNetLdapDataSourceBackend"
 
 #------------------------------------------------------------------------------
 # User-facing strings
