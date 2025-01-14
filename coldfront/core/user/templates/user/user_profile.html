@@ -103,10 +103,12 @@ User Profile{% if not requester_is_viewed_user %}: {{ viewed_user.username }}{% 
                 {% endfor %}
               </ul>
             {% endif %}
-            <a href="{% url 'update-departments' %}" class="btn btn-secondary float-right">
-              <i class="far fa-edit" aria-hidden="true"></i>
-              Update
-            </a>
+            {% if requester_is_viewed_user %}
+              <a href="{% url 'update-departments' %}" class="btn btn-secondary float-right">
+                <i class="far fa-edit" aria-hidden="true"></i>
+                Update
+              </a>
+            {% endif %}
           </td>
         </tr>
         {% endif %}
