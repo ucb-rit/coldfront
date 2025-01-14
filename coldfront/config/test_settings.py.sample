@@ -172,3 +172,11 @@ EXTRA_EXTRA_APPS += [
 
 DEPARTMENTS_DEPARTMENT_DISPLAY_NAME = 'Department'
 DEPARTMENTS_DEPARTMENT_DATA_SOURCE = 'coldfront.plugins.departments.utils.data_sources.backends.dummy.DummyDataSourceBackend'
+
+#------------------------------------------------------------------------------
+# django-q settings
+#------------------------------------------------------------------------------
+
+Q_CLUSTER = {
+    'sync': True,
+}
