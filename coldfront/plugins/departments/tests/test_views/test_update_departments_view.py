@@ -1,5 +1,6 @@
 from copy import deepcopy
 from http import HTTPStatus
+from importlib import reload
 from unittest.mock import patch
 
 from django.conf import settings as django_settings
@@ -7,6 +8,7 @@ from django.test import override_settings
 from django.urls import reverse
 
 from coldfront.core.utils.tests.test_base import TransactionTestBase
+from coldfront.plugins.departments.conf import settings
 from coldfront.plugins.departments.models import Department
 from coldfront.plugins.departments.models import HistoricalUserDepartment
 from coldfront.plugins.departments.models import UserDepartment
@@ -16,13 +18,21 @@ Q_CLUSTER_COPY = deepcopy(django_settings.Q_CLUSTER)
 Q_CLUSTER_COPY['sync'] = True
 
 
-@override_settings(Q_CLUSTER=Q_CLUSTER_COPY)
+@override_settings(
+    Q_CLUSTER=Q_CLUSTER_COPY,
+    DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
+        'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
+        'DummyDataSourceBackend')
+)
 class TestUpdateDepartmentsView(TransactionTestBase):
     """A class for testing UpdateDepartmentsView."""
 
     def setUp(self):
         """Set up test data."""
         super().setUp()
+
+        # conf.settings needs to be reloaded after the override.
+        reload(settings)
 
         self.create_test_user()
         self.client.login(username=self.user.username, password=self.password)
@@ -103,6 +113,10 @@ class TestUpdateDepartmentsView(TransactionTestBase):
     def test_sets_selected_departments_non_authoritatively(self):
         """Test that a POST request updates the user's non-authoritative
         departments, retaining history."""
+        self.user.first_name = ''
+        self.user.last_name = ''
+        self.user.save()
+
         self.assertEqual(UserDepartment.objects.count(), 0)
         self.assertEqual(HistoricalUserDepartment.objects.count(), 0)
 
@@ -200,10 +214,6 @@ class TestUpdateDepartmentsView(TransactionTestBase):
         self._assert_user_departments(
             self.user, expected_departments_name_and_is_authoritative)
 
-    @override_settings(
-        DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
-            'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
-            'DummyDataSourceBackend'))
     def test_no_departments_found_in_data_source(self):
         """Test that, if no departments for the user are found in the
         data source backend, none are set authoritatively."""
@@ -225,10 +235,6 @@ class TestUpdateDepartmentsView(TransactionTestBase):
         self._assert_user_departments(
             self.user, expected_departments_name_and_is_authoritative)
 
-    @override_settings(
-        DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
-            'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
-            'DummyDataSourceBackend'))
     def test_authoritative_not_overridden_as_non_authoritative(self):
         """Test that, if a department is set authoritatively for a user,
         the user cannot set it as non-authoritative."""
@@ -273,10 +279,6 @@ class TestUpdateDepartmentsView(TransactionTestBase):
         self._assert_user_departments(
             self.user, expected_departments_name_and_is_authoritative)
 
-    @override_settings(
-        DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
-            'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
-            'DummyDataSourceBackend'))
     def test_outdated_authoritative_departments_unset(self):
         """Test that the view removes any authoritatively-associated
         departments that are no longer returned by the data source."""
@@ -305,10 +307,6 @@ class TestUpdateDepartmentsView(TransactionTestBase):
         self._assert_user_departments(
             self.user, expected_departments_name_and_is_authoritative)
 
-    @override_settings(
-        DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
-            'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
-            'DummyDataSourceBackend'))
     def test_data_source_error_authoritative_unaffected(self):
         """Test that, if an error occurs when fetching department data
         from the data source, authoritative department associations are
