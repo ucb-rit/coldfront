@@ -13,7 +13,7 @@
     cwd: "{{ lookup('env', 'PWD') }} "
     provisioning_tasks: true
     common_tasks: true
-    python_version: 3.8
+    python_version: 3.6
     postgres_version: 15
     python_version_dotless: "{{ python_version | regex_replace('\\.','') }}"
     postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
@@ -63,14 +63,17 @@
         # The SCL role runs many tasks when it's included, so having it do
         # everything in one run would be ideal to not have redundant tasks.
 
-        - name: Install SCL for Postgres and Python; Install Python {{ python_version }}
+        - name: Install SCL
           include_role:
             role: smbambling.scl
-          vars:
-            scl_packages:
-              - name: rh-python{{ python_version_dotless }}-python
-              - name: rh-python{{ python_version_dotless }}-python-devel
-              - name: rh-python{{ python_version_dotless }}-python-pip
+
+        - name: Install required Python packages
+          yum:
+            name:
+              - python3
+              - python3-devel
+              - python3-pip
+            state: present
 
         - name: Install required web packages
           yum:
@@ -296,8 +299,7 @@
         - name: Initialize Python virtual environment
           shell: >
               test -f {{ git_prefix }}/venv/bin/activate
-              || (source scl_source enable rh-python{{ python_version_dotless }}
-              && python3 -m venv {{ git_prefix }}/venv
+              || (python{{ python_version }} -m venv {{ git_prefix }}/venv
               && echo created)
           register: venv_register
           become_user: "{{ djangooperator }}"
@@ -520,8 +522,6 @@
           blockinfile:
             path: "{{ user.home }}/.bashrc"
             block: |
-              # Add the SCL-installed Python 3 to PATH by default
-              source scl_source enable rh-python{{ python_version_dotless }}
               # Upon login, navigate to the ColdFront directory and source the virtual environment.
               cd {{ git_prefix }}/{{ reponame }}
               source ../venv/bin/activate
