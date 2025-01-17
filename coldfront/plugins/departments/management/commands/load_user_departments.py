@@ -36,9 +36,8 @@ class Command(BaseCommand):
 
         data_source = get_data_source()
 
-        # A mapping from Department code to the primary key of the corresponding
-        # object.
-        department_pk_by_code = {}
+        # A mapping from Department code to the corresponding object.
+        department_by_code = {}
 
         for user in users:
             # TODO: This is going to get duplicated. Make a function.
@@ -48,16 +47,16 @@ class Command(BaseCommand):
 
             for code, name in user_department_data:
 
-                if code not in department_pk_by_code:
+                if code not in department_by_code:
                     department, department_created = \
                         create_or_update_department(code, name)
-                    department_pk_by_code[code] = department.pk
-                department_pk = department_pk_by_code[code]
+                    department_by_code[code] = department
+                department = department_by_code[code]
 
                 user_department, user_department_created = \
                     UserDepartment.objects.update_or_create(
                         user=user,
-                        department=department_pk,
+                        department=department,
                         defaults={
                             'is_authoritative': True,
                         })
