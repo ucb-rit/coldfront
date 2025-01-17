@@ -133,8 +133,7 @@ flag_link_login_enabled: True
 # TODO: For LRC, disable BRC and enable LRC.
 flag_brc_enabled: True
 flag_lrc_enabled: False
-# TODO: For LRC, disable department functionality.
-flag_user_departments_enabled: True
+
 # The number of the month in which users should be able to request renewal for
 # the next allowance year.
 # TODO: For LRC, set the month number to 9 (September).
