@@ -62,8 +62,13 @@ STREAM_LOGS_TO_STDOUT = True
 STREAM_LOGS_TO_STDOUT = False
 {% endif %}
 
+# TODO: Ideally, come up with an approach wherein admins may subscribe to
+#  individual types of events.
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = {{ request_approval_cc_list }}
+# A list of admin email addresses to notify when a project-user removal request
+# is processed.
+PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST = {{ project_user_removal_request_processed_email_admin_list }}
 
 {% if allow_all_jobs | bool %}
 # Allow all jobs, bypassing all checks at job submission time.
