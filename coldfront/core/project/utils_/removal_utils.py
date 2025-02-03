@@ -1,6 +1,7 @@
 from itertools import chain
 import logging
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.db import transaction
@@ -263,42 +264,60 @@ class ProjectRemovalRequestProcessingRunner(object):
         if not email_enabled:
             return
 
-        email_sender = import_from_settings('EMAIL_SENDER')
-        email_signature = import_from_settings('EMAIL_SIGNATURE')
-        support_email = import_from_settings('CENTER_HELP_EMAIL')
+        num_failures = 0
 
-        template_context = {
+        subject = 'Project Removal Request Completed'
+        sender = import_from_settings('EMAIL_SENDER')
+        context = {
             'removed_user_first_name': self._removed_user.first_name,
             'removed_user_last_name': self._removed_user.last_name,
             'requester_first_name': self._request_obj.requester.first_name,
             'requester_last_name': self._request_obj.requester.last_name,
             'project_name': self._project.name,
-            'signature': email_signature,
-            'support_email': support_email,
+            'signature': import_from_settings('EMAIL_SIGNATURE'),
+            'support_email': import_from_settings('CENTER_HELP_EMAIL'),
         }
 
+        # To the removed user, along with relevant project administrators
         unique_users_to_email = set()
         for project_user in self._project.managers_and_pis_to_email():
             unique_users_to_email.add(project_user.user)
         unique_users_to_email.add(self._removed_user)
 
-        num_failures = 0
+        template_name = 'email/project_removal/project_removal_complete.txt'
         for user in unique_users_to_email:
-            template_context['user_first_name'] = user.first_name
-            template_context['user_last_name'] = user.last_name
+            context['user_first_name'] = user.first_name
+            context['user_last_name'] = user.last_name
+            receiver_list = [user.email]
             try:
                 send_email_template(
-                    'Project Removal Request Completed',
-                    'email/project_removal/project_removal_complete.txt',
-                    template_context,
-                    email_sender,
-                    [user.email])
+                    subject, template_name, context, sender, receiver_list)
             except Exception as e:
                 message = (
                     f'Failed to send a notification email to {user.email}. '
                     f'Details: \n{e}')
                 logger.exception(message)
                 num_failures += 1
+        context.pop('user_first_name', None)
+        context.pop('user_last_name', None)
+
+        # To administrators who should be notified about ProjectUser removal
+        # request processing, if any
+        receiver_list = \
+            settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST
+        if receiver_list:
+            template_name = (
+                'email/project_removal/project_removal_complete_admin.txt')
+            try:
+                send_email_template(
+                    subject, template_name, context, sender, receiver_list)
+            except Exception as e:
+                message = (
+                    f'Failed to send notification email to administrators: '
+                    f'{", ".join(receiver_list)}. Details:\n{e}')
+                logger.exception(message)
+                num_failures += 1
+
         return num_failures
 
     def _send_emails_safe(self):
