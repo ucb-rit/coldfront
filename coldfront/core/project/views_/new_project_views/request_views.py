@@ -259,7 +259,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 allocation_period = self.__get_allocation_period(form_data)
                 pi = self.__handle_pi_data(form_data)
 
-                if self.__department_required():
+                if self.__departments_enabled():
                     self.__handle_pi_departments(form_data, pi)
 
                 if computing_allowance_wrapper.is_instructional():
@@ -301,11 +301,11 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                     **request_kwargs)
 
             try:
-                # Enqueue a task to update the PI's authoritative departments.
-                # This is purposefully placed outside the transaction to prevent
-                # it from closing during processing (when processing is
-                # synchronous).
-                if self.__department_required():
+                if self.__departments_enabled():
+                    # Enqueue a task to update the PI's authoritative
+                    # departments. This is purposefully placed outside the
+                    # transaction to prevent it from closing during processing
+                    # (when processing is synchronous).
                     func = (
                         'coldfront.plugins.departments.tasks.'
                         'fetch_and_set_user_authoritative_departments')
@@ -412,7 +412,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             - Department information is required.
             - The PI does not already have any departments set.
         """
-        if not self.__department_required():
+        if not self.__departments_enabled():
             return False
 
         existing_pi_step = str(self.step_numbers_by_form_name['existing_pi'])
@@ -462,10 +462,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         return flag_enabled('LRC_ONLY')
 
     @staticmethod
-    def __department_required():
-        """Return whether departments should be requested from the
-        user. The form for requesting it will be included based on
-        additional factors."""
+    def __departments_enabled():
+        """Return whether department functionality is enabled."""
         return flag_enabled('USER_DEPARTMENTS_ENABLED')
 
     def __get_allocation_period(self, form_data):
@@ -571,10 +569,15 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
     def __handle_pi_departments(self, form_data, pi):
         """Update the PI's non-authoritative departments to the
-        specified ones."""
+        specified ones, if the requester was prompted to provide them.
+        Do not update the PI's authoritative departments."""
         step_number = self.step_numbers_by_form_name['pi_department']
         data = form_data[step_number]
-        non_authoritative_departments = data['departments']
+        non_authoritative_departments = data.get('departments', None)
+
+        if non_authoritative_departments is None:
+            # The requester was not prompted to provide departments.
+            return
 
         user_department_updater = UserDepartmentUpdater(
             pi, non_authoritative_departments)
