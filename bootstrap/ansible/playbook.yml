@@ -758,7 +758,7 @@
         - name: Ensure that a Supervisor worker is running a django_q cluster
           supervisorctl:
             name: 'django_q'
-            state: started
+            state: restarted
 
       when: provisioning_tasks == true or common_tasks == true
       tags:
