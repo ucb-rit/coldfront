@@ -9,10 +9,9 @@ class CalNetLdapDataSourceBackend(BaseDataSourceBackend):
 
     https://calnet.berkeley.edu/calnet-technologists/ldap-directory-service
 
-    TODO: Discuss structure, which org units are considered departments
-     in our case, etc. Give examples, etc.
-
     The departments of interest are "L4" org units.
+
+    Refer to the documentation for more information.
     """
 
     DIRECTORY_URL = 'ldap.berkeley.edu'
