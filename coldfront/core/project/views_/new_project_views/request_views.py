@@ -81,7 +81,7 @@ class ProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
 class NewProjectRequestLandingView(LoginRequiredMixin, UserPassesTestMixin,
                                    TemplateView):
     template_name = (
-        'project_request_landing.html')
+        'project/project_request/savio/request/project_request_landing.html')
 
     def test_func(self):
         if self.request.user.is_superuser:
@@ -660,7 +660,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 class VectorProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
                                FormView):
     form_class = VectorProjectDetailsForm
-    template_name = 'project/project_request/vector/project_details.html'
+    template_name = (
+        'project/project_request/vector/request/project_details.html')
 
     logger = logging.getLogger(__name__)
 

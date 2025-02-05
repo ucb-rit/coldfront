@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 class AllocationRenewalLandingView(LoginRequiredMixin, UserPassesTestMixin,
                                    TemplateView):
-    template_name = 'project/project_renewal/request_landing.html'
+    template_name = 'project/project_renewal/request/request_landing.html'
 
     def test_func(self):
         if self.request.user.is_superuser:
