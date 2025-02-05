@@ -2,6 +2,7 @@ import csv
 import itertools
 import logging
 
+from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
@@ -143,6 +144,15 @@ class SlurmJobListView(LoginRequiredMixin,
             self.request.user.has_perm('statistics.view_job')
 
         context['show_username'] = (self.request.user.is_superuser or self.request.user.has_perm('statistics.view_job')) or is_pi
+
+        if self.object_list.count() > 100000:
+            context['total_service_units'] = 'Too many jobs to calculate'
+        else:
+            total_service_units = Decimal('0.00')
+            for job in self.object_list.iterator():
+                total_service_units += job.amount
+            context['total_service_units'] = \
+                total_service_units.quantize(Decimal('0.01'))
 
         return context
 
