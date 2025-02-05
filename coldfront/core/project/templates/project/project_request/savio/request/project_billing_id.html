@@ -1,15 +1,8 @@
-{% extends "common/base.html" %}
-{% load crispy_forms_tags %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
 {{ PRIMARY_CLUSTER_NAME }} Project Request - Billing ID
-{% endblock %}
-
-
-{% block head %}
-{{ wizard.form.media }}
 {% endblock %}
 
 
@@ -35,6 +28,6 @@
 
 <p>Please provide an LBL Project ID, which may be used for billing:</p>
 
-{% include "wizard_form.html" %}
+{{ block.super }}
 
 {% endblock %}

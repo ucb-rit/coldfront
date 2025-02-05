@@ -1,7 +1,6 @@
-{% extends "common/base.html" %}
+{% extends "common/wizard_base.html" %}
+
 {% load feature_flags %}
-{% load crispy_forms_tags %}
-{% load static %}
 
 
 {% block title %}
@@ -10,7 +9,9 @@
 
 
 {% block head %}
-{{ wizard.form.media }}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
 {% endblock %}
 
 
@@ -47,21 +48,16 @@
   <li>If you are not the PI, please do not select yourself.</li>
 </ul>
 
-{% include "wizard_form.html" %}
+{{ block.super }}
+{% endblock %}
 
-<script>
-$('select').selectize({
-  create: false,
-  sortField: 'text',
-  placeholder: 'Type to search. If your PI is not listed or selectable, please review the instructions above.'
-})
-</script>
 
-<script>
-  $('select').selectize({
-    create: false,
-    sortField: 'text'
-  })
-</script>
-
+{% block javascript %}
+  <script>
+    $('select').selectize({
+      create: false,
+      sortField: 'text',
+      placeholder: 'Type to search. If your PI is not listed or selectable, please review the instructions above.'
+    })
+  </script>
 {% endblock %}

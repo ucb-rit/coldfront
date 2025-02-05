@@ -1,21 +1,14 @@
-{% extends "common/base.html" %}
-{% load crispy_forms_tags %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
-{{ PRIMARY_CLUSTER_NAME }} Project Request - Survey
-{% endblock %}
-
-
-{% block head %}
-{{ wizard.form.media }}
+{{ PRIMARY_CLUSTER_NAME }} Project Request - Project Details
 {% endblock %}
 
 
 {% block content %}
 
-<h1>{{ PRIMARY_CLUSTER_NAME }}: Survey</h1><hr>
+<h1>{{ PRIMARY_CLUSTER_NAME }}: New Project Details</h1><hr>
 
 <ol class="breadcrumb">
   <li>Allowance: {{ computing_allowance.name }}</li>
@@ -31,12 +24,10 @@
       Not Pooling
     {% endif %}
   </li>
-  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
-  <li>Requested Project: {{ requested_project }}</li>
 </ol>
 
-<p>Please respond to the following questions to provide us with more information about your project and computational needs.</p>
+<p>You are creating a new project. Please provide the following details:</p>
 
-{% include "wizard_form.html" %}
+{{ block.super }}
 
 {% endblock %}

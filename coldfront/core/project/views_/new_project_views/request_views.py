@@ -52,6 +52,7 @@ from flags.state import flag_enabled
 from formtools.wizard.views import SessionWizardView
 
 import logging
+import os
 
 
 class ProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
@@ -80,7 +81,7 @@ class ProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
 class NewProjectRequestLandingView(LoginRequiredMixin, UserPassesTestMixin,
                                    TemplateView):
     template_name = (
-        'project/project_request/savio/project_request_landing.html')
+        'project_request_landing.html')
 
     def test_func(self):
         if self.request.user.is_superuser:
@@ -134,27 +135,21 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         ('survey', SavioProjectSurveyForm),
     ]
 
+    _TEMPLATES_DIR = 'project/project_request/savio/request'
+
+    # Files are relative to _TEMPLATES_DIR.
     TEMPLATES = {
-        'computing_allowance':
-            'project/project_request/savio/project_computing_allowance.html',
-        'allocation_period':
-            'project/project_request/savio/project_allocation_period.html',
-        'existing_pi':
-            'project/project_request/savio/project_existing_pi.html',
-        'new_pi':
-            'project/project_request/savio/project_new_pi.html',
-        'ica_extra_fields':
-            'project/project_request/savio/project_ica_extra_fields.html',
-        'recharge_extra_fields':
-            'project/project_request/savio/project_recharge_extra_fields.html',
-        'pool_allocations':
-            'project/project_request/savio/project_pool_allocations.html',
-        'pooled_project_selection':
-            ('project/project_request/savio/'
-             'project_pooled_project_selection.html'),
-        'details': 'project/project_request/savio/project_details.html',
-        'billing_id': 'project/project_request/savio/project_billing_id.html',
-        'survey': 'project/project_request/savio/project_survey.html',
+        'computing_allowance': 'project_computing_allowance.html',
+        'allocation_period': 'project_allocation_period.html',
+        'existing_pi': 'project_existing_pi.html',
+        'new_pi': 'project_new_pi.html',
+        'ica_extra_fields': 'project_ica_extra_fields.html',
+        'recharge_extra_fields': 'project_recharge_extra_fields.html',
+        'pool_allocations': 'project_pool_allocations.html',
+        'pooled_project_selection': 'project_pooled_project_selection.html',
+        'details': 'project_details.html',
+        'billing_id': 'project_billing_id.html',
+        'survey': 'project_survey.html',
     }
 
     form_list = [
@@ -226,7 +221,11 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         return kwargs
 
     def get_template_names(self):
-        return [self.TEMPLATES[self.FORMS[int(self.steps.current)][0]]]
+        step_name = self.FORMS[int(self.steps.current)][0]
+        template_file_name = self.TEMPLATES[step_name]
+        resolved_template_name = os.path.join(
+            self._TEMPLATES_DIR, template_file_name)
+        return [resolved_template_name]
 
     def done(self, form_list, **kwargs):
         """Perform processing and store information in a request

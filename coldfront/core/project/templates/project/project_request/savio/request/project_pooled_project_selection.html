@@ -1,6 +1,4 @@
-{% extends "common/base.html" %}
-{% load crispy_forms_tags %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
@@ -9,7 +7,9 @@
 
 
 {% block head %}
-{{ wizard.form.media }}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
 {% endblock %}
 
 
@@ -35,13 +35,16 @@
 
 <p>You are pooling your allocation with an existing project's allocation. Please select the project from the dropdown below.</p>
 
-{% include "wizard_form.html" %}
+{{ block.super }}
 
-<script>
-  $('select').selectize({
-    create: false,
-    sortField: 'text'
-  })
-</script>
+{% endblock %}
 
+
+{% block javascript %}
+  <script>
+    $('select').selectize({
+      create: false,
+      sortField: 'text'
+    })
+  </script>
 {% endblock %}

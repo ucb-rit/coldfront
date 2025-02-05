@@ -1,16 +1,12 @@
-{% extends "common/base.html" %}
+{% extends "common/wizard_base.html" %}
+
 {% load feature_flags %}
-{% load static %}
 
 
 {% block title %}
 {{ PRIMARY_CLUSTER_NAME }} Project Request - New PI
 {% endblock %}
 
-
-{% block head %}
-{{ wizard.form.media }}
-{% endblock %}
 
 {% block content %}
 
@@ -29,6 +25,6 @@
   <p>Note: Only LBL employees, users with an "@lbl.gov" email, can be a PI.</p>
 {% endif %}
 
-{% include "wizard_form.html" %}
+{{ block.super }}
 
 {% endblock %}
