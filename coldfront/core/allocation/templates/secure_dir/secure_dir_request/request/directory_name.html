@@ -1,14 +1,8 @@
-{% extends "common/base.html" %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
   Secure Directory Request: Directory Name
-{% endblock %}
-
-
-{% block head %}
-  {{ wizard.form.media }}
 {% endblock %}
 
 
@@ -35,6 +29,6 @@
     Both directories will have the same name on the cluster.
   </p>
 
-  {% include "wizard_form.html" %}
+  {{ block.super }}
 
 {% endblock %}

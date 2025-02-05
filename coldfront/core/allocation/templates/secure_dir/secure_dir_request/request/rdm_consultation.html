@@ -1,14 +1,8 @@
-{% extends "common/base.html" %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
   Secure Directory Request: Research Data Management Team
-{% endblock %}
-
-
-{% block head %}
-  {{ wizard.form.media }}
 {% endblock %}
 
 
@@ -22,6 +16,6 @@
     <li>{{ breadcrumb_pi }}</li>
   </ol>
 
-  {% include "wizard_form.html" %}
+  {{ block.super }}
 
 {% endblock %}

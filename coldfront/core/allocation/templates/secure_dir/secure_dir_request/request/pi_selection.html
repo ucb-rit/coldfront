@@ -1,5 +1,4 @@
-{% extends "common/base.html" %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
@@ -8,7 +7,9 @@
 
 
 {% block head %}
-  {{ wizard.form.media }}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
 {% endblock %}
 
 
@@ -18,12 +19,22 @@
 
   {% if breadcrumb_project %}
     <ol class="breadcrumb">
-        <li>{{ breadcrumb_project }}</li>
+      <li>{{ breadcrumb_project }}</li>
     </ol>
   {% endif %}
 
   <p>Select a PI of the project. This PI will be asked to sign a Researcher Use Agreement during the approval process.</p>
 
-  {% include "wizard_form.html" %}
+  {{ block.super }}
 
+{% endblock %}
+
+
+{% block javascript %}
+  <script>
+    $('select').selectize({
+      create: false,
+      sortField: 'text'
+    })
+  </script>
 {% endblock %}
