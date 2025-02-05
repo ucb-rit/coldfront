@@ -329,7 +329,7 @@ class Command(BaseCommand):
             a semicolon-separated list of str representations of
             departments."""
             authoritative_department_strs, non_authoritative_department_strs = \
-                get_departments_for_user(_user)
+                get_departments_for_user(_user, strs_only=True)
             authoritative_str = ';'.join(
                 [s for s in authoritative_department_strs])
             non_authoritative_str = ';'.join(
