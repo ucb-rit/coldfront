@@ -1,17 +1,9 @@
-{% extends "common/base.html" %}
-{% load crispy_forms_tags %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
 Project Renewal - New Project Details
 {% endblock %}
-
-
-{% block head %}
-{{ wizard.form.media }}
-{% endblock %}
-
 
 {% block content %}
 
@@ -27,6 +19,6 @@ Project Renewal - New Project Details
 
 <p>You are creating a new project. Please provide the following details:</p>
 
-{% include "wizard_form.html" %}
+{{ block.super }}
 
 {% endblock %}

@@ -1,6 +1,4 @@
-{% extends "common/base.html" %}
-{% load crispy_forms_tags %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
@@ -9,7 +7,9 @@ Project Renewal - Allocation Period
 
 
 {% block head %}
-{{ wizard.form.media }}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
 {% endblock %}
 
 
@@ -23,12 +23,15 @@ Project Renewal - Allocation Period
   then.
 </p>
 
-{% include "wizard_form.html" %}
+{{ block.super }}
 
-<script>
-  $('select').selectize({
-    create: false,
-  })
-</script>
+{% endblock %}
 
+
+{% block javascript %}
+  <script>
+    $('select').selectize({
+      create: false,
+    })
+  </script>
 {% endblock %}

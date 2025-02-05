@@ -1,15 +1,8 @@
-{% extends "common/base.html" %}
-{% load crispy_forms_tags %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
 Project Renewal - Usage Survey
-{% endblock %}
-
-
-{% block head %}
-{{ wizard.form.media }}
 {% endblock %}
 
 
@@ -26,7 +19,6 @@ Project Renewal - Usage Survey
   <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
   <li>Requested Project: {{ requested_project }}</li>
 </ol>
-
 
 <p>
   Please fill out the survey below to provide us with more information about your project and computational needs.
@@ -50,7 +42,6 @@ Project Renewal - Usage Survey
 {% endif %}
 <p></p>
 
-
-{% include "wizard_form.html" %}
+{{ block.super }}
 
 {% endblock %}

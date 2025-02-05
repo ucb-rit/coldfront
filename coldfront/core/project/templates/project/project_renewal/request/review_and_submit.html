@@ -1,15 +1,10 @@
-{% extends "common/base.html" %}
+{% extends "common/wizard_base.html" %}
 {% load crispy_forms_tags %}
 {% load static %}
 
 
 {% block title %}
 Project Renewal - Review and Submit
-{% endblock %}
-
-
-{% block head %}
-{{ wizard.form.media }}
 {% endblock %}
 
 
@@ -89,6 +84,6 @@ Project Renewal - Review and Submit
   </li>
 </ol>
 
-{% include "wizard_form.html" %}
+{{ block.super }}
 
 {% endblock %}

@@ -1,15 +1,8 @@
-{% extends "common/base.html" %}
-{% load crispy_forms_tags %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
 Project Renewal - Pooling Preference
-{% endblock %}
-
-
-{% block head %}
-{{ wizard.form.media }}
 {% endblock %}
 
 
@@ -27,6 +20,6 @@ Project Renewal - Pooling Preference
   Project: {{ current_project }}.
 </p>
 
-{% include "wizard_form.html" %}
+{{ block.super }}
 
 {% endblock %}

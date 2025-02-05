@@ -1,6 +1,4 @@
-{% extends "common/base.html" %}
-{% load crispy_forms_tags %}
-{% load static %}
+{% extends "common/wizard_base.html" %}
 
 
 {% block title %}
@@ -9,7 +7,9 @@ Project Renewal - Project Selection
 
 
 {% block head %}
-{{ wizard.form.media }}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
 {% endblock %}
 
 
@@ -26,9 +26,19 @@ Project Renewal - Project Selection
 </ol>
 
 <p>
-  Select the Project for which the PI's allowance should be renewed.
+  Select the project under which the PI's allowance should be renewed.
 </p>
 
-{% include "wizard_form.html" %}
+{{ block.super }}
 
+{% endblock %}
+
+
+{% block javascript %}
+  <script>
+    $('select').selectize({
+      create: false,
+      sortField: 'text',
+    })
+  </script>
 {% endblock %}
