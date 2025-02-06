@@ -3,6 +3,9 @@ from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.utils import prorated_allocation_amount
+from coldfront.core.billing.forms import BillingIDValidationForm
+from coldfront.core.billing.models import BillingActivity
+from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectAllocationPeriodForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectDetailsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
@@ -42,6 +45,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.db import IntegrityError
+from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -131,8 +135,9 @@ class AllocationRenewalMixin(object):
     @staticmethod
     def create_allocation_renewal_request(requester, pi, computing_allowance,
                                           allocation_period, pre_project,
-                                          post_project, 
-                                          new_project_request=None):
+                                          post_project,
+                                          new_project_request=None,
+                                          billing_activity=None):
         """Create a new AllocationRenewalRequest."""
         request_kwargs = dict()
         request_kwargs['requester'] = requester
@@ -145,6 +150,10 @@ class AllocationRenewalMixin(object):
         request_kwargs['pre_project'] = pre_project
         request_kwargs['post_project'] = post_project
         request_kwargs['new_project_request'] = new_project_request
+
+        # TODO: Only if isinstance
+        # request_kwargs['billing_activity'] =
+
         request_kwargs['request_time'] = utc_now_offset_aware()
         return AllocationRenewalRequest.objects.create(**request_kwargs)
 
@@ -202,6 +211,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ('pooling_preference', ProjectRenewalPoolingPreferenceForm),
         ('project_selection', ProjectRenewalProjectSelectionForm),
         ('new_project_details', SavioProjectDetailsForm),
+        ('billing_id', BillingIDValidationForm),
         ('new_project_survey', SavioProjectSurveyForm),
         ('renewal_survey', ProjectRenewalSurveyForm),
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
@@ -215,6 +225,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         'project_selection': 'project/project_renewal/project_selection.html',
         'new_project_details':
             'project/project_renewal/new_project_details.html',
+        'billing_id': 'project/project_renewal/billing_id.html',
         'new_project_survey':
             'project/project_renewal/new_project_survey.html',
         'renewal_survey':
@@ -228,6 +239,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ProjectRenewalPoolingPreferenceForm,
         ProjectRenewalProjectSelectionForm,
         SavioProjectDetailsForm,
+        BillingIDValidationForm,
         SavioProjectSurveyForm,
         ProjectRenewalSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
@@ -359,24 +371,36 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                     f'AllocationRenewalRequest for AllocationPeriod '
                     f'{allocation_period.name}.')
 
-            # If a new Project was requested, create it along with a
-            # SavioProjectAllocationRequest.
-            new_project_request = None
-            form_class = ProjectRenewalPoolingPreferenceForm
-            if tmp['preference'] == form_class.POOLED_TO_UNPOOLED_NEW:
-                requested_project = self.__handle_create_new_project(form_data)
-                survey_data = self.__get_survey_data(form_data)
-                new_project_request = self.__handle_create_new_project_request(
-                    pi, requested_project, survey_data)
-            else:
-                requested_project = tmp['requested_project']
+            with transaction.atomic():
 
-            request = self.create_allocation_renewal_request(
-                self.request.user, pi, self.computing_allowance,
-                allocation_period, tmp['current_project'], requested_project,
-                new_project_request=new_project_request)
+                pooling_preference = tmp['preference']
+                if (self.__billing_id_required() and
+                        not self.__is_pooling(pooling_preference)):
+                    billing_activity = self.__get_or_create_billing_activity(
+                        form_data)
+                else:
+                    billing_activity = None
 
+                # If a new Project was requested, create it along with a
+                # SavioProjectAllocationRequest.
+                new_project_request = None
+                form_class = ProjectRenewalPoolingPreferenceForm
+                if tmp['preference'] == form_class.POOLED_TO_UNPOOLED_NEW:
+                    requested_project = self.__handle_create_new_project(form_data)
+                    survey_data = self.__get_survey_data(form_data)
+                    new_project_request = self.__handle_create_new_project_request(
+                        pi, requested_project, survey_data, billing_activity=billing_activity)
+                else:
+                    requested_project = tmp['requested_project']
+
+                request = self.create_allocation_renewal_request(
+                    self.request.user, pi, self.computing_allowance,
+                    allocation_period, tmp['current_project'], requested_project,
+                    new_project_request=new_project_request)
+
+            # Emails are only sent if no exception was raised.
             self.send_emails(request)
+
         except Exception as e:
             logger.exception(e)
             messages.error(self.request, self.error_message)
@@ -394,9 +418,22 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         return {
             '3': view.show_project_selection_form_condition,
             '4': view.show_new_project_forms_condition,
-            '5': view.show_new_project_forms_condition,
-            '6': view.show_renewal_survey_form_condition,
+            '5': view.show_billing_id_form_condition,
+            '6': view.show_new_project_forms_condition,
+            '7': view.show_renewal_survey_form_condition,
         }
+
+    def show_billing_id_form_condition(self):
+        """Only show the form for providing a billing ID when it is
+        required, and when the pooling preference is to create a new
+        one."""
+        if not self.__billing_id_required():
+            return False
+        step_name = 'pooling_preference'
+        step = str(self.step_numbers_by_form_name[step_name])
+        cleaned_data = self.get_cleaned_data_for_step(step) or {}
+        preference = cleaned_data.get('preference', None)
+        return not self.__is_pooling(preference)
 
     def show_new_project_forms_condition(self):
         """Only show the forms needed for a new Project if the pooling
@@ -427,14 +464,42 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         """Only show the renewal survey form if a survey is required."""
         return flag_enabled('RENEWAL_SURVEY_ENABLED')
 
+    @staticmethod
+    def __billing_id_required():
+        """Return whether a billing ID should be requested from the
+        user. Ultimately, the form will only be included if pooling is
+        not requested."""
+        return flag_enabled('LRC_ONLY')
+
+    def __get_or_create_billing_activity(self, form_data):
+        """Get or create, and return, a BillingActivity corresponding to
+        the billing ID provided by the user."""
+        step_number = self.step_numbers_by_form_name['billing_id']
+        data = form_data[step_number]
+        return get_or_create_billing_activity_from_full_id(data['billing_id'])
+
     def __get_survey_data(self, form_data):
         """Return provided survey data."""
         step_number = self.step_numbers_by_form_name['new_project_survey']
         return form_data[step_number]
 
+    @staticmethod
+    def __is_pooling(preference):
+        """Return whether the PI's service units will be pooled after
+        the request has been processed, based on the selected pooling
+        preference."""
+        form_class = ProjectRenewalPoolingPreferenceForm
+        pooling_preferences = (
+            form_class.UNPOOLED_TO_POOLED,
+            form_class.POOLED_TO_POOLED_SAME,
+            form_class.POOLED_TO_POOLED_DIFFERENT,
+        )
+        return preference in pooling_preferences
+
     def __handle_create_new_project(self, form_data):
         """Create a new project and an allocation to the primary compute
-        resource. This method should only be invoked if a new Project"""
+        resource. This method should only be invoked if a new Project
+        was requested."""
         step_number = self.step_numbers_by_form_name['new_project_details']
         data = form_data[step_number]
 
@@ -460,7 +525,8 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
 
         return project
 
-    def __handle_create_new_project_request(self, pi, project, survey_data):
+    def __handle_create_new_project_request(self, pi, project, survey_data,
+                                            billing_activity=None):
         """Create a new SavioProjectAllocationRequest. This method
         should only be invoked if a new Project is requested."""
         # TODO: allocation_type will eventually be removed from the model.
@@ -476,6 +542,8 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         request_kwargs['status'] = \
             ProjectAllocationRequestStatusChoice.objects.get(
                 name='Under Review')
+        if isinstance(billing_activity, BillingActivity):
+            request_kwargs['billing_activity'] = billing_activity
         return SavioProjectAllocationRequest.objects.create(**request_kwargs)
 
     def __infer_pi_current_project(self, pi_user, computing_allowance):
@@ -567,6 +635,13 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                 dictionary.update(data)
                 dictionary['requested_project'] = data['project']
 
+        billing_id_form_step = self.step_numbers_by_form_name['billing_id']
+        if step > billing_id_form_step:
+            data = self.get_cleaned_data_for_step(str(billing_id_form_step))
+            if data:
+                dictionary.update(data)
+                # TODO
+
         new_project_details_form_step = self.step_numbers_by_form_name[
             'new_project_details']
         if step > new_project_details_form_step:
@@ -581,6 +656,8 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                                                UserPassesTestMixin,
                                                AllocationRenewalMixin,
                                                SessionWizardView):
+
+    # TODO: Add the form here too.
 
     FORMS = [
         ('allocation_period', SavioProjectAllocationPeriodForm),

@@ -312,7 +312,7 @@ class ProjectRemovalRequestListView(LoginRequiredMixin,
         else:
             filter_parameters_with_order_by = filter_parameters
 
-        context['expand_accordion'] = "toggle"
+        context['expand_accordion'] = "show"
 
         context['filter_parameters'] = filter_parameters
         context['filter_parameters_with_order_by'] = filter_parameters_with_order_by

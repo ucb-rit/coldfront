@@ -23,9 +23,16 @@ Project Renewal - New Project Survey
 <ol class="breadcrumb">
   <li>Allocation Period: {{ allocation_period.name }}</li>
   <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
-  <li>PI: {{ PI.user.username}}, Current Project: {{ current_project }}</li>
+  <li>PI: {{ PI.user.username }}, Current Project: {{ current_project }}</li>
   <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
   <li>Preference: {{ breadcrumb_pooling_preference }}</li>
+
+  <!-- TODO: Only display the billing ID section if relevant? -->
+  {% if breadcrumb_billing_id %}
+    <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+    <li>Billing ID: {{ breadcrumb_billing_id }}</li>
+  {% endif %}
+
   <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
   <li>Requested Project: {{ requested_project }}</li>
 </ol>

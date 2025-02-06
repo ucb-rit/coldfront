@@ -492,6 +492,9 @@ class AllocationRenewalRequest(TimeStampedModel):
 
     state = models.JSONField(default=allocation_renewal_request_state_schema)
     extra_fields = models.JSONField(default=dict)
+    billing_activity = models.ForeignKey(
+        'billing.BillingActivity', blank=True, null=True,
+        on_delete=models.SET_NULL, related_name='billing_activity')
 
     UNPOOLED_TO_UNPOOLED = 'unpooled_to_unpooled'
     UNPOOLED_TO_POOLED = 'unpooled_to_pooled'

@@ -434,7 +434,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
     def __handle_billing_id(self, form_data, request_kwargs):
         """Store the User-provided billing ID in the given dictionary to
-        be used during request creation."""
+        be used during request creation. Get or create a corresponding
+        BillingActivity as needed."""
         step_number = self.step_numbers_by_form_name['billing_id']
         data = form_data[step_number]
         billing_id = data['billing_id']

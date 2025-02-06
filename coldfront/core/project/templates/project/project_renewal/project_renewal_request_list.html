@@ -31,6 +31,9 @@ Project Renewal {{ request_filter|title }} Requests %}
   {% endif %}
 </p>
 
+{% if expand_accordion == "show" %}
+{% endif %}
+
 {% if renewal_request_list %}
 <div class="table-responsive">
   {% with queryset=renewal_request_list %}
