@@ -3,6 +3,7 @@ from django.views.generic import TemplateView
 
 from flags.urls import flagged_paths
 
+import coldfront.core.allocation.views_.secure_dir_views.new_directory.request_views as secure_dir_new_directory_request_views
 import coldfront.core.project.views as project_views
 import coldfront.core.project.views_.addition_views.approval_views as addition_approval_views
 import coldfront.core.project.views_.addition_views.request_views as addition_request_views
@@ -13,7 +14,6 @@ import coldfront.core.project.views_.new_project_views.request_views as new_proj
 import coldfront.core.project.views_.removal_views as removal_views
 import coldfront.core.project.views_.renewal_views.approval_views as renewal_approval_views
 import coldfront.core.project.views_.renewal_views.request_views as renewal_request_views
-import coldfront.core.allocation.views_.secure_dir_views as secure_dir_views
 import coldfront.core.utils.views.mou_views as mou_views
 
 
@@ -256,12 +256,13 @@ with flagged_paths('SERVICE_UNITS_PURCHASABLE'):
 # Request a secure directory
 with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
     flagged_url_patterns = [
+        # New Directory Request Views
         path('<int:pk>/secure-dir-request-landing',
-             secure_dir_views.SecureDirRequestLandingView.as_view(),
+             secure_dir_new_directory_request_views.SecureDirRequestLandingView.as_view(),
              name='secure-dir-request-landing'),
         path('<int:pk>/secure-dir-request',
-             secure_dir_views.SecureDirRequestWizard.as_view(
-                 condition_dict=secure_dir_views.SecureDirRequestWizard.condition_dict(),
+             secure_dir_new_directory_request_views.SecureDirRequestWizard.as_view(
+                 condition_dict=secure_dir_new_directory_request_views.SecureDirRequestWizard.condition_dict(),
              ),
              name='secure-dir-request'),
     ]

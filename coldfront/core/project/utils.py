@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 from flags.state import flag_enabled
 
@@ -40,6 +42,48 @@ def project_join_list_url():
     domain = import_from_settings('CENTER_BASE_URL')
     view = reverse('project-join-list')
     return urljoin(domain, view)
+
+
+def render_project_compute_usage(project):
+    """Return a str containing the given Project's usage of its compute
+    allowance, the total allowance, and the percentage used, rounded to
+    two decimal places.
+
+    Return 'N/A':
+        - If the Project's status is not 'Active'.
+        - If relevant database objects cannot be retrieved. This is done
+          for simplicity, even though some cases would be unexpected.
+
+    Return 'Failed to compute' if calculations fail.
+
+    Returns:
+        - str
+
+    Raises:
+        - AssertionError
+    """
+    assert isinstance(project, Project)
+
+    n_a = 'N/A'
+    if project.status.name != 'Active':
+        return n_a
+    try:
+        accounting_allocation_objects = get_accounting_allocation_objects(
+            project)
+    except Exception:
+        return n_a
+
+    try:
+        allowance = Decimal(
+            accounting_allocation_objects.allocation_attribute.value)
+        usage = Decimal(
+            accounting_allocation_objects.allocation_attribute_usage.value)
+        # Retain two decimal places.
+        percentage = (
+            Decimal(100.00) * usage / allowance).quantize(Decimal('0.00'))
+    except Exception:
+        return 'Failed to compute'
+    return f'{usage}/{allowance} ({percentage} %)'
 
 
 def review_project_join_requests_url(project):

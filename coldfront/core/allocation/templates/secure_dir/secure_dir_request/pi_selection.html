@@ -4,7 +4,7 @@
 
 
 {% block title %}
-  Secure Directory Request: Data Description
+  Secure Directory Request: PI Selection
 {% endblock %}
 
 
@@ -18,15 +18,15 @@
   <script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
   <link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
 
-  <h1>Secure Directory: Data Description</h1><hr>
+  <h1>Secure Directory: PI Selection</h1><hr>
 
-  <ol class="breadcrumb">
-    <li>{{ breadcrumb_project }}</li>
-    <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
-    <li>{{ breadcrumb_pi }}</li>
-  </ol>
+  {% if breadcrumb_project %}
+    <ol class="breadcrumb">
+        <li>{{ breadcrumb_project }}</li>
+    </ol>
+  {% endif %}
 
-  <p>Please respond to the following questions to provide us with more information about your data.</p>
+  <p>Select a PI of the project. This PI will be asked to sign a Researcher Use Agreement during the approval process.</p>
 
   <form action="" method="post">
     {% csrf_token %}
@@ -41,24 +41,6 @@
         {{ wizard.form|crispy }}
       {% endif %}
     </table>
-    {% if wizard.steps.prev %}
-      <button
-              class="btn btn-secondary"
-              formnovalidate="formnovalidate"
-              name="wizard_goto_step"
-              type="submit"
-              value="{{ wizard.steps.first }}">
-        First Step
-      </button>
-      <button
-              class="btn btn-secondary"
-              formnovalidate="formnovalidate"
-              name="wizard_goto_step"
-              type="submit"
-              value="{{ wizard.steps.prev }}">
-        Previous Step
-      </button>
-    {% endif %}
     <input class="btn btn-primary" type="submit" value="Next Step"/>
   </form>
   <br>
