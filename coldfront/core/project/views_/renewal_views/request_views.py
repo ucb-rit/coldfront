@@ -225,7 +225,14 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         'project_selection': 'project/project_renewal/project_selection.html',
         'new_project_details':
             'project/project_renewal/new_project_details.html',
+
+
+
+        # TODO: This template does not exist yet.
         'billing_id': 'project/project_renewal/billing_id.html',
+
+
+
         'new_project_survey':
             'project/project_renewal/new_project_survey.html',
         'renewal_survey':
