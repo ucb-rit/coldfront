@@ -23,24 +23,27 @@ from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
 from coldfront.core.project.utils import render_project_compute_usage
 
+from coldfront.core.utils.gsheets import get_decommission_alerts_for_user
+from django.contrib.auth.decorators import login_required
+
 
 # from coldfront.core.publication.models import Publication
 # from coldfront.core.research_output.models import ResearchOutput
 
 
 def home(request):
-
     context = {}
     if request.user.is_authenticated:
         template_name = 'portal/authorized_home.html'
         project_list = Project.objects.filter(
-            (Q(status__name__in=['New', 'Active', ]) &
-             Q(projectuser__user=request.user) &
-             Q(projectuser__status__name__in=['Active', 'Pending - Remove']))
+            Q(status__name__in=['New', 'Active', ]) &
+            Q(projectuser__user=request.user) &
+            Q(projectuser__status__name__in=['Active', 'Pending - Remove'])
         ).distinct().order_by('name')
-
-        cluster_access_attributes = AllocationUserAttribute.objects.filter(allocation_attribute_type__name='Cluster Account Status',
-                                                                       allocation_user__user=request.user)
+        cluster_access_attributes = AllocationUserAttribute.objects.filter(
+            allocation_attribute_type__name='Cluster Account Status',
+            allocation_user__user=request.user
+        )
         access_states = {}
         for attribute in cluster_access_attributes:
             project = attribute.allocation.project
@@ -49,8 +52,7 @@ def home(request):
 
         for project in project_list:
             project.display_status = access_states.get(project, None)
-            if (project.display_status is not None and
-                    'Active' in project.display_status):
+            if project.display_status is not None and 'Active' in project.display_status:
                 context['cluster_username'] = request.user.username
 
             resource_name = get_project_compute_resource_name(project)
@@ -72,21 +74,24 @@ def home(request):
         context['project_list'] = project_list
         context['allocation_list'] = allocation_list
 
-        num_join_requests = \
-            ProjectUserJoinRequest.objects.filter(
+        num_join_requests = ProjectUserJoinRequest.objects.filter(
                 project_user__status__name='Pending - Add',
-                project_user__user=request.user). \
-                order_by('project_user', '-created'). \
-                distinct('project_user').count()
-
+                project_user__user=request.user
+            ).order_by('project_user', '-created').distinct('project_user').count()
         context['num_join_requests'] = num_join_requests
 
-        context['pending_removal_request_projects'] = \
-            [removal_request.project_user.project.name
-             for removal_request in
-             ProjectUserRemovalRequest.objects.filter(
-                 Q(project_user__user__username=request.user.username) &
-                 Q(status__name='Pending'))]
+        context['pending_removal_request_projects'] = [
+            removal_request.project_user.project.name
+            for removal_request in ProjectUserRemovalRequest.objects.filter(
+                Q(project_user__user__username=request.user.username) &
+                Q(status__name='Pending')
+            )
+        ]
+
+        # Add decommission alerts to the context.
+        alerts = get_decommission_alerts_for_user(request.user.email)
+        if alerts:
+            context['decommission_alerts'] = alerts
 
     else:
         template_name = 'portal/nonauthorized_home.html'
@@ -214,3 +219,15 @@ def allocation_summary(request):
     context['resources_chart_data'] = resources_chart_data
 
     return render(request, 'portal/allocation_summary.html', context)
+
+@login_required
+def decommission_details(request):
+    """
+    Displays a page with detailed information (all fields) for each decommission record
+    associated with the current user's email.
+    """
+    # Reuse the same helper function to get alerts.
+    alerts = get_decommission_alerts_for_user(request.user.email)
+    return render(request, "portal/decommission_details.html", {
+        "decommission_alerts": alerts
+    })

@@ -1,0 +1,39 @@
+{% extends "common/base.html" %}
+{% load static %}
+
+{% block title %}
+  Condo Decommission Details
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <h1>Allocated Condos</h1>
+  <hr>
+  {% if decommission_alerts %}
+    {% for alert in decommission_alerts %}
+      <div class="card mb-4">
+        <div class="card-header">
+          <strong>Cluster:</strong> {{ alert.sheet }}
+        </div>
+        <div class="card-body">
+          {# Iterate over the record dictionary to display each field #}
+          {% for key, value in alert.record.items %}
+            <div class="row mb-2">
+              <div class="col-sm-4 font-weight-bold">
+                {{ key }}:
+              </div>
+              <div class="col-sm-8">
+                {{ value }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-info">
+      No decommission alerts found!
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
