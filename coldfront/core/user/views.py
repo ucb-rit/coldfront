@@ -42,6 +42,8 @@ from coldfront.core.user.utils_.host_user_utils import is_lbl_employee
 from coldfront.core.utils.common import (import_from_settings,
                                          utc_now_offset_aware)
 
+from coldfront.plugins.departments.utils.queries import get_departments_for_user
+
 from flags.state import flag_enabled
 
 logger = logging.getLogger(__name__)
@@ -89,6 +91,7 @@ class UserProfile(TemplateView):
         group_list = ', '.join(
             [group.name for group in viewed_user.groups.all()])
         context['group_list'] = group_list
+
         context['viewed_user'] = viewed_user
 
         context['has_cluster_access'] = has_cluster_access(viewed_user)
@@ -96,17 +99,18 @@ class UserProfile(TemplateView):
         requester_is_viewed_user = viewed_user == self.request.user
         context['requester_is_viewed_user'] = requester_is_viewed_user
 
-        if requester_is_viewed_user:
-            self._update_context_with_identity_linking_request_data(context)
-
         context['help_email'] = import_from_settings('CENTER_HELP_EMAIL')
 
-        context['requester_is_viewed_user'] = requester_is_viewed_user
+        if requester_is_viewed_user:
+            self._update_context_with_identity_linking_request_data(context)
 
         self._update_context_with_email_and_account_data(context, viewed_user)
 
         if self._flag_lrc_only:
             self._update_context_with_billing_data(context, viewed_user)
+
+        if self._flag_user_departments_enabled:
+            self._update_context_with_department_data(context, viewed_user)
 
         context['is_lbl_employee'] = is_lbl_employee(viewed_user)
 
@@ -119,12 +123,13 @@ class UserProfile(TemplateView):
         self._flag_multiple_email_addresses_allowed = flag_enabled(
             'MULTIPLE_EMAIL_ADDRESSES_ALLOWED')
         self._flag_sso_enabled = flag_enabled('SSO_ENABLED')
+        self._flag_user_departments_enabled = flag_enabled(
+            'USER_DEPARTMENTS_ENABLED')
 
     @staticmethod
     def _update_context_with_billing_data(context, viewed_user):
         """Update the given context dictionary with fields relating to
-        billing IDs. Take the currently-viewed User object as an input
-        to make determinations."""
+        billing IDs."""
         billing_id = 'N/A'
         try:
             user_profile = viewed_user.userprofile
@@ -139,12 +144,21 @@ class UserProfile(TemplateView):
                 billing_id = billing_activity.full_id()
         context['monthly_user_account_fee_billing_id'] = billing_id
 
+    @staticmethod
+    def _update_context_with_department_data(context, viewed_user):
+        """Update the given context dictionary with fields relating to
+        departments."""
+        authoritative_department_strs, non_authoritative_department_strs = \
+            get_departments_for_user(viewed_user, strs_only=True)
+        context['auth_department_list'] = authoritative_department_strs
+        context['non_auth_department_list'] = non_authoritative_department_strs
+        context['department_display_name'] = import_from_settings(
+            'DEPARTMENTS_DEPARTMENT_DISPLAY_NAME')
+
     def _update_context_with_email_and_account_data(self, context,
                                                     viewed_user):
         """Update the given context directory with fields relating to
-        user emails, passwords, and third-party accounts. Take the
-        currently-viewed User object as an input to make
-        determinations."""
+        user emails, passwords, and third-party accounts."""
         requester_is_viewed_user = viewed_user == self.request.user
 
         context['change_password_enabled'] = (

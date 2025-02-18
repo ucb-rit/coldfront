@@ -9,6 +9,7 @@ from django.urls import path, reverse_lazy
 from flags.urls import flagged_paths
 
 import coldfront.core.user.views as user_views
+import coldfront.plugins.departments.views as department_views
 import coldfront.core.user.views_.link_login_views as link_login_views
 import coldfront.core.user.views_.request_hub_views as request_hub_views
 from coldfront.core.user.forms import VerifiedEmailAddressPasswordResetForm
@@ -80,7 +81,6 @@ with flagged_paths('BASIC_AUTH_ENABLED') as f_path:
                name='password-reset-complete'),
     ]
 
-
 with flagged_paths('LINK_LOGIN_ENABLED') as f_path:
     urlpatterns += [
         f_path('request-login-link/',
@@ -91,6 +91,12 @@ with flagged_paths('LINK_LOGIN_ENABLED') as f_path:
                name='link-login'),
     ]
 
+with flagged_paths('USER_DEPARTMENTS_ENABLED') as f_path:
+    urlpatterns += [
+        f_path('update-departments',
+            department_views.UpdateDepartmentsView.as_view(),
+            name='update-departments'),
+    ]
 
 with flagged_paths('SSO_ENABLED') as f_path:
     urlpatterns += [

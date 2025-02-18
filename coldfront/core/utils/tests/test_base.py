@@ -13,6 +13,7 @@ from django.core.management import call_command
 from django.test import Client
 from django.test import override_settings
 from django.test import TestCase
+from django.test import TransactionTestCase
 from django.test.utils import TestContextDecorator
 from django.urls import reverse
 
@@ -31,8 +32,9 @@ from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowanc
 from coldfront.core.utils.common import utc_now_offset_aware
 
 
-class TestBase(TestCase):
-    """A base class for testing the application."""
+class BaseTestMixin(object):
+    """A mixin with useful methods for testing the application, to be
+    incorporated into a class inheriting from e.g., TestCase."""
 
     # A password for convenient reference.
     password = 'password'
@@ -165,6 +167,17 @@ class TestBase(TestCase):
         user_profile = user.userprofile
         user_profile.access_agreement_signed_date = utc_now_offset_aware()
         user_profile.save()
+
+
+class TestBase(BaseTestMixin, TestCase):
+    """A base class for testing the application."""
+    pass
+
+
+class TransactionTestBase(BaseTestMixin, TransactionTestCase):
+    """A base class for testing the application, with real database
+    transactions."""
+    pass
 
 
 class enable_deployment(TestContextDecorator):

@@ -18,7 +18,6 @@ from coldfront.core.utils.common import utc_now_offset_aware
 from django import forms
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.exceptions import ImproperlyConfigured
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinLengthValidator
 from django.core.validators import MinValueValidator
