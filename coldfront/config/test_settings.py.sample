@@ -157,6 +157,26 @@ FLAGS = {
     'SECURE_DIRS_REQUESTABLE': [{'condition': 'boolean', 'value': True}],
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': True}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': False}],
+    'USER_DEPARTMENTS_ENABLED': [{'condition': 'app installed', 'value': 'coldfront.plugins.departments'}],
     'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': False}],
     'RENEWAL_SURVEY_ENABLED': [{'condition': 'boolean', 'value': True}],
+}
+
+#------------------------------------------------------------------------------
+# Plugin: departments
+#------------------------------------------------------------------------------
+
+EXTRA_EXTRA_APPS += [
+    'coldfront.plugins.departments'
+]
+
+DEPARTMENTS_DEPARTMENT_DISPLAY_NAME = 'Department'
+DEPARTMENTS_DEPARTMENT_DATA_SOURCE = 'coldfront.plugins.departments.utils.data_sources.backends.dummy.DummyDataSourceBackend'
+
+#------------------------------------------------------------------------------
+# django-q settings
+#------------------------------------------------------------------------------
+
+Q_CLUSTER = {
+    'sync': True,
 }
