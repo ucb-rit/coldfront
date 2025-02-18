@@ -7,3 +7,4 @@ docker build -f bootstrap/development/docker/images/app-shell.Dockerfile -t cold
 docker build -f bootstrap/development/docker/images/web.Dockerfile -t coldfront-web .
 docker build -f bootstrap/development/docker/images/email-server.Dockerfile -t coldfront-email-server .
 docker build -f bootstrap/development/docker/images/db-postgres-shell.Dockerfile -t coldfront-db-postgres-shell .
+docker build -f bootstrap/development/docker/images/qcluster.Dockerfile -t coldfront-qcluster .

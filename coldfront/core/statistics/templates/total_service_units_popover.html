@@ -1,0 +1,11 @@
+<a href="#" data-toggle="popover" title="Service Units" data-trigger="hover" data-content=
+        "The total service units used by the jobs in the list below. The total is only calculated when there are no more than 100,000 jobs. If you exceed this limit, consider adjusting job filters.">
+  <span class="accessibility-link-text">Total Service Units</span>
+  <i class="fas fa-info-circle"></i>
+</a>
+
+<script>
+  $(document).ready(function() {
+      $('[data-toggle="popover"]').popover({html:true});
+  });
+</script>

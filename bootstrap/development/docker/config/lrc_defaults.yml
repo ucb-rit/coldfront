@@ -16,6 +16,10 @@ flag_lrc_enabled: True
 flag_next_period_renewal_requestable_month: 9
 flag_multiple_email_addresses_allowed: False
 
+plugin_departments_enabled: false
+plugin_departments_department_display_name: "Division"
+plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.dummy.DummyDataSourceBackend"
+
 portal_name: MyLRC
 program_name_long: Laboratory Research Computing
 program_name_short: LRC
