@@ -3,13 +3,15 @@ import importlib
 from copy import deepcopy
 from http import HTTPStatus
 
-from django.apps import apps
 from django.conf import settings
+from django.urls import clear_url_caches
 from django.test import override_settings
 from django.urls import reverse
 
+from coldfront.config import urls
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import SavioProjectAllocationRequest
+from coldfront.core.project import urls as project_urls
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.tests.test_base import enable_deployment
@@ -19,12 +21,14 @@ from coldfront.plugins.departments.conf import settings as department_settings
 
 
 FLAGS_COPY = deepcopy(settings.FLAGS)
+FLAGS_COPY.pop('LRC_ONLY')
 FLAGS_COPY['USER_DEPARTMENTS_ENABLED'] = [
     {'condition': 'boolean', 'value': True}]
 
 INSTALLED_APPS_COPY = deepcopy(settings.INSTALLED_APPS)
 if 'coldfront.plugins.departments' not in INSTALLED_APPS_COPY:
     INSTALLED_APPS_COPY.append('coldfront.plugins.departments')
+
 
 @override_settings(FLAGS=FLAGS_COPY, INSTALLED_APPS=INSTALLED_APPS_COPY)
 class TestSavioProjectRequestWizard(TransactionTestBase):
@@ -34,8 +38,6 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
     @enable_deployment('BRC')
     def setUpClass(cls):
         super().setUpClass()
-        # Clear the app registry to reflect changes in INSTALLED_APPS
-        # apps.clear_cache()
 
         # Manually migrate the departments app.
         from django.core.management import call_command
@@ -76,6 +78,14 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
         TODO: Some POST data should be made configurable (e.g., new PI
          details, pooling, etc.).
         """
+        # TODO: This sequence of reloads and cache-clearing somehow gets the
+        # enabling of the departments flag to be detected when the flag is
+        # initially disabled in the settings file (e.g., on LRC development
+        # instances). Further investigation is required to understand why.
+        importlib.reload(project_urls)
+        clear_url_caches()
+        importlib.reload(urls)
+
         form_data = []
 
         view_name = 'savio_project_request_wizard'
@@ -139,7 +149,7 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     @enable_deployment('BRC')
-    @override_settings(FLAGS=FLAGS_COPY)
+    @override_settings(FLAGS=FLAGS_COPY, INSTALLED_APPS=INSTALLED_APPS_COPY)
     def test_post_creates_request_and_project(self):
         """Test that a POST request creates a
         SavioProjectAllocationRequest and a Project."""
@@ -189,6 +199,7 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
         self.assertEqual(request.status.name, 'Under Review')
 
     @enable_deployment('BRC')
+    @override_settings(FLAGS=FLAGS_COPY, INSTALLED_APPS=INSTALLED_APPS_COPY)
     def test_post_sets_user_departments(self):
         """Test that a POST request sets authoritative and
         non-authoritative UserDepartments for the PI."""
