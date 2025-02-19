@@ -328,7 +328,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         # The index of the next form to be added.
         next_index = 4
 
-        if view().__departments_enabled():
+        if view.__departments_enabled():
             _condition_dict[str(next_index)] = \
                 view.show_pi_department_form_condition
             next_index += 1
