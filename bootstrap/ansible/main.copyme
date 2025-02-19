@@ -176,8 +176,6 @@ center_user_guide: "https://docs-research-it.berkeley.edu/services/high-performa
 center_login_guide: "https://docs-research-it.berkeley.edu/services/high-performance-computing/user-guide/logging-brc-clusters/#Logging-in"
 # TODO: For MyLRC, use "hpcshelp@lbl.gov".
 center_help_email: "brc-hpc-help@berkeley.edu"
-# TODO: For MyLRC, use "Division".
-department_display_name: "Department"
 
 #------------------------------------------------------------------------------
 # BRC Vector settings
