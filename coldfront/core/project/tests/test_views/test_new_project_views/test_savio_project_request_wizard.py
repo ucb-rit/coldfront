@@ -1,3 +1,5 @@
+import importlib
+
 from copy import deepcopy
 from http import HTTPStatus
 
@@ -13,26 +15,20 @@ from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAl
 from coldfront.core.utils.tests.test_base import enable_deployment
 from coldfront.core.utils.tests.test_base import TransactionTestBase
 
+from coldfront.plugins.departments.conf import settings as department_settings
+
 
 FLAGS_COPY = deepcopy(settings.FLAGS)
 FLAGS_COPY['USER_DEPARTMENTS_ENABLED'] = [
     {'condition': 'boolean', 'value': True}]
 
 INSTALLED_APPS_COPY = deepcopy(settings.INSTALLED_APPS)
-INSTALLED_APPS_COPY.append('coldfront.plugins.departments')
+if 'coldfront.plugins.departments' not in INSTALLED_APPS_COPY:
+    INSTALLED_APPS_COPY.append('coldfront.plugins.departments')
 
-Q_CLUSTER_COPY = deepcopy(settings.Q_CLUSTER)
-Q_CLUSTER_COPY['sync'] = True
-
-
-@override_settings(
-    FLAGS=FLAGS_COPY,
-    INSTALLED_APPS=INSTALLED_APPS_COPY,
-    Q_CLUSTER=Q_CLUSTER_COPY)
+@override_settings(FLAGS=FLAGS_COPY, INSTALLED_APPS=INSTALLED_APPS_COPY)
 class TestSavioProjectRequestWizard(TransactionTestBase):
     """A class for testing SavioProjectRequestWizard."""
-
-    # TODO: More work is required on this.
 
     @classmethod
     @enable_deployment('BRC')
@@ -193,10 +189,6 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
         self.assertEqual(request.status.name, 'Under Review')
 
     @enable_deployment('BRC')
-    @override_settings(
-        DEPARTMENT_DATA_SOURCE=(
-            'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
-            'DummyDataSourceBackend'))
     def test_post_sets_user_departments(self):
         """Test that a POST request sets authoritative and
         non-authoritative UserDepartments for the PI."""
@@ -218,9 +210,22 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
             'scope_and_intent': 'b' * 20,
             'computational_aspects': 'c' * 20,
         }
-        self._send_post_data(
-            computing_allowance, allocation_period, details_data, survey_data,
-            existing_pi=self.user, pi_departments=[self._department_1])
+
+        Q_CLUSTER_COPY = deepcopy(settings.Q_CLUSTER)
+        Q_CLUSTER_COPY['sync'] = True
+        with override_settings(
+                DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
+                    'coldfront.plugins.departments.utils.data_sources.backends.'
+                    'dummy.DummyDataSourceBackend'),
+                Q_CLUSTER=Q_CLUSTER_COPY):
+            # Reload the plugin's settings module to reflect the change in the
+            # main app's settings module.
+            importlib.reload(department_settings)
+
+            self._send_post_data(
+                computing_allowance, allocation_period, details_data,
+                survey_data, existing_pi=self.user,
+                pi_departments=[self._department_1])
 
         self.assertEqual(self._user_department_model.objects.count(), 3)
         self.assertTrue(
