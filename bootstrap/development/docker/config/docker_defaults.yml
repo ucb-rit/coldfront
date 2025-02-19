@@ -19,5 +19,6 @@ from_email: developer@localhost
 admin_email: developer@localhost
 email_admin_list: ['developer@localhost']
 request_approval_cc_list: ['developer@localhost']
+project_user_removal_request_processed_email_admin_list: ['developer@localhost']
 
 renewal_survey_backend: 'permissive'

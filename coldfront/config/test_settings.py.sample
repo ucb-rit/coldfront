@@ -60,6 +60,9 @@ STREAM_LOGS_TO_STDOUT = False
 
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = ['test@test.test']
+# A list of admin email addresses to notify when a project-user removal request
+# is processed.
+PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST = ['test@test.test']
 
 # Extra apps to be included.
 EXTRA_EXTRA_APPS = []
