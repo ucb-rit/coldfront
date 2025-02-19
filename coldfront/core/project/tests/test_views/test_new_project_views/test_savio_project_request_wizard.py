@@ -1,28 +1,53 @@
+import importlib
+
 from copy import deepcopy
 from http import HTTPStatus
 
 from django.conf import settings
+from django.urls import clear_url_caches
 from django.test import override_settings
 from django.urls import reverse
 
+from coldfront.config import urls
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import SavioProjectAllocationRequest
+from coldfront.core.project import urls as project_urls
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.tests.test_base import enable_deployment
 from coldfront.core.utils.tests.test_base import TransactionTestBase
 
-from coldfront.plugins.departments.models import Department
-from coldfront.plugins.departments.models import UserDepartment
+from coldfront.plugins.departments.conf import settings as department_settings
 
 
-Q_CLUSTER_COPY = deepcopy(settings.Q_CLUSTER)
-Q_CLUSTER_COPY['sync'] = True
+FLAGS_COPY = deepcopy(settings.FLAGS)
+FLAGS_COPY.pop('LRC_ONLY')
+FLAGS_COPY['USER_DEPARTMENTS_ENABLED'] = [
+    {'condition': 'boolean', 'value': True}]
+
+INSTALLED_APPS_COPY = deepcopy(settings.INSTALLED_APPS)
+if 'coldfront.plugins.departments' not in INSTALLED_APPS_COPY:
+    INSTALLED_APPS_COPY.append('coldfront.plugins.departments')
 
 
-@override_settings(Q_CLUSTER=Q_CLUSTER_COPY)
+@override_settings(FLAGS=FLAGS_COPY, INSTALLED_APPS=INSTALLED_APPS_COPY)
 class TestSavioProjectRequestWizard(TransactionTestBase):
     """A class for testing SavioProjectRequestWizard."""
+
+    @classmethod
+    @enable_deployment('BRC')
+    def setUpClass(cls):
+        super().setUpClass()
+
+        # Manually migrate the departments app.
+        from django.core.management import call_command
+        call_command('migrate', 'departments')
+
+        # Import and store department models.
+        from coldfront.plugins.departments.models import Department
+        from coldfront.plugins.departments.models import UserDepartment
+        cls._department_model = Department
+        cls._user_department_model = UserDepartment
 
     @enable_deployment('BRC')
     def setUp(self):
@@ -34,9 +59,9 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
 
         self.interface = ComputingAllowanceInterface()
 
-        self._department_1 = Department.objects.create(
+        self._department_1 = self._department_model.objects.create(
             name='Department 1', code='DEPT1')
-        self._department_2 = Department.objects.create(
+        self._department_2 = self._department_model.objects.create(
             name='Department 2', code='DEPT2')
 
     @staticmethod
@@ -53,6 +78,14 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
         TODO: Some POST data should be made configurable (e.g., new PI
          details, pooling, etc.).
         """
+        # TODO: This sequence of reloads and cache-clearing somehow gets the
+        # enabling of the departments flag to be detected when the flag is
+        # initially disabled in the settings file (e.g., on LRC development
+        # instances). Further investigation is required to understand why.
+        importlib.reload(project_urls)
+        clear_url_caches()
+        importlib.reload(urls)
+
         form_data = []
 
         view_name = 'savio_project_request_wizard'
@@ -116,6 +149,7 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     @enable_deployment('BRC')
+    @override_settings(FLAGS=FLAGS_COPY, INSTALLED_APPS=INSTALLED_APPS_COPY)
     def test_post_creates_request_and_project(self):
         """Test that a POST request creates a
         SavioProjectAllocationRequest and a Project."""
@@ -164,10 +198,8 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
 
         self.assertEqual(request.status.name, 'Under Review')
 
-    @override_settings(
-        DEPARTMENT_DATA_SOURCE=(
-            'coldfront.plugins.departments.utils.data_sources.backends.dummy.'
-            'DummyDataSourceBackend'))
+    @enable_deployment('BRC')
+    @override_settings(FLAGS=FLAGS_COPY, INSTALLED_APPS=INSTALLED_APPS_COPY)
     def test_post_sets_user_departments(self):
         """Test that a POST request sets authoritative and
         non-authoritative UserDepartments for the PI."""
@@ -175,7 +207,8 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
         self.user.last_name = 'Last'
         self.user.save()
 
-        self.assertFalse(UserDepartment.objects.filter(user=self.user).exists())
+        self.assertFalse(
+            self._user_department_model.objects.filter(user=self.user).exists())
 
         computing_allowance = self.get_predominant_computing_allowance()
         allocation_period = get_current_allowance_year_period()
@@ -188,25 +221,40 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
             'scope_and_intent': 'b' * 20,
             'computational_aspects': 'c' * 20,
         }
-        self._send_post_data(
-            computing_allowance, allocation_period, details_data, survey_data,
-            existing_pi=self.user, pi_departments=[self._department_1])
 
-        self.assertEqual(UserDepartment.objects.count(), 3)
+        Q_CLUSTER_COPY = deepcopy(settings.Q_CLUSTER)
+        Q_CLUSTER_COPY['sync'] = True
+        with override_settings(
+                DEPARTMENTS_DEPARTMENT_DATA_SOURCE=(
+                    'coldfront.plugins.departments.utils.data_sources.backends.'
+                    'dummy.DummyDataSourceBackend'),
+                Q_CLUSTER=Q_CLUSTER_COPY):
+            # Reload the plugin's settings module to reflect the change in the
+            # main app's settings module.
+            importlib.reload(department_settings)
+
+            self._send_post_data(
+                computing_allowance, allocation_period, details_data,
+                survey_data, existing_pi=self.user,
+                pi_departments=[self._department_1])
+
+        self.assertEqual(self._user_department_model.objects.count(), 3)
         self.assertTrue(
-            UserDepartment.objects.filter(
+            self._user_department_model.objects.filter(
                 user=self.user,
                 department=self._department_1,
                 is_authoritative=False).exists())
         self.assertTrue(
-            UserDepartment.objects.filter(
+            self._user_department_model.objects.filter(
                 user=self.user,
-                department=Department.objects.get(name='Department F'),
+                department=self._department_model.objects.get(
+                    name='Department F'),
                 is_authoritative=True).exists())
         self.assertTrue(
-            UserDepartment.objects.filter(
+            self._user_department_model.objects.filter(
                 user=self.user,
-                department=Department.objects.get(name='Department L'),
+                department=self._department_model.objects.get(
+                    name='Department L'),
                 is_authoritative=True).exists())
 
     # TODO

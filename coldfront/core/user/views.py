@@ -42,8 +42,6 @@ from coldfront.core.user.utils_.host_user_utils import is_lbl_employee
 from coldfront.core.utils.common import (import_from_settings,
                                          utc_now_offset_aware)
 
-from coldfront.plugins.departments.utils.queries import get_departments_for_user
-
 from flags.state import flag_enabled
 
 logger = logging.getLogger(__name__)
@@ -148,6 +146,8 @@ class UserProfile(TemplateView):
     def _update_context_with_department_data(context, viewed_user):
         """Update the given context dictionary with fields relating to
         departments."""
+        from coldfront.plugins.departments.utils.queries import get_departments_for_user
+
         authoritative_department_strs, non_authoritative_department_strs = \
             get_departments_for_user(viewed_user, strs_only=True)
         context['auth_department_list'] = authoritative_department_strs
