@@ -455,7 +455,15 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
     @staticmethod
     def __departments_enabled():
         """Return whether department functionality is enabled."""
-        return flag_enabled('USER_DEPARTMENTS_ENABLED')
+        # Because this is called from urls.py (via condition_dict) at import
+        # time, the database table for flag state may not exist yet. Catch the
+        # exception raised to allow the import to succeed.
+        try:
+            return flag_enabled('USER_DEPARTMENTS_ENABLED')
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.exception(e)
+            return False
 
     def __get_allocation_period(self, form_data):
         """Return the AllocationPeriod the user selected."""
