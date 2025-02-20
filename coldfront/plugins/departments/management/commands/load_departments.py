@@ -6,6 +6,7 @@ from coldfront.core.utils.common import add_argparse_dry_run_argument
 
 from coldfront.plugins.departments.models import Department
 from coldfront.plugins.departments.utils.data_sources import fetch_departments
+from coldfront.plugins.departments.utils.queries import create_or_update_department
 
 
 class Command(BaseCommand):
@@ -45,8 +46,7 @@ class Command(BaseCommand):
                 department.name = name
                 department.code = code
             else:
-                department, created = Department.objects.get_or_create(
-                    name=name, code=code)
+                department, created = create_or_update_department(code, name)
             if created:
                 message = f'Created Department {department}.'
                 self.log(message, dry_run)
