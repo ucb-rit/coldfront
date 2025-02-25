@@ -435,18 +435,24 @@ class TestBRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
         savio_project_allocation = create_project_allocation(
             savio_project, Decimal('0.00')).allocation
 
-        vector_project = self.create_active_project_with_pi(
-            'vector_project', self.user)
-        vector_project_allocation = Allocation.objects.create(
-            project=vector_project, status=savio_project_allocation.status)
-        vector_project_allocation.resources.add(
-            Resource.objects.get(name='Vector Compute'))
-        project_user = vector_project.projectuser_set.get(user=self.user)
+        vector_projects = []
+        for i in range(2):
+            vector_project = self.create_active_project_with_pi(
+                f'vector_project_{i}', self.user)
+            vector_project_allocation = Allocation.objects.create(
+                project=vector_project, status=savio_project_allocation.status)
+            vector_project_allocation.resources.add(
+                Resource.objects.get(name='Vector Compute'))
+            vector_projects.append({
+                'project': vector_project,
+                'allocation': vector_project_allocation,
+                'project_user': vector_project.projectuser_set.get(user=self.user)
+            })
 
         self.assertEqual(len(mail.outbox), 0)
 
         runner = self._runner_factory.get_runner(
-            project_user, NewProjectUserSource.ADDED)
+            vector_projects[0]['project_user'], NewProjectUserSource.ADDED)
         runner.run()
 
         # There should be two ClusterAccessRequests: one for the Vector
@@ -458,10 +464,25 @@ class TestBRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
             allocation_user__allocation=savio_project_allocation)
         self.assertEqual(savio_request.status.name, 'Pending - Add')
         vector_request = cluster_access_requests.get(
-            allocation_user__allocation=vector_project_allocation)
+            allocation_user__allocation=vector_projects[0]['allocation'])
         self.assertEqual(vector_request.status.name, 'Pending - Add')
 
         self.assertEqual(len(mail.outbox), 4)
+
+        runner = self._runner_factory.get_runner(
+            vector_projects[1]['project_user'], NewProjectUserSource.ADDED)
+        runner.run()
+
+        # There should be one ClusterAccessRequests: one for the Vector
+        # project, and none for the Savio project as was previously added.
+        cluster_access_requests = ClusterAccessRequest.objects.filter(
+            allocation_user__user=self.user)
+        self.assertEqual(cluster_access_requests.count(), 3)
+        vector_request = cluster_access_requests.get(
+            allocation_user__allocation=vector_projects[1]['allocation'])
+        self.assertEqual(vector_request.status.name, 'Pending - Add')
+
+        self.assertEqual(len(mail.outbox), 6)
 
     @enable_deployment('BRC')
     def test_factory_creates_expected_runner(self):
