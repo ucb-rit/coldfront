@@ -6,15 +6,14 @@ from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.utils import get_project_compute_allocation
-from coldfront.core.allocation.utils import prorated_allocation_amount
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import SavioProjectAllocationRequest
+from coldfront.core.project.utils_.computing_allowance_eligibility_manager import ComputingAllowanceEligibilityManager
 from coldfront.core.project.utils_.request_processing_utils import create_project_users
-from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.statistics.models import ProjectTransaction
@@ -199,71 +198,21 @@ def get_pi_active_unique_project(pi_user, computing_allowance,
     return project
 
 
-def has_non_denied_renewal_request(pi, allocation_period):
-    """Return whether the given PI User has a non-"Denied"
-    AllocationRenewalRequest for the given AllocationPeriod."""
-    if not isinstance(pi, User):
-        raise TypeError(f'{pi} is not a User object.')
-    if not isinstance(allocation_period, AllocationPeriod):
-        raise TypeError(
-            f'{allocation_period} is not an AllocationPeriod object.')
-    status_names = ['Under Review', 'Approved', 'Complete']
-    return AllocationRenewalRequest.objects.filter(
-        pi=pi,
-        allocation_period=allocation_period,
-        status__name__in=status_names).exists()
-
-
 def is_any_project_pi_renewable(project, allocation_period):
     """Return whether the Project has at least one PI who is eligible to
     make an AllocationRenewalRequest during the given
     AllocationPeriod."""
+    interface = ComputingAllowanceInterface()
+    computing_allowance = ComputingAllowance(
+        interface.allowance_from_project(project))
+    computing_allowance_eligibility_manager = \
+        ComputingAllowanceEligibilityManager(
+            computing_allowance, allocation_period=allocation_period)
     for pi in project.pis():
-        if not has_non_denied_renewal_request(pi, allocation_period):
+        if computing_allowance_eligibility_manager.is_pi_eligible(
+                pi, is_renewal=True):
             return True
     return False
-
-
-def non_denied_renewal_request_statuses():
-    """Return a queryset of AllocationRenewalRequestStatusChoices that
-    do not have the name 'Denied'."""
-    return AllocationRenewalRequestStatusChoice.objects.filter(
-        ~Q(name='Denied'))
-
-
-def pis_with_renewal_requests_pks(allocation_period, computing_allowance=None,
-                                  request_status_names=[]):
-    """Return a list of primary keys of PIs of allocation renewal
-    requests for the given AllocationPeriod that match the given filters.
-
-    Parameters:
-        - allocation_period (AllocationPeriod): The AllocationPeriod to
-                                                filter with
-        - computing_allowance (Resource): An optional computing
-                                          allowance to filter with
-        - request_status_names (list[str]): A list of names of request
-                                            statuses to filter with
-
-    Returns:
-        - A list of integers representing primary keys of matching PIs.
-
-    Raises:
-        - AssertionError, if an input has an unexpected type.
-        - ComputingAllowanceInterfaceError, if allowance-related values
-          cannot be retrieved.
-    """
-    assert isinstance(allocation_period, AllocationPeriod)
-    f = Q(allocation_period=allocation_period)
-    if computing_allowance is not None:
-        assert isinstance(computing_allowance, Resource)
-        interface = ComputingAllowanceInterface()
-        project_prefix = interface.code_from_name(computing_allowance.name)
-        f = f & Q(post_project__name__startswith=project_prefix)
-    if request_status_names:
-        f = f & Q(status__name__in=request_status_names)
-    return set(
-        AllocationRenewalRequest.objects.filter(
-            f).values_list('pi__pk', flat=True))
 
 
 def send_allocation_renewal_request_approval_email(request, num_service_units):

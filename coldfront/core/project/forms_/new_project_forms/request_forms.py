@@ -2,23 +2,17 @@ from coldfront.core.allocation.forms import AllocationPeriodChoiceField
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.project.forms import DisabledChoicesSelectWidget
 from coldfront.core.project.models import Project
-from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses
-from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
-from coldfront.core.project.utils_.new_project_utils import project_pi_pks
-from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_request_statuses
-from coldfront.core.project.utils_.renewal_utils import pis_with_renewal_requests_pks
+from coldfront.core.project.utils_.computing_allowance_eligibility_manager import ComputingAllowanceEligibilityManager
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
-from coldfront.core.user.utils_.host_user_utils import is_lbl_employee
 from coldfront.core.utils.common import utc_now_offset_aware
 
 from django import forms
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.exceptions import ImproperlyConfigured
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinLengthValidator
 from django.core.validators import MinValueValidator
@@ -174,45 +168,14 @@ class SavioProjectExistingPIForm(forms.Form):
     def disable_pi_choices(self):
         """Prevent certain Users, who should be displayed, from being
         selected as PIs."""
-        disable_user_pks = set()
+        computing_allowance_eligibility_manager = \
+            ComputingAllowanceEligibilityManager(
+                self.computing_allowance,
+                allocation_period=self.allocation_period)
 
-        if self.computing_allowance.is_one_per_pi() and self.allocation_period:
-            # Disable any PI who has:
-            #     (a) an existing Project with the allowance*,
-            #     (b) a new project request for a Project with the allowance
-            #         during the AllocationPeriod*, or
-            #     (c) an allowance renewal request for a Project with the
-            #         allowance during the AllocationPeriod*.
-            # * Projects/requests must have ineligible statuses.
-            resource = self.computing_allowance.get_resource()
-            project_status_names = ['New', 'Active', 'Inactive']
-            disable_user_pks.update(
-                project_pi_pks(
-                    computing_allowance=resource,
-                    project_status_names=project_status_names))
-            new_project_request_status_names = list(
-                non_denied_new_project_request_statuses().values_list(
-                    'name', flat=True))
-            disable_user_pks.update(
-                pis_with_new_project_requests_pks(
-                    self.allocation_period,
-                    computing_allowance=resource,
-                    request_status_names=new_project_request_status_names))
-            renewal_request_status_names = list(
-                non_denied_renewal_request_statuses().values_list(
-                    'name', flat=True))
-            disable_user_pks.update(
-                pis_with_renewal_requests_pks(
-                    self.allocation_period,
-                    computing_allowance=resource,
-                    request_status_names=renewal_request_status_names))
-
-        if flag_enabled('LRC_ONLY'):
-            # On LRC, PIs must be LBL employees.
-            non_lbl_employees = set(
-                [user.pk for user in User.objects.all()
-                 if not is_lbl_employee(user)])
-            disable_user_pks.update(non_lbl_employees)
+        disable_user_pks = \
+            computing_allowance_eligibility_manager.get_ineligible_users(
+                pks_only=True)
 
         self.fields['PI'].widget.disabled_choices = disable_user_pks
 
