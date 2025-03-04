@@ -267,7 +267,7 @@ class ProjectRemovalRequestListView(LoginRequiredMixin,
             if data.get('requester'):
                 project_removal_request_list = \
                     project_removal_request_list.filter(
-                        requester__user__username__icontains=data.get(
+                        requester__username__icontains=data.get(
                             'username'))
 
         return project_removal_request_list.order_by(order_by)
