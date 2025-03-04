@@ -850,3 +850,9 @@ class IdentityLinkingRequestView(UserPassesTestMixin, View):
         messages.success(request, message)
 
         return HttpResponseRedirect(reverse('user-profile'))
+
+
+class ProgressTrackerDemoView(TemplateView):
+
+    def get_template_names(self):
+        return ['user/progress_tracker_demo.html']

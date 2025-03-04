@@ -1,0 +1,71 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.progress-tracker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 50px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.circle-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circle {
+  width: 30px;
+  height: 30px;
+  border: 2px solid #ccc;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.step.completed .circle {
+  background-color: #4caf50;
+  border-color: #4caf50;
+}
+
+.step .checkmark {
+  font-size: 18px;
+  color: transparent;
+  transition: color 0.3s;
+}
+
+.step.completed .checkmark {
+  color: white;
+}
+
+.step .label {
+  font-size: 16px;
+}
+
+.line {
+  position: absolute;
+  top: 100%;
+  left: 35%;
+  width: 2px;
+  height: 100%;
+  background-color: #ccc;
+  transform: translateX(-50%);
+}
+
+.step:last-child .line {
+  display: none;
+}

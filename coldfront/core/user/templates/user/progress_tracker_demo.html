@@ -1,0 +1,103 @@
+{% extends "common/base.html" %}
+{% load static %}
+{% load feature_flags %}
+
+
+{% block title %}
+Progress Tracker Demo
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/user/css/progress-tracker-demo.css' %}">
+
+<h2>Cluster access</h2>
+
+<div class="progress-tracker">
+  <div class="step completed">
+    <div class="circle-wrapper">
+      <div class="circle">
+        <i class="fas fa-check-circle checkmark"></i>
+      </div>
+      <div class="line"></div>
+    </div>
+    <span class="label">
+      <b>Join request received</b>
+      <p>You made a request to join fc_demo. The managers and PIs of the project have been notified.</p>
+    </span>
+  </div>
+  <div class="step completed">
+    <div class="circle-wrapper">
+      <div class="circle">
+        <i class="fas fa-check-circle checkmark"></i>
+      </div>
+      <div class="line"></div>
+    </div>
+    <span class="label">
+      <b>Join request approved by project managers</b>
+      <p>The managers of fc_demo have approved your request to join.</p>
+    </span>
+  </div>
+  <div class="step">
+    <div class="circle-wrapper">
+      <div class="circle"></div>
+      <div class="line"></div>
+    </div>
+    <span class="label">
+      <b>Cluster access approved by system administrators</b>
+      <p>System administrators have approved your access to fc_demo on the cluster, and will set it up on the cluster.</p>
+    </span>
+  </div>
+  <div class="step">
+    <div class="circle-wrapper">
+      <div class="circle"></div>
+    </div>
+    <span class="label">
+      <b>Cluster access ready</b>
+      <p>Your access to fc_demo on the cluster is ready.</p>
+    </span>
+  </div>
+</div>
+
+<br>
+<hr>
+<br>
+
+<h2>Project user removal</h2>
+
+<div class="progress-tracker">
+  <div class="step completed">
+    <div class="circle-wrapper">
+      <div class="circle">
+        <i class="fas fa-check-circle checkmark"></i>
+      </div>
+      <div class="line"></div> <!-- Line under the circle -->
+    </div>
+    <span class="label">
+      <b>Removal request received</b>
+      <p>A manager of fc_demo has requested to remove you from the project.</p>
+    </span>
+  </div>
+  <div class="step completed">
+    <div class="circle-wrapper">
+      <div class="circle">
+        <i class="fas fa-check-circle checkmark"></i>
+      </div>
+      <div class="line"></div>
+    </div>
+    <span class="label">
+      <b>Removal from project complete</b>
+      <p>System administrators have removed you from fc_demo on the cluster.</p>
+    </span>
+  </div>
+  <div class="step">
+    <div class="circle-wrapper">
+      <div class="circle"></div>
+    </div>
+    <span class="label">
+      <b>Cluster account deleted</b>
+      <p>Your cluster account has been deleted.</p>
+    </span>
+  </div>
+</div>
+
+{% endblock %}

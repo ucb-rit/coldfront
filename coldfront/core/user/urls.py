@@ -143,3 +143,10 @@ urlpatterns += [
          request_hub_views.RequestHubView.as_view(show_all_requests=True),
          name='request-hub-admin'),
 ]
+
+
+urlpatterns += [
+    path('progress-tracker-demo',
+         user_views.ProgressTrackerDemoView.as_view(),
+         name='progress-tracker-demo'),
+]
