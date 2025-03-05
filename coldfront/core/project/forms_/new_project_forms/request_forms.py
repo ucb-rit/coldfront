@@ -18,7 +18,6 @@ from coldfront.core.utils.common import utc_now_offset_aware
 from django import forms
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.exceptions import ImproperlyConfigured
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinLengthValidator
 from django.core.validators import MinValueValidator
@@ -133,9 +132,15 @@ class SavioProjectAllocationPeriodForm(forms.Form):
         return AllocationPeriod.objects.filter(f).order_by(*order_by)
 
 
+class ComputingAllowanceField(forms.ModelChoiceField):
+
+    def label_from_instance(self, obj):
+        return obj.name
+
+
 class ComputingAllowanceForm(forms.Form):
 
-    computing_allowance = forms.ModelChoiceField(
+    computing_allowance = ComputingAllowanceField(
         label='Computing Allowance',
         queryset=Resource.objects.filter(
             resource_type__name='Computing Allowance').order_by('pk'))

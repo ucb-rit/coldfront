@@ -37,10 +37,10 @@ jobs:
     - name: Checkout the current commit
       uses: actions/checkout@v3
 
-    - name: Set up Python 3.8.13
+    - name: Set up Python 3.10
       uses: actions/setup-python@v3
       with:
-        python-version: 3.8.13
+        python-version: "3.10"
 
     - name: Cache and/or Install apache2-dev needed for testing suite
       uses: awalsh128/cache-apt-pkgs-action@latest
@@ -52,12 +52,12 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/venv
-        key: ${{ runner.os }}-python-packages-${{ hashFiles('requirements.txt') }}
+        key: ${{ runner.os }}-python310-packages-${{ hashFiles('requirements.txt') }}
 
     - if: ${{ steps.cache-python.outputs.cache-hit != 'true' }} # If a cache is not found
       name: Install Python packages
       run: |
-        python3.8 -m venv ~/venv
+        python3.10 -m venv ~/venv
         source ~/venv/bin/activate
         pip install -r requirements.txt
 

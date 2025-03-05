@@ -1,0 +1,3 @@
+There is a new request to remove user {{ user_str }} from the secure directory {{ directory_name }}.
+
+Please handle the request here: {{ review_url }}.

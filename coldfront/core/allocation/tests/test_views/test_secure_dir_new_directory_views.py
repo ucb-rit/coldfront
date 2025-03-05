@@ -57,6 +57,7 @@ class TestSecureDirRequestBase(TestBase):
         project_user_status = ProjectUserStatusChoice.objects.get(
             name='Active')
         user_role = ProjectUserRoleChoice.objects.get(name='User')
+        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
         pi_role = ProjectUserRoleChoice.objects.get(
             name='Principal Investigator')
         for i in range(2):
@@ -65,12 +66,14 @@ class TestSecureDirRequestBase(TestBase):
                 name=f'fc_project{i}', status=project_status)
             setattr(self, f'project{i}', project)
             for j in range(2):
+                non_pi_role = manager_role if j % 2 == 0 else user_role
                 ProjectUser.objects.create(
                     user=getattr(self, f'user{j}'), project=project,
-                    role=user_role, status=project_user_status)
+                    role=non_pi_role, status=project_user_status)
                 ProjectUser.objects.create(
-                    user=getattr(self, f'pi{j}'), project=project, role=pi_role,
-                    status=project_user_status)
+                    user=getattr(self, f'pi{j}'), project=project,
+                    role=pi_role, status=project_user_status,
+                    enable_notifications=True)
 
             # Create a compute allocation for the Project.
             allocation = Decimal(f'{i + 1}000.00')
@@ -105,25 +108,32 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
         super().setUp()
         self.url = 'secure-dir-request'
 
-    def get_form_data(self):
-        """Generates valid form data for SecureDirRequestWizard."""
+    @staticmethod
+    def get_form_data(pi_project_user_pk):
+        """Generates valid form data for SecureDirRequestWizard. Select
+        the PI ProjectUser with the given primary key."""
         view_name = 'secure_dir_request_wizard'
         current_step_key = f'{view_name}-current_step'
-        data_description_form_data = {
-            '0-department': 'Dept. of Testing',
-            '0-data_description': 'a' * 20,
-            '0-rdm_consultation': True,
+        pi_selection_form_data = {
+            '0-pi': pi_project_user_pk,
             current_step_key: '0',
         }
-        rdm_consultation_form_data = {
-            '1-rdm_consultants': 'Tom and Jerry',
+        data_description_form_data = {
+            '1-department': 'Dept. of Testing',
+            '1-data_description': 'a' * 20,
+            '1-rdm_consultation': True,
             current_step_key: '1',
         }
-        directory_name_data = {
-            '2-directory_name': 'test_dir',
+        rdm_consultation_form_data = {
+            '2-rdm_consultants': 'Tom and Jerry',
             current_step_key: '2',
         }
+        directory_name_data = {
+            '3-directory_name': 'test_dir',
+            current_step_key: '3',
+        }
         form_data = [
+            pi_selection_form_data,
             data_description_form_data,
             rdm_consultation_form_data,
             directory_name_data
@@ -136,14 +146,20 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
         self.assert_has_access(url, self.admin, True)
         self.assert_has_access(url, self.pi0, True)
         self.assert_has_access(url, self.pi1, True)
-        self.assert_has_access(url, self.user0, False)
+        # user0 is a manager of project1.
+        self.assert_has_access(url, self.user0, True)
+        # user1 is a regular user of project1.
+        self.assert_has_access(url, self.user1, False)
 
     def test_post_creates_request(self):
         """Test that a POST request creates a SecureDirRequest."""
         self.assertEqual(SecureDirRequest.objects.count(), 0)
 
         pre_time = utc_now_offset_aware()
-        form_data = self.get_form_data()
+
+        pi_project_user_pk = ProjectUser.objects.get(
+            project=self.project1, user=self.pi0).pk
+        form_data = self.get_form_data(pi_project_user_pk)
 
         self.client.login(username=self.pi0.username, password=self.password)
         url = reverse(self.url, kwargs={'pk': self.project1.pk})
@@ -161,15 +177,16 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
 
         request = requests.first()
         self.assertEqual(request.requester, self.pi0)
+        self.assertEqual(request.pi, self.pi0)
         self.assertEqual(
             request.data_description,
-            form_data[0]['0-data_description'])
+            form_data[1]['1-data_description'])
         self.assertEqual(
             request.rdm_consultation,
-            form_data[1]['1-rdm_consultants'])
+            form_data[2]['2-rdm_consultants'])
         self.assertEqual(
             request.directory_name,
-            f'pl1_{form_data[2]["2-directory_name"]}')
+            f'pl1_{form_data[3]["3-directory_name"]}')
         self.assertEqual(request.project, self.project1)
         self.assertTrue(
             pre_time < request.request_time < utc_now_offset_aware())
@@ -179,9 +196,11 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
     def test_emails_sent(self):
         """Test that a POST request sends the correct emails."""
 
-        form_data = self.get_form_data()
+        pi_project_user_pk = ProjectUser.objects.get(
+            project=self.project1, user=self.pi0).pk
+        form_data = self.get_form_data(pi_project_user_pk)
 
-        self.client.login(username=self.pi1.username, password=self.password)
+        self.client.login(username=self.user0.username, password=self.password)
         url = reverse(self.url, kwargs={'pk': self.project1.pk})
         for i, data in enumerate(form_data):
             response = self.client.post(url, data)
@@ -193,16 +212,22 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
         # Test that the correct emails are sent.
         admin_email = settings.EMAIL_ADMIN_LIST
         pi0_email = self.pi0.email
-        pi_email_body = [f'There is a new secure directory request for '
-                         f'project {self.project1.name} requested by '
-                         f'{self.pi1.first_name} {self.pi1.last_name}'
-                         f' ({self.pi1.email})',
-                         f'You may view the details of the request here:']
-        admin_email_body = [f'There is a new secure directory request for '
-                            f'project {self.project1.name} requested by '
-                            f'{self.pi1.first_name} {self.pi1.last_name}'
-                            f' ({self.pi1.email}).',
-                            'Please review the request here:']
+        pi_email_body = [
+            (f'{self.user0.first_name} {self.user0.last_name} '
+             f'({self.user0.email}) has made a request to create a new secure '
+             f'directory under project {self.project1.name}, with you as the '
+             f'Principal Investigator (PI)'),
+            'view the details of the request',
+            'would like to prevent this',
+        ]
+        admin_email_body = [
+            (f'There is a new secure directory request for project '
+             f'{self.project1.name} under PI {self.pi0.first_name} '
+             f'{self.pi0.last_name} ({self.pi0.email}) requested by '
+             f'{self.user0.first_name} {self.user0.last_name} '
+             f'({self.user0.email}).'),
+            'Please review the request here:',
+        ]
 
         self.assertEqual(2, len(mail.outbox))
         for email in mail.outbox:
@@ -230,6 +255,7 @@ class TestSecureDirRequestListView(TestSecureDirRequestBase):
         self.request0 = SecureDirRequest.objects.create(
             directory_name='test_dir0',
             requester=self.pi0,
+            pi=self.pi0,
             data_description='a'*20,
             project=self.project0,
             status=SecureDirRequestStatusChoice.objects.get(name='Under Review'),
@@ -239,6 +265,7 @@ class TestSecureDirRequestListView(TestSecureDirRequestBase):
         self.request1 = SecureDirRequest.objects.create(
             directory_name='test_dir1',
             requester=self.pi1,
+            pi=self.pi1,
             data_description='a'*20,
             project=self.project1,
             status=SecureDirRequestStatusChoice.objects.get(name='Under Review'),
@@ -347,7 +374,8 @@ class TestSecureDirRequestDetailView(TestSecureDirRequestBase):
         # Create SecureDirRequest
         self.request0 = SecureDirRequest.objects.create(
             directory_name='test_dir',
-            requester=self.pi0,
+            requester=self.user0,
+            pi=self.pi0,
             data_description='a'*20,
             project=self.project0,
             status=SecureDirRequestStatusChoice.objects.get(name='Approved - Processing'),
@@ -365,7 +393,8 @@ class TestSecureDirRequestDetailView(TestSecureDirRequestBase):
     def test_access(self):
         self.assert_has_access(self.url0, self.admin, True)
         self.assert_has_access(self.url0, self.staff, True)
-        self.assert_has_access(self.url0, self.user0, False)
+        self.assert_has_access(self.url0, self.user0, True)
+        self.assert_has_access(self.url0, self.user1, False)
         self.assert_has_access(self.url0, self.pi0, True)
 
     def test_content(self):
@@ -434,12 +463,8 @@ class TestSecureDirRequestDetailView(TestSecureDirRequestBase):
     def test_post_request_emails_sent(self):
         """Test that a POST request sends the correct emails."""
         self.client.login(username=self.admin.username, password=self.password)
-        response = self.client.post(self.url0, {})
+        self.client.post(self.url0, {})
 
-        # Test that the correct emails are sent.
-        pi_emails = self.project0.projectuser_set.filter(
-            role__name='Principal Investigator'
-        ).values_list('user__email', flat=True)
         email_body = [f'Your request for a secure directory for project '
                       f'\'{self.project0.name}\' was approved. Setup '
                       f'on the cluster is complete.',
@@ -450,12 +475,15 @@ class TestSecureDirRequestDetailView(TestSecureDirRequestBase):
                       f'{self.request0.directory_name}\', '
                       f'respectively.']
 
-        self.assertEqual(len(pi_emails), len(mail.outbox))
-        for email in mail.outbox:
-            self.assertIn(email.to[0], pi_emails)
-            for section in email_body:
-                self.assertIn(section, email.body)
-            self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+        # The email should be sent to the requester, with active PIs CC'ed.
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn('Secure Directory Request Approved', email.subject)
+        self.assertEqual(email.to, [self.user0.email])
+        self.assertEqual(email.cc, [self.pi0.email, self.pi1.email])
+        self.assertEqual(email.from_email, settings.EMAIL_SENDER)
+        for section in email_body:
+            self.assertIn(section, email.body)
 
 
 class TestSecureDirRequestUndenyRequestView(TestSecureDirRequestBase):
@@ -468,6 +496,7 @@ class TestSecureDirRequestUndenyRequestView(TestSecureDirRequestBase):
         self.request0 = SecureDirRequest.objects.create(
             directory_name='test_dir',
             requester=self.pi0,
+            pi=self.pi0,
             data_description='a'*20,
             project=self.project0,
             status=SecureDirRequestStatusChoice.objects.get(name='Denied'),
@@ -544,7 +573,8 @@ class TestSecureDirRequestReviewDenyView(TestSecureDirRequestBase):
         # Create SecureDirRequest
         self.request0 = SecureDirRequest.objects.create(
             directory_name='test_dir',
-            requester=self.pi0,
+            requester=self.user0,
+            pi=self.pi0,
             data_description='a'*20,
             project=self.project0,
             status=SecureDirRequestStatusChoice.objects.get(name='Approved - Processing'),
@@ -589,24 +619,23 @@ class TestSecureDirRequestReviewDenyView(TestSecureDirRequestBase):
         """Test that a POST request sends the correct emails."""
         self.client.login(username=self.admin.username, password=self.password)
         data = {'justification': 'This is a test denial justification.'}
-        response = self.client.post(self.url, data)
+        self.client.post(self.url, data)
 
-        # Test that the correct emails are sent.
-        pi_emails = self.project0.projectuser_set.filter(
-            role__name='Principal Investigator'
-        ).values_list('user__email', flat=True)
         email_body = [f'Your request for a secure directory for project '
                       f'\'{self.project0.name}\' was denied for the '
                       f'following reason:',
                       data['justification'],
                       'If you have any questions, please contact us at']
 
-        self.assertEqual(len(pi_emails), len(mail.outbox))
-        for email in mail.outbox:
-            self.assertIn(email.to[0], pi_emails)
-            for section in email_body:
-                self.assertIn(section, email.body)
-            self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+        # The email should be sent to the requester, with active PIs CC'ed.
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn('Secure Directory Request Denied', email.subject)
+        self.assertEqual(email.to, [self.user0.email])
+        self.assertEqual(email.cc, [self.pi0.email, self.pi1.email])
+        self.assertEqual(email.from_email, settings.EMAIL_SENDER)
+        for section in email_body:
+            self.assertIn(section, email.body)
 
 
 class TestSecureDirRequestReviewRDMConsultView(TestSecureDirRequestBase):
@@ -619,6 +648,7 @@ class TestSecureDirRequestReviewRDMConsultView(TestSecureDirRequestBase):
         self.request0 = SecureDirRequest.objects.create(
             directory_name='test_dir',
             requester=self.pi0,
+            pi=self.pi0,
             data_description='a'*20,
             project=self.project0,
             status=SecureDirRequestStatusChoice.objects.get(name='Under Review'),
@@ -680,6 +710,7 @@ class TestSecureDirRequestReviewMOUView(TestSecureDirRequestBase):
         self.request0 = SecureDirRequest.objects.create(
             directory_name='test_dir',
             requester=self.pi0,
+            pi=self.pi0,
             data_description='a'*20,
             project=self.project0,
             status=SecureDirRequestStatusChoice.objects.get(name='Under Review'),
@@ -745,6 +776,7 @@ class TestSecureDirRequestReviewSetupView(TestSecureDirRequestBase):
         self.request0 = SecureDirRequest.objects.create(
             directory_name='test_dir',
             requester=self.pi0,
+            pi=self.pi0,
             data_description='a'*20,
             project=self.project0,
             status=SecureDirRequestStatusChoice.objects.get(name='Approved - Processing'),

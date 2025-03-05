@@ -17,6 +17,10 @@
       Project
       {% include 'common/table_sorter.html' with table_sorter_field='project' %}
     </th>
+    <th scope="col">
+      PI
+      {% include 'common/table_sorter.html' with table_sorter_field='pi' %}
+    </th>
     <th scope="col">Status</th>
   </tr>
   </thead>
@@ -32,6 +36,7 @@
       <td>{{ sec_dir_request.request_time|date:"M. d, Y" }}</td>
       <td>{{ sec_dir_request.requester.email }}</td>
       <td>{{ sec_dir_request.project.name }}</td>
+      <td>{{ sec_dir_request.pi.email }}</td>
       <td>
         {% with status=sec_dir_request.status.name %}
           {% if status == 'Under Review' %}
