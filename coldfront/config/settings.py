@@ -269,3 +269,21 @@ try:
     SETTINGS_EXPORT = SETTINGS_EXPORT + LOCAL_SETTINGS_EXPORT
 except NameError:
     SETTINGS_EXPORT = SETTINGS_EXPORT
+
+
+DECOMMISSION_ALERT_COLUMNS = [
+    "Hardware Type",
+    "Status",
+    "Initial Inquiry Date"
+]
+
+
+DECOMMISSION_DETAIL_COLUMNS = [
+    "PI Email",
+    "PI Name (first last)",
+    "Expected Decomission Date",
+    "Hardware Type",
+    "Status",
+    "Department Division",
+    "Hardware Specification Details"
+]

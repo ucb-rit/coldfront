@@ -7,6 +7,10 @@ from django.contrib.humanize.templatetags.humanize import intcomma
 from django.db.models import Count, Q, Sum
 from django.shortcuts import render
 from django.views.decorators.cache import cache_page
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, get_object_or_404
+from django.http import Http404
+from django.conf import settings
 
 from coldfront.core.allocation.models import (Allocation,
                                               AllocationUser,
@@ -23,7 +27,7 @@ from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
 from coldfront.core.project.utils import render_project_compute_usage
 
-from coldfront.core.utils.gsheets import get_decommission_alerts_for_user
+from coldfront.core.utils.gsheets import get_all_condo_allocations
 from django.contrib.auth.decorators import login_required
 
 
@@ -88,11 +92,16 @@ def home(request):
             )
         ]
 
-        # Add decommission alerts to the context.
-        alerts = get_decommission_alerts_for_user(request.user.email)
-        if alerts:
-            context['decommission_alerts'] = alerts
+        # Fetch all condo allocation alerts
+        all_alerts = get_all_condo_allocations(request.user.email)
 
+        # Filter to only include alerts with status "Compelete"
+        condo_allocations = [alert for alert in all_alerts if alert.get("status") == "Compelete"]
+        context['condo_allocations'] = condo_allocations
+        context['condo_allocations_columns'] = getattr(
+            settings, "DECOMMISSION_ALERT_COLUMNS",
+            ["Hardware Type", "Status", "Initial Inquiry Date"]
+        )
     else:
         template_name = 'portal/nonauthorized_home.html'
 
@@ -223,11 +232,39 @@ def allocation_summary(request):
 @login_required
 def decommission_details(request):
     """
-    Displays a page with detailed information (all fields) for each decommission record
-    associated with the current user's email.
+    Renders a page with a list of decommission alerts.
+    Each alert is displayed using configurable columns and includes a link
+    to an individual detail page.
     """
-    # Reuse the same helper function to get alerts.
-    alerts = get_decommission_alerts_for_user(request.user.email)
-    return render(request, "portal/decommission_details.html", {
-        "decommission_alerts": alerts
+    alerts = get_all_condo_allocations(request.user.email)
+
+    context = {
+        "decommission_alerts": alerts,
+        "decommission_alert_columns": getattr(settings, "DECOMMISSION_ALERT_COLUMNS_KEYS", [])
+    }
+    return render(request, "portal/decommission_details.html", context)
+
+
+from django.http import Http404
+
+
+@login_required
+def decommission_entry_detail(request, entry_id):
+    """
+    Look up a specific decommission alert for the current user using the unique id,
+    and display its details using configurable columns.
+    """
+    alerts = get_all_condo_allocations(request.user.email)
+    alert = None
+    for a in alerts:
+        if a.get("id") == entry_id:
+            alert = a
+            break
+    if not alert:
+        raise Http404("Decommission entry not found.")
+
+    detail_columns = getattr(settings, "DECOMMISSION_DETAIL_COLUMNS", [])
+    return render(request, "portal/decommission_entry_detail.html", {
+        "alert": alert,
+        "decommission_detail_columns": detail_columns,
     })

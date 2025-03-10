@@ -15,7 +15,12 @@ def get_setting(name):
 
 @register.filter
 def get_item(dictionary, key):
-    """Usage: {{ my_dict|get_item:"my_key" }}"""
-    if isinstance(dictionary, dict):
-        return dictionary.get(key, "")
-    return ""
+    return dictionary.get(key, "")
+
+@register.filter(name='replace')
+def replace(value, arg):
+    try:
+        old, new = arg.split(',')
+    except ValueError:
+        return value
+    return value.replace(old, new)

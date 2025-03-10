@@ -4,6 +4,7 @@ from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Q
 from django.views.generic.base import TemplateView
 from flags.state import flag_enabled
+from coldfront.core.utils.gsheets import get_all_condo_allocations
 
 from coldfront.core.allocation.models import (AllocationAttributeType,
                                               AllocationUserAttribute,
@@ -58,6 +59,29 @@ class RequestHubView(LoginRequiredMixin,
                 return True
         else:
             return True
+
+    def get_condo_allocations_request(self):
+        condo_obj = RequestListItem()
+        user = self.request.user
+        # If admin view, show all records regardless of status; otherwise, filter by email
+        if self.request.GET.get('show_all_requests') == 'on':
+            alerts = get_all_condo_allocations(None)
+            filtered_alerts = alerts  # do not filter by status in admin view
+        else:
+            alerts = get_all_condo_allocations(user.email)
+            filtered_alerts = [alert for alert in alerts if alert.get("status") in ["Active", "Inactive"]]
+        condo_obj.pending_queryset = filtered_alerts
+        condo_obj.complete_queryset = []
+        condo_obj.num_pending = len(filtered_alerts)
+        condo_obj.title = 'Condo Allocations'
+        condo_obj.table = 'user/condo_allocations_list_table.html'
+        condo_obj.button_path = 'decommission_details'
+        condo_obj.id = 'condo_allocations_request_section'
+        condo_obj.help_text = 'Showing condo allocations requests.'
+        condo_obj.columns = getattr(settings, "DECOMMISSION_ALERT_COLUMNS", [])
+        return condo_obj
+
+
 
     def create_paginator(self, queryset):
         """
@@ -584,13 +608,17 @@ class RequestHubView(LoginRequiredMixin,
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        requests = ['cluster_account_request',
-                    'project_removal_request',
-                    'savio_project_request',
-                    'vector_project_request',
-                    'project_join_request',
-                    'project_renewal_request',
-                    'su_purchase_request']
+        # Add your existing request types to this list.
+        requests = [
+            'cluster_account_request',
+            'project_removal_request',
+            'savio_project_request',
+            'vector_project_request',
+            'project_join_request',
+            'project_renewal_request',
+            'su_purchase_request',
+            'condo_allocations_request'
+        ]
 
         if flag_enabled('SECURE_DIRS_REQUESTABLE'):
             requests += ['secure_dir_request',
@@ -601,15 +629,15 @@ class RequestHubView(LoginRequiredMixin,
                                 self.request.user.is_staff) and
                                self.show_all_requests)
 
-        for request in requests:
-            request_obj = eval(f'self.get_{request}()')
+        for req in requests:
+            request_obj = eval(f'self.get_{req}()')
             if context['show_all']:
-                request_obj.help_text = f'Showing all {request_obj.title} ' \
-                                        f'in {settings.PORTAL_NAME}.'
-            context[f'{request}_obj'] = request_obj
+                request_obj.help_text = f'Showing all {request_obj.title} in {settings.PORTAL_NAME}.'
+            context[f'{req}_obj'] = request_obj
 
         context['admin_staff'] = (self.request.user.is_superuser or
                                   self.request.user.is_staff)
         context['hide_table_sorter'] = True
+        context['condo_alloc_req_count'] = self.get_condo_allocations_request().num_pending
 
         return context

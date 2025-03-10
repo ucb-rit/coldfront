@@ -94,6 +94,10 @@
     {% endwith %}
   {% endif %}
 
+{% with request_obj=condo_allocations_request_obj %}
+  {% include 'request_hub/request_section.html' %}
+{% endwith %}
+
   <script>
     {# set variables to be used for scroll position #}
       window.onbeforeunload = function(e) {

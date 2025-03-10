@@ -10,33 +10,6 @@
     {% include 'portal/feedback_alert.html' %}
 
   {% if decommission_alerts %}
-  <div class="alert alert-warning">
-    <strong>Decommission Notice:</strong> Your condo allocation is scheduled for decommissioning.
-    Please <a href="{% url 'decommission_details' %}">click here</a> for details.
-
-    <table class="table table-sm mt-2">
-      <thead>
-        <tr>
-          <th>Hardware Type</th>
-          <th>Expected Decomission Date</th>
-          <th>Status</th>
-          <th>Department Division</th>
-          <th>Hardware Specification Details</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for alert in decommission_alerts %}
-          <tr>
-            <td>{{ alert.record|get_item:"Hardware Type" }}</td>
-            <td>{{ alert.record|get_item:"Expected Decomission Date" }}</td>
-            <td>{{ alert.record|get_item:"Status" }}</td>
-            <td>{{ alert.record|get_item:"Department Division" }}</td>
-            <td>{{ alert.record|get_item:"Hardware Specification Details" }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
 {% endif %}
 
     <p>If you would like to set up or update your access to a cluster, please complete the following steps.</p>
@@ -229,7 +202,49 @@
     </a>
 
   </div>
+<!--  Add an empty space-->
+    <div class="col-lg-12 mt-2">
+        {% if condo_allocations %}
 
+
+    <a href="{% url 'request-hub' %}">
+      <h3>My Condo Allocations &raquo;</h3>
+    </a>
+    <hr>
+      <div class="table-responsive">
+        <table class="table table-sm mt-2">
+          <thead>
+            <tr>
+              {% for col in condo_allocations_columns %}
+                <th>{{ col }}</th>
+              {% endfor %}
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for alert in condo_allocations %}
+              <tr>
+                {% for col in condo_allocations_columns %}
+                  <td>{{ alert.record|get_item:col }}</td>
+                {% endfor %}
+                <td>
+                  <a href="{% url 'decommission_entry_detail' alert.id %}">View Detail</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-info">
+            <div class="col-lg-12 mt-2">
+            </div>
+        No Completed Condo Allocations Requests found.
+      </div>
+    {% endif %}
+
+    </div>
+    </div>
 
 <!-- We do not need to display allocations for the users in the home page -krishna.
   <div class="col-lg-6 mt-2">
