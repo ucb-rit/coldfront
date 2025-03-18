@@ -17,7 +17,7 @@
             {% if users_pending_removal %}
                 <div class="card">
                     <div class="card-body">
-                        <strong>Users With Pending Removal Requests:  </strong>
+                        <h3 class="mb-3">Users With Pending Removal Requests:  </h3>
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
@@ -65,9 +65,54 @@
         <p></p>
         <td>
             {% if users_to_remove %}
+                <div class="modal fade" id="removeUsersModal" tabindex="-1" role="dialog" aria-labelledby="removeUsersModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <form action="{% url 'project-remove-users' project.pk %}" method="post" id="removeUsersForm">
+                            {% csrf_token %}
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <p class="modal-title">User Removal Request</p>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <label>Are you sure? These users will immediately be disallowed from submitting jobs under this project.</label>
+                                    <table class="table table-hover">
+                                        <thead>
+                                        <th scope="col">Username</th>
+                                        <th scope="col">Email</th>
+                                        <th scope="col">Role</th>
+                                        <th scope="col">Status</th>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                    <input type="hidden" name="usernames">
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                    <button class="btn btn-danger" type="submit">
+                                        <i class="fas fa-user-plus" aria-hidden="true"></i>
+                                        Submit
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-body">
-                        <strong>Select Users to Remove:  </strong>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3>Select Users to Remove:  </h3>
+                            <button id="remove-selected-users-button" class="btn btn-danger" onclick="showUserRemovalModal()">
+                                <i class="fas fa-user-plus" aria-hidden="true"></i>
+                                Remove Selected Users
+                            </button>
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
@@ -91,46 +136,13 @@
                                         <td>{{ user.role }}</td>
                                         <td>{{ user.status }}</td>
 
-                                        <td>
-                                            <div class="modal fade" id="remove{{ user.username }}Modal" tabindex="-1" role="dialog" aria-labelledby="remove{{ user.username }}ModalLabel" aria-hidden="true">
-                                                <div class="modal-dialog" role="document">
-                                                    <form action="{% url 'project-remove-users' project.pk %}" method="post" id="remove{{ user.username }}Form">
-                                                        {% csrf_token %}
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <p class="modal-title">User Removal Request</p>
-                                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                                    <span aria-hidden="true">&times;</span>
-                                                                </button>
-                                                            </div>
-
-                                                            <div class="modal-body">
-                                                                <label>Are you sure? This user will immediately be disallowed from submitting jobs under this project.</label>
-
-                                                                <br><b>User:</b> {{ user.username }}
-                                                                <br><b>Project:</b> {{ project.title }}
-                                                                <br><b>Role:</b> {{ user.role }}
-                                                                <br><b>Status:</b> {{ user.status }}
-
-                                                                <input type="hidden" value="{{ user.username }}" name="username">
-                                                            </div>
-
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                                                <button class="btn btn-danger" type="submit">
-                                                                    <i class="fas fa-user-plus" aria-hidden="true"></i>
-                                                                    Submit
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-
-                                            <button class="btn btn-danger" data-toggle="modal" data-target="#remove{{ user.username }}Modal">
-                                                <i class="fas fa-user-plus" aria-hidden="true"></i>
-                                                Remove
-                                            </button>
+                                        <td class="d-flex justify-content-around">
+                                                <input type="checkbox"
+                                                       class="form-check-input"
+                                                       name="users_selected_for_removal"
+                                                       value="{{ user.username }},{{user.email}},{{user.role}},{{user.status}}"
+                                                       id="user{{ user.username }}"
+                                                       style="width: 15px; height: 15px;">
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -178,6 +190,34 @@
             icon.toggleClass("fa-plus fa-minus");
 
         });
+
+        function showUserRemovalModal() {
+            var selectedUsers = []; // Reset the selected users array
+            $("input[name='users_selected_for_removal']:checked").each(function() {
+                selectedUsers.push($(this).val());
+            });
+            const selectedUsersUsernames = selectedUsers.map((user) => user.split(",")[0]);
+            $("#removeUsersForm input[name='usernames']").val(selectedUsersUsernames.join(","));
+
+            var tableBody = $("#removeUsersModal tbody");
+            tableBody.empty();
+            $.each(selectedUsers, function(index, user) {
+                var splitUser = user.split(",");
+                var userRow = `<tr>
+                    <td>${splitUser[0]}</td>
+                    <td>${splitUser[1]}</td>
+                    <td>${splitUser[2]}</td>
+                    <td>${splitUser[3]}</td>
+                </tr>`;
+                tableBody.append(userRow);
+            });
+
+            if (selectedUsers.length > 0) {
+                $('#removeUsersModal').modal('show');
+            } else {
+                alert("Please select at least one user to remove.");
+            }
+        }
     </script>
 
     <script>

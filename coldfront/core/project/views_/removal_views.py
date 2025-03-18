@@ -124,30 +124,34 @@ class ProjectRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
+        print("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
         pk = self.kwargs.get('pk')
         project_obj = get_object_or_404(Project, pk=pk)
-        user_obj = User.objects.get(
-            username=self.request.POST['username'])
+        usernames = self.request.POST.get('usernames').split(',')
 
-        try:
-            request_runner = ProjectRemovalRequestRunner(
-                self.request.user, user_obj, project_obj)
-            runner_result = request_runner.run()
-            success_messages, error_messages = request_runner.get_messages()
+        for username in usernames:
+            user_obj = User.objects.get(
+                username=username)
 
-            if runner_result:
-                request_runner.send_emails()
-                for m in success_messages:
-                    messages.success(request, m)
-            else:
-                for m in error_messages:
-                    messages.error(request, m)
+            try:
+                request_runner = ProjectRemovalRequestRunner(
+                    self.request.user, user_obj, project_obj)
+                runner_result = request_runner.run()
+                success_messages, error_messages = request_runner.get_messages()
 
-        except Exception as e:
-            logger.exception(e)
-            error_message = \
-                'Unexpected error. Please contact an administrator.'
-            messages.error(self.request, error_message)
+                if runner_result:
+                    request_runner.send_emails()
+                    for m in success_messages:
+                        messages.success(request, m)
+                else:
+                    for m in error_messages:
+                        messages.error(request, m)
+
+            except Exception as e:
+                logger.exception(e)
+                error_message = \
+                    'Unexpected error. Please contact an administrator.'
+                messages.error(self.request, error_message)
 
         return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': pk}))
 
