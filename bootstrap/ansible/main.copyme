@@ -176,8 +176,6 @@ center_user_guide: "https://docs-research-it.berkeley.edu/services/high-performa
 center_login_guide: "https://docs-research-it.berkeley.edu/services/high-performance-computing/user-guide/logging-brc-clusters/#Logging-in"
 # TODO: For MyLRC, use "hpcshelp@lbl.gov".
 center_help_email: "brc-hpc-help@berkeley.edu"
-# TODO: For MyLRC, use "Division".
-department_display_name: "Department"
 
 #------------------------------------------------------------------------------
 # BRC Vector settings
@@ -331,6 +329,10 @@ sentry_dsn: ""
 # # A list of email addresses to CC when certain requests are processed.
 # # TODO: Set these addresses to yours.
 # request_approval_cc_list: []
+# # A list of email addresses to be notified when a project-user removal request
+# # is processed.
+# # TODO: Set these addresses to yours.
+# project_user_removal_request_processed_email_admin_list: []
 
 #------------------------------------------------------------------------------
 # prod_settings
@@ -388,6 +390,10 @@ sentry_dsn: ""
 # # A list of email addresses to CC when certain requests are processed.
 # # TODO: Set these addresses to yours.
 # request_approval_cc_list: []
+# # A list of email addresses to be notified when a project-user removal request
+# # is processed.
+# # TODO: Set these addresses to yours.
+# project_user_removal_request_processed_email_admin_list: []
 
 #------------------------------------------------------------------------------
 # dev_settings
@@ -441,4 +447,8 @@ sentry_dsn: ""
 # # events.
 # email_admin_list: ['placeholder@dev.dev']
 # # A list of email addresses to CC when certain requests are processed.
+# # TODO: Set these addresses to yours.
 # request_approval_cc_list: ['placeholder@dev.dev']
+# # A list of email addresses to be notified when a project-user removal request
+# # is processed.
+# project_user_removal_request_processed_email_admin_list: ['placeholder@dev.dev']

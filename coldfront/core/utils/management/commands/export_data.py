@@ -17,8 +17,6 @@ from coldfront.core.project.forms_.renewal_forms.request_forms import Deprecated
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
-from coldfront.plugins.departments.utils.queries import get_departments_for_user
-
 from django import forms
 from flags.state import flag_enabled
 
@@ -328,6 +326,8 @@ class Command(BaseCommand):
             authoritative and non-authoritative departments. Each str is
             a semicolon-separated list of str representations of
             departments."""
+            from coldfront.plugins.departments.utils.queries import get_departments_for_user
+
             authoritative_department_strs, non_authoritative_department_strs = \
                 get_departments_for_user(_user, strs_only=True)
             authoritative_str = ';'.join(

@@ -33,13 +33,10 @@ from coldfront.core.resource.utils_.allowance_utils.computing_allowance import C
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
-from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
 
-from coldfront.plugins.departments.forms import NonAuthoritativeDepartmentSelectionForm
-from coldfront.plugins.departments.utils.queries import get_departments_for_user
-from coldfront.plugins.departments.utils.queries import UserDepartmentUpdater
+from collections import OrderedDict
 
 from django.conf import settings
 from django.contrib import messages
@@ -58,7 +55,6 @@ from django_q.tasks import async_task
 from flags.state import flag_enabled
 from formtools.wizard.views import SessionWizardView
 
-import hashlib
 import logging
 import os
 
@@ -89,7 +85,7 @@ class ProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
 class NewProjectRequestLandingView(LoginRequiredMixin, UserPassesTestMixin,
                                    TemplateView):
     template_name = (
-        'project/project_request/savio/request/project_request_landing.html')
+        'project/project_request/savio/request/request/project_request_landing.html')
 
     def test_func(self):
         if self.request.user.is_superuser:
@@ -129,45 +125,13 @@ class NewProjectRequestLandingView(LoginRequiredMixin, UserPassesTestMixin,
 class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                                 SessionWizardView):
 
-    FORMS = [
-        ('computing_allowance', ComputingAllowanceForm),
-        ('allocation_period', SavioProjectAllocationPeriodForm),
-        ('existing_pi', SavioProjectExistingPIForm),
-        ('new_pi', SavioProjectNewPIForm),
-        ('pi_department', NonAuthoritativeDepartmentSelectionForm),
-        ('ica_extra_fields', SavioProjectICAExtraFieldsForm),
-        ('recharge_extra_fields', SavioProjectRechargeExtraFieldsForm),
-        ('pool_allocations', SavioProjectPoolAllocationsForm),
-        ('pooled_project_selection', SavioProjectPooledProjectSelectionForm),
-        ('details', SavioProjectDetailsForm),
-        ('billing_id', BillingIDValidationForm),
-        ('survey', SavioProjectSurveyForm),
-    ]
-
-    _TEMPLATES_DIR = 'project/project_request/savio/request'
-
-    # Files are relative to _TEMPLATES_DIR.
-    TEMPLATES = {
-        'computing_allowance': 'project_computing_allowance.html',
-        'allocation_period': 'project_allocation_period.html',
-        'existing_pi': 'project_existing_pi.html',
-        'new_pi': 'project_new_pi.html',
-        'pi_department': 'project_pi_department.html',
-        'ica_extra_fields': 'project_ica_extra_fields.html',
-        'recharge_extra_fields': 'project_recharge_extra_fields.html',
-        'pool_allocations': 'project_pool_allocations.html',
-        'pooled_project_selection': 'project_pooled_project_selection.html',
-        'details': 'project_details.html',
-        'billing_id': 'project_billing_id.html',
-        'survey': 'project_survey.html',
-    }
-
+    # Note that this list may not contain all forms included in the view. Avoid
+    # referencing this list directly.
     form_list = [
         ComputingAllowanceForm,
         SavioProjectAllocationPeriodForm,
         SavioProjectExistingPIForm,
         SavioProjectNewPIForm,
-        NonAuthoritativeDepartmentSelectionForm,
         SavioProjectICAExtraFieldsForm,
         SavioProjectRechargeExtraFieldsForm,
         SavioProjectPoolAllocationsForm,
@@ -180,10 +144,25 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
     logger = logging.getLogger(__name__)
 
     def __init__(self, *args, **kwargs):
+        # When instantiated with .as_view(), the class variable form_list is
+        # processed. However, the check for whether department functionality is
+        # enabled cannot be done at the class level, so the check, and the
+        # update to the list of forms to include the department selection form,
+        # is done here.
+        if self.__departments_enabled():
+            kwargs['form_list'] = self.__include_department_form(
+                kwargs['form_list'])
+
         super().__init__(*args, **kwargs)
+
+        # A list of tuples (form name, form class) in order of appearance.
+        self.__forms = self.__wizard_form_names_and_classes()
+        # A dict mapping form name to the corresponding template.
+        self.__templates = self.__wizard_templates()
+
         # Define a lookup table from form name to step number.
         self.step_numbers_by_form_name = {
-            name: i for i, (name, _) in enumerate(self.FORMS)}
+            name: i for i, (name, _) in enumerate(self.__forms)}
 
     def test_func(self):
         if self.request.user.is_superuser:
@@ -232,11 +211,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         return kwargs
 
     def get_template_names(self):
-        step_name = self.FORMS[int(self.steps.current)][0]
-        template_file_name = self.TEMPLATES[step_name]
-        resolved_template_name = os.path.join(
-            self._TEMPLATES_DIR, template_file_name)
-        return [resolved_template_name]
+        return [self.__templates[self.__forms[int(self.steps.current)][0]]]
 
     def done(self, form_list, **kwargs):
         """Perform processing and store information in a request
@@ -244,8 +219,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         redirect_url = '/'
         try:
             form_data = session_wizard_all_form_data(
-                form_list, kwargs['form_dict'], len(self.form_list))
-
+                form_list, kwargs['form_dict'], len(self.__forms))
             request_kwargs = {
                 'requester': self.request.user,
             }
@@ -345,17 +319,35 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         (zero-indexed) to a function determining whether FORMS[int(i)]
         should be included."""
         view = SavioProjectRequestWizard
-        return {
-            '1': view.show_allocation_period_form_condition,
-            '3': view.show_new_pi_form_condition,
-            '4': view.show_pi_department_form_condition,
-            '5': view.show_ica_extra_fields_form_condition,
-            '6': view.show_recharge_extra_fields_form_condition,
-            '7': view.show_pool_allocations_form_condition,
-            '8': view.show_pooled_project_selection_form_condition,
-            '9': view.show_details_form_condition,
-            '10': view.show_billing_id_form_condition,
-        }
+
+        _condition_dict = {}
+        # The computing allowance form (at index 0) is always included.
+        _condition_dict['1'] = view.show_allocation_period_form_condition
+        # The existing PI selection form (at index 2) is always included.
+        _condition_dict['3'] = view.show_new_pi_form_condition
+
+        # The index of the next form to be added.
+        next_index = 4
+
+        if view.__departments_enabled():
+            _condition_dict[str(next_index)] = \
+                view.show_pi_department_form_condition
+            next_index += 1
+
+        remaining_form_conditions = (
+            view.show_ica_extra_fields_form_condition,
+            view.show_recharge_extra_fields_form_condition,
+            view.show_pool_allocations_form_condition,
+            view.show_pooled_project_selection_form_condition,
+            view.show_details_form_condition,
+            view.show_billing_id_form_condition,
+        )
+
+        for condition in remaining_form_conditions:
+            _condition_dict[str(next_index)] = condition
+            next_index += 1
+
+        return _condition_dict
 
     def show_allocation_period_form_condition(self):
         """Only show the form for selecting an AllocationPeriod for
@@ -413,6 +405,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         if not self.__departments_enabled():
             return False
 
+        from coldfront.plugins.departments.utils.queries import get_departments_for_user
+
         existing_pi_step = str(self.step_numbers_by_form_name['existing_pi'])
         existing_pi_cleaned_data = self.get_cleaned_data_for_step(
             existing_pi_step) or {}
@@ -462,7 +456,15 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
     @staticmethod
     def __departments_enabled():
         """Return whether department functionality is enabled."""
-        return flag_enabled('USER_DEPARTMENTS_ENABLED')
+        # Because this is called from urls.py (via condition_dict) at import
+        # time, the database table for flag state may not exist yet. Catch the
+        # exception raised to allow the import to succeed.
+        try:
+            return flag_enabled('USER_DEPARTMENTS_ENABLED')
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.exception(e)
+            return False
 
     def __get_allocation_period(self, form_data):
         """Return the AllocationPeriod the user selected."""
@@ -577,6 +579,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             # The requester was not prompted to provide departments.
             return
 
+        from coldfront.plugins.departments.utils.queries import UserDepartmentUpdater
+
         user_department_updater = UserDepartmentUpdater(
             pi, non_authoritative_departments)
         user_department_updater.run(authoritative=False, non_authoritative=True)
@@ -652,6 +656,31 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
         return project
 
+    def __include_department_form(self, form_list):
+        """Given an OrderedDict defined in WizardView's get_initkwargs
+        method that maps a step name (str) to a form class, return a new
+        OrderedDict with the department selection form included.
+
+        This should be done at instantiation, as opposed to at the class
+        level, because the departments plugin app may not be installed,
+        so imports of it may fail.
+
+        This method should only be called if the app is installed.
+        """
+        from coldfront.plugins.departments.forms import \
+            NonAuthoritativeDepartmentSelectionForm
+
+        updated_form_list = OrderedDict()
+        index = 0
+        for _, form_class in form_list.items():
+            updated_form_list[str(index)] = form_class
+            index += 1
+            if form_class == SavioProjectNewPIForm:
+                updated_form_list[str(index)] = \
+                    NonAuthoritativeDepartmentSelectionForm
+                index += 1
+        return updated_form_list
+
     def __set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""
         computing_allowance_form_step = \
@@ -726,6 +755,77 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                     str(details_step))
                 name = details_form_data['name']
                 dictionary.update({'breadcrumb_project': f'Project: {name}'})
+
+    def __wizard_form_names_and_classes(self):
+        """Return a list of tuples (form name, form class) in order of
+        appearance."""
+        names_and_classes = []
+
+        names_and_classes.append(
+            ('computing_allowance', ComputingAllowanceForm))
+        names_and_classes.append(
+            ('allocation_period', SavioProjectAllocationPeriodForm))
+        names_and_classes.append(
+            ('existing_pi', SavioProjectExistingPIForm))
+        names_and_classes.append(
+            ('new_pi', SavioProjectNewPIForm))
+
+        if self.__departments_enabled():
+            from coldfront.plugins.departments.forms import \
+                NonAuthoritativeDepartmentSelectionForm
+            names_and_classes.append(
+                ('pi_department', NonAuthoritativeDepartmentSelectionForm))
+
+        names_and_classes.append(
+            ('ica_extra_fields', SavioProjectICAExtraFieldsForm))
+        names_and_classes.append(
+            ('recharge_extra_fields', SavioProjectRechargeExtraFieldsForm))
+        names_and_classes.append(
+            ('pool_allocations', SavioProjectPoolAllocationsForm))
+        names_and_classes.append(
+            ('pooled_project_selection',
+             SavioProjectPooledProjectSelectionForm))
+        names_and_classes.append(('details', SavioProjectDetailsForm))
+        names_and_classes.append(('billing_id', BillingIDValidationForm))
+        names_and_classes.append(('survey', SavioProjectSurveyForm))
+
+        return names_and_classes
+
+    def __wizard_templates(self):
+        """Return a dict mapping form name to the corresponding
+        template."""
+        templates = {}
+
+        templates['computing_allowance'] = (
+            'project/project_request/savio/request/project_computing_allowance.html')
+        templates['allocation_period'] = (
+            'project/project_request/savio/request/project_allocation_period.html')
+        templates['existing_pi'] = (
+            'project/project_request/savio/request/project_existing_pi.html')
+        templates['new_pi'] = (
+            'project/project_request/savio/request/project_new_pi.html')
+
+        if self.__departments_enabled():
+            templates['pi_department'] = (
+                'project/project_request/savio/request/project_pi_department.html')
+
+        templates['ica_extra_fields'] = (
+            'project/project_request/savio/request/project_ica_extra_fields.html')
+        templates['recharge_extra_fields'] = (
+            'project/project_request/savio/request/project_recharge_extra_fields.html')
+        templates['pool_allocations'] = (
+            'project/project_request/savio/request/project_pool_allocations.html')
+        templates['pooled_project_selection'] = (
+            'project/project_request/savio/request/'
+            'project_pooled_project_selection.html')
+        templates['details'] = (
+            'project/project_request/savio/request/project_details.html')
+        templates['billing_id'] = (
+            'project/project_request/savio/request/project_billing_id.html')
+        templates['survey'] = (
+            'project/project_request/savio/request/project_survey.html')
+
+        return templates
 
 
 # =============================================================================
