@@ -78,7 +78,9 @@
                                 </div>
 
                                 <div class="modal-body">
-                                    <label>Are you sure? These users will immediately be disallowed from submitting jobs under this project.</label>
+                                    <label>Are you sure? These users will immediately be disallowed from submitting jobs under this project. <br>
+                                           <b>Note:</b> this process only removes the user from the project and does not delete their cluster account.
+                                    </label>
                                     <table class="table table-hover">
                                         <thead>
                                         <th scope="col">Username</th>
@@ -95,7 +97,7 @@
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                                     <button class="btn btn-danger" type="submit">
-                                        <i class="fas fa-user-plus" aria-hidden="true"></i>
+                                        <i class="fas fa-user-times" aria-hidden="true"></i>
                                         Submit
                                     </button>
                                 </div>
@@ -109,7 +111,7 @@
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h3>Select Users to Remove:  </h3>
                             <button id="remove-selected-users-button" class="btn btn-danger" onclick="showUserRemovalModal()">
-                                <i class="fas fa-user-plus" aria-hidden="true"></i>
+                                <i class="fas fa-user-times" aria-hidden="true"></i>
                                 Remove Selected Users
                             </button>
                         </div>
@@ -218,6 +220,10 @@
                 alert("Please select at least one user to remove.");
             }
         }
+        
+        $('#removeUsersForm').on('submit', function() {
+            $(this).find(':submit').prop('disabled', true);
+        });
     </script>
 
     <script>
