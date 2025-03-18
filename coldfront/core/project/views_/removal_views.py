@@ -109,17 +109,8 @@ class ProjectRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
         context['project'] = get_object_or_404(Project, pk=pk)
         context['users_pending_removal'] = users_pending_removal
 
-        page = request.GET.get('page', 1)
 
-        paginator = Paginator(users_to_remove_list, 25)
-        try:
-            users_to_remove = paginator.page(page)
-        except PageNotAnInteger:
-            users_to_remove = paginator.page(1)
-        except EmptyPage:
-            users_to_remove = paginator.page(paginator.num_pages)
-
-        context['users_to_remove'] = users_to_remove
+        context['users_to_remove'] = users_to_remove_list
 
         return render(request, self.template_name, context)
 
