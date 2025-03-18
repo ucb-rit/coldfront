@@ -124,7 +124,6 @@ class ProjectRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
-        print("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
         pk = self.kwargs.get('pk')
         project_obj = get_object_or_404(Project, pk=pk)
         usernames = self.request.POST.get('usernames').split(',')
