@@ -80,7 +80,6 @@ with flagged_paths('BASIC_AUTH_ENABLED') as f_path:
                name='password-reset-complete'),
     ]
 
-
 with flagged_paths('LINK_LOGIN_ENABLED') as f_path:
     urlpatterns += [
         f_path('request-login-link/',
@@ -91,6 +90,17 @@ with flagged_paths('LINK_LOGIN_ENABLED') as f_path:
                name='link-login'),
     ]
 
+# Note: The USER_DEPARTMENTS_ENABLED flag generally abstracts away the
+# check for whether the app is installed. However, this does not work
+# when defining URLs, so the check is manually done here.
+if 'coldfront.plugins.departments' in settings.INSTALLED_APPS:
+    import coldfront.plugins.departments.views as department_views
+    with flagged_paths('USER_DEPARTMENTS_ENABLED') as f_path:
+        urlpatterns += [
+            f_path('update-departments',
+                department_views.UpdateDepartmentsView.as_view(),
+                name='update-departments'),
+        ]
 
 with flagged_paths('SSO_ENABLED') as f_path:
     urlpatterns += [

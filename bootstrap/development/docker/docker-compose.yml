@@ -58,6 +58,11 @@ services:
       - ../../..:/var/www/coldfront_app/coldfront
       - /Users/heshamelbashandy/Documents/projects/mybrc/coldfront/bootstrap/development/docker/lbl-it-coldfront-0be16a411059.json:/var/www/coldfront_app/coldfront/lbl-it-coldfront-0be16a411059.json
 
+  qcluster:
+    image: coldfront-qcluster
+    volumes:
+      - ../../..:/var/www/coldfront_app/coldfront
+
 volumes:
   db-postgres:
     external: false
