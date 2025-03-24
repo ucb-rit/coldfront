@@ -30,18 +30,18 @@ class RequestListItem:
     """
 
     def __init__(self):
-        num = None
-        title = None
-        num_pending = None
-        table = None
-        pending_queryset = None
-        complete_queryset = None
-        button_path = None
-        button_arg1 = None
-        button_arg2 = None
-        button_text = None
-        id = None
-        help_text = None
+        self.num = None
+        self.title = None
+        self.num_pending = None
+        self.table = None
+        self.pending_queryset = None
+        self.complete_queryset = None
+        self.button_path = None
+        self.button_arg1 = None
+        self.button_arg2 = None
+        self.button_text = None
+        self.id = None
+        self.help_text = None
 
 
 class RequestHubView(LoginRequiredMixin,
@@ -59,29 +59,6 @@ class RequestHubView(LoginRequiredMixin,
                 return True
         else:
             return True
-
-    def get_condo_allocations_request(self):
-        condo_obj = RequestListItem()
-        user = self.request.user
-        # If admin view, show all records regardless of status; otherwise, filter by email
-        if self.request.GET.get('show_all_requests') == 'on':
-            alerts = get_all_condo_allocations(None)
-            filtered_alerts = alerts  # do not filter by status in admin view
-        else:
-            alerts = get_all_condo_allocations(user.email)
-            filtered_alerts = [alert for alert in alerts if alert.get("status") in ["Active", "Inactive"]]
-        condo_obj.pending_queryset = filtered_alerts
-        condo_obj.complete_queryset = []
-        condo_obj.num_pending = len(filtered_alerts)
-        condo_obj.title = 'Condo Allocations'
-        condo_obj.table = 'user/condo_allocations_list_table.html'
-        condo_obj.button_path = 'decommission_details'
-        condo_obj.id = 'condo_allocations_request_section'
-        condo_obj.help_text = 'Showing condo allocations requests.'
-        condo_obj.columns = getattr(settings, "DECOMMISSION_ALERT_COLUMNS", [])
-        return condo_obj
-
-
 
     def create_paginator(self, queryset):
         """
@@ -142,6 +119,59 @@ class RequestHubView(LoginRequiredMixin,
             'Showing your cluster access requests.'
 
         return cluster_request_object
+
+    def get_hardware_procurement_request(self):
+        """Populates a RequestListItem with data for hardware
+        procurement requests"""
+
+        # Note: These imports are placed here because the hardware_procurements
+        #  plugin may not necessarily be installed.
+        from coldfront.plugins.hardware_procurements.utils import UserInfoDict
+        from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
+
+        user = self.request.user
+
+        fetch_hardware_procurements_kwargs = {}
+        if not self.show_all_requests:
+            user_data = UserInfoDict.from_user(user)
+            fetch_hardware_procurements_kwargs['user_data'] = user_data
+
+        hardware_procurements = fetch_hardware_procurements(
+            **fetch_hardware_procurements_kwargs)
+
+        # TODO: Hide implementation-specific details.
+        pending_statuses = {'Active'}
+        complete_statuses = {'Complete', 'Completed', 'Compelete', 'Compeleted'}
+        pending_hardware_procurements = []
+        complete_hardware_procurements = []
+        for hardware_procurement in hardware_procurements:
+            status = hardware_procurement['status']
+            if status in pending_statuses:
+                pending_hardware_procurements.append(hardware_procurement)
+            elif status in complete_statuses:
+                complete_hardware_procurements.append(hardware_procurement)
+
+        hardware_procurement_request_obj = RequestListItem()
+        hardware_procurement_request_obj.num = self.paginators
+        hardware_procurement_request_obj.pending_queryset = \
+            self.create_paginator(pending_hardware_procurements)
+        hardware_procurement_request_obj.complete_queryset = \
+            self.create_paginator(complete_hardware_procurements)
+        hardware_procurement_request_obj.num_pending = len(
+            pending_hardware_procurements)
+        hardware_procurement_request_obj.title = 'Hardware Procurement Requests'
+        hardware_procurement_request_obj.table = (
+            'hardware_procurements/'
+            'hardware_procurement_request_list_table.html')
+        hardware_procurement_request_obj.button_path = (
+            'hardware-procurement-list')
+        hardware_procurement_request_obj.button_text = (
+            'Go To Hardware Procurement Requests Main Page')
+        hardware_procurement_request_obj.id = (
+            'hardware_procurement_request_section')
+        hardware_procurement_request_obj.help_text = (
+            'Showing your hardware procurement requests.')
+        return hardware_procurement_request_obj
 
     def get_project_removal_request(self):
         """Populates a RequestListItem with data for project removal requests"""
@@ -617,13 +647,15 @@ class RequestHubView(LoginRequiredMixin,
             'project_join_request',
             'project_renewal_request',
             'su_purchase_request',
-            'condo_allocations_request'
         ]
 
         if flag_enabled('SECURE_DIRS_REQUESTABLE'):
             requests += ['secure_dir_request',
                          'secure_dir_join_request',
                          'secure_dir_remove_request']
+
+        if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
+            requests.append('hardware_procurement_request')
 
         context['show_all'] = ((self.request.user.is_superuser or
                                 self.request.user.is_staff) and
@@ -638,6 +670,5 @@ class RequestHubView(LoginRequiredMixin,
         context['admin_staff'] = (self.request.user.is_superuser or
                                   self.request.user.is_staff)
         context['hide_table_sorter'] = True
-        context['condo_alloc_req_count'] = self.get_condo_allocations_request().num_pending
 
         return context
