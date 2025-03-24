@@ -1,0 +1,36 @@
+{% load portal_tags %}
+
+<table class="table table-sm">
+  <thead>
+    <tr>
+      <th scope="col">Initial Inquiry Date</th>
+      {% if display_user_info %}
+        <th scope="col">PI Name</th>
+        <th scope="col">PI Email</th>
+      {% endif %}
+      <th scope="col">Hardware Type</th>
+      <th scope="col">Hardware Specification Details</th>
+      <th scope="col">Status</th>
+      <th scope="col">Details</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for request_obj in queryset %}
+    <tr>
+      <td>{{ request_obj|get_item:"initial_inquiry_date" }}</td>
+      {% if display_user_info %}
+        <td>{{ request_obj|get_item:"pi_name" }}</td>
+        <td>{{ request_obj|get_item:"pi_email" }}</td>
+      {% endif %}
+      <td>{{ request_obj|get_item:"hardware_type" }}</td>
+      <td>{{ request_obj|get_item:"hardware_specification_details" }}</td>
+      <td>{{ request_obj|get_item:"status" }}</td>
+      <td>
+        <a href="{% url 'hardware-procurement-detail' request_obj.id %}">
+          View
+        </a>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>

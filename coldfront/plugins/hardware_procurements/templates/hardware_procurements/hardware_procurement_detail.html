@@ -1,0 +1,47 @@
+{% extends "common/base.html" %}
+{% load static %}
+
+
+{% block title %}
+Hardware Procurement Details
+{% endblock %}
+
+{% block content %}
+
+<h2>Hardware Procurement Details</h2>
+<br>
+
+<table class="table">
+	<tbody>
+		<tr>
+			<td><b>PI Email</b></td>
+			<td>{{ procurement.pi_email }}</td>
+		</tr>
+		<tr>
+			<td><b>PI Name</b></td>
+			<td>{{ procurement.pi_name }}</td>
+		</tr>
+		<tr>
+			<td><b>POC Email</b></td>
+			<td>{{ procurement.poc_email }}</td>
+		</tr>
+		<tr>
+			<td><b>POC Name</b></td>
+			<td>{{ procurement.poc_name }}</td>
+		</tr>
+		<tr>
+			<td><b>Hardware Type</b></td>
+			<td>{{ procurement.hardware_type }}</td>
+		</tr>
+		<tr>
+			<td><b>Status</b></td>
+			<td>{{ procurement.status }}</td>
+		</tr>
+		<tr>
+			<td><b>Hardware Specification Details</b></td>
+			<td>{{ procurement.hardware_specification_details }}</td>
+		</tr>
+	</tbody>
+</table>
+
+{% endblock %}
