@@ -58,3 +58,29 @@ if ('allauth.account.auth_backends.AuthenticationBackend' in
         ])
     for prefix, module_path in prefixes_and_module_paths:
         urlpatterns.append(path(prefix, include(module_path)))
+
+
+
+# TODO
+from flags.urls import flagged_paths
+
+# Note: The HARDWARE_PROCUREMENTS_ENABLED flag generally abstracts away the
+# check for whether the app is installed. However, this does not work when
+# defining URLs, so the check is manually done here.
+if 'coldfront.plugins.hardware_procurements' in settings.INSTALLED_APPS:
+    import coldfront.plugins.hardware_procurements.views as hardware_procurement_views
+
+    # TODO: Ideally, use include(), but it is unclear whether flagged_paths
+    #  works with that.
+
+    with flagged_paths('HARDWARE_PROCUREMENTS_ENABLED') as f_path:
+        urlpatterns += [
+            f_path(
+                'hardware-procurements/',
+                hardware_procurement_views.HardwareProcurementListView.as_view(),
+                name='hardware-procurement-list'),
+            f_path(
+                'hardware-procurements/<str:procurement_id>/',
+                hardware_procurement_views.HardwareProcurementDetailView.as_view(),
+                name='hardware-procurement-detail'),
+        ]

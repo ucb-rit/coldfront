@@ -12,6 +12,8 @@ from django.shortcuts import render, get_object_or_404
 from django.http import Http404
 from django.conf import settings
 
+from flags.state import flag_enabled
+
 from coldfront.core.allocation.models import (Allocation,
                                               AllocationUser,
                                               AllocationUserAttribute)
@@ -92,16 +94,32 @@ def home(request):
             )
         ]
 
-        # Fetch all condo allocation alerts
-        all_alerts = get_all_condo_allocations(request.user.email)
+        if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
+            from coldfront.plugins.hardware_procurements.utils import UserInfoDict
+            from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
+            user_data = UserInfoDict.from_user(request.user)
+            procurements = fetch_hardware_procurements(user_data=user_data)
 
-        # Filter to only include alerts with status "Compelete"
-        condo_allocations = [alert for alert in all_alerts if alert.get("status") == "Compelete"]
-        context['condo_allocations'] = condo_allocations
-        context['condo_allocations_columns'] = getattr(
-            settings, "DECOMMISSION_ALERT_COLUMNS",
-            ["Hardware Type", "Status", "Initial Inquiry Date"]
-        )
+            complete_procurements = []
+            # TODO: Hide implementation-specific details.
+            complete_statuses = {
+                'Complete', 'Completed', 'Compelete', 'Compeleted'}
+            for procurement in procurements:
+                if procurement.get('status', None) in complete_statuses:
+                    procurement['status'] = 'Complete'
+                    complete_procurements.append(procurement)
+
+            # TODO: Clean up.
+            # Fetch all condo allocation alerts
+            # all_alerts = get_all_condo_allocations(request.user.email)
+
+            # Filter to only include alerts with status "Compelete"
+            # condo_allocations = [alert for alert in all_alerts if alert.get("status") == "Compelete"]
+            context['hardware_procurements'] = complete_procurements
+            # context['condo_allocations_columns'] = getattr(
+            #     settings, "DECOMMISSION_ALERT_COLUMNS",
+            #     ["Hardware Type", "Status", "Initial Inquiry Date"]
+            # )
     else:
         template_name = 'portal/nonauthorized_home.html'
 
@@ -229,6 +247,8 @@ def allocation_summary(request):
 
     return render(request, 'portal/allocation_summary.html', context)
 
+
+# TODO: Clean up.
 @login_required
 def decommission_details(request):
     """

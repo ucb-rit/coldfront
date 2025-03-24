@@ -202,44 +202,45 @@
     </a>
 
   </div>
-<!--  Add an empty space-->
+
+<!-- TODO: Make this a template that can be included. -->
     <div class="col-lg-12 mt-2">
+      <br>
         {% if condo_allocations %}
 
 
     <a href="{% url 'request-hub' %}">
-      <h3>My Condo Allocations &raquo;</h3>
+      <h3>My Condo Hardware &raquo;</h3>
     </a>
     <hr>
       <div class="table-responsive">
         <table class="table table-sm mt-2">
           <thead>
             <tr>
-              {% for col in condo_allocations_columns %}
-                <th>{{ col }}</th>
-              {% endfor %}
-              <th>Action</th>
+              <th>Initial Inquiry Date</th>
+              <th>Hardware Type</th>
+              <th>Hardware Specification Details</th>
+              <th>Status</th>
+              <th>Details</th>
             </tr>
           </thead>
           <tbody>
-            {% for alert in condo_allocations %}
+            <!-- TODO: Rename variables. -->
+            {% for procurement_obj in hardware_procurements %}
               <tr>
-                {% for col in condo_allocations_columns %}
-                  <td>{{ alert.record|get_item:col }}</td>
-                {% endfor %}
+                <td>{{ procurement_obj|get_item:"initial_inquiry_date" }}</td>
+                <td>{{ procurement_obj|get_item:"hardware_type" }}</td>
+                <td>{{ procurement_obj|get_item:"hardware_specification_details" }}</td>
+                <td>{{ procurement_obj|get_item:"status" }}</td>
                 <td>
-                  <a href="{% url 'decommission_entry_detail' alert.id %}">View Detail</a>
+                  <a href="{% url 'hardware-procurement-detail' procurement_obj.id %}">
+                    View
+                  </a>
                 </td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
-      </div>
-    {% else %}
-      <div class="alert alert-info">
-            <div class="col-lg-12 mt-2">
-            </div>
-        No Completed Condo Allocations Requests found.
       </div>
     {% endif %}
 
