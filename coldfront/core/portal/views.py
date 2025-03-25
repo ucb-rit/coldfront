@@ -11,8 +11,8 @@ from django.views.decorators.cache import cache_page
 from coldfront.core.allocation.models import (Allocation,
                                               AllocationUser,
                                               AllocationUserAttribute)
-from coldfront.core.allocation.utils import (get_project_compute_allocation,
-                                             get_project_compute_resource_name)
+from coldfront.core.allocation.utils import get_project_compute_resource_name
+from coldfront.core.allocation.utils import has_cluster_access
 # from coldfront.core.grant.models import Grant
 from coldfront.core.portal.utils import (generate_allocations_chart_data,
                                          generate_publication_by_year_chart_data,
@@ -30,6 +30,27 @@ from coldfront.core.project.utils import render_project_compute_usage
 
 def home(request):
 
+    def _compute_project_user_cluster_access_statuses(_user):
+        """Return a dict mapping each Project object that the given User
+        is associated with to a str describing the user's access to the
+        cluster under the project."""
+        statuses = {}
+
+        cluster_access_attributes = AllocationUserAttribute.objects.filter(
+            allocation_attribute_type__name='Cluster Account Status',
+            allocation_user__user=_user)
+        for attribute in cluster_access_attributes:
+            _project = attribute.allocation.project
+            statuses[_project] = attribute.value
+
+        for project_user_removal_request in \
+                ProjectUserRemovalRequest.objects.filter(
+                    project_user__user=_user, status__name='Pending'):
+            _project = project_user_removal_request.project_user.project
+            statuses[_project] = 'Pending - Remove'
+
+        return statuses
+
     context = {}
     if request.user.is_authenticated:
         template_name = 'portal/authorized_home.html'
@@ -39,20 +60,11 @@ def home(request):
              Q(projectuser__status__name__in=['Active', 'Pending - Remove']))
         ).distinct().order_by('name')
 
-        cluster_access_attributes = AllocationUserAttribute.objects.filter(allocation_attribute_type__name='Cluster Account Status',
-                                                                       allocation_user__user=request.user)
-        access_states = {}
-        for attribute in cluster_access_attributes:
-            project = attribute.allocation.project
-            status = attribute.value
-            access_states[project] = status
+        access_states = _compute_project_user_cluster_access_statuses(
+            request.user)
 
         for project in project_list:
-            project.display_status = access_states.get(project, None)
-            if (project.display_status is not None and
-                    'Active' in project.display_status):
-                context['cluster_username'] = request.user.username
-
+            project.display_status = access_states.get(project, 'None')
             resource_name = get_project_compute_resource_name(project)
             project.cluster_name = resource_name.replace(' Compute', '')
             try:
@@ -60,6 +72,9 @@ def home(request):
             except Exception:
                 rendered_compute_usage = 'Unexpected error'
             project.rendered_compute_usage = rendered_compute_usage
+
+        if has_cluster_access(request.user):
+            context['cluster_username'] = request.user.username
 
         allocation_list = Allocation.objects.filter(
            Q(status__name__in=['Active', 'New', 'Renewal Requested', ]) &
@@ -80,13 +95,6 @@ def home(request):
                 distinct('project_user').count()
 
         context['num_join_requests'] = num_join_requests
-
-        context['pending_removal_request_projects'] = \
-            [removal_request.project_user.project.name
-             for removal_request in
-             ProjectUserRemovalRequest.objects.filter(
-                 Q(project_user__user__username=request.user.username) &
-                 Q(status__name='Pending'))]
 
     else:
         template_name = 'portal/nonauthorized_home.html'
