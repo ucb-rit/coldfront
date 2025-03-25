@@ -62,12 +62,10 @@ class HardwareProcurementListView(LoginRequiredMixin, UserPassesTestMixin,
         super().__init__(*args, **kwargs)
         self._procurements = []
 
-    def dispatch(self, request, *args, **kwargs):
-        self._procurements = self._get_procurements()
-        return super().dispatch(request, *args, **kwargs)
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        self._procurements = self._get_procurements()
 
         search_form = HardwareProcurementSearchForm(self.request.GET)
         if search_form.is_valid():
