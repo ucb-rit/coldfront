@@ -21,6 +21,7 @@ from coldfront.core.portal.utils import (generate_allocations_chart_data,
 from coldfront.core.project.models import Project, ProjectStatusChoice, ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
+from coldfront.core.project.utils import render_project_compute_usage
 
 
 # from coldfront.core.publication.models import Publication
@@ -66,6 +67,14 @@ def home(request):
             project.display_status = access_states.get(project, 'None')
             resource_name = get_project_compute_resource_name(project)
             project.cluster_name = resource_name.replace(' Compute', '')
+            try:
+                rendered_compute_usage = render_project_compute_usage(project)
+            except Exception:
+                rendered_compute_usage = 'Unexpected error'
+            project.rendered_compute_usage = rendered_compute_usage
+
+        if has_cluster_access(request.user):
+            context['cluster_username'] = request.user.username
 
         if has_cluster_access(request.user):
             context['cluster_username'] = request.user.username

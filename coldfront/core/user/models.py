@@ -12,7 +12,6 @@ from phonenumber_field.modelfields import PhoneNumberField
 from rest_framework.authtoken.models import Token
 from simple_history.models import HistoricalRecords
 
-
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     is_pi = models.BooleanField(default=False)
@@ -42,7 +41,6 @@ class UserProfile(models.Model):
         on_delete=models.SET_NULL)
 
     history = HistoricalRecords()
-
 
 class EmailAddress(models.Model):
     user = models.ForeignKey(

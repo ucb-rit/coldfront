@@ -53,6 +53,7 @@ INSTALLED_APPS += [
 INSTALLED_APPS += [
     'coldfront.core.user',
     'coldfront.core.field_of_science',
+    # 'coldfront.core.department',
     'coldfront.core.utils',
     'coldfront.core.portal',
     'coldfront.core.project',
@@ -151,6 +152,7 @@ TEMPLATES = [
                 'coldfront.core.utils.context_processors.display_time_zone',
                 'coldfront.core.utils.context_processors.portal_and_program_names',
                 'coldfront.core.utils.context_processors.primary_cluster_name',
+                'coldfront.core.utils.context_processors.request_alert_counts',
             ],
         },
     },

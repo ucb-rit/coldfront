@@ -1,6 +1,7 @@
 from http import HTTPStatus
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import Permission
 from django.contrib.messages import get_messages
@@ -596,6 +597,8 @@ class TestProjectRemovalRequestCompleteStatusView(TestBase):
         expected_from = settings.EMAIL_SENDER
         expected_to = {
             user.email for user in [self.user2, self.pi1, self.manager1]}
+        expected_to.update(
+            settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST)
         user_name = f'{self.user2.first_name} {self.user2.last_name}'
         pi_name = f'{self.pi1.first_name} {self.pi1.last_name}'
         project_name = self.project1.name
@@ -863,11 +866,12 @@ class TestProjectRemovalRequestCompleteStatusView(TestBase):
         response = self.client.post(url, data)
         self.assertRedirects(response, reverse('project-removal-request-list'))
 
-        email_to_list = [proj_user.user.email for proj_user in
+        email_to_list = ([proj_user.user.email for proj_user in
                          self.project1.projectuser_set.filter(
                              role__name__in=['Manager', 'Principal Investigator'],
                              status__name='Active',
-                             enable_notifications=True)] + [self.user2.email]
+                             enable_notifications=True)] + [self.user2.email] +
+                         settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST)
         self.assertEqual(len(mail.outbox), len(email_to_list))
 
         email_body = f'The request to remove {self.user2.first_name} ' \

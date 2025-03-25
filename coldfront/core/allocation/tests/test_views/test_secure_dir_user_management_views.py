@@ -21,7 +21,7 @@ from coldfront.core.allocation.models import (Allocation,
                                               AllocationUserStatusChoice,
                                               AllocationAttributeType,
                                               AllocationUserAttribute)
-from coldfront.core.allocation.utils_.secure_dir_utils import create_secure_dirs
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import create_secure_directory
 from coldfront.core.project.models import (ProjectUser,
                                            ProjectUserStatusChoice,
                                            ProjectUserRoleChoice, Project,
@@ -98,6 +98,7 @@ class TestSecureDirBase(TestBase):
                                          name='Active'))
         pi.role = ProjectUserRoleChoice.objects.get(name='Principal '
                                                          'Investigator')
+        pi.enable_notifications = True
         pi.save()
 
         # Create superuser
@@ -112,9 +113,9 @@ class TestSecureDirBase(TestBase):
         self.subdirectory_name = 'test_dir'
         call_command('add_directory_defaults')
         self.groups_allocation = \
-            create_secure_dirs(self.project1, self.subdirectory_name, 'groups')
+            create_secure_directory(self.project1, self.subdirectory_name, 'groups')
         self.scratch_allocation = \
-            create_secure_dirs(self.project1, self.subdirectory_name, 'scratch')
+            create_secure_directory(self.project1, self.subdirectory_name, 'scratch')
 
         for alloc in [self.groups_allocation, self.scratch_allocation]:
             AllocationUser.objects.create(
@@ -299,12 +300,13 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
         SecureDirManageUsersView."""
 
         # Adding users to allocation
+        active_status = AllocationUserStatusChoice.objects.get(name='Active')
         for i in range(2, 5):
             temp_user = User.objects.create(username=f'user{i}')
             AllocationUser.objects.create(
                 allocation=self.groups_allocation,
                 user=temp_user,
-                status=AllocationUserStatusChoice.objects.get(name='Active'))
+                status=active_status)
             setattr(self, f'user{i}', temp_user)
 
         # Users with a pending SecureDirRemoveUserRequest should not be shown
@@ -316,31 +318,23 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
 
         # Testing users shown on groups_allocation remove users page
         kwargs = {'pk': self.groups_allocation.pk, 'action': 'remove'}
-        response = self.get_response(self.pi,
-                                     self.url,
-                                     kwargs=kwargs)
-        html = response.content.decode('utf-8')
-        self.assertIn(self.user3.username, html)
-        self.assertIn(self.user4.username, html)
-
-        self.assertNotIn(self.user0.username, html)
-        self.assertNotIn(self.user1.username, html)
-        self.assertNotIn(self.user2.username, html)
-        self.assertNotIn(self.admin.username, html)
+        response = self.get_response(self.pi, self.url, kwargs=kwargs)
+        self.assertContains(response, self.user3.username)
+        self.assertContains(response, self.user4.username)
+        self.assertNotContains(response, self.user0.username)
+        self.assertNotContains(response, self.user1.username)
+        self.assertNotContains(response, self.user2.username)
+        self.assertNotContains(response, self.admin.username)
 
         # Testing users shown on scratch_allocation remove users page
         kwargs = {'pk': self.scratch_allocation.pk, 'action': 'remove'}
-        response = self.get_response(self.pi,
-                                     self.url,
-                                     kwargs=kwargs)
-        html = response.content.decode('utf-8')
-
-        self.assertNotIn(self.user0.username, html)
-        self.assertNotIn(self.user1.username, html)
-        self.assertNotIn(self.user2.username, html)
-        self.assertNotIn(self.user3.username, html)
-        self.assertNotIn(self.user4.username, html)
-        self.assertNotIn(self.admin.username, html)
+        response = self.get_response(self.pi, self.url, kwargs=kwargs)
+        self.assertNotContains(response, self.user0.username)
+        self.assertNotContains(response, self.user1.username)
+        self.assertNotContains(response, self.user2.username)
+        self.assertNotContains(response, self.user3.username)
+        self.assertNotContains(response, self.user4.username)
+        self.assertNotContains(response, self.admin.username)
 
     def test_add_users(self):
         """Test that the correct SecureDirAddUserRequest is created"""
@@ -381,17 +375,21 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
 
         # Test that the correct email is sent.
         recipients = settings.EMAIL_ADMIN_LIST
-        email_body = [f'There is 1 new secure '
-                      f'directory user addition request for '
-                      f'{self.scratch_path}.',
-                      'Please process this request here.']
+        email_body = [
+            'There is a new request to add user',
+            self.scratch_path,
+            'Please handle the request here',
+        ]
 
-        self.assertEqual(len(recipients), len(mail.outbox))
-        for email in mail.outbox:
+        added_user_emails = [self.user0.email]
+        self.assertEqual(len(mail.outbox), len(added_user_emails))
+        for i in range(len(mail.outbox)):
+            sent_email_obj = mail.outbox[i]
+            self.assertEqual(sent_email_obj.to, recipients)
+            self.assertEqual(sent_email_obj.from_email, settings.EMAIL_SENDER)
             for section in email_body:
-                self.assertIn(section, email.body)
-            self.assertIn(email.to[0], recipients)
-            self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+                self.assertIn(section, sent_email_obj.body)
+            self.assertIn(added_user_emails[i], sent_email_obj.body)
 
     def test_remove_users(self):
         """Test that the correct SecureDirRemoveUserRequest is created"""
@@ -439,17 +437,21 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
 
         # Test that the correct email is sent.
         recipients = settings.EMAIL_ADMIN_LIST
-        email_body = [f'There are 2 new secure '
-                      f'directory user removal requests for '
-                      f'{self.groups_path}.',
-                      'Please process these requests here.']
+        email_body = [
+            'There is a new request to remove user',
+            self.groups_path,
+            'Please handle the request here',
+        ]
 
-        self.assertEqual(len(recipients), len(mail.outbox))
-        for email in mail.outbox:
+        removed_user_emails = [self.user0.email, self.user1.email]
+        self.assertEqual(len(mail.outbox), len(removed_user_emails))
+        for i in range(len(mail.outbox)):
+            sent_email_obj = mail.outbox[i]
+            self.assertEqual(sent_email_obj.to, recipients)
+            self.assertEqual(sent_email_obj.from_email, settings.EMAIL_SENDER)
             for section in email_body:
-                self.assertIn(section, email.body)
-            self.assertIn(email.to[0], recipients)
-            self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+                self.assertIn(section, sent_email_obj.body)
+            self.assertIn(removed_user_emails[i], sent_email_obj.body)
 
     def test_content(self):
         """Test that the correct variables are displayed."""
@@ -694,6 +696,23 @@ class TestSecureDirManageUsersDenyRequestView(TestSecureDirBase):
     def test_deny_add_request(self):
         """Testing that the correct status is set and emails are sent
         when denying a SecureDirAddUserRequest"""
+        # Add two managers to the project. Add one of them to the directory.
+        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
+        project_user1 = ProjectUser.objects.get(
+            project=self.project1, user=self.user1)
+        project_user1.role = manager_role
+        project_user1.save()
+
+        AllocationUser.objects.create(
+            allocation=self.add_request.allocation,
+            user=self.user1,
+            status=AllocationUserStatusChoice.objects.get(name='Active'))
+
+        ProjectUser.objects.create(
+            project=self.project1,
+            user=self.staff,
+            role=manager_role,
+            status=ProjectUserStatusChoice.objects.get(name='Active'))
 
         kwargs = {'pk': self.add_request.pk, 'action': 'add'}
         data = {'reason': 'This is a test for denying SecureDirAddUserRequest.'}
@@ -709,7 +728,6 @@ class TestSecureDirManageUsersDenyRequestView(TestSecureDirBase):
                         utc_now_offset_aware())
 
         # Test that the correct emails are sent
-        recipients = [self.pi.email, self.user0.email]
         email_body = [f'The request to add first0 last0 (user0) to '
                       f'the secure directory {self.groups_path} '
                       f'has been denied for the following reason:',
@@ -717,13 +735,14 @@ class TestSecureDirManageUsersDenyRequestView(TestSecureDirBase):
                       'If you have any questions, please contact us at']
         email_subject = 'Secure Directory Addition Request Denied'
 
-        self.assertEqual(len(recipients), len(mail.outbox))
-        for email in mail.outbox:
-            for section in email_body:
-                self.assertIn(section, email.body)
-            self.assertIn(email_subject, email.subject)
-            self.assertIn(email.to[0], recipients)
-            self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn(email_subject, email.subject)
+        self.assertEqual(email.to, [self.user0.email])
+        self.assertEqual(set(email.cc), {self.pi.email, self.user1.email})
+        self.assertEqual(email.from_email, settings.EMAIL_SENDER)
+        for section in email_body:
+            self.assertIn(section, email.body)
 
         # Test that the correct message is displayed.
         expected_message = \
@@ -743,6 +762,23 @@ class TestSecureDirManageUsersDenyRequestView(TestSecureDirBase):
     def test_deny_removal_request(self):
         """Testing that the correct status is set and emails are sent
         when denying a SecureDirRemoveUserRequest"""
+        # Add two managers to the project. Add one of them to the directory.
+        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
+        project_user0 = ProjectUser.objects.get(
+            project=self.project1, user=self.user0)
+        project_user0.role = manager_role
+        project_user0.save()
+
+        AllocationUser.objects.create(
+            allocation=self.remove_request.allocation,
+            user=self.user0,
+            status=AllocationUserStatusChoice.objects.get(name='Active'))
+
+        ProjectUser.objects.create(
+            project=self.project1,
+            user=self.staff,
+            role=manager_role,
+            status=ProjectUserStatusChoice.objects.get(name='Active'))
 
         kwargs = {'pk': self.remove_request.pk, 'action': 'remove'}
         data = {
@@ -759,7 +795,6 @@ class TestSecureDirManageUsersDenyRequestView(TestSecureDirBase):
                         utc_now_offset_aware())
 
         # Test that the correct emails are sent
-        recipients = [self.pi.email, self.user1.email]
         email_body = [f'The request to remove first1 last1 (user1) from '
                       f'the secure directory {self.scratch_path} has '
                       f'been denied for the following reason:',
@@ -767,13 +802,14 @@ class TestSecureDirManageUsersDenyRequestView(TestSecureDirBase):
                       'If you have any questions, please contact us at']
         email_subject = 'Secure Directory Removal Request Denied'
 
-        self.assertEqual(len(recipients), len(mail.outbox))
-        for email in mail.outbox:
-            for section in email_body:
-                self.assertIn(section, email.body)
-            self.assertIn(email_subject, email.subject)
-            self.assertIn(email.to[0], recipients)
-            self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn(email_subject, email.subject)
+        self.assertEqual(email.to, [self.user1.email])
+        self.assertEqual(set(email.cc), {self.pi.email, self.user0.email})
+        self.assertEqual(email.from_email, settings.EMAIL_SENDER)
+        for section in email_body:
+            self.assertIn(section, email.body)
 
         # Test that the correct message is displayed.
         expected_message = \
@@ -1066,6 +1102,24 @@ class TestSecureDirManageUsersCompleteStatusView(TestSecureDirBase):
     def test_add_request_status_updated(self):
         """Testing that the request status is updated, corret emails are sent,
         and correct messages are shown."""
+        # Add two managers to the project. Add one of them to the directory.
+        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
+        project_user1 = ProjectUser.objects.get(
+            project=self.project1, user=self.user1)
+        project_user1.role = manager_role
+        project_user1.save()
+
+        AllocationUser.objects.create(
+            allocation=self.add_request.allocation,
+            user=self.user1,
+            status=AllocationUserStatusChoice.objects.get(name='Active'))
+
+        ProjectUser.objects.create(
+            project=self.project1,
+            user=self.staff,
+            role=manager_role,
+            status=ProjectUserStatusChoice.objects.get(name='Active'))
+
         kwargs = {'pk': self.add_request.pk, 'action': 'add'}
         data = {'status': 'Complete'}
 
@@ -1100,25 +1154,52 @@ class TestSecureDirManageUsersCompleteStatusView(TestSecureDirBase):
         self.assertEqual(expected_message, messages[0])
 
         # Test that the correct emails are sent.
-        recipients = [self.pi.email, self.user0.email]
         email_body = [f'The request to add first0 last0 (user0) to the secure '
                       f'directory {self.groups_path} has been '
-                      f'completed. first0 last0 now has access to '
+                      f'completed. The user now has access to '
                       f'{self.groups_path} on the cluster.',
                       'If you have any questions, please contact us at']
         email_subject = 'Secure Directory Addition Request Complete'
 
-        self.assertEqual(len(recipients), len(mail.outbox))
-        for email in mail.outbox:
-            for section in email_body:
-                self.assertIn(section, email.body)
-            self.assertIn(email_subject, email.subject)
-            self.assertIn(email.to[0], recipients)
-            self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn(email_subject, email.subject)
+        self.assertEqual(email.to, [self.user0.email])
+        # Active PIs on the project, along with active managers who have access
+        # to the directory, should be CC'ed.
+        self.assertEqual(set(email.cc), {self.pi.email, self.user1.email})
+        self.assertEqual(email.from_email, settings.EMAIL_SENDER)
+        for section in email_body:
+            self.assertIn(section, email.body)
 
     def test_remove_request_status_updated(self):
         """Testing that the request status is updated, corret emails are sent,
         and correct messages are shown."""
+        # Add two managers to the project. Add one of them to the directory.
+        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
+        project_user0 = ProjectUser.objects.get(
+            project=self.project1, user=self.user0)
+        project_user0.role = manager_role
+        project_user0.save()
+
+        AllocationUser.objects.create(
+            allocation=self.remove_request.allocation,
+            user=self.user0,
+            status=AllocationUserStatusChoice.objects.get(name='Active'))
+
+        ProjectUser.objects.create(
+            project=self.project1,
+            user=self.staff,
+            role=manager_role,
+            status=ProjectUserStatusChoice.objects.get(name='Active'))
+
+        kwargs = {'pk': self.remove_request.pk, 'action': 'add'}
+        data = {'status': 'Complete'}
+
+        response = self.post_response(self.admin, self.url, kwargs=kwargs,
+                                      data=data)
+
+        mail.outbox = []
 
         kwargs = {'pk': self.remove_request.pk, 'action': 'remove'}
         data = {'status': 'Complete'}
@@ -1154,18 +1235,20 @@ class TestSecureDirManageUsersCompleteStatusView(TestSecureDirBase):
         self.assertEqual(expected_message, messages[0])
 
         # Test that the correct emails are sent.
-        recipients = [self.pi.email, self.user1.email]
         email_body = [f'The request to remove first1 last1 (user1) from the '
                       f'secure directory {self.scratch_path} has been '
-                      f'completed. first1 last1 no longer has access to '
+                      f'completed. The user no longer has access to '
                       f'{self.scratch_path} on the cluster.',
                       'If you have any questions, please contact us at']
         email_subject = 'Secure Directory Removal Request Complete'
 
-        self.assertEqual(len(recipients), len(mail.outbox))
-        for email in mail.outbox:
-            for section in email_body:
-                self.assertIn(section, email.body)
-            self.assertIn(email_subject, email.subject)
-            self.assertIn(email.to[0], recipients)
-            self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn(email_subject, email.subject)
+        self.assertEqual(email.to, [self.user1.email])
+        # Active PIs on the project, along with active managers who have access
+        # to the directory, should be CC'ed.
+        self.assertEqual(set(email.cc), {self.pi.email, self.user0.email})
+        self.assertEqual(email.from_email, settings.EMAIL_SENDER)
+        for section in email_body:
+            self.assertIn(section, email.body)
