@@ -55,7 +55,7 @@ def home(request):
     if request.user.is_authenticated:
         template_name = 'portal/authorized_home.html'
         project_list = Project.objects.filter(
-            (Q(status__name__in=['New', 'Active', ]) &
+            (Q(status__name__in=['New', 'Active', 'Inactive']) &
              Q(projectuser__user=request.user) &
              Q(projectuser__status__name__in=['Active', 'Pending - Remove']))
         ).distinct().order_by('name')
