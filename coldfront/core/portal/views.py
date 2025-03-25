@@ -18,7 +18,7 @@ from coldfront.core.portal.utils import (generate_allocations_chart_data,
                                          generate_publication_by_year_chart_data,
                                          generate_resources_chart_data,
                                          generate_total_grants_by_agency_chart_data)
-from coldfront.core.project.models import Project, ProjectStatusChoice, ProjectUserJoinRequest
+from coldfront.core.project.models import Project, ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
 from coldfront.core.project.utils import render_project_compute_usage
