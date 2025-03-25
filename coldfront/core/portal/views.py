@@ -76,9 +76,6 @@ def home(request):
         if has_cluster_access(request.user):
             context['cluster_username'] = request.user.username
 
-        if has_cluster_access(request.user):
-            context['cluster_username'] = request.user.username
-
         allocation_list = Allocation.objects.filter(
            Q(status__name__in=['Active', 'New', 'Renewal Requested', ]) &
            Q(project__status__name__in=['Active', 'New']) &
