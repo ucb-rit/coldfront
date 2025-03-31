@@ -32,6 +32,11 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             'poc_email',
             'hardware_type',
             'hardware_specification_details',
+            'procurement_start_date',
+            'jira_ticket',
+            'order_received_date',
+            'installed_date',
+            'qos_provisioned_date',
             'id',
         ]
 
