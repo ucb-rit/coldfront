@@ -140,6 +140,7 @@ class RequestHubView(LoginRequiredMixin,
             **fetch_hardware_procurements_kwargs)
 
         # TODO: Hide implementation-specific details.
+        # TODO: This cleaning is replicated in multiple places.
         pending_statuses = {'Active'}
         complete_statuses = {'Complete', 'Completed', 'Compelete', 'Compeleted'}
         pending_hardware_procurements = []
@@ -147,8 +148,10 @@ class RequestHubView(LoginRequiredMixin,
         for hardware_procurement in hardware_procurements:
             status = hardware_procurement['status']
             if status in pending_statuses:
+                hardware_procurement['status'] = 'Pending'
                 pending_hardware_procurements.append(hardware_procurement)
             elif status in complete_statuses:
+                hardware_procurement['status'] = 'Completed'
                 complete_hardware_procurements.append(hardware_procurement)
 
         hardware_procurement_request_obj = RequestListItem()
