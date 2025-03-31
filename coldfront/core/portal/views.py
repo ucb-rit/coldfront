@@ -106,7 +106,7 @@ def home(request):
                 'Complete', 'Completed', 'Compelete', 'Compeleted'}
             for procurement in procurements:
                 if procurement.get('status', None) in complete_statuses:
-                    procurement['status'] = 'Complete'
+                    procurement['status'] = 'Completed'
                     complete_procurements.append(procurement)
 
             # TODO: Clean up.

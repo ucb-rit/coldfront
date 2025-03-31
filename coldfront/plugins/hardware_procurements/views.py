@@ -43,11 +43,28 @@ class HardwareProcurementDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
     def _fetch_procurement(self, procurement_id):
         """TODO"""
+        # TODO: Avoid hard-coding statuses.
+        # TODO: These misspellings should be corrected in the source.
+        status_mapping = {
+            'completed': {'Complete', 'Completed', 'Compelete', 'Compeleted',},
+            'inactive': {'Inactive',},
+            'pending': {'Active',},
+        }
+
         # TODO: Write a helper method that gets the object based on ID.
         # TODO: Caching...
         for procurement in fetch_hardware_procurements():
             # print(procurement)
             if procurement['id'] == procurement_id:
+
+                # TODO: Improve efficiency?
+                procurement_status = procurement.get('status', 'Unknown')
+                for canonical_status, raw_statuses in status_mapping.items():
+                    if procurement_status in raw_statuses:
+                        procurement_status = canonical_status
+                        break
+                procurement['status'] = procurement_status.capitalize()
+
                 return procurement
         raise ValueError(f'Could not fetch procurement {procurement_id}.')
 
@@ -153,5 +170,14 @@ class HardwareProcurementListView(LoginRequiredMixin, UserPassesTestMixin,
                     continue
 
             filtered_hardware_procurements.append(hardware_procurement)
+
+        # TODO: Improve efficiency?
+        for hardware_procurement in filtered_hardware_procurements:
+            procurement_status = hardware_procurement.get('status', 'Unknown')
+            for canonical_status, raw_statuses in status_mapping.items():
+                if procurement_status in raw_statuses:
+                    procurement_status = canonical_status
+                    break
+            hardware_procurement['status'] = procurement_status.capitalize()
 
         return filtered_hardware_procurements
