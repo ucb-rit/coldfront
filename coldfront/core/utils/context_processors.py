@@ -116,17 +116,9 @@ def request_alert_counts(request):
 
         if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
             # TODO: Cache.
-            # TODO: Avoid hard-coding the statuses for pending/complete in
-            #  multiple places.
-            # TODO: Hide implementation-specific details.
             from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
-
-            num_pending_requests = 0
-            pending_statuses = {'Active'}
-            for hardware_procurement in fetch_hardware_procurements():
-                if hardware_procurement.get('status', '') in pending_statuses:
-                    num_pending_requests += 1
-            context['hardware_procurement_req_count'] = num_pending_requests
+            context['hardware_procurement_req_count'] = len(
+                list(fetch_hardware_procurements(status='Pending')))
 
         if flag_enabled('SERVICE_UNITS_PURCHASABLE'):
             context['su_purchase_req_count'] = \

@@ -136,30 +136,19 @@ class RequestHubView(LoginRequiredMixin,
             user_data = UserInfoDict.from_user(user)
             fetch_hardware_procurements_kwargs['user_data'] = user_data
 
-        hardware_procurements = fetch_hardware_procurements(
-            **fetch_hardware_procurements_kwargs)
-
-        # TODO: Hide implementation-specific details.
-        # TODO: This cleaning is replicated in multiple places.
-        pending_statuses = {'Active'}
-        complete_statuses = {'Complete', 'Completed', 'Compelete', 'Compeleted'}
-        pending_hardware_procurements = []
-        complete_hardware_procurements = []
-        for hardware_procurement in hardware_procurements:
-            status = hardware_procurement['status']
-            if status in pending_statuses:
-                hardware_procurement['status'] = 'Pending'
-                pending_hardware_procurements.append(hardware_procurement)
-            elif status in complete_statuses:
-                hardware_procurement['status'] = 'Completed'
-                complete_hardware_procurements.append(hardware_procurement)
+        pending_hardware_procurements = list(
+            fetch_hardware_procurements(
+                **{**fetch_hardware_procurements_kwargs, 'status': 'Pending'}))
+        completed_hardware_procurements = list(
+            fetch_hardware_procurements(
+                **{**fetch_hardware_procurements_kwargs, 'status': 'Completed'}))
 
         hardware_procurement_request_obj = RequestListItem()
         hardware_procurement_request_obj.num = self.paginators
         hardware_procurement_request_obj.pending_queryset = \
             self.create_paginator(pending_hardware_procurements)
         hardware_procurement_request_obj.complete_queryset = \
-            self.create_paginator(complete_hardware_procurements)
+            self.create_paginator(completed_hardware_procurements)
         hardware_procurement_request_obj.num_pending = len(
             pending_hardware_procurements)
         hardware_procurement_request_obj.title = 'Hardware Procurement Requests'

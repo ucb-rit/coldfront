@@ -95,31 +95,15 @@ def home(request):
         ]
 
         if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
+
             from coldfront.plugins.hardware_procurements.utils import UserInfoDict
             from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
+
             user_data = UserInfoDict.from_user(request.user)
-            procurements = fetch_hardware_procurements(user_data=user_data)
+            context['hardware_procurements'] = list(
+                fetch_hardware_procurements(
+                    user_data=user_data, status='Completed'))
 
-            complete_procurements = []
-            # TODO: Hide implementation-specific details.
-            complete_statuses = {
-                'Complete', 'Completed', 'Compelete', 'Compeleted'}
-            for procurement in procurements:
-                if procurement.get('status', None) in complete_statuses:
-                    procurement['status'] = 'Completed'
-                    complete_procurements.append(procurement)
-
-            # TODO: Clean up.
-            # Fetch all condo allocation alerts
-            # all_alerts = get_all_condo_allocations(request.user.email)
-
-            # Filter to only include alerts with status "Compelete"
-            # condo_allocations = [alert for alert in all_alerts if alert.get("status") == "Compelete"]
-            context['hardware_procurements'] = complete_procurements
-            # context['condo_allocations_columns'] = getattr(
-            #     settings, "DECOMMISSION_ALERT_COLUMNS",
-            #     ["Hardware Type", "Status", "Initial Inquiry Date"]
-            # )
     else:
         template_name = 'portal/nonauthorized_home.html'
 

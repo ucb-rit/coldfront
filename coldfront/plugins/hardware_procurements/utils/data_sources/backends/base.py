@@ -7,9 +7,7 @@ class BaseDataSourceBackend(ABC):
     a number of backends."""
 
     @abstractmethod
-    def fetch_hardware_procurements(self, user_data=None):
-        """TODO
-        
-        TODO: A generator of dicts from column name --> column value
-        """
+    def fetch_hardware_procurements(self, user_data=None, status=None):
+        """Return a generator that yields procurements (dicts),
+        optionally filtering by user (dict) or status (str)."""
         raise NotImplementedError
