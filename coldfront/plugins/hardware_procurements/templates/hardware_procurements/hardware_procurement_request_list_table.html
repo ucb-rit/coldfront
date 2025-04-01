@@ -24,7 +24,18 @@
       {% endif %}
       <td>{{ request_obj|get_item:"hardware_type" }}</td>
       <td>{{ request_obj|get_item:"hardware_specification_details" }}</td>
-      <td>{{ request_obj|get_item:"status" }}</td>
+      {% with request_status=request_obj|get_item:"status" %}
+      <td>
+        <!-- TODO: Don't hard-code these? -->
+        {% if request_status == "Complete" %}
+          <span class="badge badge-success">{{ request_status }}</span>
+        {% elif request_status == "Inactive" %}
+          <span class="badge badge-danger">{{ request_status }}</span>
+        {% else %}
+          <span class="badge badge-warning">{{ request_status }}</span>
+        {% endif %}
+      </td>
+      {% endwith %}
       <td>
         <a href="{% url 'hardware-procurement-detail' request_obj.id %}">
           View

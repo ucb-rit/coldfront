@@ -39,7 +39,16 @@ Hardware Procurement Details
 		</tr>
 		<tr>
 			<td><b>Status</b></td>
-			<td>{{ procurement.status }}</td>
+			<td>
+				<!-- TODO: Don't hard-code these? -->
+				{% if procurement.status == "Complete" %}
+					<span class="badge badge-success">{{ procurement.status }}</span>
+				{% elif procurement.status == "Inactive" %}
+					<span class="badge badge-danger">{{ procurement.status }}</span>
+				{% else %}
+					<span class="badge badge-warning">{{ procurement.status }}</span>
+				{% endif %}
+			</td>
 		</tr>
 		<tr>
 			<td><b>Initial Inquiry Date</b></td>

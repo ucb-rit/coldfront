@@ -225,13 +225,16 @@
             </tr>
           </thead>
           <tbody>
-            <!-- TODO: Rename variables. -->
             {% for procurement_obj in hardware_procurements %}
               <tr>
                 <td>{{ procurement_obj|get_item:"initial_inquiry_date" }}</td>
                 <td>{{ procurement_obj|get_item:"hardware_type" }}</td>
                 <td>{{ procurement_obj|get_item:"hardware_specification_details" }}</td>
-                <td>{{ procurement_obj|get_item:"status" }}</td>
+                <td>
+                  <span class="badge badge-success">
+                    {{ procurement_obj|get_item:"status" }}
+                  </span>
+                </td>
                 <td>
                   <a href="{% url 'hardware-procurement-detail' procurement_obj.id %}">
                     View

@@ -102,7 +102,7 @@ def home(request):
             user_data = UserInfoDict.from_user(request.user)
             context['hardware_procurements'] = list(
                 fetch_hardware_procurements(
-                    user_data=user_data, status='Completed'))
+                    user_data=user_data, status='Complete'))
 
     else:
         template_name = 'portal/nonauthorized_home.html'

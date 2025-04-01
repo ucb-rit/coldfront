@@ -22,7 +22,7 @@ class HardwareProcurementSearchForm(forms.Form):
 
     STATUS_CHOICES = (
         ('', '-----'),
-        ('completed', 'Completed'),
+        ('complete', 'Complete'),
         ('inactive', 'Inactive'),
         ('pending', 'Pending'),
     )

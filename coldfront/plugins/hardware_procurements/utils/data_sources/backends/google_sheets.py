@@ -72,7 +72,7 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             # TODO: Where are these canonical ones going to be stored so that
             #  forms can access them?
             pending = 'Pending'
-            completed = 'Completed'
+            complete = 'Complete'
             inactive = 'Inactive'
 
             # A mapping from raw statuses in the spreadsheet to canonical
@@ -80,10 +80,10 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             # in case, etc.
             raw_to_canonical = {
                 'active': pending,
-                'complete': completed,
-                'completed': completed,
-                'compelete': completed,
-                'compeleted': completed,
+                'complete': complete,
+                'completed': complete,
+                'compelete': complete,
+                'compeleted': complete,
                 'inactive': inactive,
             }
             raw_status = column_value.lower()
