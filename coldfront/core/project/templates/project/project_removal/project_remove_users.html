@@ -184,6 +184,9 @@
                 selectedUsers.push($(this).val());
             });
 
+            const selectedUsersUsernames = selectedUsers.map((user) => user.split(",")[0]);
+            $("#removeUsersForm input[name='usernames']").val(selectedUsersUsernames.join(","));
+
             var tableBody = $("#removeUsersModal tbody");
             tableBody.empty();
             $.each(selectedUsers, function(index, user) {
