@@ -66,7 +66,7 @@
         <td>
             {% if users_to_remove %}
                 <div class="modal fade" id="removeUsersModal" tabindex="-1" role="dialog" aria-labelledby="removeUsersModalLabel" aria-hidden="true">
-                    <div class="modal-dialog" role="document">
+                    <div class="modal-dialog modal-lg" role="document">
                         <form action="{% url 'project-remove-users' project.pk %}" method="post" id="removeUsersForm">
                             {% csrf_token %}
                             <div class="modal-content">
@@ -86,7 +86,6 @@
                                         <th scope="col">Username</th>
                                         <th scope="col">Email</th>
                                         <th scope="col">Role</th>
-                                        <th scope="col">Status</th>
                                         </thead>
                                         <tbody>
                                         </tbody>
@@ -184,8 +183,6 @@
             $("input[name='users_selected_for_removal']:checked").each(function() {
                 selectedUsers.push($(this).val());
             });
-            const selectedUsersUsernames = selectedUsers.map((user) => user.split(",")[0]);
-            $("#removeUsersForm input[name='usernames']").val(selectedUsersUsernames.join(","));
 
             var tableBody = $("#removeUsersModal tbody");
             tableBody.empty();
@@ -195,7 +192,6 @@
                     <td>${splitUser[0]}</td>
                     <td>${splitUser[1]}</td>
                     <td>${splitUser[2]}</td>
-                    <td>${splitUser[3]}</td>
                 </tr>`;
                 tableBody.append(userRow);
             });
