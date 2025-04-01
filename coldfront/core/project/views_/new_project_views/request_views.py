@@ -85,7 +85,7 @@ class ProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
 class NewProjectRequestLandingView(LoginRequiredMixin, UserPassesTestMixin,
                                    TemplateView):
     template_name = (
-        'project/project_request/savio/request/request/project_request_landing.html')
+        'project/project_request/savio/request/project_request_landing.html')
 
     def test_func(self):
         if self.request.user.is_superuser:
