@@ -2,6 +2,7 @@ from urllib.parse import urlencode
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import UserPassesTestMixin
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import EmptyPage
 from django.core.paginator import PageNotAnInteger
 from django.core.paginator import Paginator
@@ -16,25 +17,47 @@ from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_har
 
 class HardwareProcurementDetailView(LoginRequiredMixin, UserPassesTestMixin,
                                     TemplateView):
-    """TODO"""
+    """A view for displaying the details of a particular
+    HardwareProcurement."""
 
     template_name = 'hardware_procurements/hardware_procurement_detail.html'
 
     def __init__(self, *args, **kwargs):
          super().__init__(*args, **kwargs)
          self._procurement = None
+         self._user_data = None
 
     def dispatch(self, request, *args, **kwargs):
+        self._user_data = UserInfoDict.from_user(self.request.user)
+
         procurement_id = self.kwargs.get('procurement_id')
         try:
             self._procurement = self._fetch_procurement(procurement_id)
         except Exception as e:
             raise Http404('Invalid procurement.')
 
+        if not self._check_permissions(self._procurement):
+            raise PermissionDenied(
+                'You do not have permission to access this procurement.')
+
         return super().dispatch(request, *args, **kwargs)
 
     def test_func(self):
+        """Permissions are handled by _check_permissions after the
+        HardwareProcurement object has been fetched."""
         return True
+
+    def _check_permissions(self, hardware_procurement):
+        """Return whether the requesting user has access to the given
+        HardwareProcurement."""
+        user = self.request.user
+        # TODO: This is duplicated in this module.
+        user_can_see_all_procurements = user.is_superuser or user.is_staff
+        if user_can_see_all_procurements:
+            return True
+        if hardware_procurement.is_user_associated(self._user_data):
+            return True
+        return False
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -42,18 +65,31 @@ class HardwareProcurementDetailView(LoginRequiredMixin, UserPassesTestMixin,
         return context
 
     def _fetch_procurement(self, procurement_id):
-        """TODO"""
-        # TODO: Write a helper method that gets the object based on ID.
-        # TODO: Caching...
-        for procurement in fetch_hardware_procurements():
-            if procurement['id'] == procurement_id:
-                return procurement
-        raise ValueError(f'Could not fetch procurement {procurement_id}.')
+        """Return a HardwareProcurement object matching the given ID, if
+        one exists. Otherwise, raise a ValueError.
 
+        Limit the scope of the search if the requesting user does not
+        have permission to view all procurements.
+        """
+        user = self.request.user
+
+        fetch_hardware_procurements_kwargs = {}
+        # TODO: This is duplicated in this module.
+        user_can_see_all_procurements = user.is_superuser or user.is_staff
+        if not user_can_see_all_procurements:
+            fetch_hardware_procurements_kwargs['user_data'] = self._user_data
+
+        for hardware_procurement in fetch_hardware_procurements(
+                **fetch_hardware_procurements_kwargs):
+            _procurement_id = hardware_procurement.get_id()
+            if _procurement_id == procurement_id:
+                return hardware_procurement
+
+        raise ValueError(f'Could not fetch procurement {procurement_id}.')
 
 class HardwareProcurementListView(LoginRequiredMixin, UserPassesTestMixin,
                                   TemplateView):
-    """TODO"""
+    """A view for displaying multiple HardwareProcurements."""
 
     template_name = 'hardware_procurements/hardware_procurement_list.html'
 
@@ -101,6 +137,7 @@ class HardwareProcurementListView(LoginRequiredMixin, UserPassesTestMixin,
     def _get_procurements(self):
         """TODO"""
         user = self.request.user
+        # TODO: This is duplicated in this module.
         user_can_see_all_procurements = user.is_superuser or user.is_staff
 
         # TODO: Move filtering (beyond status) to the utility method?
@@ -130,16 +167,19 @@ class HardwareProcurementListView(LoginRequiredMixin, UserPassesTestMixin,
         filtered_hardware_procurements = []
         for hardware_procurement in hardware_procurements:
 
+            procurement_data = hardware_procurement.get_data()
+            procurement_data['id'] = hardware_procurement.get_id()
+
             if pi_filter is not None:
-                pi_email = hardware_procurement.get('pi_email', None)
+                pi_email = procurement_data.get('pi_email', None)
                 if pi_email != pi_filter.email:
                     continue
 
             if hardware_type_filter is not None:
-                hardware_type = hardware_procurement.get('hardware_type', None)
+                hardware_type = procurement_data.get('hardware_type', None)
                 if hardware_type != hardware_type_filter:
                     continue
 
-            filtered_hardware_procurements.append(hardware_procurement)
+            filtered_hardware_procurements.append(procurement_data)
 
         return filtered_hardware_procurements
