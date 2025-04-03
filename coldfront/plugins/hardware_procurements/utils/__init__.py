@@ -53,13 +53,16 @@ class HardwareProcurement(object):
     def _get_identifying_fields(self):
         """Return a tuple of values that identify the procurement.
 
-        The assumption is that a single PI would not make more than one
-        procurement request for the same hardware type on the same date.
+        A procurement can generally be identified by the PI's email, the
+        hardware type, and initial inquiry date. The assumption is that
+        a single PI would not make more than one procurement request for
+        the same hardware type on the same date.
 
-        However, to handle this edge case, a "copy number" is used. If
-        there are multiple procurements with these fields in common, the
-        first would have copy number 0, the second 1, and so on. It is
-        the responsibility of the caller to provide the copy number."""
+        To handle the rare case in which multiple procurements have
+        these fields in common, a "copy number" is used to ensure
+        uniqueness. The first procurement would have copy number 0, the
+        second 1, and so on. It is the responsibility of the caller to
+        provide the copy number at initialization."""
         return (
             self._pi_email,
             self._hardware_type,

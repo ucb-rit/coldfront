@@ -1,22 +1,36 @@
 import gspread
 import os
 
+from collections import defaultdict
+
+from ... import HardwareProcurement
 from .base import BaseDataSourceBackend
-
-
-# TODO: Introduce caching here, or in the caller?
 
 
 class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
     """A backend that fetches hardware procurement data from a Google
     Sheet."""
 
+    def __init__(self, credentials_file_path=None, sheet_id=None,
+                 sheet_tab=None, sheet_columns=None, header_row_index=None):
+        # TODO: Validate.
+        assert isinstance(credentials_file_path, str)
+        assert isinstance(sheet_id, str)
+        assert isinstance(sheet_tab, str)
+        assert isinstance(sheet_columns, dict)
+        assert isinstance(header_row_index, int)
+
+        self._credentials_file_path = credentials_file_path
+        self._sheet_id = sheet_id
+        self._sheet_tab = sheet_tab
+        self._sheet_columns = sheet_columns
+        self._header_row_index = header_row_index
+
     # TODO: Take more filters?
     def fetch_hardware_procurements(self, user_data=None, status=None):
         sheet_data = self._fetch_sheet_data()
 
-        metadata = self._load_sheet_metadata()
-        sheet_columns = metadata['sheet_columns']
+        sheet_columns = self._sheet_columns
 
         if user_data is not None:
             user_emails = set(user_data['emails'])
@@ -38,8 +52,11 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             'order_received_date',
             'installed_date',
             'qos_provisioned_date',
-            'id',
         ]
+
+        # Maintain HardwareProcurement "copy numbers". Refer to the
+        # HardwareProcurement class for more details.
+        num_copies_by_identifier = defaultdict(int)
 
         for line in sheet_data:
             entry = {}
@@ -59,18 +76,28 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
                 poc_email = entry['poc_email']
                 if pi_email not in user_emails and poc_email not in user_emails:
                     continue
-
             if status is not None:
                 if entry['status'] != status:
                     continue
 
-            yield entry
+            identifier = (
+                entry['pi_email'],
+                entry['hardware_type'],
+                entry['initial_inquiry_date'])
+            hardware_procurement_obj = HardwareProcurement(
+                *identifier, num_copies_by_identifier[identifier], entry)
+            num_copies_by_identifier[identifier] += 1
 
-    def _clean_sheet_value(self, column_name, column_value):
-        """TODO"""
+            yield hardware_procurement_obj
+
+    def _clean_sheet_value(self, column_name, value):
+        """Clean the given value stored in the column with the given
+        name. Currently-cleaned columns include:
+            - status
+        """
         if column_name == 'status':
             # TODO: Where are these canonical ones going to be stored so that
-            #  forms can access them?
+            #  forms can access them and avoid hard-coding?
             pending = 'Pending'
             complete = 'Complete'
             inactive = 'Inactive'
@@ -86,31 +113,26 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
                 'compeleted': complete,
                 'inactive': inactive,
             }
-            raw_status = column_value.lower()
+            raw_status = value.lower()
             if raw_status not in raw_to_canonical:
                 raise ValueError(f'Unexpected status {raw_status}')
             return raw_to_canonical[raw_status]
 
-        return column_value
+        return value
 
-    def _fetch_sheet_data(self, *args, **kwargs):
-        """TODO"""
-        metadata = self._load_sheet_metadata()
-
-        credentials_file_path = metadata['credentials_file_path']
+    def _fetch_sheet_data(self):
+        """Open the spreadsheet and specific tab, and return all values
+        strictly after the header row."""
+        credentials_file_path = self._credentials_file_path
         if not os.path.isfile(credentials_file_path):
             raise FileNotFoundError(
                 f'Could not find credentials file: {credentials_file_path}.')
 
         gc = gspread.service_account(filename=credentials_file_path)
+        sh = gc.open_by_key(self._sheet_id)
+        wks = sh.worksheet(self._sheet_tab)
 
-        sheet_id = metadata['sheet_id']
-        sh = gc.open_by_key(sheet_id)
-
-        sheet_tab = metadata['sheet_tab']
-        wks = sh.worksheet(sheet_tab)
-
-        return wks.get_all_values()[3:]
+        return wks.get_all_values()[self._header_row_index:]
 
     @staticmethod
     def _gsheet_column_to_index(column_str):
@@ -120,9 +142,3 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
         for char in column_str:
             index = index * 26 + (ord(char.upper()) - ord('A') + 1)
         return index - 1
-
-    def _load_sheet_metadata(self):
-        """Return a dict containing metadata about the Google Sheet that
-        stores hardware procurement data."""
-        # TODO: Load this from conf.
-        return {}

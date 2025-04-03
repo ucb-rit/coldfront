@@ -8,6 +8,6 @@ class BaseDataSourceBackend(ABC):
 
     @abstractmethod
     def fetch_hardware_procurements(self, user_data=None, status=None):
-        """Return a generator that yields procurements (dicts),
+        """Return a generator that yields HardwareProcurement objects,
         optionally filtering by user (dict) or status (str)."""
         raise NotImplementedError
