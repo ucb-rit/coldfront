@@ -27,7 +27,11 @@ class CachedDataSourceBackend(BaseDataSourceBackend):
 
         # Ensure that the cache is populated.
         self._cache_manager = HardwareProcurementsCacheManager(self._cache_key)
-        self._populate_cache_if_needed()
+        self.populate_cache_if_needed()
+
+    def clear_cache(self):
+        """Clear the cache."""
+        self._cache_manager.clear_cache()
 
     def fetch_hardware_procurements(self, user_data=None, status=None):
         if user_data is None:
@@ -43,7 +47,7 @@ class CachedDataSourceBackend(BaseDataSourceBackend):
                     continue
             yield hardware_procurement
 
-    def _populate_cache_if_needed(self):
+    def populate_cache_if_needed(self):
         """If the cache is not populated, fetch data using the
         underlying backend, and populate it."""
         hardware_procurement_generator = \
@@ -60,7 +64,8 @@ class HardwareProcurementsCacheManager(object):
 
     The following assumptions are made:
         - The total amount of procurement data is small enough (a few
-          hundred records) to be stored locally and loaded into memory.
+          hundred records, < 1 KB each) to be stored locally and loaded
+          into memory.
         - User IDs are unique, non-zero integers (e.g., database primary
           keys). The zero ID is reserved for procurements that are not
           associated with any user.
@@ -125,6 +130,10 @@ class HardwareProcurementsCacheManager(object):
                     continue
                 yield hardware_procurement
 
+    def clear_cache(self):
+        """Clear the cache entry stored under the cache key."""
+        return cache.delete(self._cache_key)
+
     def populate_cache(self, hardware_procurement_generator):
         """Given a generator that yields HardwareProcurements, populate
         the cache entry with the expected structure."""
@@ -138,7 +147,6 @@ class HardwareProcurementsCacheManager(object):
                     procurements_by_user_id[user_id] = {}
                 procurements_by_user_id[user_id][procurement_id] = \
                     hardware_procurement
-        # TODO: Set a configurable timeout?
         cache.set(self._cache_key, procurements_by_user_id)
 
     def is_cache_populated(self):
