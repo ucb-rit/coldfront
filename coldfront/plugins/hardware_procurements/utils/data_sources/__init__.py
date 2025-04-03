@@ -1,6 +1,6 @@
 from django.utils.module_loading import import_string
 
-from coldfront.plugins.hardware_procurements.conf import settings
+from ...conf import settings
 
 
 """Methods relating to fetching of hardware procurement data."""
@@ -13,7 +13,9 @@ __all__ = [
 
 
 def get_data_source(data_source=None, **kwds):
-    klass = import_string(data_source or settings.DATA_SOURCE)
+    klass = import_string(
+        data_source or settings.DATA_SOURCE_CONFIG['DATA_SOURCE'])
+    kwds = kwds or settings.DATA_SOURCE_CONFIG['OPTIONS']
     return klass(**kwds)
 
 
