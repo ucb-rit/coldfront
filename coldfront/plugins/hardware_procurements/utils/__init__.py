@@ -45,6 +45,14 @@ class HardwareProcurement(object):
             self._id = self._compute_id()
         return self._id
 
+    def is_user_associated(self, user_data):
+        """Given a UserInfoDict representing a user, return whether the
+        user is associated with the procurement."""
+        user_emails = set(user_data['emails'])
+        pi_email = self['pi_email']
+        poc_email = self['poc_email']
+        return pi_email in user_emails or poc_email in user_emails
+
     def _compute_id(self):
         """Compute a unique ID (str), based on identifying fields."""
         object_bytes = str(self._get_identifying_fields()).encode('utf-8')
