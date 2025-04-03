@@ -100,9 +100,13 @@ def home(request):
             from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
 
             user_data = UserInfoDict.from_user(request.user)
-            context['hardware_procurements'] = list(
-                fetch_hardware_procurements(
-                    user_data=user_data, status='Complete'))
+            hardware_procurements = []
+            for hardware_procurement in fetch_hardware_procurements(
+                    user_data=user_data, status='Complete'):
+                procurement_data = hardware_procurement.get_data()
+                procurement_data['id'] = hardware_procurement.get_id()
+                hardware_procurements.append(procurement_data)
+            context['hardware_procurements'] = hardware_procurements
 
     else:
         template_name = 'portal/nonauthorized_home.html'

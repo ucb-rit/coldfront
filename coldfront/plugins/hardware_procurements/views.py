@@ -87,6 +87,7 @@ class HardwareProcurementDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
         raise ValueError(f'Could not fetch procurement {procurement_id}.')
 
+
 class HardwareProcurementListView(LoginRequiredMixin, UserPassesTestMixin,
                                   TemplateView):
     """A view for displaying multiple HardwareProcurements."""

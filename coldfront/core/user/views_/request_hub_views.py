@@ -136,12 +136,16 @@ class RequestHubView(LoginRequiredMixin,
             user_data = UserInfoDict.from_user(user)
             fetch_hardware_procurements_kwargs['user_data'] = user_data
 
-        pending_hardware_procurements = list(
-            fetch_hardware_procurements(
-                **{**fetch_hardware_procurements_kwargs, 'status': 'Pending'}))
-        complete_hardware_procurements = list(
-            fetch_hardware_procurements(
-                **{**fetch_hardware_procurements_kwargs, 'status': 'Complete'}))
+        pending_hardware_procurements, complete_hardware_procurements = [], []
+        for hardware_procurement in fetch_hardware_procurements(
+                **fetch_hardware_procurements_kwargs):
+            procurement_data = hardware_procurement.get_data()
+            procurement_data['id'] = hardware_procurement.get_id()
+            status = procurement_data['status']
+            if status == 'Pending':
+                pending_hardware_procurements.append(procurement_data)
+            elif status == 'Complete':
+                complete_hardware_procurements.append(procurement_data)
 
         hardware_procurement_request_obj = RequestListItem()
         hardware_procurement_request_obj.num = self.paginators
