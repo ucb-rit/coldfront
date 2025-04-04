@@ -1,5 +1,6 @@
 import argparse
 import os
+import json
 import yaml
 
 from jinja2 import Environment
@@ -35,6 +36,8 @@ def generate_settings(context):
     environment = Environment(loader=loader)
     environment.filters['bool'] = (
         lambda x: str(x).lower() in ['true', 'yes', 'on', '1'])
+    # Emulate Ansible's to_json filter.
+    environment.filters['to_json'] = lambda _yaml_dict: json.dumps(_yaml_dict)
     template = environment.get_template(
         DJANGO_SETTINGS_JINJA_TEMPLATE_FILE_NAME)
     return template.render(context)

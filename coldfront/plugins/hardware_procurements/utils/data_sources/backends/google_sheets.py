@@ -1,4 +1,5 @@
 import gspread
+import json
 import os
 
 from collections import defaultdict
@@ -11,20 +12,24 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
     """A backend that fetches hardware procurement data from a Google
     Sheet."""
 
-    def __init__(self, credentials_file_path=None, sheet_id=None,
-                 sheet_tab=None, sheet_columns=None, header_row_index=None):
-        # TODO: Validate.
-        assert isinstance(credentials_file_path, str)
-        assert isinstance(sheet_id, str)
-        assert isinstance(sheet_tab, str)
-        assert isinstance(sheet_columns, dict)
-        assert isinstance(header_row_index, int)
+    def __init__(self, **kwargs):
+        if 'config_file_path' in kwargs:
+            config = self._load_config_from_file(kwargs['config_file_path'])
+        else:
+            config = kwargs
 
-        self._credentials_file_path = credentials_file_path
-        self._sheet_id = sheet_id
-        self._sheet_tab = sheet_tab
-        self._sheet_columns = sheet_columns
-        self._header_row_index = header_row_index
+        self._credentials_file_path = config['credentials_file_path']
+        self._sheet_id = config['sheet_id']
+        self._sheet_tab = config['sheet_tab']
+        self._sheet_columns = config['sheet_columns']
+        self._header_row_index = config['header_row_index']
+
+        # TODO: Validate.
+        assert isinstance(self._credentials_file_path, str)
+        assert isinstance(self._sheet_id, str)
+        assert isinstance(self._sheet_tab, str)
+        assert isinstance(self._sheet_columns, dict)
+        assert isinstance(self._header_row_index, int)
 
     # TODO: Take more filters?
     def fetch_hardware_procurements(self, user_data=None, status=None):
@@ -142,3 +147,9 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
         for char in column_str:
             index = index * 26 + (ord(char.upper()) - ord('A') + 1)
         return index - 1
+
+    def _load_config_from_file(self, config_file_path):
+        """Read configuration from the given JSON file and return it as
+        a dict."""
+        with open(config_file_path, 'r') as f:
+            return json.load(f)

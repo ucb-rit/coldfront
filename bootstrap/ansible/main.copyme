@@ -159,6 +159,34 @@ plugin_departments_department_display_name: "Department"
 plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.calnet_ldap.CalNetLdapDataSourceBackend"
 
 #------------------------------------------------------------------------------
+# Plugin: hardware_procurements
+#------------------------------------------------------------------------------
+
+plugin_hardware_procurements_enabled: false
+
+# A mapping from short names of data sources to associated module paths.
+plugin_hardware_procurements_data_source_modules_by_short_name:
+  cached: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.cached.CachedDataSourceBackend'
+  google_sheets: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.google_sheets.GoogleSheetsDataSourceBackend'
+
+# # TODO: Uncomment only the section relevant to the specified data source.
+
+# # Settings: 'cached' backend.
+# plugin_hardware_procurements:
+#   data_source: 'cached'
+#   data_source_options:
+#     cache_key: 'hardware_procurements_data'
+#     cached_data_source: 'google_sheets'
+#     cached_data_source_options:
+#       config_file_path: '/path/to/data-source-options-file.json'
+
+# # Settings: 'google_sheets' backend.
+# plugin_hardware_procurements:
+#   data_source: 'google_sheets'
+#   data_source_options:
+#     config_file_path: '/path/to/data-source-options-file.json'
+
+#------------------------------------------------------------------------------
 # User-facing strings
 #------------------------------------------------------------------------------
 

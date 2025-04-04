@@ -304,6 +304,7 @@ FLAGS = {
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': {{ flag_sso_enabled }}}],
     'USER_DEPARTMENTS_ENABLED': [{'condition': 'app installed', 'value': 'coldfront.plugins.departments'}],
+    'HARDWARE_PROCUREMENTS_ENABLED': [{'condition': 'app installed', 'value': 'coldfront.plugins.hardware_procurements'}],
     'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': {{ flag_mou_generation_enabled }}}],
     'RENEWAL_SURVEY_ENABLED': [{'condition': 'boolean', 'value': {{ flag_renewal_survey_enabled }}}],
 }
@@ -336,6 +337,30 @@ EXTRA_EXTRA_APPS += [
 DEPARTMENTS_DEPARTMENT_DISPLAY_NAME = '{{ plugin_departments_department_display_name }}'
 DEPARTMENTS_DEPARTMENT_DATA_SOURCE = '{{ plugin_departments_department_data_source }}'
 {% endif %}
+
+{% if plugin_hardware_procurements_enabled is defined and plugin_hardware_procurements_enabled | bool -%}
+#------------------------------------------------------------------------------
+# Plugin: hardware_procurements
+#------------------------------------------------------------------------------
+
+EXTRA_EXTRA_APPS += [
+    'coldfront.plugins.hardware_procurements'
+]
+
+HARDWARE_PROCUREMENTS_CONFIG = {
+    'DATA_SOURCE': '{{ plugin_hardware_procurements_data_source_modules_by_short_name[plugin_hardware_procurements.data_source]}}',
+    {% if plugin_hardware_procurements.data_source == 'cached' -%}
+    'OPTIONS': {
+        'cache_key': '{{ plugin_hardware_procurements.data_source_options.cache_key }}',
+        'cached_data_source': '{{ plugin_hardware_procurements_data_source_modules_by_short_name[plugin_hardware_procurements.data_source_options.cached_data_source] }}',
+        'cached_data_source_options': {{ plugin_hardware_procurements.data_source_options.cached_data_source_options | to_json }},
+    },
+    {%- else -%}
+    'OPTIONS': {{ plugin_hardware_procurements.data_source_options | to_json }},
+    {%- endif %}
+}
+{%- endif -%}
+
 
 {% if file_storage_backend == 'google_drive' %}
 #------------------------------------------------------------------------------
