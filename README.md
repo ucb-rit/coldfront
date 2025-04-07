@@ -26,7 +26,6 @@ Documentation resides in a separate repository. Please request access.
 ### Miscellaneous Topics
 
 - [Deployment](bootstrap/ansible/README.md)
-- [Google Sheets Setup](bootstrap/docs/g-sheets-setup.md)
 - [REST API](coldfront/api/README.md)
 
 ## License
