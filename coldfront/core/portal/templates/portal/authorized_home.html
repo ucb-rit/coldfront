@@ -1,7 +1,5 @@
 {% extends "common/base.html" %} {% load common_tags %} {% block content %}
 
-{% load portal_tags %}
-
 <div class="row">
   <div class="col-lg-12">
     <h2>Welcome</h2>
@@ -115,7 +113,6 @@
       <span class="alert alert-danger"><b>No Cluster Account</b></span>
     {% endif %}
   </div>
-  </div>
 </div>
 <br></br>
 
@@ -215,12 +212,12 @@
         <tbody>
           {% for procurement_obj in hardware_procurements %}
             <tr>
-              <td>{{ procurement_obj|get_item:"initial_inquiry_date" }}</td>
-              <td>{{ procurement_obj|get_item:"hardware_type" }}</td>
-              <td>{{ procurement_obj|get_item:"hardware_specification_details" }}</td>
+              <td>{{ procurement_obj|get_value_from_dict:"initial_inquiry_date" }}</td>
+              <td>{{ procurement_obj|get_value_from_dict:"hardware_type" }}</td>
+              <td>{{ procurement_obj|get_value_from_dict:"hardware_specification_details" }}</td>
               <td>
                 <span class="badge badge-success">
-                  {{ procurement_obj|get_item:"status" }}
+                  {{ procurement_obj|get_value_from_dict:"status" }}
                 </span>
               </td>
               <td>

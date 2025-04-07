@@ -1,4 +1,4 @@
-{% load portal_tags %}
+{% load common_tags %}
 
 <table class="table table-sm">
   <thead>
@@ -17,14 +17,14 @@
   <tbody>
   {% for request_obj in queryset %}
     <tr>
-      <td>{{ request_obj|get_item:"initial_inquiry_date" }}</td>
+      <td>{{ request_obj|get_value_from_dict:"initial_inquiry_date" }}</td>
       {% if display_user_info %}
-        <td>{{ request_obj|get_item:"pi_name" }}</td>
-        <td>{{ request_obj|get_item:"pi_email" }}</td>
+        <td>{{ request_obj|get_value_from_dict:"pi_name" }}</td>
+        <td>{{ request_obj|get_value_from_dict:"pi_email" }}</td>
       {% endif %}
-      <td>{{ request_obj|get_item:"hardware_type" }}</td>
-      <td>{{ request_obj|get_item:"hardware_specification_details" }}</td>
-      {% with request_status=request_obj|get_item:"status" %}
+      <td>{{ request_obj|get_value_from_dict:"hardware_type" }}</td>
+      <td>{{ request_obj|get_value_from_dict:"hardware_specification_details" }}</td>
+      {% with request_status=request_obj|get_value_from_dict:"status" %}
       <td>
         <!-- TODO: Don't hard-code these? -->
         {% if request_status == "Complete" %}

@@ -12,7 +12,3 @@ def get_version():
 @register.simple_tag
 def get_setting(name):
     return getattr(settings, name, "")
-
-@register.filter
-def get_item(dictionary, key):
-    return dictionary.get(key, "")
