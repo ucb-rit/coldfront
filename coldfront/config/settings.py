@@ -221,11 +221,6 @@ DECIMAL_MAX_PLACES = 2
 ALLOCATION_MIN = Decimal('0.00')
 ALLOCATION_MAX = Decimal('100000000.00')
 
-DECOMMISSION_WARNING_DAYS = 30
-
-GSHEETS_DISABLE_CACHE = True
-
-
 # Whether to allow all jobs, bypassing all checks at job submission time.
 ALLOW_ALL_JOBS = False
 
@@ -270,21 +265,3 @@ try:
     SETTINGS_EXPORT = SETTINGS_EXPORT + LOCAL_SETTINGS_EXPORT
 except NameError:
     SETTINGS_EXPORT = SETTINGS_EXPORT
-
-
-DECOMMISSION_ALERT_COLUMNS = [
-    "Hardware Type",
-    "Status",
-    "Initial Inquiry Date"
-]
-
-
-DECOMMISSION_DETAIL_COLUMNS = [
-    "PI Email",
-    "PI Name (first last)",
-    "Expected Decomission Date",
-    "Hardware Type",
-    "Status",
-    "Department Division",
-    "Hardware Specification Details"
-]

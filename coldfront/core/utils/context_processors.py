@@ -115,7 +115,6 @@ def request_alert_counts(request):
             }
 
         if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
-            # TODO: Cache.
             from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
             context['hardware_procurement_req_count'] = len(
                 list(fetch_hardware_procurements(status='Pending')))

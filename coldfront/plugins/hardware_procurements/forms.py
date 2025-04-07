@@ -10,9 +10,9 @@ class UserChoiceField(forms.ModelChoiceField):
 
 
 class HardwareProcurementSearchForm(forms.Form):
-    """TODO"""
+    """A form for searching for hardware procurements based on various
+    criteria."""
 
-    # TODO: Ideally, fetch these from the data source.
     HARDWARE_TYPE_CHOICES = (
         ('', '-----'),
         ('CPU', 'CPU'),

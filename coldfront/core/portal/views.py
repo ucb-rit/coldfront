@@ -7,10 +7,6 @@ from django.contrib.humanize.templatetags.humanize import intcomma
 from django.db.models import Count, Q, Sum
 from django.shortcuts import render
 from django.views.decorators.cache import cache_page
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404
-from django.http import Http404
-from django.conf import settings
 
 from flags.state import flag_enabled
 
@@ -29,7 +25,6 @@ from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
 from coldfront.core.project.utils import render_project_compute_usage
 
-from coldfront.core.utils.gsheets import get_all_condo_allocations
 from django.contrib.auth.decorators import login_required
 
 
@@ -250,45 +245,3 @@ def allocation_summary(request):
     context['resources_chart_data'] = resources_chart_data
 
     return render(request, 'portal/allocation_summary.html', context)
-
-
-# TODO: Clean up.
-@login_required
-def decommission_details(request):
-    """
-    Renders a page with a list of decommission alerts.
-    Each alert is displayed using configurable columns and includes a link
-    to an individual detail page.
-    """
-    alerts = get_all_condo_allocations(request.user.email)
-
-    context = {
-        "decommission_alerts": alerts,
-        "decommission_alert_columns": getattr(settings, "DECOMMISSION_ALERT_COLUMNS_KEYS", [])
-    }
-    return render(request, "portal/decommission_details.html", context)
-
-
-from django.http import Http404
-
-
-@login_required
-def decommission_entry_detail(request, entry_id):
-    """
-    Look up a specific decommission alert for the current user using the unique id,
-    and display its details using configurable columns.
-    """
-    alerts = get_all_condo_allocations(request.user.email)
-    alert = None
-    for a in alerts:
-        if a.get("id") == entry_id:
-            alert = a
-            break
-    if not alert:
-        raise Http404("Decommission entry not found.")
-
-    detail_columns = getattr(settings, "DECOMMISSION_DETAIL_COLUMNS", [])
-    return render(request, "portal/decommission_entry_detail.html", {
-        "alert": alert,
-        "decommission_detail_columns": detail_columns,
-    })

@@ -4,7 +4,6 @@ from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Q
 from django.views.generic.base import TemplateView
 from flags.state import flag_enabled
-from coldfront.core.utils.gsheets import get_all_condo_allocations
 
 from coldfront.core.allocation.models import (AllocationAttributeType,
                                               AllocationUserAttribute,
