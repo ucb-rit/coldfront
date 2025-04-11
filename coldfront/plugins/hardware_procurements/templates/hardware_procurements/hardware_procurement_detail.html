@@ -8,75 +8,107 @@ Hardware Procurement Details
 
 {% block content %}
 
-<h2>Hardware Procurement Details</h2>
-<br>
-
-<table class="table">
-	<tbody>
-		<tr>
-			<td><b>PI Email</b></td>
-			<td>{{ procurement.pi_email }}</td>
-		</tr>
-		<tr>
-			<td><b>PI Name</b></td>
-			<td>{{ procurement.pi_name }}</td>
-		</tr>
-		{% if procurement.poc_email %}
-		<tr>
-			<td><b>POC Email</b></td>
-			<td>{{ procurement.poc_email }}</td>
-		</tr>
-		<tr>
-			<td><b>POC Name</b></td>
-			<td>{{ procurement.poc_name }}</td>
-		</tr>
-		{% endif %}
-		<tr>
-			<td><b>Hardware Type</b></td>
-			<td>{{ procurement.hardware_type }}</td>
-		</tr>
-		<tr>
-			<td><b>Hardware Specification Details</b></td>
-			<td>{{ procurement.hardware_specification_details }}</td>
-		</tr>
-		<tr>
-			<td><b>Status</b></td>
-			<td>
-				<!-- TODO: Don't hard-code these? -->
-				{% if procurement.status == "Complete" %}
-					<span class="badge badge-success">{{ procurement.status }}</span>
-				{% elif procurement.status == "Inactive" %}
-					<span class="badge badge-danger">{{ procurement.status }}</span>
-				{% else %}
-					<span class="badge badge-warning">{{ procurement.status }}</span>
-				{% endif %}
-			</td>
-		</tr>
-		<tr>
-			<td><b>Initial Inquiry Date</b></td>
-			<td>{{ procurement.initial_inquiry_date }}</td>
-		</tr>
-		<tr>
-			<td><b>Procurement Start Date</b></td>
-			<td>{{ procurement.procurement_start_date }}</td>
-		</tr>
-		<tr>
-			<td><b>Order Received Date</b></td>
-			<td>{{ procurement.order_received_date }}</td>
-		</tr>
-		<tr>
-			<td><b>Installed Date</b></td>
-			<td>{{ procurement.installed_date }}</td>
-		</tr>
-		<tr>
-			<td><b>Expected Retirement Date</b></td>
-			<td>{{ procurement.expected_retirement_date }}</td>
-		</tr>
-		<tr>
-			<td><b>JIRA Ticket</b></td>
-			<td>{{ procurement.jira_ticket }}</td>
-		</tr>
-	</tbody>
-</table>
+<div class="card mb-3">
+  <div class="card-header">
+    <h2><i class="fas fa-list"></i> Hardware Procurement Information</h2>
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <tbody>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              PI Email
+            </th>
+            <td>{{ procurement.pi_email }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              PI Name
+            </th>
+            <td>{{ procurement.pi_name }}</td>
+          </tr>
+          {% if procurement.poc_email %}
+          <tr>
+            <th scope="row" class="text-nowrap">
+              POC Email
+            </th>
+            <td>{{ procurement.poc_email }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              POC Name
+            </th>
+            <td>{{ procurement.poc_name }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Hardware Type
+            </th>
+            <td>{{ procurement.hardware_type }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Hardware Specification Details
+            </th>
+            <td>{{ procurement.hardware_specification_details }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Status
+            </th>
+            <td>
+              <!-- TODO: Don't hard-code these? -->
+              {% if procurement.status == "Complete" %}
+                <span class="badge badge-success">{{ procurement.status }}</span>
+              {% elif procurement.status == "Inactive" %}
+                <span class="badge badge-danger">{{ procurement.status }}</span>
+              {% else %}
+                <span class="badge badge-warning">{{ procurement.status }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Initial Inquiry Date
+            </th>
+            <td>{{ procurement.initial_inquiry_date }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Procurement Start Date
+            </th>
+            <td>{{ procurement.procurement_start_date }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Order Received Date
+            </th>
+            <td>{{ procurement.order_received_date }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Installed Date
+            </th>
+            <td>{{ procurement.installed_date }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Expected Retirement Date
+            </th>
+            <td>{{ procurement.expected_retirement_date }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              JIRA Ticket
+            </th>
+            <td>{{ procurement.jira_ticket }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
 {% endblock %}
