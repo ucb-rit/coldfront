@@ -106,8 +106,15 @@ class HardwareProcurementListView(LoginRequiredMixin, UserPassesTestMixin,
         search_form = HardwareProcurementSearchForm(self.request.GET)
         if search_form.is_valid():
             context['search_form'] = search_form
+            data = search_form.cleaned_data
+            filter_parameters = urlencode(
+                {key: value for key, value in data.items() if value})
         else:
             context['search_form'] = HardwareProcurementSearchForm()
+            filter_parameters = ''
+
+        # Pagination expects the following context variable.
+        context['filter_parameters_with_order_by'] = filter_parameters
 
         page = self.request.GET.get('page', 1)
         paginator = Paginator(self._procurements, 30)
