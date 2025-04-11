@@ -141,7 +141,13 @@ Hardware Procurement Details
             <th scope="row" class="text-nowrap">
               Expected Retirement Date
             </th>
-            <td>{{ procurement|get_value_from_dict:"expected_retirement_date" }}</td>
+            <td>
+              {% if procurement|get_value_from_dict:"expected_retirement_date" %}
+                {{ procurement|get_value_from_dict:"expected_retirement_date" }}
+              {% else %}
+                TBD
+              {% endif %}
+            </td>
           </tr>
           <tr>
             <th scope="row" class="text-nowrap">
