@@ -5,8 +5,8 @@
     <tr>
       <th scope="col">Initial Inquiry Date</th>
       {% if display_user_info %}
-        <th scope="col">PI Name</th>
-        <th scope="col">PI Email</th>
+        <th scope="col">PI Name(s)</th>
+        <th scope="col">PI Email(s)</th>
       {% endif %}
       <th scope="col">Hardware Type</th>
       <th scope="col">Hardware Specification Details</th>
@@ -19,8 +19,8 @@
     <tr>
       <td>{{ request_obj|get_value_from_dict:"initial_inquiry_date" }}</td>
       {% if display_user_info %}
-        <td>{{ request_obj|get_value_from_dict:"pi_name" }}</td>
-        <td>{{ request_obj|get_value_from_dict:"pi_email" }}</td>
+        <td>{{ request_obj|get_value_from_dict:"pi_names" }}</td>
+        <td>{{ request_obj|get_value_from_dict:"pi_emails" }}</td>
       {% endif %}
       <td>{{ request_obj|get_value_from_dict:"hardware_type" }}</td>
       <td>{{ request_obj|get_value_from_dict:"hardware_specification_details" }}</td>

@@ -61,7 +61,7 @@ class HardwareProcurementDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['procurement'] = self._procurement
+        context['procurement'] = self._procurement.get_renderable_data()
         return context
 
     def _fetch_procurement(self, procurement_id):
@@ -167,20 +167,18 @@ class HardwareProcurementListView(LoginRequiredMixin, UserPassesTestMixin,
 
         filtered_hardware_procurements = []
         for hardware_procurement in hardware_procurements:
-
             procurement_data = hardware_procurement.get_data()
-            procurement_data['id'] = hardware_procurement.get_id()
 
             if pi_filter is not None:
-                pi_email = procurement_data.get('pi_email', None)
-                if pi_email != pi_filter.email:
+                pi_emails = procurement_data.get('pi_emails', [])
+                if pi_filter.email not in pi_emails:
                     continue
-
             if hardware_type_filter is not None:
                 hardware_type = procurement_data.get('hardware_type', None)
                 if hardware_type != hardware_type_filter:
                     continue
 
-            filtered_hardware_procurements.append(procurement_data)
+            filtered_hardware_procurements.append(
+                hardware_procurement.get_renderable_data())
 
         return filtered_hardware_procurements

@@ -1,5 +1,7 @@
 import hashlib
 
+from copy import deepcopy
+
 from allauth.account.models import EmailAddress
 
 
@@ -15,9 +17,13 @@ class HardwareProcurement(object):
     # Note: This object is intended to be stored in a cache, so it must
     # be serializable.
 
-    def __init__(self, pi_email, hardware_type, initial_inquiry_date,
+    def __init__(self, pi_emails_str, hardware_type, initial_inquiry_date,
                  copy_number, data):
-        self._pi_email = pi_email
+        # A procurement could have multiple PIs, and thus multiple PI emails,
+        # but for identification purposes, the given pi_emails_str should be a
+        # str (e.g., one email, or a comma-separated list of emails).
+        assert isinstance(pi_emails_str, str)
+        self._pi_emails_str = pi_emails_str
         self._hardware_type = hardware_type
         self._initial_inquiry_date = initial_inquiry_date
         self._copy_number = copy_number
@@ -35,7 +41,7 @@ class HardwareProcurement(object):
 
     def get_data(self):
         """Return the underlying dict of procurement data."""
-        return self._data
+        return deepcopy(self._data)
 
     def get_id(self):
         """Return a unique ID (str) for the procurement, based on
@@ -45,13 +51,27 @@ class HardwareProcurement(object):
             self._id = self._compute_id()
         return self._id
 
+    # TODO: Consider whether this logic should be moved outside the class.
+    def get_renderable_data(self):
+        """Return the underlying dict of procurement data, with an
+        additional `id` field set to the ID, and lists converted into
+        comma-separated strs."""
+        data = self.get_data()
+        data['id'] = self.get_id()
+        for key, value in data.items():
+            if isinstance(value, list):
+                data[key] = ', '.join(value)
+        return data
+
     def is_user_associated(self, user_data):
         """Given a UserInfoDict representing a user, return whether the
         user is associated with the procurement."""
         user_emails = set(user_data['emails'])
-        pi_email = self['pi_email']
-        poc_email = self['poc_email']
-        return pi_email in user_emails or poc_email in user_emails
+        pi_emails = set(self['pi_emails'])
+        poc_emails = set(self['poc_emails'])
+        return (
+            set.intersection(user_emails, pi_emails) or
+            set.intersection(user_emails, poc_emails))
 
     def _compute_id(self):
         """Compute a unique ID (str), based on identifying fields."""
@@ -61,10 +81,11 @@ class HardwareProcurement(object):
     def _get_identifying_fields(self):
         """Return a tuple of values that identify the procurement.
 
-        A procurement can generally be identified by the PI's email, the
-        hardware type, and initial inquiry date. The assumption is that
-        a single PI would not make more than one procurement request for
-        the same hardware type on the same date.
+        A procurement can generally be identified by the string of PI
+        emails, the hardware type, and initial inquiry date. The
+        assumption is that a PI (or group of PIs) would not make more
+        than one procurement request for the same hardware type on the
+        same date.
 
         To handle the rare case in which multiple procurements have
         these fields in common, a "copy number" is used to ensure
@@ -72,7 +93,7 @@ class HardwareProcurement(object):
         second 1, and so on. It is the responsibility of the caller to
         provide the copy number at initialization."""
         return (
-            self._pi_email,
+            self._pi_emails_str,
             self._hardware_type,
             self._initial_inquiry_date,
             self._copy_number)

@@ -111,8 +111,18 @@ class HardwareProcurementsCacheManager(object):
         across all users."""
         assert self.is_cache_populated()
         procurements_by_user_id = cache.get(self._cache_key)
+
+        # A procurement that is associated with more than one user is stored
+        # multiple times, once for each user. Maintain a set of seen procurement
+        # IDs to prevent yielding duplicate results.
+        seen_procurement_ids = set()
+
         for _, user_procurements in procurements_by_user_id.items():
-            for _, hardware_procurement in user_procurements.items():
+            for procurement_id, hardware_procurement in \
+                    user_procurements.items():
+                if procurement_id in seen_procurement_ids:
+                    continue
+                seen_procurement_ids.add(procurement_id)
                 yield hardware_procurement
 
     def get_cached_procurements_for_user(self, user_data):
@@ -156,29 +166,37 @@ class HardwareProcurementsCacheManager(object):
 
     def _lookup_associated_user_ids(self, hardware_procurement):
         """Give a HardwareProcurement, look up the IDs of the users
-        associated with it, namely the PI and POC. If none are found,
+        associated with it, namely the PIs and POCs. If none are found,
         return the nonexistent user ID. Return a list of unique IDs."""
+        pi_users = []
         try:
-            pi_email = hardware_procurement['pi_email']
-            pi_user = look_up_user_by_email(pi_email)
+            pi_emails = hardware_procurement['pi_emails']
+            for pi_email in pi_emails:
+                pi_user = look_up_user_by_email(pi_email)
+                if pi_user is not None:
+                    pi_users.append(pi_user)
         except Exception as e:
-            pi_user = None
+            pass
 
+        poc_users = []
         try:
-            poc_email = hardware_procurement['poc_email']
-            poc_user = look_up_user_by_email(poc_email)
+            poc_emails = hardware_procurement['poc_emails']
+            for poc_email in poc_emails:
+                poc_user = look_up_user_by_email(poc_email)
+                if poc_user is not None:
+                    poc_users.append(poc_user)
         except Exception as e:
-            poc_user = None
+            pass
 
         associated_user_ids = set()
-        if not (pi_user or poc_user):
+        if not (pi_users or poc_users):
             user_id = self.NONEXISTENT_USER_ID
             associated_user_ids.add(user_id)
         else:
-            if pi_user is not None:
+            for pi_user in pi_users:
                 user_id = pi_user.id
                 associated_user_ids.add(user_id)
-            if poc_user is not None:
+            for poc_user in poc_users:
                 user_id = poc_user.id
                 associated_user_ids.add(user_id)
         return list(associated_user_ids)

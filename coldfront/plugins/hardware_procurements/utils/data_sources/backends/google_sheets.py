@@ -46,10 +46,10 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
         keys = [
             'status',
             'initial_inquiry_date',
-            'pi_name',
-            'pi_email',
-            'poc_name',
-            'poc_email',
+            'pi_names',
+            'pi_emails',
+            'poc_names',
+            'poc_emails',
             'hardware_type',
             'hardware_specification_details',
             'procurement_start_date',
@@ -77,16 +77,18 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
 
             # TODO: Move filtering into a function?
             if user_data is not None:
-                pi_email = entry['pi_email']
-                poc_email = entry['poc_email']
-                if pi_email not in user_emails and poc_email not in user_emails:
+                is_user_a_pi = set.intersection(
+                    user_emails, set(entry['pi_emails']))
+                is_user_a_poc = set.intersection(
+                    user_emails, set(entry['poc_emails']))
+                if not (is_user_a_pi or is_user_a_poc):
                     continue
             if status is not None:
                 if entry['status'] != status:
                     continue
 
             identifier = (
-                entry['pi_email'],
+                ','.join(sorted(entry['pi_emails'])),
                 entry['hardware_type'],
                 entry['initial_inquiry_date'])
             hardware_procurement_obj = HardwareProcurement(
@@ -99,6 +101,8 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
         """Clean the given value stored in the column with the given
         name. Currently-cleaned columns include:
             - status
+            - pi_emails
+            - poc_emails
         """
         if column_name == 'status':
             # TODO: Where are these canonical ones going to be stored so that
@@ -124,6 +128,9 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             if raw_status not in raw_to_canonical:
                 raise ValueError(f'Unexpected status {raw_status}')
             return raw_to_canonical[raw_status]
+
+        elif column_name == 'pi_emails' or column_name == 'poc_emails':
+            return [email.strip() for email in value.split(',')]
 
         return value
 

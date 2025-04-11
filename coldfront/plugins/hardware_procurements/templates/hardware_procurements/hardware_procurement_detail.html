@@ -1,5 +1,6 @@
 {% extends "common/base.html" %}
 {% load static %}
+{% load common_tags %}
 
 
 {% block title %}
@@ -16,43 +17,44 @@ Hardware Procurement Details
     <div class="table-responsive">
       <table class="table table-bordered table-sm">
         <tbody>
+          {% with procurement_status=procurement|get_value_from_dict:"status" %}
           <tr>
             <th scope="row" class="text-nowrap">
-              PI Email
+              PI Email(s)
             </th>
-            <td>{{ procurement.pi_email }}</td>
+            <td>{{ procurement|get_value_from_dict:"pi_emails" }}</td>
           </tr>
           <tr>
             <th scope="row" class="text-nowrap">
-              PI Name
+              PI Name(s)
             </th>
-            <td>{{ procurement.pi_name }}</td>
+            <td>{{ procurement|get_value_from_dict:"pi_names" }}</td>
           </tr>
-          {% if procurement.poc_email %}
+          {% if procurement|get_value_from_dict:"poc_emails" %}
           <tr>
             <th scope="row" class="text-nowrap">
-              POC Email
+              POC Email(s)
             </th>
-            <td>{{ procurement.poc_email }}</td>
+            <td>{{ procurement|get_value_from_dict:"poc_emails" }}</td>
           </tr>
           <tr>
             <th scope="row" class="text-nowrap">
-              POC Name
+              POC Name(s)
             </th>
-            <td>{{ procurement.poc_name }}</td>
+            <td>{{ procurement|get_value_from_dict:"poc_names" }}</td>
           </tr>
           {% endif %}
           <tr>
             <th scope="row" class="text-nowrap">
               Hardware Type
             </th>
-            <td>{{ procurement.hardware_type }}</td>
+            <td>{{ procurement|get_value_from_dict:"hardware_type" }}</td>
           </tr>
           <tr>
             <th scope="row" class="text-nowrap">
               Hardware Specification Details
             </th>
-            <td>{{ procurement.hardware_specification_details }}</td>
+            <td>{{ procurement|get_value_from_dict:"hardware_specification_details" }}</td>
           </tr>
           <tr>
             <th scope="row" class="text-nowrap">
@@ -60,14 +62,14 @@ Hardware Procurement Details
             </th>
             <td>
               <!-- TODO: Don't hard-code these? -->
-              {% if procurement.status == "Complete" %}
-                <span class="badge badge-success">{{ procurement.status }}</span>
-              {% elif procurement.status == "Inactive" %}
-                <span class="badge badge-danger">{{ procurement.status }}</span>
-              {% elif procurement.status == "Retired" %}
-                <span class="badge badge-danger">{{ procurement.status }}</span>
+              {% if procurement_status == "Complete" %}
+                <span class="badge badge-success">{{ procurement_status }}</span>
+              {% elif procurement_status == "Inactive" %}
+                <span class="badge badge-danger">{{ procurement_status }}</span>
+              {% elif procurement_status == "Retired" %}
+                <span class="badge badge-danger">{{ procurement_status }}</span>
               {% else %}
-                <span class="badge badge-warning">{{ procurement.status }}</span>
+                <span class="badge badge-warning">{{ procurement_status }}</span>
               {% endif %}
             </td>
           </tr>
@@ -76,10 +78,10 @@ Hardware Procurement Details
               Initial Inquiry Date
             </th>
             <td>
-              {% if procurement.initial_inquiry_date %}
-                {{ procurement.initial_inquiry_date }}
+              {% if procurement|get_value_from_dict:"initial_inquiry_date" %}
+                {{ procurement|get_value_from_dict:"initial_inquiry_date" }}
               {% else %}
-                {% if procurement.status == "Pending" %}
+                {% if procurement_status == "Pending" %}
                   TBD
                 {% else %}
                   N/A
@@ -92,10 +94,10 @@ Hardware Procurement Details
               Procurement Start Date
             </th>
             <td>
-              {% if procurement.procurement_start_date %}
-                {{ procurement.procurement_start_date }}
+              {% if procurement|get_value_from_dict:"procurement_start_date" %}
+                {{ procurement|get_value_from_dict:"procurement_start_date" }}
               {% else %}
-                {% if procurement.status == "Pending" %}
+                {% if procurement_status == "Pending" %}
                   TBD
                 {% else %}
                   N/A
@@ -108,10 +110,10 @@ Hardware Procurement Details
               Order Received Date
             </th>
             <td>
-              {% if procurement.order_received_date %}
-                {{ procurement.order_received_date }}
+              {% if procurement|get_value_from_dict:"order_received_date" %}
+                {{ procurement|get_value_from_dict:"order_received_date" }}
               {% else %}
-                {% if procurement.status == "Pending" %}
+                {% if procurement_status == "Pending" %}
                   TBD
                 {% else %}
                   N/A
@@ -124,10 +126,10 @@ Hardware Procurement Details
               Installed Date
             </th>
             <td>
-              {% if procurement.installed_date %}
-                {{ procurement.installed_date }}
+              {% if procurement|get_value_from_dict:"installed_date" %}
+                {{ procurement|get_value_from_dict:"installed_date" }}
               {% else %}
-                {% if procurement.status == "Pending" %}
+                {% if procurement_status == "Pending" %}
                   TBD
                 {% else %}
                   N/A
@@ -139,14 +141,15 @@ Hardware Procurement Details
             <th scope="row" class="text-nowrap">
               Expected Retirement Date
             </th>
-            <td>{{ procurement.expected_retirement_date }}</td>
+            <td>{{ procurement|get_value_from_dict:"expected_retirement_date" }}</td>
           </tr>
           <tr>
             <th scope="row" class="text-nowrap">
               JIRA Ticket
             </th>
-            <td>{{ procurement.jira_ticket }}</td>
+            <td>{{ procurement|get_value_from_dict:"jira_ticket" }}</td>
           </tr>
+          {% endwith %}
         </tbody>
       </table>
     </div>
