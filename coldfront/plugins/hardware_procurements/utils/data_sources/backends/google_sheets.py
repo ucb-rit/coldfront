@@ -56,7 +56,7 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             'jira_ticket',
             'order_received_date',
             'installed_date',
-            'qos_provisioned_date',
+            'expected_retirement_date',
         ]
 
         # Maintain HardwareProcurement "copy numbers". Refer to the
