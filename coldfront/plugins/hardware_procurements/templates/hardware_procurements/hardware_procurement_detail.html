@@ -21,6 +21,7 @@ Hardware Procurement Details
 			<td><b>PI Name</b></td>
 			<td>{{ procurement.pi_name }}</td>
 		</tr>
+		{% if procurement.poc_email %}
 		<tr>
 			<td><b>POC Email</b></td>
 			<td>{{ procurement.poc_email }}</td>
@@ -29,6 +30,7 @@ Hardware Procurement Details
 			<td><b>POC Name</b></td>
 			<td>{{ procurement.poc_name }}</td>
 		</tr>
+		{% endif %}
 		<tr>
 			<td><b>Hardware Type</b></td>
 			<td>{{ procurement.hardware_type }}</td>
