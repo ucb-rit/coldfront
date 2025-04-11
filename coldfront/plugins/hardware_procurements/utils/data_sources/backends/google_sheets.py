@@ -3,6 +3,8 @@ import json
 import os
 
 from collections import defaultdict
+from datetime import date
+from datetime import datetime
 
 from ... import HardwareProcurement
 from .base import BaseDataSourceBackend
@@ -11,6 +13,8 @@ from .base import BaseDataSourceBackend
 class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
     """A backend that fetches hardware procurement data from a Google
     Sheet."""
+
+    DATE_FORMAT = '%m/%d/%Y'
 
     def __init__(self, **kwargs):
         if 'config_file_path' in kwargs:
@@ -87,10 +91,15 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
                 if entry['status'] != status:
                     continue
 
+            pi_emails_str = ','.join(sorted(entry['pi_emails']))
+            hardware_type_str = entry['hardware_type']
+            initial_inquiry_date_str = (
+                entry['initial_inquiry_date'].strftime(self.DATE_FORMAT)
+                if isinstance(entry['initial_inquiry_date'], date)
+                else '')
             identifier = (
-                ','.join(sorted(entry['pi_emails'])),
-                entry['hardware_type'],
-                entry['initial_inquiry_date'])
+                pi_emails_str, hardware_type_str, initial_inquiry_date_str)
+
             hardware_procurement_obj = HardwareProcurement(
                 *identifier, num_copies_by_identifier[identifier], entry)
             num_copies_by_identifier[identifier] += 1
@@ -100,10 +109,23 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
     def _clean_sheet_value(self, column_name, value):
         """Clean the given value stored in the column with the given
         name. Currently-cleaned columns include:
-            - status
+            - expected_retirement_date
+            - initial_inquiry_date
+            - installed_date
+            - order_received_date
             - pi_emails
             - poc_emails
+            - procurement_start_date
+            - status
         """
+        date_fields = (
+            'expected_retirement_date',
+            'initial_inquiry_date',
+            'installed_date',
+            'order_received_date',
+            'procurement_start_date',
+        )
+
         if column_name == 'status':
             # TODO: Where are these canonical ones going to be stored so that
             #  forms can access them and avoid hard-coding?
@@ -131,6 +153,12 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
 
         elif column_name == 'pi_emails' or column_name == 'poc_emails':
             return [email.strip() for email in value.split(',')]
+
+        elif column_name in date_fields:
+            try:
+                return datetime.strptime(value, self.DATE_FORMAT).date()
+            except Exception as e:
+                return None
 
         return value
 

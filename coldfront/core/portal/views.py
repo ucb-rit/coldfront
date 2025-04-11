@@ -114,8 +114,10 @@ def home(request):
             hardware_procurements = []
             for hardware_procurement in fetch_hardware_procurements(
                     user_data=user_data, status='Complete'):
-                hardware_procurements.append(
-                    hardware_procurement.get_renderable_data())
+                hardware_procurements.append(hardware_procurement)
+            hardware_procurements.sort(reverse=True)
+            hardware_procurements = [
+                hp.get_renderable_data() for hp in hardware_procurements]
             context['hardware_procurements'] = hardware_procurements
 
     else:

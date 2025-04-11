@@ -1,6 +1,7 @@
 import hashlib
 
 from copy import deepcopy
+from datetime import date
 
 from allauth.account.models import EmailAddress
 
@@ -17,15 +18,15 @@ class HardwareProcurement(object):
     # Note: This object is intended to be stored in a cache, so it must
     # be serializable.
 
-    def __init__(self, pi_emails_str, hardware_type, initial_inquiry_date,
-                 copy_number, data):
+    def __init__(self, pi_emails_str, hardware_type_str,
+                 initial_inquiry_date_str, copy_number, data):
         # A procurement could have multiple PIs, and thus multiple PI emails,
         # but for identification purposes, the given pi_emails_str should be a
         # str (e.g., one email, or a comma-separated list of emails).
         assert isinstance(pi_emails_str, str)
         self._pi_emails_str = pi_emails_str
-        self._hardware_type = hardware_type
-        self._initial_inquiry_date = initial_inquiry_date
+        self._hardware_type_str = hardware_type_str
+        self._initial_inquiry_date_str = initial_inquiry_date_str
         self._copy_number = copy_number
         self._data = data
         self._id = self._compute_id()
@@ -38,6 +39,12 @@ class HardwareProcurement(object):
 
         """
         return self._data[key]
+
+    def __lt__(self, other):
+        """Sort on initial inquiry date."""
+        self_initial_inquiry_date = self['initial_inquiry_date'] or date.min
+        other_initial_inquiry_date = other['initial_inquiry_date'] or date.min
+        return self_initial_inquiry_date < other_initial_inquiry_date
 
     def get_data(self):
         """Return the underlying dict of procurement data."""
@@ -53,7 +60,11 @@ class HardwareProcurement(object):
 
     # TODO: Consider whether this logic should be moved outside the class.
     def get_renderable_data(self):
-        """Return the underlying dict of procurement data, with an
+        """Return the underlying dict of procurement data, with the
+        following changes:
+            - An `id` field is added, with the procurement's ID.
+            - Lists are converted into comma-separated strs.
+            - None values are replaced with the empty string.
         additional `id` field set to the ID, and lists converted into
         comma-separated strs."""
         data = self.get_data()
@@ -61,6 +72,8 @@ class HardwareProcurement(object):
         for key, value in data.items():
             if isinstance(value, list):
                 data[key] = ', '.join(value)
+            elif value is None:
+                data[key] = ''
         return data
 
     def is_user_associated(self, user_data):
@@ -94,8 +107,8 @@ class HardwareProcurement(object):
         provide the copy number at initialization."""
         return (
             self._pi_emails_str,
-            self._hardware_type,
-            self._initial_inquiry_date,
+            self._hardware_type_str,
+            self._initial_inquiry_date_str,
             self._copy_number)
 
 

@@ -178,7 +178,10 @@ class HardwareProcurementListView(LoginRequiredMixin, UserPassesTestMixin,
                 if hardware_type != hardware_type_filter:
                     continue
 
-            filtered_hardware_procurements.append(
-                hardware_procurement.get_renderable_data())
+            filtered_hardware_procurements.append(hardware_procurement)
+
+        filtered_hardware_procurements.sort(reverse=True)
+        filtered_hardware_procurements = [
+            hp.get_renderable_data() for hp in filtered_hardware_procurements]
 
         return filtered_hardware_procurements
