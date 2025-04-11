@@ -356,7 +356,11 @@ HARDWARE_PROCUREMENTS_CONFIG = {
         'cached_data_source_options': {{ plugin_hardware_procurements.data_source_options.cached_data_source_options | to_json }},
     },
     {%- else -%}
-    'OPTIONS': {{ plugin_hardware_procurements.data_source_options | to_json }},
+    'OPTIONS': {% if plugin_hardware_procurements.data_source_options is not none -%}
+      {{ plugin_hardware_procurements.data_source_options | to_json }}
+    {%- else -%}
+      {}
+    {%- endif -%},
     {%- endif %}
 }
 {%- endif -%}
