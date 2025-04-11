@@ -31,6 +31,8 @@
           <span class="badge badge-success">{{ request_status }}</span>
         {% elif request_status == "Inactive" %}
           <span class="badge badge-danger">{{ request_status }}</span>
+        {% elif request_status == "Retired" %}
+          <span class="badge badge-danger">{{ request_status }}</span>
         {% else %}
           <span class="badge badge-warning">{{ request_status }}</span>
         {% endif %}

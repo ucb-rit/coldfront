@@ -122,7 +122,7 @@ class HardwareProcurementListView(LoginRequiredMixin, UserPassesTestMixin,
         list_url = reverse('hardware-procurement-list')
 
         # TODO: Avoid hard-coding statuses.
-        for status in ('completed', 'inactive', 'pending'):
+        for status in ('completed', 'inactive', 'pending', 'retired'):
             context[f'{status}_url'] = (
                 f'{list_url}?{urlencode({"status": status})}')
 

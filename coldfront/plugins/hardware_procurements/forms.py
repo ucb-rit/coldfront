@@ -25,6 +25,7 @@ class HardwareProcurementSearchForm(forms.Form):
         ('complete', 'Complete'),
         ('inactive', 'Inactive'),
         ('pending', 'Pending'),
+        ('retired', 'Retired'),
     )
 
     pi = UserChoiceField(

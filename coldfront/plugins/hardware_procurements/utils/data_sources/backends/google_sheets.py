@@ -106,6 +106,7 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             pending = 'Pending'
             complete = 'Complete'
             inactive = 'Inactive'
+            retired = 'Retired'
 
             # A mapping from raw statuses in the spreadsheet to canonical
             # statuses in the web service. This accounts for typos, differences
@@ -117,6 +118,7 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
                 'compelete': complete,
                 'compeleted': complete,
                 'inactive': inactive,
+                'retired': retired,
             }
             raw_status = value.lower()
             if raw_status not in raw_to_canonical:

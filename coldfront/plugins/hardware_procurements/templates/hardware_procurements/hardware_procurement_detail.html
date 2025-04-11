@@ -64,6 +64,8 @@ Hardware Procurement Details
                 <span class="badge badge-success">{{ procurement.status }}</span>
               {% elif procurement.status == "Inactive" %}
                 <span class="badge badge-danger">{{ procurement.status }}</span>
+              {% elif procurement.status == "Retired" %}
+                <span class="badge badge-danger">{{ procurement.status }}</span>
               {% else %}
                 <span class="badge badge-warning">{{ procurement.status }}</span>
               {% endif %}
