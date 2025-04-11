@@ -73,25 +73,65 @@ Hardware Procurement Details
             <th scope="row" class="text-nowrap">
               Initial Inquiry Date
             </th>
-            <td>{{ procurement.initial_inquiry_date }}</td>
+            <td>
+              {% if procurement.initial_inquiry_date %}
+                {{ procurement.initial_inquiry_date }}
+              {% else %}
+                {% if procurement.status == "Pending" %}
+                  TBD
+                {% else %}
+                  N/A
+                {% endif %}
+              {% endif %}
+            </td>
           </tr>
           <tr>
             <th scope="row" class="text-nowrap">
               Procurement Start Date
             </th>
-            <td>{{ procurement.procurement_start_date }}</td>
+            <td>
+              {% if procurement.procurement_start_date %}
+                {{ procurement.procurement_start_date }}
+              {% else %}
+                {% if procurement.status == "Pending" %}
+                  TBD
+                {% else %}
+                  N/A
+                {% endif %}
+              {% endif %}
+            </td>
           </tr>
           <tr>
             <th scope="row" class="text-nowrap">
               Order Received Date
             </th>
-            <td>{{ procurement.order_received_date }}</td>
+            <td>
+              {% if procurement.order_received_date %}
+                {{ procurement.order_received_date }}
+              {% else %}
+                {% if procurement.status == "Pending" %}
+                  TBD
+                {% else %}
+                  N/A
+                {% endif %}
+              {% endif %}
+            </td>
           </tr>
           <tr>
             <th scope="row" class="text-nowrap">
               Installed Date
             </th>
-            <td>{{ procurement.installed_date }}</td>
+            <td>
+              {% if procurement.installed_date %}
+                {{ procurement.installed_date }}
+              {% else %}
+                {% if procurement.status == "Pending" %}
+                  TBD
+                {% else %}
+                  N/A
+                {% endif %}
+              {% endif %}
+            </td>
           </tr>
           <tr>
             <th scope="row" class="text-nowrap">
