@@ -141,9 +141,10 @@ class RequestHubView(LoginRequiredMixin,
             procurement_data = hardware_procurement.get_data()
             procurement_data['id'] = hardware_procurement.get_id()
             status = procurement_data['status']
+            # TODO: Avoid hard-coding statuses.
             if status == 'Pending':
                 pending_hardware_procurements.append(procurement_data)
-            elif status == 'Complete':
+            elif status == 'Complete' or status == 'Retired':
                 complete_hardware_procurements.append(procurement_data)
 
         hardware_procurement_request_obj = RequestListItem()
