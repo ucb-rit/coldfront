@@ -209,7 +209,7 @@ def is_any_project_pi_renewable(project, allocation_period):
         ComputingAllowanceEligibilityManager(
             computing_allowance, allocation_period=allocation_period)
     for pi in project.pis():
-        if computing_allowance_eligibility_manager.is_pi_eligible(
+        if computing_allowance_eligibility_manager.is_user_eligible(
                 pi, is_renewal=True):
             return True
     return False
