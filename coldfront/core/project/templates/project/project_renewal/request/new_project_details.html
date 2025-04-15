@@ -1,0 +1,24 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+Project Renewal - New Project Details
+{% endblock %}
+
+{% block content %}
+
+<h1>New Project Details</h1><hr>
+
+<ol class="breadcrumb">
+  <li>Allocation Period: {{ allocation_period.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>PI: {{ PI.user.username}}, Current Project: {{ current_project }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>Preference: {{ breadcrumb_pooling_preference }}</li>
+</ol>
+
+<p>You are creating a new project. Please provide the following details:</p>
+
+{{ block.super }}
+
+{% endblock %}

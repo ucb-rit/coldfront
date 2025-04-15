@@ -1,0 +1,25 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+Project Renewal - Pooling Preference
+{% endblock %}
+
+
+{% block content %}
+<h1>Update Pooling Preference</h1><hr>
+
+<ol class="breadcrumb">
+  <li>Allocation Period: {{ allocation_period.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>PI: {{ PI.user.username }}, Current Project: {{ current_project }}</li>
+</ol>
+
+<p>
+  Update the pooling preference for the PI, whose allowance is currently under
+  Project: {{ current_project }}.
+</p>
+
+{{ block.super }}
+
+{% endblock %}

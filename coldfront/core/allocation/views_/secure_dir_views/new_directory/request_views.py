@@ -1,4 +1,5 @@
 import logging
+import os
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -80,8 +81,8 @@ class SecureDirRequestLandingView(LoginRequiredMixin,
                                   TemplateView):
     """A view for the secure directory request landing page."""
 
-    template_name = \
-        'secure_dir/secure_dir_request/secure_dir_request_landing.html'
+    template_name = (
+        'secure_dir/secure_dir_request/request/secure_dir_request_landing.html')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -108,13 +109,13 @@ class SecureDirRequestWizard(LoginRequiredMixin,
         ('directory_name', SecureDirDirectoryNamesForm)
     ]
 
+    _TEMPLATES_DIR = 'secure_dir/secure_dir_request/request'
+
     TEMPLATES = {
-        'pi_selection': 'secure_dir/secure_dir_request/pi_selection.html',
-        'data_description':
-            'secure_dir/secure_dir_request/data_description.html',
-        'rdm_consultation':
-            'secure_dir/secure_dir_request/rdm_consultation.html',
-        'directory_name': 'secure_dir/secure_dir_request/directory_name.html'
+        'pi_selection': 'pi_selection.html',
+        'data_description': 'data_description.html',
+        'rdm_consultation': 'rdm_consultation.html',
+        'directory_name': 'directory_name.html',
     }
 
     form_list = [
@@ -160,7 +161,11 @@ class SecureDirRequestWizard(LoginRequiredMixin,
         return kwargs
 
     def get_template_names(self):
-        return [self.TEMPLATES[self.FORMS[int(self.steps.current)][0]]]
+        step_name = self.FORMS[int(self.steps.current)][0]
+        template_file_name = self.TEMPLATES[step_name]
+        resolved_template_name = os.path.join(
+            self._TEMPLATES_DIR, template_file_name)
+        return [resolved_template_name]
 
     def done(self, form_list, **kwargs):
         """Run the runner for handling a new request."""

@@ -1,0 +1,40 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+  Secure Directory Request: PI Selection
+{% endblock %}
+
+
+{% block head %}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
+{% endblock %}
+
+
+{% block content %}
+
+  <h1>Secure Directory: PI Selection</h1><hr>
+
+  {% if breadcrumb_project %}
+    <ol class="breadcrumb">
+      <li>{{ breadcrumb_project }}</li>
+    </ol>
+  {% endif %}
+
+  <p>Select a PI of the project. This PI will be asked to sign a Researcher Use Agreement during the approval process.</p>
+
+  {{ block.super }}
+
+{% endblock %}
+
+
+{% block javascript %}
+  <script>
+    $('select').selectize({
+      create: false,
+      sortField: 'text'
+    })
+  </script>
+{% endblock %}

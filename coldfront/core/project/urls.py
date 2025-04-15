@@ -119,7 +119,8 @@ with flagged_paths('BRC_ONLY') as f_path:
         f_path('project-request-vector-landing/',
                TemplateView.as_view(
                    template_name=(
-                       'project/project_request/vector/project_request_landing.html')
+                       'project/project_request/vector/request/'
+                       'project_request_landing.html')
                ),
                name='project-request-vector-landing'),
         f_path('vector-project-request/',
