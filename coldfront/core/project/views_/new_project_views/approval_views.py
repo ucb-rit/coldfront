@@ -3,7 +3,7 @@ from coldfront.core.allocation.utils import annotate_queryset_with_allocation_pe
 from coldfront.core.allocation.utils import calculate_service_units_to_allocate
 from coldfront.core.project.forms import MemorandumSignedForm
 from coldfront.core.project.forms import ReviewDenyForm
-from coldfront.core.project.forms import ReviewStatusForm
+from coldfront.core.project.forms import ReviewStatusForm, ReviewEligibilityForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import NewProjectExtraFieldsFormFactory
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
 from coldfront.core.project.forms_.new_project_forms.approval_forms import SavioProjectReviewSetupForm
@@ -18,8 +18,10 @@ from coldfront.core.project.utils_.new_project_utils import savio_request_state_
 from coldfront.core.project.utils_.new_project_utils import send_project_request_pooling_email
 from coldfront.core.project.utils_.new_project_utils import VectorProjectProcessingRunner
 from coldfront.core.project.utils_.new_project_utils import vector_request_state_status
+from django.contrib.auth.models import User
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import format_date_month_name_day_year
 from coldfront.core.utils.common import utc_now_offset_aware
@@ -32,7 +34,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import UserPassesTestMixin
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
@@ -587,9 +589,11 @@ class SavioProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 class SavioProjectReviewEligibilityView(LoginRequiredMixin,
                                         UserPassesTestMixin,
                                         SavioProjectRequestMixin, FormView):
-    form_class = ReviewStatusForm
+    form_class = ReviewEligibilityForm
     template_name = (
         'project/project_request/savio/project_review_eligibility.html')
+
+    logger = logging.getLogger(__name__)
 
     def test_func(self):
         """UserPassesTestMixin tests."""
@@ -606,7 +610,7 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
         if redirect is not None:
             return redirect
         return super().dispatch(request, *args, **kwargs)
-
+    
     def form_valid(self, form):
         form_data = form.cleaned_data
         status = form_data['status']
@@ -622,9 +626,48 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
         if status == 'Denied':
             runner = ProjectDenialRunner(self.request_obj)
             runner.run()
+        
+        if form_data['PI'] != self.request_obj.pi:
+            if form_data['PI'] is not None:
+                self.request_obj.pi = form_data['PI']
+                self.request_obj.save()
+            elif all([form_data['first_name'],
+                      form_data['last_name'],
+                      form_data['email']]):
+                try:
+                    self.request_obj.pi = User.objects.create(
+                        username=form_data['email'],
+                        first_name=form_data['first_name'],
+                        last_name=form_data['last_name'],
+                        email=form_data['email'],
+                        is_active=True)
+                    self.request_obj.pi.save()
+                    self.request_obj.save()
+                except IntegrityError as e:
+                    self.logger.error(f'User {form_data["email"]} '
+                                       'unexpectedly exists.')
+                    raise e
+                try:
+                    pi_profile = self.request_obj.pi.userprofile
+                except UserProfile.DoesNotExist as e:
+                    self.logger.error(
+                        f'User {form_data["email"]} unexpectedly has no '
+                        'UserProfile.')
+                    raise e
+                pi_profile.middle_name = form_data['middle_name'] or None
+                pi_profile.upgrade_request = utc_now_offset_aware()
+                pi_profile.save()
+            else:
+                incomplete_fields = [field for field in ['email', 'first_name',
+                                        'last_name'] if not form_data[field]]
+                message = \
+                    f'Incomplete field(s): {", ".join(incomplete_fields)}. ' \
+                     'Please specify a PI or provide all required fields ' \
+                     'for a new PI.'
+                messages.error(self.request, message)
+                return self.form_invalid(form)
 
         self.request_obj.save()
-
         message = (
             f'Eligibility status for request {self.request_obj.pk} has been '
             f'set to {status}.')
@@ -642,6 +685,7 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
     def get_initial(self):
         initial = super().get_initial()
         eligibility = self.request_obj.state['eligibility']
+        initial['PI'] = self.request_obj.pi
         initial['status'] = eligibility['status']
         initial['justification'] = eligibility['justification']
         return initial
@@ -1220,7 +1264,7 @@ class VectorProjectRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 class VectorProjectReviewEligibilityView(LoginRequiredMixin,
                                          UserPassesTestMixin,
                                          VectorProjectRequestMixin, FormView):
-    form_class = ReviewStatusForm
+    form_class = ReviewEligibilityForm
     template_name = (
         'project/project_request/vector/project_review_eligibility.html')
 

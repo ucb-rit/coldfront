@@ -8,10 +8,7 @@ from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice
-from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses
-from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
-from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_request_statuses
-from coldfront.core.project.utils_.renewal_utils import pis_with_renewal_requests_pks
+from coldfront.core.project.utils_.computing_allowance_eligibility_manager import ComputingAllowanceEligibilityManager
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.project.utils_.renewal_survey import is_renewal_survey_completed
@@ -19,7 +16,6 @@ from coldfront.core.project.utils_.renewal_survey import is_renewal_survey_compl
 from flags.state import flag_enabled
 from django import forms
 from django.utils.safestring import mark_safe
-from django.core.validators import MinLengthValidator
 from django.core.exceptions import ValidationError
 
 
@@ -68,34 +64,20 @@ class ProjectRenewalPISelectionForm(forms.Form):
     def disable_pi_choices(self, pi_project_users):
         """Prevent certain of the given ProjectUsers, who should be
         displayed, from being selected for renewal."""
+        computing_allowance_eligibility_manager = \
+            ComputingAllowanceEligibilityManager(
+                self.computing_allowance,
+                allocation_period=self.allocation_period)
+
+        disable_user_pks = \
+            computing_allowance_eligibility_manager.get_ineligible_users(
+                is_renewal=True, pks_only=True)
+
         disable_project_user_pks = set()
-        if self.computing_allowance.is_one_per_pi():
-            # Disable any PI who has:
-            #    (a) a new project request for a Project during the
-            #        AllocationPeriod*, or
-            #    (b) an AllocationRenewalRequest during the AllocationPeriod*.
-            # * Requests must have ineligible statuses.
-            resource = self.computing_allowance.get_resource()
-            disable_user_pks = set()
-            new_project_request_status_names = list(
-                non_denied_new_project_request_statuses().values_list(
-                    'name', flat=True))
-            disable_user_pks.update(
-                pis_with_new_project_requests_pks(
-                    self.allocation_period,
-                    computing_allowance=resource,
-                    request_status_names=new_project_request_status_names))
-            renewal_request_status_names = list(
-                non_denied_renewal_request_statuses().values_list(
-                    'name', flat=True))
-            disable_user_pks.update(
-                pis_with_renewal_requests_pks(
-                    self.allocation_period,
-                    computing_allowance=resource,
-                    request_status_names=renewal_request_status_names))
-            for project_user in pi_project_users:
-                if project_user.user.pk in disable_user_pks:
-                    disable_project_user_pks.add(project_user.pk)
+        for project_user in pi_project_users:
+            if project_user.user.pk in disable_user_pks:
+                disable_project_user_pks.add(project_user.pk)
+
         self.fields['PI'].widget.disabled_choices = disable_project_user_pks
 
 
