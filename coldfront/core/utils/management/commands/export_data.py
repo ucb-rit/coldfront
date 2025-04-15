@@ -6,18 +6,19 @@ from sys import stdout, stderr
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Value, F, CharField, Func, \
     DurationField, ExpressionWrapper
-from django.contrib.auth.models import User
 
 from coldfront.core.allocation.models import AllocationAttributeType, \
     AllocationUserAttribute, AllocationRenewalRequest, AllocationPeriod
 from coldfront.core.statistics.models import Job
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
+from django.contrib.auth.models import User
 from coldfront.core.project.forms_.renewal_forms.request_forms import DeprecatedProjectRenewalSurveyForm
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
 from django import forms
+from flags.state import flag_enabled
 
 """An admin command that exports the results of useful database queries
 in user-friendly formats."""
@@ -104,6 +105,19 @@ class Command(BaseCommand):
             '--partition',
             help='Filter jobs by the partition they requested.',
             type=str)
+
+        user_subparser = subparsers.add_parser(
+            'users', help='Export user data.')
+        user_subparser.add_argument(
+            '--format',
+            choices=['csv', 'json'],
+            required=True,
+            help='Export results in the given format.',
+            type=str)
+        user_subparser.add_argument(
+            '--pi_only',
+            help='Only return PI users.',
+            action='store_true')
 
         project_subparser = subparsers.add_parser('projects',
                                                   help='Export projects data')
@@ -304,6 +318,62 @@ class Command(BaseCommand):
         time_str = '{}hrs {}mins {}secs'.format(hours, minutes, seconds)
 
         self.stdout.write(self.style.SUCCESS(time_str))
+
+    def handle_users(self, *args, **kwargs):
+
+        def _get_department_fields_for_user(_user):
+            """Return a list of two strs representing the given User's
+            authoritative and non-authoritative departments. Each str is
+            a semicolon-separated list of str representations of
+            departments."""
+            from coldfront.plugins.departments.utils.queries import get_departments_for_user
+
+            authoritative_department_strs, non_authoritative_department_strs = \
+                get_departments_for_user(_user, strs_only=True)
+            authoritative_str = ';'.join(
+                [s for s in authoritative_department_strs])
+            non_authoritative_str = ';'.join(
+                [s for s in non_authoritative_department_strs])
+            return [authoritative_str, non_authoritative_str]
+
+        _format = kwargs['format']
+        pi_only = kwargs['pi_only']
+
+        users = User.objects.order_by('pk')
+        if pi_only:
+            users = users.filter(userprofile__is_pi=True)
+
+        include_departments = flag_enabled('USER_DEPARTMENTS_ENABLED')
+
+        fields = [
+            'id', 'username', 'first_name', 'last_name', 'email', 'is_active']
+
+        all_user_data = []
+        for user in users:
+            user_data = [getattr(user, field) for field in fields]
+            if include_departments:
+                user_data.extend(_get_department_fields_for_user(user))
+            all_user_data.append(user_data)
+
+        if include_departments:
+            department_fields = [
+                'authoritative_departments', 'non_authoritative_departments']
+            fields.extend(department_fields)
+
+        if _format == 'csv':
+            self.to_csv(
+                all_user_data,
+                header=fields,
+                output=kwargs.get('stdout', stdout),
+                error=kwargs.get('stderr', stderr))
+        elif _format == 'json':
+            json_objects = []
+            for user_data in all_user_data:
+                json_objects.append(dict(zip(fields, user_data)))
+            self.to_json(
+                json_objects,
+                output=kwargs.get('stdout', stdout),
+                error=kwargs.get('stderr', stderr))
 
     def handle_projects(self, *args, **kwargs):
         format = kwargs['format']
@@ -576,8 +646,6 @@ class Command(BaseCommand):
             self.to_json(surveys,
                          output=kwargs.get('stdout', stdout),
                          error=kwargs.get('stderr', stderr))
-            
-        
 
     @staticmethod
     def to_csv(query_set, header=None, output=stdout, error=stderr):
@@ -628,7 +696,7 @@ class Command(BaseCommand):
 
         try:
             json_output = json.dumps(list(query_set), indent=4, default=str)
-            output.writelines(json_output)
+            output.writelines(json_output + '\n')
         except Exception as e:
             error.write(str(e))
 

@@ -15,6 +15,7 @@ def settings_value(name):
         'CENTER_HELP_EMAIL',
         'CENTER_HELP_URL',
         'CENTER_USER_GUIDE',
+        'DEPARTMENTS_DEPARTMENT_DISPLAY_NAME',
         'DISPLAY_TIME_ZONE',
         'EMAIL_PROJECT_REVIEW_CONTACT',
         'PORTAL_NAME',

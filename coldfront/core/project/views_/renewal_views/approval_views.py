@@ -100,10 +100,15 @@ class AllocationRenewalRequestMixin(object):
             messages.error(self.request, self.error_message)
             context['allocation_amount'] = 'Failed to compute.'
         if flag_enabled('RENEWAL_SURVEY_ENABLED'):
-            context['survey_response'] = get_renewal_survey_response(
-                self.request_obj.allocation_period.name,
-                self.request_obj.post_project.name,
-                self.request_obj.pi.username)
+            try:
+                context['survey_response'] = get_renewal_survey_response(
+                    self.request_obj.allocation_period.name,
+                    self.request_obj.post_project.name,
+                    self.request_obj.pi.username)
+            except Exception as e:
+                logger.exception(e)
+                messages.error(self.request, self.error_message)
+                context['survey_response'] = None
         context['has_survey_answers'] = bool(
             context.get('survey_response', None))
         return context

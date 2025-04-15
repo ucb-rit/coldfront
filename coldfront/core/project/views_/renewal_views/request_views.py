@@ -51,6 +51,7 @@ from flags.state import flag_enabled
 from formtools.wizard.views import SessionWizardView
 
 import logging
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 class AllocationRenewalLandingView(LoginRequiredMixin, UserPassesTestMixin,
                                    TemplateView):
-    template_name = 'project/project_renewal/request_landing.html'
+    template_name = 'project/project_renewal/request/request_landing.html'
 
     def test_func(self):
         if self.request.user.is_superuser:
@@ -207,19 +208,17 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
     ]
 
+    _TEMPLATES_DIR = 'project/project_renewal/request'
+
     TEMPLATES = {
-        'allocation_period': 'project/project_renewal/allocation_period.html',
-        'pi_selection': 'project/project_renewal/pi_selection.html',
-        'pooling_preference':
-            'project/project_renewal/pooling_preference.html',
-        'project_selection': 'project/project_renewal/project_selection.html',
-        'new_project_details':
-            'project/project_renewal/new_project_details.html',
-        'new_project_survey':
-            'project/project_renewal/new_project_survey.html',
-        'renewal_survey':
-            'project/project_renewal/project_renewal_survey.html',
-        'review_and_submit': 'project/project_renewal/review_and_submit.html',
+        'allocation_period': 'allocation_period.html',
+        'pi_selection': 'pi_selection.html',
+        'pooling_preference': 'pooling_preference.html',
+        'project_selection': 'project_selection.html',
+        'new_project_details': 'new_project_details.html',
+        'new_project_survey': 'new_project_survey.html',
+        'renewal_survey': 'project_renewal_survey.html',
+        'review_and_submit': 'review_and_submit.html',
     }
 
     form_list = [
@@ -335,7 +334,11 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         return kwargs
 
     def get_template_names(self):
-        return [self.TEMPLATES[self.FORMS[int(self.steps.current)][0]]]
+        step_name = self.FORMS[int(self.steps.current)][0]
+        template_file_name = self.TEMPLATES[step_name]
+        resolved_template_name = os.path.join(
+            self._TEMPLATES_DIR, template_file_name)
+        return [resolved_template_name]
 
     def done(self, form_list, **kwargs):
         """Perform processing and store information in a request
@@ -596,11 +599,13 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         ('review_and_submit', ProjectRenewalReviewAndSubmitForm),
     ]
 
+    _TEMPLATES_DIR = 'project/project_renewal/request'
+
     TEMPLATES = {
-        'allocation_period': 'project/project_renewal/allocation_period.html',
-        'pi_selection': 'project/project_renewal/pi_selection.html',
-        'renewal_survey': 'project/project_renewal/project_renewal_survey.html',
-        'review_and_submit': 'project/project_renewal/review_and_submit.html',
+        'allocation_period': 'allocation_period.html',
+        'pi_selection': 'pi_selection.html',
+        'renewal_survey': 'project_renewal_survey.html',
+        'review_and_submit': 'review_and_submit.html',
     }
 
     form_list = [
@@ -699,7 +704,11 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         return kwargs
 
     def get_template_names(self):
-        return [self.TEMPLATES[self.FORMS[int(self.steps.current)][0]]]
+        step_name = self.FORMS[int(self.steps.current)][0]
+        template_file_name = self.TEMPLATES[step_name]
+        resolved_template_name = os.path.join(
+            self._TEMPLATES_DIR, template_file_name)
+        return [resolved_template_name]
 
     def test_func(self):
         """Allow superusers and users who are active Managers or

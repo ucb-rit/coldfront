@@ -3,6 +3,7 @@ FROM rockylinux/rockylinux:8.8
 RUN dnf update -y && \
     dnf install -y \
     gcc \
+    git \
     make \
     wget \
     openssl-devel \
@@ -28,4 +29,10 @@ RUN rm -rf /usr/src/python310
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
     ldconfig
 
-# TODO: libfaketime
+# Install libfaketime.
+RUN git clone https://github.com/wolfcw/libfaketime.git /opt/libfaketime && \
+    cd /opt/libfaketime && \
+    make && \
+    make install && \
+    dnf clean all && \
+    rm -rf /opt/libfaketime

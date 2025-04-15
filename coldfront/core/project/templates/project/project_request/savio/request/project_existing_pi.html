@@ -1,0 +1,63 @@
+{% extends "common/wizard_base.html" %}
+
+{% load feature_flags %}
+
+
+{% block title %}
+{{ PRIMARY_CLUSTER_NAME }} Project Request - Existing PI
+{% endblock %}
+
+
+{% block head %}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
+{% endblock %}
+
+
+{% block content %}
+
+<h1>{{ PRIMARY_CLUSTER_NAME }}: Principal Investigator</h1><hr>
+
+<ol class="breadcrumb">
+  <li>Allowance: {{ computing_allowance.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>Allocation Period: {{ allocation_period.name }}</li>
+</ol>
+
+<p>Select a user to be a Principal Investigator (PI) of the project. <b>Please review the instructions below.</b></p>
+
+<ul>
+  <li>If your PI is not listed, leave the field blank and provide information about your PI in the next step.</li>
+
+  {% flag_enabled 'LRC_ONLY' as lrc_only %}
+  {% if allowance_is_one_per_pi or lrc_only %}
+  <li>
+    If your PI is listed but not selectable, this may be for one of the following reasons:
+    <ul>
+      {% if allowance_is_one_per_pi %}
+      <li>A PI may only have one {{ computing_allowance.name }} at a time. Any PI with an existing {{ computing_allowance.name }} project or a pending request to create one is not selectable.</li>
+      {% endif %}
+      {% if lrc_only %}
+      <li>The PI must be an LBL employee. Any user who does not have an "@lbl.gov" email is not selectable.</li>
+      {% endif %}
+    </ul>
+  </li>
+  {% endif %}
+
+  <li>If you are not the PI, please do not select yourself.</li>
+</ul>
+
+{{ block.super }}
+{% endblock %}
+
+
+{% block javascript %}
+  <script>
+    $('select').selectize({
+      create: false,
+      sortField: 'text',
+      placeholder: 'Type to search. If your PI is not listed or selectable, please review the instructions above.'
+    })
+  </script>
+{% endblock %}

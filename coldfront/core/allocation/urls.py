@@ -6,7 +6,9 @@ from flags.urls import flagged_paths
 import coldfront.core.allocation.views as allocation_views
 import coldfront.core.allocation.views_.cluster_access_views as \
     cluster_access_views
-import coldfront.core.allocation.views_.secure_dir_views as secure_dir_views
+import coldfront.core.allocation.views_.secure_dir_views.new_directory.approval_views as secure_dir_new_directory_approval_views
+import coldfront.core.allocation.views_.secure_dir_views.user_management.approval_views as secure_dir_user_management_approval_views
+import coldfront.core.allocation.views_.secure_dir_views.user_management.request_views as secure_dir_user_management_request_views
 import coldfront.core.utils.views.mou_views as mou_views
 
 
@@ -87,44 +89,49 @@ urlpatterns += [
 
 with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
     flagged_url_patterns = [
+        # User Management Request Views
         path('<int:pk>/secure-dir-<str:action>-users/',
-             secure_dir_views.SecureDirManageUsersView.as_view(),
+             secure_dir_user_management_request_views.SecureDirManageUsersView.as_view(),
              name='secure-dir-manage-users'),
+
+        # User Management Approval Views
         path('secure-dir-<str:action>-users-request-list/<str:status>',
-             secure_dir_views.SecureDirManageUsersRequestListView.as_view(),
+             secure_dir_user_management_approval_views.SecureDirManageUsersRequestListView.as_view(),
              name='secure-dir-manage-users-request-list'),
         path('<int:pk>/secure-dir-<str:action>-user-update-status',
-             secure_dir_views.SecureDirManageUsersUpdateStatusView.as_view(),
+             secure_dir_user_management_approval_views.SecureDirManageUsersUpdateStatusView.as_view(),
              name='secure-dir-manage-user-update-status'),
         path('<int:pk>/secure-dir-<str:action>-user-complete-status',
-             secure_dir_views.SecureDirManageUsersCompleteStatusView.as_view(),
+             secure_dir_user_management_approval_views.SecureDirManageUsersCompleteStatusView.as_view(),
              name='secure-dir-manage-user-complete-status'),
         path('<int:pk>/secure-dir-<str:action>-user-deny-request',
-             secure_dir_views.SecureDirManageUsersDenyRequestView.as_view(),
+             secure_dir_user_management_approval_views.SecureDirManageUsersDenyRequestView.as_view(),
              name='secure-dir-manage-user-deny-request'),
+
+        # New Directory Approval Views
         path('secure-dir-pending-requests/',
-             secure_dir_views.SecureDirRequestListView.as_view(completed=False),
+             secure_dir_new_directory_approval_views.SecureDirRequestListView.as_view(completed=False),
              name='secure-dir-pending-request-list'),
         path('secure-dir-completed-requests/',
-             secure_dir_views.SecureDirRequestListView.as_view(completed=True),
+             secure_dir_new_directory_approval_views.SecureDirRequestListView.as_view(completed=True),
              name='secure-dir-completed-request-list'),
         path('secure-dir-request-detail/<int:pk>',
-             secure_dir_views.SecureDirRequestDetailView.as_view(),
+             secure_dir_new_directory_approval_views.SecureDirRequestDetailView.as_view(),
              name='secure-dir-request-detail'),
         path('secure-dir-request/<int:pk>/rdm_consultation',
-             secure_dir_views.SecureDirRequestReviewRDMConsultView.as_view(),
+             secure_dir_new_directory_approval_views.SecureDirRequestReviewRDMConsultView.as_view(),
              name='secure-dir-request-review-rdm-consultation'),
         path('secure-dir-request/<int:pk>/mou',
-             secure_dir_views.SecureDirRequestReviewMOUView.as_view(),
+             secure_dir_new_directory_approval_views.SecureDirRequestReviewMOUView.as_view(),
              name='secure-dir-request-review-mou'),
         path('secure-dir-request/<int:pk>/setup',
-             secure_dir_views.SecureDirRequestReviewSetupView.as_view(),
+             secure_dir_new_directory_approval_views.SecureDirRequestReviewSetupView.as_view(),
              name='secure-dir-request-review-setup'),
         path('secure-dir-request/<int:pk>/deny',
-             secure_dir_views.SecureDirRequestReviewDenyView.as_view(),
+             secure_dir_new_directory_approval_views.SecureDirRequestReviewDenyView.as_view(),
              name='secure-dir-request-review-deny'),
         path('secure-dir-request/<int:pk>/undeny',
-             secure_dir_views.SecureDirRequestUndenyRequestView.as_view(),
+             secure_dir_new_directory_approval_views.SecureDirRequestUndenyRequestView.as_view(),
              name='secure-dir-request-undeny'),
         path('secure-dir-request/<int:pk>/download-unsigned-mou/<str:request_type>/',
              mou_views.UnsignedMOUDownloadView.as_view(),
@@ -136,10 +143,10 @@ with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
              mou_views.MOUDownloadView.as_view(),
              name='secure-dir-request-download-mou'),
         path('secure-dir-request/<int:pk>/edit-department/',
-             secure_dir_views.SecureDirRequestEditDepartmentView.as_view(),
+             secure_dir_new_directory_approval_views.SecureDirRequestEditDepartmentView.as_view(),
              name='secure-dir-request-edit-department'),
         path('secure-dir-request/<int:pk>/notify-pi/',
-             secure_dir_views.SecureDirRequestNotifyPIView.as_view(),
+             secure_dir_new_directory_approval_views.SecureDirRequestNotifyPIView.as_view(),
              name='secure-dir-request-notify-pi'),
     ]
 

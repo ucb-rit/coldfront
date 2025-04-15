@@ -136,7 +136,6 @@ class ProjectRenewalPoolingPreferenceForm(forms.Form):
 class ProjectRenewalProjectSelectionForm(forms.Form):
 
     project = PooledProjectChoiceField(
-        empty_label=None,
         queryset=Project.objects.none(),
         required=True,
         widget=forms.Select())

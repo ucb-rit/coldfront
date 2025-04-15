@@ -51,12 +51,12 @@ def add_vector_user_to_designated_savio_project(user_obj, email_strategy=None):
     user_role = ProjectUserRoleChoice.objects.get(name='User')
     active_status = ProjectUserStatusChoice.objects.get(name='Active')
 
-    project_user_exists = ProjectUser.objects.filter(
-        project=project_obj, user=user_obj).exists()
+    project_user_query = ProjectUser.objects.filter(
+        project=project_obj, user=user_obj)
     with transaction.atomic():
         run_runner = False
-        if project_user_exists:
-            project_user_obj = project_user_exists.first()
+        if project_user_query.exists():
+            project_user_obj = project_user_query.first()
             if project_user_obj.status != active_status:
                 project_user_obj.status = active_status
                 project_user_obj.save()

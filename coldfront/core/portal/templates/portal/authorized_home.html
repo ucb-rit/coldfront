@@ -142,6 +142,9 @@
                 <th scope="col" class="text-nowrap">
                   Access to Project on Cluster
                 </th>
+                <th scope="col" class="text-nowrap">
+                  Service Units
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -150,8 +153,11 @@
                   <td>
                     <a href="{% url 'project-detail' project.pk %}">
                       <i class="fa fa-folder fa-lg" aria-hidden="true"></i>
-                      {{ project.name }}
-                    </a>
+                      {{ project.name }}</a>
+                    {% if project.status.name == 'Inactive' %}
+                      <span class="badge badge-warning">{{ project.status.name }}</span>
+                      {% include "portal/info_hover_popup.html" with title="Inactive" content="This project's computing allowance must be renewed before jobs may be submitted under it." %}
+                    {% endif %}
                     {% if project.needs_review %}
                       <a href="{% url 'project-review' project.pk %}">
                         <span class="badge badge-warning">Needs Review</span>
@@ -160,18 +166,9 @@
                   </td>
                   <td>{{ project.cluster_name|upper }}</td>
                   <td>
-                    {% if project.name in pending_removal_request_projects %}
-                        <span class="badge badge-danger">Pending Removal</span>
-                    {% elif 'Active' in project.display_status %}
-                        <span class="badge badge-success">Active</span>
-                    {% elif 'Pending' in project.display_status %}
-                        <span class="badge badge-warning">Pending</span>
-                    {% elif 'Processing' in project.display_status %}
-                        <span class="badge badge-warning">Processing</span>
-                    {% else %}
-                        <span class="badge badge-danger">No Access</span>
-                    {% endif %}
+                    {% include "allocation/cluster_access_badge.html" with status=project.display_status %}
                   </td>
+                  <td>{{ project.rendered_compute_usage }}</td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -262,6 +259,7 @@
 
 <script>
   $(function () {
+    $('[data-toggle="popover"]').popover();
     $('[data-toggle="tooltip"]').tooltip()
   })
 </script>
