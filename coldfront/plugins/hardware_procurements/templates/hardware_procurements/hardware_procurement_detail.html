@@ -62,15 +62,7 @@ Hardware Procurement Details
             </th>
             <td>
               <!-- TODO: Don't hard-code these? -->
-              {% if procurement_status == "Complete" %}
-                <span class="badge badge-success">{{ procurement_status }}</span>
-              {% elif procurement_status == "Inactive" %}
-                <span class="badge badge-danger">{{ procurement_status }}</span>
-              {% elif procurement_status == "Retired" %}
-                <span class="badge badge-danger">{{ procurement_status }}</span>
-              {% else %}
-                <span class="badge badge-warning">{{ procurement_status }}</span>
-              {% endif %}
+              {% include 'hardware_procurements/hardware_procurement_status_badge.html' with status=procurement_status %}
             </td>
           </tr>
           <tr>
@@ -161,5 +153,17 @@ Hardware Procurement Details
     </div>
   </div>
 </div>
+
+{% endblock %}
+
+
+{% block javascript %}
+  {{ block.super }}
+
+  <script>
+    $(function () {
+      $('[data-toggle="popover"]').popover();
+    })
+  </script>
 
 {% endblock %}
