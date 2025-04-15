@@ -109,45 +109,39 @@ class ProjectRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
         context['project'] = get_object_or_404(Project, pk=pk)
         context['users_pending_removal'] = users_pending_removal
 
-        page = request.GET.get('page', 1)
 
-        paginator = Paginator(users_to_remove_list, 25)
-        try:
-            users_to_remove = paginator.page(page)
-        except PageNotAnInteger:
-            users_to_remove = paginator.page(1)
-        except EmptyPage:
-            users_to_remove = paginator.page(paginator.num_pages)
-
-        context['users_to_remove'] = users_to_remove
+        context['users_to_remove'] = users_to_remove_list
 
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
         project_obj = get_object_or_404(Project, pk=pk)
-        user_obj = User.objects.get(
-            username=self.request.POST['username'])
+        usernames = self.request.POST.get('usernames').split(',')
 
-        try:
-            request_runner = ProjectRemovalRequestRunner(
-                self.request.user, user_obj, project_obj)
-            runner_result = request_runner.run()
-            success_messages, error_messages = request_runner.get_messages()
+        for username in usernames:
+            user_obj = User.objects.get(
+                username=username)
 
-            if runner_result:
-                request_runner.send_emails()
-                for m in success_messages:
-                    messages.success(request, m)
-            else:
-                for m in error_messages:
-                    messages.error(request, m)
+            try:
+                request_runner = ProjectRemovalRequestRunner(
+                    self.request.user, user_obj, project_obj)
+                runner_result = request_runner.run()
+                success_messages, error_messages = request_runner.get_messages()
 
-        except Exception as e:
-            logger.exception(e)
-            error_message = \
-                'Unexpected error. Please contact an administrator.'
-            messages.error(self.request, error_message)
+                if runner_result:
+                    request_runner.send_emails()
+                    for m in success_messages:
+                        messages.success(request, m)
+                else:
+                    for m in error_messages:
+                        messages.error(request, m)
+
+            except Exception as e:
+                logger.exception(e)
+                error_message = \
+                    'Unexpected error. Please contact an administrator.'
+                messages.error(self.request, error_message)
 
         return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': pk}))
 
