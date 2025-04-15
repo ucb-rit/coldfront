@@ -1,0 +1,49 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+Project Renewal - PI Selection
+{% endblock %}
+
+
+{% block head %}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
+{% endblock %}
+
+
+{% block content %}
+
+<h1>Select a PI</h1><hr>
+
+<ol class="breadcrumb">
+  <li>Allocation Period: {{ allocation_period.name }}</li>
+</ol>
+
+<p>
+  Select the PI whose allowance should be renewed. You are allowed to renew the
+  allowance of any active PI of any Project on which you are an active Manager
+  or PI.
+</p>
+
+{% if allowance_is_one_per_pi %}
+<p>
+  Note: Each PI may only have one {{ computing_allowance.name }} at a time, so
+  any that have pending or approved renewal requests are not selectable.
+</p>
+{% endif %}
+
+{{ block.super }}
+
+{% endblock %}
+
+
+{% block javascript %}
+  <script>
+    $('select').selectize({
+      create: false,
+      sortField: 'text'
+    })
+  </script>
+{% endblock %}

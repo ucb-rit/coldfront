@@ -1,0 +1,33 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+{{ PRIMARY_CLUSTER_NAME }} Project Request - Project Details
+{% endblock %}
+
+
+{% block content %}
+
+<h1>{{ PRIMARY_CLUSTER_NAME }}: New Project Details</h1><hr>
+
+<ol class="breadcrumb">
+  <li>Allowance: {{ computing_allowance.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>Allocation Period: {{ allocation_period.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>{{ breadcrumb_pi }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>
+    {% if breadcrumb_pooling %}
+      Pooling
+    {% else %}
+      Not Pooling
+    {% endif %}
+  </li>
+</ol>
+
+<p>You are creating a new project. Please provide the following details:</p>
+
+{{ block.super }}
+
+{% endblock %}
