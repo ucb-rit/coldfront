@@ -71,7 +71,7 @@ class HardwareProcurement(object):
         data['id'] = self.get_id()
         for key, value in data.items():
             if isinstance(value, list):
-                data[key] = ', '.join(value)
+                data[key] = ', '.join([str(v) for v in value])
             elif value is None:
                 data[key] = ''
         return data
@@ -82,7 +82,7 @@ class HardwareProcurement(object):
         user_emails = set(user_data['emails'])
         pi_emails = set(self['pi_emails'])
         poc_emails = set(self['poc_emails'])
-        return (
+        return bool(
             set.intersection(user_emails, pi_emails) or
             set.intersection(user_emails, poc_emails))
 
