@@ -87,14 +87,14 @@ jobs:
         sudo mkdir "/media/Secure Directory Request MOUs/"
         sudo chmod -R 777 "/media/"
 
+    - name: Run pytest unit tests
+      run: |
+        source ~/venv/bin/activate
+        pytest -m unit
+
     - name: Run Tests
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
         python manage.py migrate
         python manage.py test
-
-    - name: Run pytest unit tests
-      run: |
-        source ~/venv/bin/activate
-        pytest -m unit
