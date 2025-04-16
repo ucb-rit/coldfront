@@ -114,6 +114,11 @@ def request_alert_counts(request):
                     'Under Review', 'Approved - Processing']).count(),
             }
 
+        if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
+            from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
+            context['hardware_procurement_req_count'] = len(
+                list(fetch_hardware_procurements(status='Pending')))
+
         if flag_enabled('SERVICE_UNITS_PURCHASABLE'):
             context['su_purchase_req_count'] = \
                 AllocationAdditionRequest.objects.filter(

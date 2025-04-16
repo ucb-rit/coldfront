@@ -1,0 +1,73 @@
+{% extends "common/base.html" %}
+{% load common_tags %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Hardware Procurement {{ request_filter|title }} Requests
+{% endblock %}
+
+
+{% block content %}
+<script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
+<link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
+
+
+<h1>{{ request_filter|title }} Hardware Procurement Requests</h1>
+<hr>
+
+
+<form id="search_form" method="GET" action="{% url 'hardware-procurement-list' %}" autocomplete="off">
+  {{ search_form|crispy }}
+  <input type="submit" class="btn btn-primary" value="Search">
+</form>
+<hr>
+
+
+<p>
+  <b>
+    Note: Only Pending requests are shown by default. Use the "Status" filter to show other requests.
+  </b>
+</p>
+<hr>
+
+
+{% if procurements %}
+  <div class="table-responsive">
+    {% with queryset=procurements display_user_info=display_user_info %}
+      {% include 'hardware_procurements/hardware_procurement_request_list_table.html' %}
+    {% endwith %}
+  </div>
+
+  {% with page_obj=procurements %}
+    {% include 'common/pagination.html' %}
+  {% endwith %}
+{% else %}
+  <div class="alert alert-info">
+    No hardware procurement requests.
+  </div>
+{% endif %}
+
+{% endblock %}
+
+
+{% block javascript %}
+{{ block.super }}
+
+<script>
+  $("#navbar-main > ul > li.active").removeClass("active");
+  $("#navbar-admin").addClass("active");
+  $(document).ready(function(){
+    $('[data-toggle="popover"]').popover();
+  });
+</script>
+
+<script>
+  $('select').selectize({
+    create: false,
+    sortField: 'text'
+  })
+</script>
+
+{% endblock %}

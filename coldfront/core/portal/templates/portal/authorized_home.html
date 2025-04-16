@@ -191,6 +191,22 @@
   </div>
 
 
+  {% if hardware_procurements %}
+  <div class="col-lg-12 mt-2">
+    <br>
+    <a href="{% url 'request-hub' %}">
+      <h3>My Condo Hardware &raquo;</h3>
+    </a>
+    <hr>
+    <div class="table-responsive">
+      {% with queryset=hardware_procurements display_user_info=False %}
+        {% include 'hardware_procurements/hardware_procurement_request_list_table.html' %}
+      {% endwith %}
+    </div>
+  </div>
+  {% endif %}
+
+
 <!-- We do not need to display allocations for the users in the home page -krishna.
   <div class="col-lg-6 mt-2">
     <a href="{% url 'allocation-list' %}">

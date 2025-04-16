@@ -1,0 +1,169 @@
+{% extends "common/base.html" %}
+{% load static %}
+{% load common_tags %}
+
+
+{% block title %}
+Hardware Procurement Details
+{% endblock %}
+
+{% block content %}
+
+<div class="card mb-3">
+  <div class="card-header">
+    <h2><i class="fas fa-list"></i> Hardware Procurement Information</h2>
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <tbody>
+          {% with procurement_status=procurement|get_value_from_dict:"status" %}
+          <tr>
+            <th scope="row" class="text-nowrap">
+              PI Email(s)
+            </th>
+            <td>{{ procurement|get_value_from_dict:"pi_emails" }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              PI Name(s)
+            </th>
+            <td>{{ procurement|get_value_from_dict:"pi_names" }}</td>
+          </tr>
+          {% if procurement|get_value_from_dict:"poc_emails" %}
+          <tr>
+            <th scope="row" class="text-nowrap">
+              POC Email(s)
+            </th>
+            <td>{{ procurement|get_value_from_dict:"poc_emails" }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              POC Name(s)
+            </th>
+            <td>{{ procurement|get_value_from_dict:"poc_names" }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Hardware Type
+            </th>
+            <td>{{ procurement|get_value_from_dict:"hardware_type" }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Hardware Specification Details
+            </th>
+            <td>{{ procurement|get_value_from_dict:"hardware_specification_details" }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Status
+            </th>
+            <td>
+              <!-- TODO: Don't hard-code these? -->
+              {% include 'hardware_procurements/hardware_procurement_status_badge.html' with status=procurement_status %}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Initial Inquiry Date
+            </th>
+            <td>
+              {% if procurement|get_value_from_dict:"initial_inquiry_date" %}
+                {{ procurement|get_value_from_dict:"initial_inquiry_date" }}
+              {% else %}
+                {% if procurement_status == "Pending" %}
+                  TBD
+                {% else %}
+                  N/A
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Procurement Start Date
+            </th>
+            <td>
+              {% if procurement|get_value_from_dict:"procurement_start_date" %}
+                {{ procurement|get_value_from_dict:"procurement_start_date" }}
+              {% else %}
+                {% if procurement_status == "Pending" %}
+                  TBD
+                {% else %}
+                  N/A
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Order Received Date
+            </th>
+            <td>
+              {% if procurement|get_value_from_dict:"order_received_date" %}
+                {{ procurement|get_value_from_dict:"order_received_date" }}
+              {% else %}
+                {% if procurement_status == "Pending" %}
+                  TBD
+                {% else %}
+                  N/A
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Installed Date
+            </th>
+            <td>
+              {% if procurement|get_value_from_dict:"installed_date" %}
+                {{ procurement|get_value_from_dict:"installed_date" }}
+              {% else %}
+                {% if procurement_status == "Pending" %}
+                  TBD
+                {% else %}
+                  N/A
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Expected Retirement Date
+            </th>
+            <td>
+              {% if procurement|get_value_from_dict:"expected_retirement_date" %}
+                {{ procurement|get_value_from_dict:"expected_retirement_date" }}
+              {% else %}
+                TBD
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              JIRA Ticket
+            </th>
+            <td>{{ procurement|get_value_from_dict:"jira_ticket" }}</td>
+          </tr>
+          {% endwith %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block javascript %}
+  {{ block.super }}
+
+  <script>
+    $(function () {
+      $('[data-toggle="popover"]').popover();
+    })
+  </script>
+
+{% endblock %}

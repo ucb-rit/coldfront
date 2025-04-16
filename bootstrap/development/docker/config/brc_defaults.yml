@@ -20,6 +20,11 @@ plugin_departments_enabled: true
 plugin_departments_department_display_name: "Department"
 plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.calnet_ldap.CalNetLdapDataSourceBackend"
 
+plugin_hardware_procurements_enabled: true
+plugin_hardware_procurements:
+  data_source: 'dummy'
+  data_source_options:
+
 portal_name: MyBRC
 program_name_long: Berkeley Research Computing
 program_name_short: BRC

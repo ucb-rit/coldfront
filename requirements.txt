@@ -11,7 +11,7 @@ django-crispy-forms==1.11.1
 django-debug-toolbar==3.2.4
 django-durationwidget==1.0.5
 django-filter==2.3.0
-django-flags==5.0.8
+django-flags==5.0.10
 django-formtools==2.2
 django-googledrive-storage==1.6.0
 django-model-utils==4.1.1
@@ -44,6 +44,8 @@ psycopg2-binary
 pylint==2.12.2
 pylint-django==2.5.2
 pyparsing==2.4.7
+pytest
+pytest-django
 python-dateutil==2.8.0
 python-memcached==1.59
 pytz==2018.9

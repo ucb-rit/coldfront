@@ -1,0 +1,40 @@
+{% comment %}
+
+Display a badge, info icon, and popup denoting the status of a hardware
+procurement, based on a string `status`, which is expected to be one of the
+following values:
+
+"Complete"
+"Inactive"
+"Retired"
+"Pending"
+
+If it is not, "Error" will be displayed.
+
+{% endcomment %}
+
+{% if status == "Complete" %}
+  <span class="badge badge-success">
+    {{ status }}
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Complete" content="The procurement is complete, and the hardware is in production." %}
+{% elif status == "Inactive" %}
+  <span class="badge badge-danger">
+    {{ status }}
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Inactive" content="There has been no activity on the procurement for a while." %}
+{% elif status == "Retired" %}
+  <span class="badge badge-danger">
+    {{ status }}
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Retired" content="The hardware has been retired." %}
+{% elif status == "Pending" %}
+  <span class="badge badge-warning">
+    {{ status }}
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Pending" content="The procurement is underway." %}
+{% else %}
+  <span class="badge badge-danger">
+    Error
+  </span>
+{% endif %}

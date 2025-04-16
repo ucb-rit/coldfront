@@ -6,6 +6,8 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
+from flags.urls import flagged_path
+
 import coldfront.core.portal.views as portal_views
 
 admin.site.site_header = 'ColdFront Administration'
@@ -56,3 +58,14 @@ if ('allauth.account.auth_backends.AuthenticationBackend' in
         ])
     for prefix, module_path in prefixes_and_module_paths:
         urlpatterns.append(path(prefix, include(module_path)))
+
+
+# Note: The feature flag generally abstracts away the check for whether the app
+# is installed. However, the app module is still resolved, which may be
+# problematic if it is not installed, so the check is manually done here.
+if 'coldfront.plugins.hardware_procurements' in settings.INSTALLED_APPS:
+    urlpatterns.append(
+        flagged_path(
+            'HARDWARE_PROCUREMENTS_ENABLED',
+            'hardware-procurements/',
+            include('coldfront.plugins.hardware_procurements.urls')))

@@ -8,6 +8,8 @@ from django.db.models import Count, Q, Sum
 from django.shortcuts import render
 from django.views.decorators.cache import cache_page
 
+from flags.state import flag_enabled
+
 from coldfront.core.allocation.models import (Allocation,
                                               AllocationUser,
                                               AllocationUserAttribute)
@@ -22,6 +24,8 @@ from coldfront.core.project.models import Project, ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
 from coldfront.core.project.utils import render_project_compute_usage
+
+from django.contrib.auth.decorators import login_required
 
 
 # from coldfront.core.publication.models import Publication
@@ -87,14 +91,34 @@ def home(request):
         context['project_list'] = project_list
         context['allocation_list'] = allocation_list
 
-        num_join_requests = \
-            ProjectUserJoinRequest.objects.filter(
+        num_join_requests = ProjectUserJoinRequest.objects.filter(
                 project_user__status__name='Pending - Add',
-                project_user__user=request.user). \
-                order_by('project_user', '-created'). \
-                distinct('project_user').count()
-
+                project_user__user=request.user
+            ).order_by('project_user', '-created').distinct('project_user').count()
         context['num_join_requests'] = num_join_requests
+
+        context['pending_removal_request_projects'] = [
+            removal_request.project_user.project.name
+            for removal_request in ProjectUserRemovalRequest.objects.filter(
+                Q(project_user__user__username=request.user.username) &
+                Q(status__name='Pending')
+            )
+        ]
+
+        if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
+
+            from coldfront.plugins.hardware_procurements.utils import UserInfoDict
+            from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
+
+            user_data = UserInfoDict.from_user(request.user)
+            hardware_procurements = []
+            for hardware_procurement in fetch_hardware_procurements(
+                    user_data=user_data, status='Complete'):
+                hardware_procurements.append(hardware_procurement)
+            hardware_procurements.sort(reverse=True)
+            hardware_procurements = [
+                hp.get_renderable_data() for hp in hardware_procurements]
+            context['hardware_procurements'] = hardware_procurements
 
     else:
         template_name = 'portal/nonauthorized_home.html'
