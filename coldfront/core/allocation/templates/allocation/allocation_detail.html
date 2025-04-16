@@ -226,8 +226,10 @@ Allocation Detail
               <th scope="col">Usage</th>
             {% endif %}
             {% flag_enabled 'LRC_ONLY' as lrc_only %}
-            {% if lrc_only %}
-              <th scope="col">Billing ID</th>
+            {% if lrc_only and allocation.project.name|slice:":2" == "ac_" or True %}
+              <th scope="col" title="Billing ID to charge every month for compute units used by this user">
+                Billing ID for Monthly Recharge Fee <i class="fas fa-info-circle" aria-hidden="true"></i>
+              </th>
             {% endif %}
           </tr>
         </thead>
@@ -250,8 +252,14 @@ Allocation Detail
               <td>{{ allocation_user_su_usages|get_value_from_dict:user.user.username }}</td>
             {% endif %}
             {% flag_enabled 'LRC_ONLY' as lrc_only %}
-            {% if lrc_only %}
-              <td>{{ allocation_user_billing_ids|get_value_from_dict:user.user.username}}</td>
+            {% if lrc_only and allocation.project.name|slice:":2" == "ac_" %}
+              <td>
+              {% if allocation_user_billing_ids|get_value_from_dict:user.user.username %}
+                {{ allocation_user_billing_ids|get_value_from_dict:user.user.username}}
+              {% else %}
+                  N/A
+              {% endif %}
+              </td>
             {% endif %}
           </tr>
           {% endfor %}
