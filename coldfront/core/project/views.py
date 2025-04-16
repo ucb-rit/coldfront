@@ -722,12 +722,14 @@ class ProjectAddUsersSearchView(LoginRequiredMixin, UserPassesTestMixin, Templat
 
     def dispatch(self, request, *args, **kwargs):
         project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
-        if project_obj.status.name not in ['Active', 'Inactive', 'New', ]:
+        if project_obj.status.name != 'Active':
             messages.error(
-                request, 'You cannot add users to an archived project.')
+                request, ('You cannot add users to a project with '
+                          f'status {project_obj.status.name}'))
             return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': project_obj.pk}))
         else:
             return super().dispatch(request, *args, **kwargs)
+
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
@@ -755,9 +757,10 @@ class ProjectAddUsersSearchResultsView(LoginRequiredMixin, UserPassesTestMixin, 
 
     def dispatch(self, request, *args, **kwargs):
         project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
-        if project_obj.status.name not in ['Active', 'Inactive', 'New', ]:
+        if project_obj.status.name != 'Active':
             messages.error(
-                request, 'You cannot add users to an archived project.')
+                request, ('You cannot add users to a project with '
+                          f'status {project_obj.status.name}'))
             return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': project_obj.pk}))
         else:
             return super().dispatch(request, *args, **kwargs)
@@ -845,9 +848,10 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
         project_obj = get_object_or_404(Project, pk=self.kwargs.get('pk'))
         _redirect = HttpResponseRedirect(
             reverse('project-detail', kwargs={'pk': project_obj.pk}))
-        if project_obj.status.name not in ['Active', 'Inactive', 'New', ]:
+        if project_obj.status.name != 'Active':
             messages.error(
-                request, 'You cannot add users to an archived project.')
+                request, ('You cannot add users to a project with '
+                          f'status {project_obj.status.name}')) 
             return _redirect
         elif is_project_billing_id_required_and_missing(project_obj):
             message = (
