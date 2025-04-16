@@ -90,6 +90,7 @@ jobs:
     - name: Run pytest unit tests
       run: |
         source ~/venv/bin/activate
+        export django_secret_key=`openssl rand -base64 64`
         pytest -m unit
 
     - name: Run Tests
