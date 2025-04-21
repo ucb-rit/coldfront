@@ -1,0 +1,21 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+  Secure Directory Request: Research Data Management Team
+{% endblock %}
+
+
+{% block content %}
+
+  <h1>Secure Directory: Research Data Management Team</h1><hr>
+
+  <ol class="breadcrumb">
+    <li>{{ breadcrumb_project }}</li>
+    <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+    <li>{{ breadcrumb_pi }}</li>
+  </ol>
+
+  {{ block.super }}
+
+{% endblock %}

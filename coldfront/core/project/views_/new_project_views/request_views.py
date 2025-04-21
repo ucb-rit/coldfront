@@ -56,6 +56,7 @@ from flags.state import flag_enabled
 from formtools.wizard.views import SessionWizardView
 
 import logging
+import os
 
 
 class ProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
@@ -84,7 +85,7 @@ class ProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
 class NewProjectRequestLandingView(LoginRequiredMixin, UserPassesTestMixin,
                                    TemplateView):
     template_name = (
-        'project/project_request/savio/project_request_landing.html')
+        'project/project_request/savio/request/project_request_landing.html')
 
     def test_func(self):
         if self.request.user.is_superuser:
@@ -796,33 +797,33 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         templates = {}
 
         templates['computing_allowance'] = (
-            'project/project_request/savio/project_computing_allowance.html')
+            'project/project_request/savio/request/project_computing_allowance.html')
         templates['allocation_period'] = (
-            'project/project_request/savio/project_allocation_period.html')
+            'project/project_request/savio/request/project_allocation_period.html')
         templates['existing_pi'] = (
-            'project/project_request/savio/project_existing_pi.html')
+            'project/project_request/savio/request/project_existing_pi.html')
         templates['new_pi'] = (
-            'project/project_request/savio/project_new_pi.html')
+            'project/project_request/savio/request/project_new_pi.html')
 
         if self.__departments_enabled():
             templates['pi_department'] = (
-                'project/project_request/savio/project_pi_department.html')
+                'project/project_request/savio/request/project_pi_department.html')
 
         templates['ica_extra_fields'] = (
-            'project/project_request/savio/project_ica_extra_fields.html')
+            'project/project_request/savio/request/project_ica_extra_fields.html')
         templates['recharge_extra_fields'] = (
-            'project/project_request/savio/project_recharge_extra_fields.html')
+            'project/project_request/savio/request/project_recharge_extra_fields.html')
         templates['pool_allocations'] = (
-            'project/project_request/savio/project_pool_allocations.html')
+            'project/project_request/savio/request/project_pool_allocations.html')
         templates['pooled_project_selection'] = (
-            'project/project_request/savio/'
+            'project/project_request/savio/request/'
             'project_pooled_project_selection.html')
         templates['details'] = (
-            'project/project_request/savio/project_details.html')
+            'project/project_request/savio/request/project_details.html')
         templates['billing_id'] = (
-            'project/project_request/savio/project_billing_id.html')
+            'project/project_request/savio/request/project_billing_id.html')
         templates['survey'] = (
-            'project/project_request/savio/project_survey.html')
+            'project/project_request/savio/request/project_survey.html')
 
         return templates
 
@@ -834,7 +835,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 class VectorProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
                                FormView):
     form_class = VectorProjectDetailsForm
-    template_name = 'project/project_request/vector/project_details.html'
+    template_name = (
+        'project/project_request/vector/request/project_details.html')
 
     logger = logging.getLogger(__name__)
 

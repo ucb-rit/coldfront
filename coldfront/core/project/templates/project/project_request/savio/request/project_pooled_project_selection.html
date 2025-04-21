@@ -1,0 +1,50 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+{{ PRIMARY_CLUSTER_NAME }} Project Request - Allocation Pooling
+{% endblock %}
+
+
+{% block head %}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
+{% endblock %}
+
+
+{% block content %}
+
+<h1>{{ PRIMARY_CLUSTER_NAME }}: Allocation Pooling</h1><hr>
+
+<ol class="breadcrumb">
+  <li>Allowance: {{ computing_allowance.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>Allocation Period: {{ allocation_period.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>{{ breadcrumb_pi }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>
+    {% if breadcrumb_pooling %}
+      Pooling
+    {% else %}
+      Not Pooling
+    {% endif %}
+  </li>
+</ol>
+
+<p>You are pooling your allocation with an existing project's allocation. Please select the project from the dropdown below.</p>
+
+{{ block.super }}
+
+{% endblock %}
+
+
+{% block javascript %}
+  <script>
+    $('select').selectize({
+      create: false,
+      sortField: 'text'
+    })
+  </script>
+{% endblock %}

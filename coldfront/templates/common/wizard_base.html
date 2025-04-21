@@ -1,36 +1,26 @@
 {% extends "common/base.html" %}
+
 {% load crispy_forms_tags %}
 {% load static %}
 
 
-{% block title %}
-{{ PRIMARY_CLUSTER_NAME }} Project Request - Recharge Details
-{% endblock %}
+{% comment %}
+A base template for any form template part of a django-formtools wizard view.
+
+In the `content` block of the child template, include `{{ block.super }}` at the end to render the form.
+
+If additional tags should be included in `<head>`, include a `head` block, and include `{{ block.super }}` within it.
+{% endcomment %}
 
 
 {% block head %}
+<script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
+
 {{ wizard.form.media }}
 {% endblock %}
 
 
 {% block content %}
-<script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
-<h1>{{ PRIMARY_CLUSTER_NAME }}: Recharge Details</h1><hr>
-
-<ol class="breadcrumb">
-  <li>Allowance: {{ computing_allowance.name }}</li>
-  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
-  <li>Allocation Period: {{ allocation_period.name }}</li>
-  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
-  <li>{{ breadcrumb_pi }}</li>
-</ol>
-
-<p>
-  Please provide the following details to purchase time on
-  {{ PRIMARY_CLUSTER_NAME }}. You will also need to return a signed copy of a
-  Memorandum of Understanding that will be sent to you.
-</p>
-
 <form action="" method="post">
   {% csrf_token %}
   <table>
@@ -62,10 +52,13 @@
       Previous Step
     </button>
   {% endif %}
-  <input class="btn btn-primary" type="submit" value="Next Step"/>
+  {% if wizard.steps.step1 == wizard.steps.count %}
+    <input class="btn btn-primary" type="submit" value="Submit"/>
+  {% else %}
+    <input class="btn btn-primary" type="submit" value="Next Step"/>
+  {% endif %}
 </form>
 <br>
 
 <p>Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}</p>
-
 {% endblock %}

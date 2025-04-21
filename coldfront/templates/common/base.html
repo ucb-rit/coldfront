@@ -51,6 +51,10 @@
    <!-- Custom -->
   <link rel="stylesheet" href="{% static 'common/css/common.css' %}">
 
+  <!-- Extending templates may add additional script/link tags. -->
+  {% block head %}
+  {% endblock %}
+
   <title>{% block title %}Welcome to {{ PORTAL_NAME }} Cluster Access Management System {% endblock %}</title>
 </head>
 
