@@ -83,7 +83,8 @@ class ProjectRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
              'last_name': ele.user.last_name,
              'email': ele.user.email,
              'role': ele.role,
-             'status': ele.status.name}
+             'status': ele.status.name,
+             'pk': ele.pk, }
 
             for ele in query_set if ele.user != self.request.user
         ]

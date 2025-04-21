@@ -137,12 +137,12 @@
                                         <td>{{ user.role }}</td>
                                         <td>{{ user.status }}</td>
 
-                                        <td class="d-flex justify-content-around">
+                                        <td class="d-flex justify-content-around form-check">
                                                 <input type="checkbox"
                                                        class="form-check-input"
                                                        name="users_selected_for_removal"
                                                        value="{{ user.username }},{{user.email}},{{user.role}},{{user.status}}"
-                                                       id="user{{ user.username }}"
+                                                       id="user{{ user.pk }}"
                                                        style="width: 15px; height: 15px;">
                                         </td>
                                     </tr>
