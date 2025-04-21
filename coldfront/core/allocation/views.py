@@ -47,6 +47,7 @@ from coldfront.core.billing.models import BillingActivity
 from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)
 from coldfront.core.resource.models import Resource
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import get_domain_url, import_from_settings
 from coldfront.core.utils.mail import send_email_template
@@ -183,6 +184,9 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
 
         context['notes'] = notes
         context['ALLOCATION_ENABLE_ALLOCATION_RENEWAL'] = ALLOCATION_ENABLE_ALLOCATION_RENEWAL
+
+        context['allowance_is_recharge'] = \
+            ComputingAllowance(allocation_obj.resources.first()).is_recharge()
 
         self._update_context(allocation_obj, attributes, context)
 
