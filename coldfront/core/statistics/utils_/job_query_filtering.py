@@ -6,9 +6,12 @@ from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
 
 def job_query_filtering(job_list, data):
-    if data.get('status'):
-        job_list = job_list.filter(
-            jobstatus__icontains=data.get('status'))
+    status = data.get('status')
+    if status:
+        if status == 'COMPLETING':
+            job_list = job_list.filter(jobstatus__in=['COMPLETED', 'COMPLETING'])
+        else:
+            job_list = job_list.filter(jobstatus__icontains=status)
 
     if data.get('jobslurmid'):
         job_list = job_list.filter(
