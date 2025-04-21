@@ -1,0 +1,48 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+{{ PRIMARY_CLUSTER_NAME }} Project Request - Allocation Period
+{% endblock %}
+
+
+{% block head %}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
+{% endblock %}
+
+
+{% block content %}
+<h1>{{ PRIMARY_CLUSTER_NAME }}: Allocation Period</h1><hr>
+
+<ol class="breadcrumb">
+  <li>Allowance: {{ computing_allowance.name }}</li>
+</ol>
+
+<p>
+  Select the time period during which the project's allocation will be valid.
+  The listed number of service units will be usable between the start date and
+  end date for the selected period.
+</p>
+
+<p>
+  A request for a time period that has not begun yet may be approved before its
+  start date, but will not be fully processed (i.e., service units will not be
+  usable) until then. Any service units not used by its end date will be
+  forfeited.
+</p>
+
+{{ block.super }}
+{% endblock %}
+
+
+{% block javascript %}
+  {{ block.super }}
+
+  <script>
+    $('select').selectize({
+      create: false,
+    })
+  </script>
+{% endblock %}

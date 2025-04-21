@@ -43,7 +43,8 @@ class AllocationAdditionRequestLandingView(LoginRequiredMixin,
     Service Units for the given Project. Eligible Project types include:
     Recharge."""
 
-    template_name = 'project/project_allocation_addition/request_landing.html'
+    template_name = (
+        'project/project_allocation_addition/request/request_landing.html')
 
     project_obj = None
 
@@ -129,7 +130,8 @@ class AllocationAdditionRequestView(LoginRequiredMixin, UserPassesTestMixin,
     the given Project."""
 
     form_class = SavioProjectRechargeExtraFieldsForm
-    template_name = 'project/project_allocation_addition/request_form.html'
+    template_name = (
+        'project/project_allocation_addition/request/request_form.html')
 
     project_obj = None
 

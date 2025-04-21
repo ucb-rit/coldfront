@@ -1,0 +1,33 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+{{ PRIMARY_CLUSTER_NAME }} Project Request - Computing Allowance
+{% endblock %}
+
+
+{% block head %}
+  {{ block.super }}
+
+  {% include "common/selectize.html" %}
+{% endblock %}
+
+
+{% block content %}
+<h1>{{ PRIMARY_CLUSTER_NAME }}: Computing Allowance</h1><hr>
+
+<p>Select a computing allowance.</p>
+
+{{ block.super }}
+{% endblock %}
+
+
+{% block javascript %}
+  {{ block.super }}
+
+  <script>
+    $('select').selectize({
+      create: false,
+    })
+  </script>
+{% endblock %}
