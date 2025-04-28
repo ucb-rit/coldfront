@@ -230,6 +230,9 @@ Allocation Detail
               <th scope="col" title="Billing ID to charge every month for compute units used by this user">
                 Billing ID for Monthly Recharge Fee <i class="fas fa-info-circle" aria-hidden="true"></i>
               </th>
+              <th scope="col" title="Billing ID to charge every month for keeping up this user account">
+                Billing ID for Monthly User Account Fee <i class="fas fa-info-circle" aria-hidden="true"></i>
+              </th>
             {% endif %}
           </tr>
         </thead>
@@ -256,6 +259,13 @@ Allocation Detail
               <td>
               {% if allocation_user_billing_ids|get_value_from_dict:user.user.username %}
                 {{ allocation_user_billing_ids|get_value_from_dict:user.user.username}}
+              {% else %}
+                  N/A
+              {% endif %}
+              </td>
+              <td>
+              {% if user.user.userprofile.billing_activity %}
+                {{ user.user.userprofile.billing_activity.full_id }}
               {% else %}
                   N/A
               {% endif %}
