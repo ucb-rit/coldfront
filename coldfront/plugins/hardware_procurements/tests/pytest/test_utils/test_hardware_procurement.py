@@ -7,8 +7,8 @@ from coldfront.plugins.hardware_procurements.utils import HardwareProcurement
 
 
 @pytest.mark.unit
-class TestHardwareProcurement:
-    """Tests for the HardwareProcurement object."""
+class TestHardwareProcurement(object):
+    """Tests for the HardwareProcurement class."""
 
     def test_get_data_returns_copy(self):
         """Test that mutating the output of get_data does not mutate

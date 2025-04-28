@@ -5,13 +5,18 @@
 [tool.pytest.ini_options]
 addopts = "--continue-on-collection-errors"
 markers = [
+    "acceptance: Marks tests as acceptance tests",
+    "component: Mark tests as component tests",
     "unit: Marks tests as unit tests",
 ]
-python_files = ["test*.py"]
+python_files = [
+    # Only collect files in a (sub)directory of "tests/pytest" to avoid
+    # collecting legacy unittest acceptance tests.
+    "tests/pytest/test*.py",
+    "tests/pytest/*/test*.py",
+]
 testpaths = [
-    # TODO: To add unit tests to an app, create the `unit` directory under
-    #  `tests`, and then add the path to it here.
-    "coldfront/plugins/hardware_procurements/tests/unit/",
+    "tests/pytest/",
 ]
 # pytest-django
 DJANGO_SETTINGS_MODULE = "coldfront.config.settings"

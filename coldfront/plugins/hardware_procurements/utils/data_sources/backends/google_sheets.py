@@ -126,6 +126,8 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             'procurement_start_date',
         )
 
+        value = value.strip()
+
         if column_name == 'status':
             # TODO: Where are these canonical ones going to be stored so that
             #  forms can access them and avoid hard-coding?
