@@ -79,18 +79,6 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
                     cleaned_value = 'Unknown'
                 entry[key] = cleaned_value
 
-            # TODO: Move filtering into a function?
-            if user_data is not None:
-                is_user_a_pi = set.intersection(
-                    user_emails, set(entry['pi_emails']))
-                is_user_a_poc = set.intersection(
-                    user_emails, set(entry['poc_emails']))
-                if not (is_user_a_pi or is_user_a_poc):
-                    continue
-            if status is not None:
-                if entry['status'] != status:
-                    continue
-
             pi_emails_str = ','.join(sorted(entry['pi_emails']))
             hardware_type_str = entry['hardware_type']
             initial_inquiry_date_str = (
@@ -103,6 +91,21 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             hardware_procurement_obj = HardwareProcurement(
                 *identifier, num_copies_by_identifier[identifier], entry)
             num_copies_by_identifier[identifier] += 1
+
+            # TODO: Move filtering into a function?
+            # Note: Filtering must occur *after* the instantiation of the
+            # HardwareProcurement so that the number of copies is static, and,
+            # consequently, the ID does not change.
+            if user_data is not None:
+                is_user_a_pi = set.intersection(
+                    user_emails, set(entry['pi_emails']))
+                is_user_a_poc = set.intersection(
+                    user_emails, set(entry['poc_emails']))
+                if not (is_user_a_pi or is_user_a_poc):
+                    continue
+            if status is not None:
+                if entry['status'] != status:
+                    continue
 
             yield hardware_procurement_obj
 
@@ -154,7 +157,8 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             return raw_to_canonical[raw_status]
 
         elif column_name == 'pi_emails' or column_name == 'poc_emails':
-            return [email.strip() for email in value.split(',')]
+            return [
+                email.strip() for email in value.split(',') if email.strip()]
 
         elif column_name in date_fields:
             try:
