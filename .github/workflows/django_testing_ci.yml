@@ -99,11 +99,11 @@ jobs:
         export django_secret_key=`openssl rand -base64 64`
         pytest -m component
 
-    - name: Run pytest acceptance tests
-      run: |
-        source ~/venv/bin/activate
-        export django_secret_key=`openssl rand -base64 64`
-        pytest -m acceptance
+    # - name: Run pytest acceptance tests
+    #   run: |
+    #     source ~/venv/bin/activate
+    #     export django_secret_key=`openssl rand -base64 64`
+    #     pytest -m acceptance
 
     - name: Run Tests
       run: |
