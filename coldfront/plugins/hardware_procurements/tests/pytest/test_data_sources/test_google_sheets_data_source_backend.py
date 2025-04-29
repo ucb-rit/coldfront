@@ -1,21 +1,216 @@
+import csv
+import json
+import os
 import pytest
 
 from datetime import date
+from datetime import datetime
 
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
 from unittest.mock import patch
 
+from ....utils import HardwareProcurement
 from ....utils.data_sources.backends.google_sheets import GoogleSheetsDataSourceBackend
+
+
+@pytest.fixture
+def backend_from_google_sheet_columns(google_sheet_columns):
+    """Return a GoogleSheetsDataSourceBackend based on the columns
+    defined in `google_sheet_columns`, and with a header row index of
+    1."""
+    backend = GoogleSheetsDataSourceBackend(
+        credentials_file_path='',
+        sheet_id='',
+        sheet_tab='',
+        sheet_columns=google_sheet_columns,
+        header_row_index=1)
+    return backend
+
+
+@pytest.fixture
+def google_sheet_data():
+    """Return a list of lists containing test data, read from a TSV
+    file, excluding the header."""
+    test_dir_path = os.path.dirname(__file__)
+    data_file_path = os.path.join(
+        test_dir_path,
+        'test_google_sheets_data_source_backend_data.tsv')
+    with open(data_file_path, 'r') as f:
+        reader = csv.reader(f, delimiter='\t')
+        data = [row for row in reader]
+    return data[1:]
+
+
+@pytest.fixture
+def google_sheet_columns():
+    """Return a dict of columns matching those in the test data file."""
+    return {
+        'status_col': 'A',
+        'initial_inquiry_date_col': 'B',
+        'pi_names_col': 'C',
+        'pi_emails_col': 'D',
+        'poc_names_col': 'E',
+        'poc_emails_col': 'F',
+        'hardware_type_col': 'G',
+        'hardware_specification_details_col': 'H',
+        'procurement_start_date_col': 'I',
+        'jira_ticket_col': 'J',
+        'order_received_date_col': 'K',
+        'installed_date_col': 'L',
+        'expected_retirement_date_col': 'M',
+    }
+
+
+@pytest.fixture
+def expected_hardware_procurements_data():
+    """Return a list of dicts representing the expected output of the
+    backend's fetch method, given the test data file as input, read from
+    a JSON file."""
+    test_dir_path = os.path.dirname(__file__)
+    data_file_path = os.path.join(
+        test_dir_path,
+        'test_google_sheets_data_source_backend_expected_output_data.json')
+    with open(data_file_path, 'r') as f:
+        return json.load(f)
 
 
 @pytest.mark.component
 class TestGoogleSheetsDataSourceBackendComponent(object):
     """Component tests for GoogleSheetsDataSourceBackend."""
 
-    pass
-    # def test_tmp(self):
-    #     assert False
+    @staticmethod
+    def _assert_procurement_expected(actual, expected):
+        """Given a HardwareProcurement object and an expected dict
+        representation of it, assert that the object is as
+        expected."""
+        assert actual.get_id() == expected['id']
+        actual_data = actual.get_data()
+        for k, v in expected['data'].items():
+            if k.endswith('_date') and v is not None:
+                v = datetime.strptime(v, '%Y-%m-%d').date()
+            assert v == actual_data[k]
+
+    def _assert_fetch_output(self, input_data, backend, expected_output_data,
+                             expected_ids=None, status=None, user_data=None):
+        """Assert that, given the input data and optional status and/or
+        user_data filters, the given backend's
+        `fetch_hardware_procurements` method returns entries with the
+        expected IDs from the given expected output data. If no expected
+        IDs are given, assert that all expected output is fetched."""
+        with patch.object(
+                backend, '_fetch_sheet_data', return_value=input_data):
+            if expected_ids is not None:
+                num_expected = len(expected_ids)
+            else:
+                num_expected = len(expected_output_data)
+            expected_index = 0
+
+            for hardware_procurement in backend.fetch_hardware_procurements(
+                    user_data=user_data, status=status):
+                assert expected_index < num_expected
+                if expected_ids is not None:
+                    expected_hardware_procurement = \
+                        next(
+                            hp
+                            for hp in expected_output_data
+                            if hp['id'] == expected_ids[expected_index])
+                else:
+                    expected_hardware_procurement = expected_output_data[
+                        expected_index]
+                self._assert_procurement_expected(
+                    hardware_procurement, expected_hardware_procurement)
+                expected_index += 1
+
+            assert expected_index == num_expected
+
+    @pytest.mark.parametrize(
+        ['status', 'user_data', 'expected_ids'],
+        [
+            ('Complete', {'emails': ['pi1@email.com']}, []),
+            ('Pending', {'emails': ['poc1@email.com']}, ['9b8aaee5']),
+            ('Pending', {'emails': ['poc2@email.com']}, ['7b79f48f']),
+            ('Inactive', {'emails': ['pi1@email.com']}, ['160d5698']),
+            ('Inactive', {'emails': ['pi2@email.com']}, ['160d5698']),
+            ('Inactive', {'emails': ['poc1@email.com']}, []),
+            ('Retired', {'emails': ['poc1@email.com']}, ['cc32e9da']),
+            ('Retired', {'emails': ['poc2@email.com']}, ['cc32e9da']),
+        ]
+    )
+    def test_fetch_hardware_procurements_multiple_filters(self, google_sheet_data,
+                                                          backend_from_google_sheet_columns,
+                                                          expected_hardware_procurements_data,
+                                                          status, user_data,
+                                                          expected_ids):
+        self._assert_fetch_output(
+            google_sheet_data,
+            backend_from_google_sheet_columns,
+            expected_hardware_procurements_data,
+            expected_ids=expected_ids,
+            status=status,
+            user_data=user_data)
+
+    def test_fetch_hardware_procurements_no_filters(self, google_sheet_data,
+                                                    backend_from_google_sheet_columns,
+                                                    expected_hardware_procurements_data):
+        self._assert_fetch_output(
+            google_sheet_data,
+            backend_from_google_sheet_columns,
+            expected_hardware_procurements_data)
+
+    @pytest.mark.parametrize(
+        ['status', 'expected_ids'],
+        [
+            ('Complete', ['a4eecf6e']),
+            ('Inactive', ['160d5698']),
+            ('Pending', ['9b8aaee5', '7b79f48f']),
+            ('Retired', ['cc32e9da']),
+        ]
+    )
+    def test_fetch_hardware_procurements_status_filter(self, google_sheet_data,
+                                                       backend_from_google_sheet_columns,
+                                                       expected_hardware_procurements_data,
+                                                       status, expected_ids):
+        self._assert_fetch_output(
+            google_sheet_data,
+            backend_from_google_sheet_columns,
+            expected_hardware_procurements_data,
+            expected_ids=expected_ids,
+            status=status)
+
+    @pytest.mark.parametrize(
+        ['user_data', 'expected_ids'],
+        [
+            (
+                {'emails': ['pi1@email.com']},
+                ['9b8aaee5', '7b79f48f', '160d5698'],
+            ),
+            (
+                {'emails': ['pi2@email.com']},
+                ['a4eecf6e', '160d5698', 'cc32e9da'],
+            ),
+            (
+                {'emails': ['poc1@email.com']},
+                ['9b8aaee5', 'cc32e9da'],
+            ),
+            (
+                {'emails': ['poc2@email.com']},
+                ['7b79f48f', 'cc32e9da'],
+            )
+        ]
+    )
+    def test_fetch_hardware_procurements_user_data_filter(self,
+                                                          google_sheet_data,
+                                                          backend_from_google_sheet_columns,
+                                                          expected_hardware_procurements_data,
+                                                          user_data,
+                                                          expected_ids):
+        self._assert_fetch_output(
+            google_sheet_data,
+            backend_from_google_sheet_columns,
+            expected_hardware_procurements_data,
+            expected_ids=expected_ids,
+            user_data=user_data)
 
 
 @pytest.mark.unit
