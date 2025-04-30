@@ -1,14 +1,15 @@
-import csv
-import json
-import os
 import pytest
 
 from datetime import date
-from datetime import datetime
 
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
 from unittest.mock import patch
+
+from .conftest import assert_procurement_expected
+from .conftest import expected_hardware_procurements_data
+from .conftest import google_sheet_columns
+from .conftest import google_sheet_data
 
 from ....utils import HardwareProcurement
 from ....utils.data_sources.backends.google_sheets import GoogleSheetsDataSourceBackend
@@ -28,68 +29,9 @@ def backend_from_google_sheet_columns(google_sheet_columns):
     return backend
 
 
-@pytest.fixture
-def google_sheet_data():
-    """Return a list of lists containing test data, read from a TSV
-    file, excluding the header."""
-    test_dir_path = os.path.dirname(__file__)
-    data_file_path = os.path.join(
-        test_dir_path,
-        'test_google_sheets_data_source_backend_data.tsv')
-    with open(data_file_path, 'r') as f:
-        reader = csv.reader(f, delimiter='\t')
-        data = [row for row in reader]
-    return data[1:]
-
-
-@pytest.fixture
-def google_sheet_columns():
-    """Return a dict of columns matching those in the test data file."""
-    return {
-        'status_col': 'A',
-        'initial_inquiry_date_col': 'B',
-        'pi_names_col': 'C',
-        'pi_emails_col': 'D',
-        'poc_names_col': 'E',
-        'poc_emails_col': 'F',
-        'hardware_type_col': 'G',
-        'hardware_specification_details_col': 'H',
-        'procurement_start_date_col': 'I',
-        'jira_ticket_col': 'J',
-        'order_received_date_col': 'K',
-        'installed_date_col': 'L',
-        'expected_retirement_date_col': 'M',
-    }
-
-
-@pytest.fixture
-def expected_hardware_procurements_data():
-    """Return a list of dicts representing the expected output of the
-    backend's fetch method, given the test data file as input, read from
-    a JSON file."""
-    test_dir_path = os.path.dirname(__file__)
-    data_file_path = os.path.join(
-        test_dir_path,
-        'test_google_sheets_data_source_backend_expected_output_data.json')
-    with open(data_file_path, 'r') as f:
-        return json.load(f)
-
-
 @pytest.mark.component
 class TestGoogleSheetsDataSourceBackendComponent(object):
     """Component tests for GoogleSheetsDataSourceBackend."""
-
-    @staticmethod
-    def _assert_procurement_expected(actual, expected):
-        """Given a HardwareProcurement object and an expected dict
-        representation of it, assert that the object is as
-        expected."""
-        assert actual.get_id() == expected['id']
-        actual_data = actual.get_data()
-        for k, v in expected['data'].items():
-            if k.endswith('_date') and v is not None:
-                v = datetime.strptime(v, '%Y-%m-%d').date()
-            assert v == actual_data[k]
 
     def _assert_fetch_output(self, input_data, backend, expected_output_data,
                              expected_ids=None, status=None, user_data=None):
@@ -118,7 +60,7 @@ class TestGoogleSheetsDataSourceBackendComponent(object):
                 else:
                     expected_hardware_procurement = expected_output_data[
                         expected_index]
-                self._assert_procurement_expected(
+                assert_procurement_expected(
                     hardware_procurement, expected_hardware_procurement)
                 expected_index += 1
 
