@@ -2,7 +2,7 @@
 
 
 <li id="navbar-admin" class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" data-toggle="dropdown">Admin 
+    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" data-toggle="dropdown">Admin
       <span class="badge badge-warning ml-2">{{ request_counts }}</span>
     </a>
     <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
@@ -22,7 +22,7 @@
 
         <li><div class="dropdown-divider"></div></li>
         <li class="dropdown-submenu">
-          <a id="navbar-admin-requests" class="dropdown-item dropdown-toggle navbar-align-badges" href="#">Requests 
+          <a id="navbar-admin-requests" class="dropdown-item dropdown-toggle navbar-align-badges" href="#">Requests
           <span class="badge badge-warning">{{ request_counts }}</span>
           </a>
             <ul class="dropdown-menu">
@@ -32,6 +32,18 @@
                 <li><a id="navbar-allocation-cluster-account-requests" class="dropdown-item navbar-align-badges" href="{% url 'allocation-cluster-account-request-list' %}?show_all_requests=on">
                   Cluster Access Requests <span class="badge badge-warning">{{ cluster_account_req_count }}</span>
                 </a></li>
+
+                {% flag_enabled 'HARDWARE_PROCUREMENTS_ENABLED' as hardware_procurements_enabled %}
+                {% if hardware_procurements_enabled %}
+                <li>
+                    <a id="navbar-hardware-procurement-requests"
+                       class="dropdown-item navbar-align-badges"
+                       href="{% url 'hardware-procurement-list' %}">
+                        Hardware Procurements <span class="badge badge-warning">{{ hardware_procurement_req_count }}</span>
+                    </a>
+                </li>
+                {% endif %}
+
                 <li><a id="navbar-project-new-project-requests" class="dropdown-item navbar-align-badges" href="{% url 'new-project-pending-request-list' %}">
                   New Project Requests <span class="badge badge-warning">{{ savio_project_req_count }}</span>
                 </a></li>

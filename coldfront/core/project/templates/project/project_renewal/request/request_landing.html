@@ -1,0 +1,70 @@
+{% extends "common/base.html" %}
+
+{% load common_tags %}
+{% load feature_flags %}
+
+
+{% block title %}
+Renew PI Allowance
+{% endblock %}
+
+
+{% block content %}
+<h1>Renew PI Allowance</h1><hr>
+
+{% flag_enabled 'ALLOCATION_RENEWAL_FOR_NEXT_PERIOD_REQUESTABLE' as next_period_requestable %}
+{% if next_period_requestable %}
+  <div class="alert alert-info" role="alert">
+    <i class="fas fa-info-circle" aria-hidden="true"></i>
+    The allowance year for {{ yearly_allowance_names }} is ending soon, on
+    {{ CURRENT_ALLOWANCE_YEAR_ALLOCATION_PERIOD.end_date|date:"M. d, Y" }}.
+    Between now and then, you may request to renew a PI's allowance and/or
+    update pooling preferences for the remainder of the current allowance year,
+    and/or for the next allowance year.
+  </div>
+{% endif %}
+
+<p>
+  Some computing allowances last for a particular allocation period. When they
+  reach their end dates, they must be renewed. Each allowance is tied to a
+  particular PI, and administrators must review that that PI is still eligible.
+  The following allowances may be renewed using this form:
+</p>
+<ul>
+  {% for allowance in allowances %}
+    {% if allowance|get_value_from_dict:'name' in renewal_supported_allowance_names %}
+      <li>{{ allowance|get_value_from_dict:'name_long' }}</li>
+    {% endif %}
+  {% endfor %}
+</ul>
+{% if renewal_not_supported_allowance_names %}
+<p>
+  The following allowances may be renewed, but are not currently supported in
+  this form. Please submit a ticket for assistance.
+  <ul>
+  {% for allowance in allowances %}
+    {% if allowance|get_value_from_dict:'name' in renewal_not_supported_allowance_names %}
+      <li>{{ allowance|get_value_from_dict:'name_long' }}</li>
+    {% endif %}
+  {% endfor %}
+  </ul>
+</p>
+{% endif %}
+<p>
+  This form is intended for Principal Investigators (PIs) or Managers of
+  projects. They may renew a particular PI's allowance for the current
+  allocation period. This may involve keeping the PI on the Project they are
+  currently using, or opting to start or stop pooling with other PIs.
+</p>
+<p>
+  If you are filling out the form on behalf of another PI, that PI will be
+  notified by email that a request is being made by you.
+</p>
+<a class="btn btn-primary" href="{% url 'renew-pi-allocation' %}">
+  Continue
+</a>
+<a class="btn btn-secondary" href="{% url 'project-list' %}">
+  Back
+</a>
+
+{% endblock %}

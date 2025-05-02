@@ -1,0 +1,12 @@
+{% load static %}
+
+{% comment %}
+Includes JS and CSS for Selectize.
+
+Include this in a child template within the `head` block.
+
+The caller is responsible for initializing selectize (within the `javascript` block).
+{% endcomment %}
+
+<script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
+<link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
