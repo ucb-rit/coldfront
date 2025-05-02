@@ -1,0 +1,6 @@
+Status	Initial Inquiry Date	PI Name (first last)	PI Email	POC Name (optional)	POC Email (optional)	Hardware Type	Hardware Specification Details	Procurement Start Date	JIRA Ticket	Order Received Date	Installed Date	Expected Retirement Date
+Active	01/01/1970	PI One	pi1@email.com	POC One	poc1@email.com	CPU	CPU Details 1	01/02/1970	00001	01/03/1970		
+Complete	01/01/1970	PI Two	pi2@email.com			Storage	Storage Details 1	01/02/1970	00002	01/03/1970	01/04/1970	01/04/1975
+Active	01/01/1970	PI One	pi1@email.com	POC Two	poc2@email.com	CPU	CPU Details 2		00003				
+Inactive	01/01/1970	PI One, PI Two	pi1@email.com, pi2@email.com			GPU	GPU Details 1					
+Retired	01/01/1970	PI Two	pi2@email.com	POC One, POC Two	poc1@email.com, poc2@email.com	Storage	Storage Details 2	01/02/1970	00004	01/03/1970	01/04/1970	01/04/1972

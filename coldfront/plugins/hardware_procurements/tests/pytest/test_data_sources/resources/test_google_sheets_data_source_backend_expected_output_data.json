@@ -1,0 +1,92 @@
+[
+    {
+        "id": "9b8aaee5",
+        "data": {
+            "status": "Pending",
+            "initial_inquiry_date": "1970-01-01",
+            "pi_names": "PI One",
+            "pi_emails": ["pi1@email.com"],
+            "poc_names": "POC One",
+            "poc_emails": ["poc1@email.com"],
+            "hardware_type": "CPU",
+            "hardware_specification_details": "CPU Details 1",
+            "procurement_start_date": "1970-01-02",
+            "jira_ticket": "00001",
+            "order_received_date": "1970-01-03",
+            "installed_date": null,
+            "expected_retirement_date": null
+        }
+    },
+    {
+        "id": "a4eecf6e",
+        "data": {
+            "status": "Complete",
+            "initial_inquiry_date": "1970-01-01",
+            "pi_names": "PI Two",
+            "pi_emails": ["pi2@email.com"],
+            "poc_names": "",
+            "poc_emails": [],
+            "hardware_type": "Storage",
+            "hardware_specification_details": "Storage Details 1",
+            "procurement_start_date": "1970-01-02",
+            "jira_ticket": "00002",
+            "order_received_date": "1970-01-03",
+            "installed_date": "1970-01-04",
+            "expected_retirement_date": "1975-01-04"
+        }
+    },
+    {
+        "id": "7b79f48f",
+        "data": {
+            "status": "Pending",
+            "initial_inquiry_date": "1970-01-01",
+            "pi_names": "PI One",
+            "pi_emails": ["pi1@email.com"],
+            "poc_names": "POC Two",
+            "poc_emails": ["poc2@email.com"],
+            "hardware_type": "CPU",
+            "hardware_specification_details": "CPU Details 2",
+            "procurement_start_date": null,
+            "jira_ticket": "00003",
+            "order_received_date": null,
+            "installed_date": null,
+            "expected_retirement_date": null
+        }
+    },
+    {
+        "id": "160d5698",
+        "data": {
+            "status": "Inactive",
+            "initial_inquiry_date": "1970-01-01",
+            "pi_names": "PI One, PI Two",
+            "pi_emails": ["pi1@email.com", "pi2@email.com"],
+            "poc_names": "",
+            "poc_emails": [],
+            "hardware_type": "GPU",
+            "hardware_specification_details": "GPU Details 1",
+            "procurement_start_date": null,
+            "jira_ticket": "",
+            "order_received_date": null,
+            "installed_date": null,
+            "expected_retirement_date": null
+        }
+    },
+    {
+        "id": "cc32e9da",
+        "data": {
+            "status": "Retired",
+            "initial_inquiry_date": "1970-01-01",
+            "pi_names": "PI Two",
+            "pi_emails": ["pi2@email.com"],
+            "poc_names": "POC One, POC Two",
+            "poc_emails": ["poc1@email.com", "poc2@email.com"],
+            "hardware_type": "Storage",
+            "hardware_specification_details": "Storage Details 2",
+            "procurement_start_date": "1970-01-02",
+            "jira_ticket": "00004",
+            "order_received_date": "1970-01-03",
+            "installed_date": "1970-01-04",
+            "expected_retirement_date": "1972-01-04"
+        }
+    }
+]

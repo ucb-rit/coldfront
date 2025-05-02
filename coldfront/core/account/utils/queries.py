@@ -8,6 +8,32 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def look_up_user_by_email(email):
+    """Given an email (str), return the User that it belongs to, if any,
+    else None.
+
+    Parameters:
+        - email (str): An email to perform the look up with
+
+    Returns:
+        - User, or None
+
+    Raises:
+        - EmailAddress.MultipleObjectsReturned, if more than one
+          EmailAddress is found (violating database uniqueness
+          constraints)
+        - Exception, if any other unexpected errors occur
+    """
+    email = email.strip().lower()
+    try:
+        email_address = EmailAddress.objects.get(email=email)
+    except EmailAddress.DoesNotExist:
+        return None
+    except EmailAddress.MultipleObjectsReturned as e:
+        raise e
+    return email_address.user
+
+
 def update_user_primary_email_address(email_address):
     """Given an EmailAddress, which must be verified, perform the
     following:

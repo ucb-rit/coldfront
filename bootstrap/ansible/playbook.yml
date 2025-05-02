@@ -727,6 +727,20 @@
             virtualenv: "{{ git_prefix }}/venv"
           become_user: "{{ djangooperator }}"
 
+        # Plugin: hardware_procurements: If the plugin is enabled and caching is
+        #  enabled, schedule a refresh of the cache every 60 minutes, if not
+        #  already scheduled.
+        # TODO: (Low priority) Make the interval configurable.
+        - name: Run Django management command - refresh_hardware_procurements_cache --schedule --interval 60
+          django_manage:
+            command: refresh_hardware_procurements_cache --schedule --interval 60
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+          when: plugin_hardware_procurements_enabled and plugin_hardware_procurements.data_source == "cached"
+
         # Grant Apache read access to Django application files.
 
         - name: Grant Apache read access to the application's parent directory
