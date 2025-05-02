@@ -6,25 +6,26 @@ from unittest.mock import MagicMock
 from unittest.mock import mock_open
 from unittest.mock import patch
 
-from .conftest import assert_procurement_expected
 from .conftest import expected_hardware_procurements_data
-from .conftest import google_sheet_columns
 from .conftest import google_sheet_data
+
+from .utils import assert_procurement_expected
+from .utils import GOOGLE_SHEET_COLUMNS
 
 from ....utils import HardwareProcurement
 from ....utils.data_sources.backends.google_sheets import GoogleSheetsDataSourceBackend
 
 
 @pytest.fixture
-def backend_from_google_sheet_columns(google_sheet_columns):
+def backend_from_google_sheet_columns():
     """Return a GoogleSheetsDataSourceBackend based on the columns
-    defined in `google_sheet_columns`, and with a header row index of
+    defined in GOOGLE_SHEET_COLUMNS, and with a header row index of
     1."""
     backend = GoogleSheetsDataSourceBackend(
         credentials_file_path='',
         sheet_id='',
         sheet_tab='',
-        sheet_columns=google_sheet_columns,
+        sheet_columns=GOOGLE_SHEET_COLUMNS,
         header_row_index=1)
     return backend
 

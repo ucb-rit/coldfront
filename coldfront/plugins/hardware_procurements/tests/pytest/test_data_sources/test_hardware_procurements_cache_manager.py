@@ -3,13 +3,13 @@ import pytest
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-from .conftest import cache_key
-from .conftest import cache_module
-from .conftest import look_up_func_module
-from .conftest import MockCache
 from .conftest import MockUser
 from .conftest import mock_look_up_user_by_email
-from .conftest import users_by_email
+
+from .utils import CACHE_KEY
+from .utils import CACHE_MODULE
+from .utils import LOOK_UP_FUNC_MODULE
+from .utils import MockCache
 
 from ....utils.data_sources.backends.cached import HardwareProcurementsCacheManager
 
@@ -69,50 +69,52 @@ def mock_hardware_procurements_by_id(mock_hardware_procurements):
 class TestHardwareProcurementsCacheManager(object):
     """Unit and component tests for HardwareProcurementsCacheManager."""
 
-    def _populate_cache(self, mock_cache, cache_module, cache_manager,
-                        look_up_func_module, mock_hardware_procurements,
-                        mock_look_up_user_by_email):
+    def setup_method(self):
+        self._cache_key = CACHE_KEY
+        self._cache_module = CACHE_MODULE
+        self._look_up_func_module = LOOK_UP_FUNC_MODULE
+
+    def _populate_cache(self, mock_cache, cache_manager,
+                        mock_hardware_procurements, mock_look_up_user_by_email):
         """Run the `populate_cache` method of the given CacheManager
         object, which is backed by the given MockCache, on the given
         list of MockHardwareProcurements, using the given mock function
         for looking up users by email."""
-        with patch(cache_module, mock_cache):
+        with patch(self._cache_module, mock_cache):
             with patch(
-                    look_up_func_module,
+                    self._look_up_func_module,
                     side_effect=mock_look_up_user_by_email):
                 cache_manager.populate_cache(mock_hardware_procurements)
 
     @pytest.mark.unit
-    def test_clear_cache(self, cache_key, cache_module):
+    def test_clear_cache(self):
         mock_cache = MockCache()
-        mock_cache[cache_key] = {'key1': 'value1', 'key2': 'value2'}
+        mock_cache[self._cache_key] = {'key1': 'value1', 'key2': 'value2'}
 
-        assert cache_key in mock_cache
-        cache_value = mock_cache[cache_key]
+        assert self._cache_key in mock_cache
+        cache_value = mock_cache[self._cache_key]
         assert cache_value['key1'] == 'value1'
         assert cache_value['key2'] == 'value2'
 
-        with patch(cache_module, mock_cache):
-            cache_manager = HardwareProcurementsCacheManager(cache_key)
+        with patch(self._cache_module, mock_cache):
+            cache_manager = HardwareProcurementsCacheManager(self._cache_key)
             cache_manager.clear_cache()
 
-        assert cache_key not in mock_cache
+        assert self._cache_key not in mock_cache
 
     @pytest.mark.component
-    def test_get_cached_procurements(self, cache_key, cache_module,
-                                     look_up_func_module,
-                                     mock_hardware_procurements,
+    def test_get_cached_procurements(self, mock_hardware_procurements,
                                      mock_hardware_procurements_by_id,
                                      mock_look_up_user_by_email):
         mock_cache = MockCache()
-        cache_manager = HardwareProcurementsCacheManager(cache_key)
+        cache_manager = HardwareProcurementsCacheManager(self._cache_key)
         self._populate_cache(
-            mock_cache, cache_module, cache_manager, look_up_func_module,
-            mock_hardware_procurements, mock_look_up_user_by_email)
+            mock_cache, cache_manager, mock_hardware_procurements,
+            mock_look_up_user_by_email)
 
         # The cache should contain exactly the entries defined in
         # `mock_hardware_procurements_by_id`, and nothing else.
-        with patch(cache_module, mock_cache):
+        with patch(self._cache_module, mock_cache):
             for hardware_procurement in cache_manager.get_cached_procurements():
                 procurement_id = hardware_procurement.get_id()
                 assert procurement_id in mock_hardware_procurements_by_id
@@ -134,23 +136,21 @@ class TestHardwareProcurementsCacheManager(object):
             ({'id': 4}, {'586fcf26', '947ff714'}),
         ]
     )
-    def test_get_cached_procurements_by_user(self, cache_key, cache_module,
-                                             look_up_func_module,
-                                             mock_hardware_procurements,
+    def test_get_cached_procurements_by_user(self, mock_hardware_procurements,
                                              mock_hardware_procurements_by_id,
                                              mock_look_up_user_by_email,
                                              user_data,
                                              expected_procurement_ids):
         mock_cache = MockCache()
-        cache_manager = HardwareProcurementsCacheManager(cache_key)
+        cache_manager = HardwareProcurementsCacheManager(self._cache_key)
         self._populate_cache(
-            mock_cache, cache_module, cache_manager, look_up_func_module,
-            mock_hardware_procurements, mock_look_up_user_by_email)
+            mock_cache, cache_manager, mock_hardware_procurements,
+            mock_look_up_user_by_email)
 
         # The cache should contain exactly the entries defined in
         # `mock_hardware_procurements_by_id` that have IDs in
         # `expected_procurement_ids`, and nothing else.
-        with patch(cache_module, mock_cache):
+        with patch(self._cache_module, mock_cache):
             for hardware_procurement in \
                     cache_manager.get_cached_procurements_for_user(user_data):
                 procurement_id = hardware_procurement.get_id()
@@ -174,17 +174,14 @@ class TestHardwareProcurementsCacheManager(object):
         ]
     )
     def test_get_cached_procurements_by_user_omits_if_not_associated(self,
-                                                                     cache_key,
-                                                                     cache_module,
-                                                                     look_up_func_module,
                                                                      mock_hardware_procurements,
                                                                      mock_look_up_user_by_email,
                                                                      user_data):
         mock_cache = MockCache()
-        cache_manager = HardwareProcurementsCacheManager(cache_key)
+        cache_manager = HardwareProcurementsCacheManager(self._cache_key)
         self._populate_cache(
-            mock_cache, cache_module, cache_manager, look_up_func_module,
-            mock_hardware_procurements, mock_look_up_user_by_email)
+            mock_cache, cache_manager, mock_hardware_procurements,
+            mock_look_up_user_by_email)
 
         with patch.object(
                 MockHardwareProcurement, 'is_user_associated',
@@ -192,7 +189,7 @@ class TestHardwareProcurementsCacheManager(object):
             # Nothing should be returned because the method should double check
             # that the user is associated with the cached procurement before
             # yielding.
-            with patch(cache_module, mock_cache):
+            with patch(self._cache_module, mock_cache):
                 generator = cache_manager.get_cached_procurements_for_user(
                     user_data)
                 with pytest.raises(StopIteration) as exc_info:
@@ -216,14 +213,13 @@ class TestHardwareProcurementsCacheManager(object):
             ({'not_cache_key': {'number': 1}}, False),
         ]
     )
-    def test_is_cache_populated(self, cache_key, cache_module, mock_cache_data,
-                                expected_output):
+    def test_is_cache_populated(self, mock_cache_data, expected_output):
         mock_cache = MockCache()
         for key, value in mock_cache_data.items():
             mock_cache.set(key, value)
 
-        cache_manager = HardwareProcurementsCacheManager(cache_key)
-        with patch(cache_module, mock_cache):
+        cache_manager = HardwareProcurementsCacheManager(self._cache_key)
+        with patch(self._cache_module, mock_cache):
             assert cache_manager.is_cache_populated() == expected_output
 
     @pytest.mark.unit
@@ -275,13 +271,12 @@ class TestHardwareProcurementsCacheManager(object):
             )
         ]
     )
-    def test_lookup_associated_user_ids(self, cache_key, hardware_procurement,
+    def test_lookup_associated_user_ids(self, hardware_procurement,
                                         sorted_expected_user_ids,
-                                        look_up_func_module,
                                         mock_look_up_user_by_email):
-        cache_manager = HardwareProcurementsCacheManager(cache_key)
+        cache_manager = HardwareProcurementsCacheManager(self._cache_key)
         with patch(
-                look_up_func_module,
+                self._look_up_func_module,
                 side_effect=mock_look_up_user_by_email):
             actual_user_ids = cache_manager._lookup_associated_user_ids(
                 hardware_procurement)
@@ -290,15 +285,14 @@ class TestHardwareProcurementsCacheManager(object):
         assert actual_user_ids == sorted_expected_user_ids
 
     @pytest.mark.component
-    def test_populate_cache(self, cache_key, cache_module, look_up_func_module,
-                            mock_hardware_procurements,
+    def test_populate_cache(self, mock_hardware_procurements,
                             mock_hardware_procurements_by_id,
                             mock_look_up_user_by_email):
         mock_cache = MockCache()
-        cache_manager = HardwareProcurementsCacheManager(cache_key)
+        cache_manager = HardwareProcurementsCacheManager(self._cache_key)
         self._populate_cache(
-            mock_cache, cache_module, cache_manager, look_up_func_module,
-            mock_hardware_procurements, mock_look_up_user_by_email)
+            mock_cache, cache_manager, mock_hardware_procurements,
+            mock_look_up_user_by_email)
 
         # The cache should contain exactly the given HardwareProcurement objects
         # for each user, and nothing else.
@@ -311,7 +305,7 @@ class TestHardwareProcurementsCacheManager(object):
         }
 
         for user_id, user_procurements_by_id in mock_cache[
-                cache_key].items():
+                self._cache_key].items():
             assert user_id in expected_procurement_ids_by_user
 
             expected_procurement_ids = expected_procurement_ids_by_user[user_id]
