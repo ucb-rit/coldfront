@@ -186,12 +186,9 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         context['notes'] = notes
         context['ALLOCATION_ENABLE_ALLOCATION_RENEWAL'] = ALLOCATION_ENABLE_ALLOCATION_RENEWAL
 
-        if allocation_obj.resources.first():
-            context['allowance_is_recharge'] = \
-                ComputingAllowance(ComputingAllowanceInterface() \
-                    .allowance_from_project(allocation_obj.project()).is_recharge())
-        else:
-            context['allowance_is_recharge'] = False
+        context['allowance_is_recharge'] = \
+            ComputingAllowance(ComputingAllowanceInterface() \
+                .allowance_from_project(allocation_obj.project).is_recharge())
 
         self._update_context(allocation_obj, attributes, context)
 
