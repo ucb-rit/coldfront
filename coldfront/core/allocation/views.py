@@ -48,6 +48,7 @@ from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import get_domain_url, import_from_settings
 from coldfront.core.utils.mail import send_email_template
@@ -186,8 +187,9 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         context['ALLOCATION_ENABLE_ALLOCATION_RENEWAL'] = ALLOCATION_ENABLE_ALLOCATION_RENEWAL
 
         if allocation_obj.resources.first():
-            context['allowance_is_recharge'] = ComputingAllowance(\
-                allocation_obj.resources.first()).is_recharge()
+            context['allowance_is_recharge'] = \
+                ComputingAllowance(ComputingAllowanceInterface() \
+                    .allowance_from_project(allocation_obj.project()).is_recharge())
         else:
             context['allowance_is_recharge'] = False
 
