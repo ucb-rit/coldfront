@@ -222,18 +222,25 @@ Allocation Detail
             <th scope="col">Email</th>
             <th scope="col">Cluster Username</th>
 <!--            <th scope="col">Last Modified</th>-->
+
             {% if allocation_user_usages_visible %}
               <th scope="col">Usage</th>
             {% endif %}
-            {% flag_enabled 'LRC_ONLY' as lrc_only %}
-            {% if lrc_only and allowance_is_recharge %}
-              <th scope="col" title="Billing ID to charge every month for compute units used by this user">
-                Billing ID for Monthly Recharge Fee <i class="fas fa-info-circle" aria-hidden="true"></i>
-              </th>
+
+            {% if user_account_fee_billing_ids_visible %}
               <th scope="col" title="Billing ID to charge every month for keeping up this user account">
-                Billing ID for Monthly User Account Fee <i class="fas fa-info-circle" aria-hidden="true"></i>
+                Billing ID for Monthly User Account Fee
+                <i class="fas fa-info-circle" aria-hidden="true"></i>
               </th>
             {% endif %}
+
+            {% if recharge_fee_billing_ids_visible %}
+              <th scope="col" title="Billing ID to charge every month for compute units used by this user">
+                Billing ID for Monthly Recharge Fee
+                <i class="fas fa-info-circle" aria-hidden="true"></i>
+              </th>
+            {% endif %}
+
           </tr>
         </thead>
         <tbody>
@@ -251,26 +258,27 @@ Allocation Detail
               </td>
             {% endif %}
 <!--            <td>{{ user.modified|date:"M. d, Y" }}</td>-->
-            {% if allocation_user_usages_visible %}
-              <td>{{ allocation_user_su_usages|get_value_from_dict:user.user.username }}</td>
-            {% endif %}
-            {% flag_enabled 'LRC_ONLY' as lrc_only %}
-            {% if lrc_only and allowance_is_recharge %}
-              <td>
-              {% if allocation_user_billing_ids|get_value_from_dict:user.user.username %}
-                {{ allocation_user_billing_ids|get_value_from_dict:user.user.username}}
-              {% else %}
-                  N/A
+
+            {% with username=user.user.username %}
+              {% if allocation_user_usages_visible %}
+                <td>
+                  {{ allocation_user_su_usages|get_value_from_dict:username }}
+                </td>
               {% endif %}
-              </td>
-              <td>
-              {% if user.user.userprofile.billing_activity %}
-                {{ user.user.userprofile.billing_activity.full_id }}
-              {% else %}
-                  N/A
+
+              {% if user_account_fee_billing_ids_visible %}
+                <td>
+                  {{ user_account_fee_billing_ids|get_value_from_dict:username }}
+                </td>
               {% endif %}
-              </td>
-            {% endif %}
+
+              {% if recharge_fee_billing_ids_visible %}
+                <td>
+                  {{ recharge_fee_billing_ids|get_value_from_dict:username }}
+                </td>
+              {% endif %}
+            {% endwith %}
+
           </tr>
           {% endfor %}
         </tbody>
