@@ -228,16 +228,16 @@ Allocation Detail
             {% endif %}
 
             {% if user_account_fee_billing_ids_visible %}
-              <th scope="col" title="Billing ID to charge every month for keeping up this user account">
-                Billing ID for Monthly User Account Fee
-                <i class="fas fa-info-circle" aria-hidden="true"></i>
+              <th scope="col">
+                Billing ID for User Account Fee
+                {% include "portal/info_hover_popup.html" with title="Billing ID for User Account Fee" content="This billing ID is charged every month for maintaining the user's account." %}
               </th>
             {% endif %}
 
             {% if recharge_fee_billing_ids_visible %}
-              <th scope="col" title="Billing ID to charge every month for compute units used by this user">
-                Billing ID for Monthly Recharge Fee
-                <i class="fas fa-info-circle" aria-hidden="true"></i>
+              <th scope="col">
+                Billing ID for Recharge Fee
+                {% include "portal/info_hover_popup.html" with title="Billing ID for Recharge Fee" content="This billing ID is charged every month for computing time used by the user under this project during the month." %}
               </th>
             {% endif %}
 
@@ -373,6 +373,9 @@ Allocation Detail
 <script>
 
   $(document).ready(function () {
+
+    $('[data-toggle="popover"]').popover();
+
     var guage_data = {{ guage_data | safe }};
     var pie_data = {{ pie_data | safe }};
   drawGauges(guage_data);
