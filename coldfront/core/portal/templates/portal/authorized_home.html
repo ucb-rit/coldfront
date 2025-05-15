@@ -1,9 +1,13 @@
 {% extends "common/base.html" %} {% load common_tags %} {% block content %}
-
+{% load progress_tracker %} {% block content %}
 <div class="row">
   <div class="col-lg-12">
     <h2>Welcome</h2>
     <hr>
+    {% if progress_steps %}
+       {% progress_tracker progress_steps %}
+    {% endif %}
+
 
     {% include 'portal/feedback_alert.html' %}
 

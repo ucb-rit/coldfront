@@ -1,0 +1,28 @@
+{# core/utils/templates/core_utils/progress_tracker.html #}
+<ol class="dds__progress-tracker">
+  {% for step in steps %}
+    <li
+      class="dds__progress-tracker__item{% if step.status %} dds__progress-tracker--{{ step.status }}{% endif %}"
+      aria-current="{{ step.aria_current }}"
+    >
+      {% if step.status == "complete" %}
+        <span class="dds__sr-only">complete</span>
+      {% elif step.status == "in-progress" %}
+        {# omit sr-only for in-progress #}
+      {% else %}
+        <span class="dds__sr-only">inactive</span>
+      {% endif %}
+      <span class="dds__progress-tracker__circle">
+        <span class="dds__progress-tracker__icon"></span>
+      </span>
+      <div class="dds__progress-tracker__content">
+        {% if step.status in "complete active"|split:" " %}
+          <a href="{{ step.url|default:'#' }}">{{ step.name }}</a>
+        {% else %}
+          <span class="dds__progress-tracker__step-name">{{ step.name }}</span>
+        {% endif %}
+        <span>{{ step.summary }}</span>
+      </div>
+    </li>
+  {% endfor %}
+</ol>

@@ -21,9 +21,12 @@ from coldfront.core.portal.utils import (generate_allocations_chart_data,
                                          generate_resources_chart_data,
                                          generate_total_grants_by_agency_chart_data)
 from coldfront.core.project.models import Project, ProjectUserJoinRequest
+from coldfront.core.utils.progress import project_join_progress
 from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
 from coldfront.core.project.utils import render_project_compute_usage
+
+
 
 from django.contrib.auth.decorators import login_required
 
@@ -89,6 +92,13 @@ def home(request):
            Q(allocationuser__status__name__in=['Active', ])
         ).distinct().order_by('-created')
         context['project_list'] = project_list
+
+        # if they have no Active/Pending‑Remove projects but *have* join requests,
+        # show the join‑progress timeline
+
+        if not project_list:
+            context['progress_steps'] = project_join_progress(request.user)
+
         context['allocation_list'] = allocation_list
 
         num_join_requests = ProjectUserJoinRequest.objects.filter(
