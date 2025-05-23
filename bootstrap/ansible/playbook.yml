@@ -727,6 +727,16 @@
             virtualenv: "{{ git_prefix }}/venv"
           become_user: "{{ djangooperator }}"
 
+        - name: Run Django management command - schedule_allocation_period_audits
+          django_manage:
+            command: schedule_allocation_period_audits {{ allocation_period_audit_email_admin_list | join(' ') }} --schedule --month {{ flag_next_period_renewal_requestable_month | int - 1 }}
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+          when: allocation_period_audit_email_admin_list is defined and allocation_period_audit_email_admin_list | length > 0
+
         # Plugin: hardware_procurements: If the plugin is enabled and caching is
         #  enabled, schedule a refresh of the cache every 60 minutes, if not
         #  already scheduled.
