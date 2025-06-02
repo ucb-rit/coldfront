@@ -376,3 +376,37 @@ class SavioProjectAllocationRequestHandler(ClassHandler):
             self._transfer_src_obj_to_dst_user(attr_name='requester')
         if self._src_obj.pi == self._src_user:
             self._transfer_src_obj_to_dst_user(attr_name='pi')
+
+
+class UserDepartmentHandler(ClassHandler):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from coldfront.plugins.departments.models import UserDepartment
+        try:
+            self._dst_obj = UserDepartment.objects.get(
+                user=self._dst_user,
+                department=self._src_obj.department)
+        except ObjectDoesNotExist:
+            self._dst_obj = None
+
+    def _run_special_handling(self):
+        department = self._src_obj.department
+        if self._dst_obj:
+            is_authoritative_updated = self._update_is_authoritative()
+            if is_authoritative_updated:
+                self._dst_obj.save()
+        else:
+            self._transfer_src_obj_to_dst_user()
+
+    def _update_is_authoritative(self):
+        """If the destination UserDepartment is non-authoritative, but
+        the source is, update the destination to be authoritative.
+        Return whether an update occurred."""
+        if (not self._dst_obj.is_authoritative and
+                self._src_obj.is_authoritative):
+            self._dst_obj.is_authoritative = self._src_obj.is_authoritative
+            self._record_update(
+                self._dst_obj.pk, 'is_authoritative', False, True)
+            return True
+        return False
