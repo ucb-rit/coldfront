@@ -1,0 +1,9 @@
+The audit of AllocationPeriod "{{ allocation_period_name }}" failed.
+
+{% for check_result in check_results %}
+  {% if check_result.success %}
+    (SUCCEEDED) {{ check_result.message }}
+  {% else %}
+    (FAILED) {{ check_result.message }}
+  {% endif %}
+{% endfor %}
