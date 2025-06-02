@@ -78,7 +78,7 @@ class SecureDirectory(object):
                 **pending_management_request_kwargs):
             eligible_user_pks.discard(request_obj.user.pk)
 
-        return User.objects.filter(pk__in=eligible_user_pks)
+        return User.objects.filter(pk__in=eligible_user_pks).order_by('username')
 
     def get_path(self):
         """Return the path to the secure directory. Cache the path in
@@ -121,7 +121,7 @@ class SecureDirectory(object):
         for pi in pis:
             eligible_user_pks.discard(pi.pk)
 
-        return User.objects.filter(pk__in=eligible_user_pks)
+        return User.objects.filter(pk__in=eligible_user_pks).order_by('username')
 
     def user_can_manage(self, user):
         """Return whether the given User has permissions to manage this
