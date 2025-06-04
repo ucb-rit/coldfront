@@ -29,7 +29,6 @@ class UserProfile(models.Model):
         null=True
     )
 
-    phone_number = PhoneNumberField(blank=True, null=True)
     access_agreement_signed_date = models.DateTimeField(blank=True, null=True)
     upgrade_request = models.DateTimeField(blank=True, null=True)
 

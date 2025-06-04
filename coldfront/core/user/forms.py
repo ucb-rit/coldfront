@@ -20,8 +20,6 @@ from coldfront.core.user.utils import send_account_activation_email
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.mail import dummy_email_address
 
-from phonenumber_field.formfields import PhoneNumberField
-
 
 class UserSearchForm(forms.Form):
     CHOICES = [('username_only', 'Exact Username Only'),
@@ -69,9 +67,6 @@ class UserRegistrationForm(UserCreationForm):
             '\'Christopher\'.'))
     middle_name = forms.CharField(label='Middle Name', required=False)
     last_name = forms.CharField(label='Last Name')
-    phone_number = PhoneNumberField(
-        help_text='The number must be in E.164 format (e.g. +12125552368).',
-        label='Phone Number', required=False)
     password1 = forms.CharField(
         help_text=(
             'This password is unique to this portal, and is separate from the '
@@ -100,10 +95,6 @@ class UserRegistrationForm(UserCreationForm):
             raise forms.ValidationError(mark_safe(message))
         return email
 
-    def clean_phone_number(self):
-        self.phone_number = self.cleaned_data['phone_number']
-        return self.phone_number
-
     def clean_first_name(self):
         self.first_name = self.cleaned_data['first_name'].title()
         return self.first_name
@@ -123,7 +114,6 @@ class UserRegistrationForm(UserCreationForm):
         if commit:
             model.save()
         model.refresh_from_db()
-        model.userprofile.phone_number = self.phone_number
         model.userprofile.middle_name = self.middle_name
         model.userprofile.save()
         return model
@@ -131,8 +121,8 @@ class UserRegistrationForm(UserCreationForm):
     class Meta:
         model = User
         fields = (
-            'email', 'first_name', 'middle_name', 'last_name', 'phone_number',
-            'password1', 'password2')
+            'email', 'first_name', 'middle_name', 'last_name', 'password1',
+            'password2')
 
 
 class UserLoginForm(AuthenticationForm):
@@ -172,12 +162,6 @@ class UserProfileUpdateForm(forms.Form):
     first_name = forms.CharField(label='First Name')
     middle_name = forms.CharField(label='Middle Name', required=False)
     last_name = forms.CharField(label='Last Name')
-    phone_number = PhoneNumberField(
-        help_text='The number must be in E.164 format (e.g. +12125552368).',
-        label='Phone Number', required=False)
-
-    def clean_phone_number(self):
-        return self.cleaned_data['phone_number']
 
     def clean_first_name(self):
         return self.cleaned_data['first_name'].title()
