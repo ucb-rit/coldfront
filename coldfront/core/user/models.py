@@ -8,7 +8,6 @@ from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from model_utils.models import TimeStampedModel
-from phonenumber_field.modelfields import PhoneNumberField
 from rest_framework.authtoken.models import Token
 from simple_history.models import HistoricalRecords
 
