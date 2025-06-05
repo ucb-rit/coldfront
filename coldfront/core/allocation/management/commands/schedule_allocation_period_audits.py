@@ -225,7 +225,7 @@ def audit_command_task_hook(task):
             Command._send_audit_exception_email(
                 allocation_period_name, task, emails)
     else:
-        audit_succeeded = task.result == 'True'
+        audit_succeeded = bool(task.result)
         if not audit_succeeded:
             # Re-enqueue the audit for the same period in X days.
             Command._schedule_audit_task_if_not_scheduled(
