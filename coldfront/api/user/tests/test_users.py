@@ -11,7 +11,7 @@ from http import HTTPStatus
 SERIALIZER_FIELDS = (
     'id', 'username', 'first_name', 'last_name', 'email', 'profile')
 PROFILE_SERIALIZER_FIELDS = (
-    'id', 'user', 'is_pi', 'middle_name', 'cluster_uid', 'phone_number',
+    'id', 'user', 'is_pi', 'middle_name', 'cluster_uid',
     'access_agreement_signed_date')
 BASE_URL = '/api/users/'
 
