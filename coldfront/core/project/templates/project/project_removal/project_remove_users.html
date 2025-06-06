@@ -8,16 +8,17 @@
     <h1>Remove users from project: {{project.title}}</h1>
     <hr>
     <div>
-        <!-- Pending removal requests -->
+        <!-- Users pending removal -->
         <p>
-            Below is a list of users with pending removal requests from project {{ project.title }}
-            that must be reviewed and processed by admins.
+            Below is a list of users pending removal from project
+            {{ project.name }}. The requests must be processed by
+            administrators.
         </p>
         <div>
             {% if users_pending_removal %}
                 <div class="card">
                     <div class="card-body">
-                        <h3 class="mb-3">Users With Pending Removal Requests</h3>
+                        <h3 class="mb-3">Users Pending Removal</h3>
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
@@ -55,10 +56,11 @@
 
         <!-- Users eligible for removal -->
         <p>
-            Below is a list of users eligible to be removed from project {{ project.title }}. To initiate a
-            removal request, click the "Remove" button next to the user to remove and click
-            "Submit" in the confirmation window. Once a removal
-            request is initiated, it must be reviewed and processed by admins.
+            Below is a list of users eligible to be removed from project
+            {{ project.name }}. Select the users to be removed, then click on
+            "Remove Selected Users". A confirmation window will appear before
+            the requests will be submitted. Once removal requests are initiated,
+            they must be processed by administrators.
         </p>
         <div>
             {% if users_to_remove %}
