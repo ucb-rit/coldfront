@@ -7,40 +7,36 @@
 {% block content %}
     <h1>Remove users from project: {{project.title}}</h1>
     <hr>
-    <tr>
-        <td>
+    <div>
+        <!-- Pending removal requests -->
+        <p>
             Below is a list of users with pending removal requests from project {{ project.title }}
             that must be reviewed and processed by admins.
-        </td>
-        <p></p>
-        <td>
+        </p>
+        <div>
             {% if users_pending_removal %}
                 <div class="card">
                     <div class="card-body">
-                        <h3 class="mb-3">Users With Pending Removal Requests:  </h3>
+                        <h3 class="mb-3">Users With Pending Removal Requests</h3>
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
                                 <tr>
-                                    <th scope="col">#</th>
                                     <th scope="col">Username</th>
                                     <th scope="col">First Name</th>
                                     <th scope="col">Last Name</th>
                                     <th scope="col">Email</th>
                                     <th scope="col">Role</th>
-                                    <th scope="col">Status</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {% for proj_user in users_pending_removal %}
                                     <tr>
-                                        <td>{{ forloop.counter }}</td>
                                         <td>{{ proj_user.user.username }}</td>
                                         <td>{{ proj_user.user.first_name }}</td>
                                         <td>{{ proj_user.user.last_name }}</td>
                                         <td>{{ proj_user.user.email }}</td>
                                         <td>{{ proj_user.role.name }}</td>
-                                        <td><span class="badge badge-warning">{{ proj_user.status.name }} </span></td>
                                     </tr>
                                 {% endfor %}
                                 </tbody>
@@ -53,17 +49,18 @@
                     No pending project removal requests!
                 </div>
             {% endif %}
-        </td>
+        </div>
 
-        <p></p>
-        <td>
+        <hr>
+
+        <!-- Users eligible for removal -->
+        <p>
             Below is a list of users eligible to be removed from project {{ project.title }}. To initiate a
             removal request, click the "Remove" button next to the user to remove and click
             "Submit" in the confirmation window. Once a removal
             request is initiated, it must be reviewed and processed by admins.
-        </td>
-        <p></p>
-        <td>
+        </p>
+        <div>
             {% if users_to_remove %}
                 <div class="modal fade" id="removeUsersModal" tabindex="-1" role="dialog" aria-labelledby="removeUsersModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-lg" role="document">
@@ -71,26 +68,33 @@
                             {% csrf_token %}
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <p class="modal-title">User Removal Request</p>
+                                    <p class="modal-title">
+                                        <b>Confirm User Removal</b>
+                                    </p>
                                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
                                 </div>
 
                                 <div class="modal-body">
-                                    <label>Are you sure? These users will immediately be disallowed from submitting jobs under this project. <br>
-                                           <b>Note:</b> this process only removes the user from the project and does not delete their cluster account.
-                                    </label>
-                                    <table class="table table-hover">
-                                        <thead>
-                                        <th scope="col">Username</th>
-                                        <th scope="col">Email</th>
-                                        <th scope="col">Role</th>
-                                        </thead>
-                                        <tbody>
-                                        </tbody>
-                                    </table>
-                                    <input type="hidden" name="usernames">
+                                    <p>
+                                        Are you sure? These users will immediately be disallowed from submitting jobs under this project.
+                                    </p>
+                                    <p>
+                                        <b>Note:</b> This process only removes the user from the project, and does not delete their cluster account.
+                                    </p>
+                                    <div style="max-height: 300px; overflow-y: auto;">
+                                        <table class="table table-hover mb-0">
+                                            <thead>
+                                                <th scope="col">Username</th>
+                                                <th scope="col">Email</th>
+                                                <th scope="col">Role</th>
+                                            </thead>
+                                            <tbody>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <input type="hidden" name="user_pks">
                                 </div>
 
                                 <div class="modal-footer">
@@ -108,7 +112,7 @@
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h3>Select Users to Remove:  </h3>
+                            <h3>Select Users to Remove</h3>
                             <button id="remove-selected-users-button" class="btn btn-danger" onclick="showUserRemovalModal()">
                                 <i class="fas fa-user-times" aria-hidden="true"></i>
                                 Remove Selected Users
@@ -117,34 +121,32 @@
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
-                                <th scope="col">#</th>
+                                <th scope="col">Remove</th>
                                 <th scope="col">Username</th>
                                 <th scope="col">First Name</th>
                                 <th scope="col">Last Name</th>
                                 <th scope="col">Email</th>
                                 <th scope="col">Role</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Remove</th>
                                 </thead>
                                 <tbody>
                                 {% for user in users_to_remove %}
                                     <tr>
-                                        <td>{{ forloop.counter }}</td>
+                                        <td class="d-flex justify-content-around form-check">
+                                            <input type="checkbox"
+                                                   class="form-check-input"
+                                                   name="users_selected_for_removal"
+                                                   value="{{ user.pk }}"
+                                                   id="user{{ user.pk }}"
+                                                   data-username="{{ user.username }}"
+                                                   data-email="{{ user.email }}"
+                                                   data-role="{{ user.role }}"
+                                                   style="width: 15px; height: 15px;">
+                                        </td>
                                         <td>{{ user.username }}</td>
                                         <td>{{ user.first_name }}</td>
                                         <td>{{ user.last_name }}</td>
                                         <td>{{ user.email }}</td>
                                         <td>{{ user.role }}</td>
-                                        <td>{{ user.status }}</td>
-
-                                        <td class="d-flex justify-content-around form-check">
-                                                <input type="checkbox"
-                                                       class="form-check-input"
-                                                       name="users_selected_for_removal"
-                                                       value="{{ user.username }},{{user.email}},{{user.role}},{{user.status}}"
-                                                       id="user{{ user.pk }}"
-                                                       style="width: 15px; height: 15px;">
-                                        </td>
                                     </tr>
                                 {% endfor %}
                                 </tbody>
@@ -158,8 +160,9 @@
                     No users to remove!
                 </div>
             {% endif %}
-        </td>
-    </tr>
+        </div>
+
+    </div>
 
     <script>
         $(document).on('click', '#form_reset_button', function() {
@@ -179,31 +182,39 @@
         });
 
         function showUserRemovalModal() {
-            var selectedUsers = []; // Reset the selected users array
+            var selectedUsers = [];
             $("input[name='users_selected_for_removal']:checked").each(function() {
-                selectedUsers.push($(this).val());
+                selectedUsers.push({
+                    pk: $(this).val(),
+                    username: $(this).data('username'),
+                    email: $(this).data('email'),
+                    role: $(this).data('role'),
+                });
             });
 
-            const selectedUsersUsernames = selectedUsers.map((user) => user.split(",")[0]);
-            $("#removeUsersForm input[name='usernames']").val(selectedUsersUsernames.join(","));
+            if (selectedUsers.length === 0) {
+                alert('Please select at least one user to remove.');
+                return;
+            }
+
+            // The value to be sent to the backend is a comma-separated string
+            // of User primary keys.
+            const selectedUserPks = selectedUsers.map((user) => user.pk);
+            $("#removeUsersForm input[name='user_pks']").val(selectedUserPks);
 
             var tableBody = $("#removeUsersModal tbody");
             tableBody.empty();
             $.each(selectedUsers, function(index, user) {
-                var splitUser = user.split(",");
-                var userRow = `<tr>
-                    <td>${splitUser[0]}</td>
-                    <td>${splitUser[1]}</td>
-                    <td>${splitUser[2]}</td>
-                </tr>`;
+                var userRow = `` +
+                    `<tr>` +
+                        `<td>${user.username}</td>` +
+                        `<td>${user.email}</td>` +
+                        `<td>${user.role}</td>` +
+                    `</tr>`;
                 tableBody.append(userRow);
             });
 
-            if (selectedUsers.length > 0) {
-                $('#removeUsersModal').modal('show');
-            } else {
-                alert("Please select at least one user to remove.");
-            }
+            $('#removeUsersModal').modal('show');
         }
         
         $('#removeUsersForm').on('submit', function() {

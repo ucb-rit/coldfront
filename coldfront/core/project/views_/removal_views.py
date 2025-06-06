@@ -84,7 +84,7 @@ class ProjectRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
              'email': ele.user.email,
              'role': ele.role,
              'status': ele.status.name,
-             'pk': ele.pk, }
+             'pk': ele.user.pk, }
 
             for ele in query_set if ele.user != self.request.user
         ]
@@ -105,24 +105,27 @@ class ProjectRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
         pk = self.kwargs.get('pk')
         project_obj = get_object_or_404(Project, pk=pk)
 
-        users_to_remove_list, users_pending_removal = self.get_users_to_remove(project_obj)
+        users_to_remove_list, users_pending_removal = self.get_users_to_remove(
+            project_obj)
+
         context = {}
         context['project'] = get_object_or_404(Project, pk=pk)
         context['users_pending_removal'] = users_pending_removal
-
-
         context['users_to_remove'] = users_to_remove_list
 
         return render(request, self.template_name, context)
 
+
     def post(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
         project_obj = get_object_or_404(Project, pk=pk)
-        usernames = self.request.POST.get('usernames').split(',')
 
-        for username in usernames:
-            user_obj = User.objects.get(
-                username=username)
+        user_pks = [
+            int(user_pk)
+            for user_pk in self.request.POST.get('user_pks').split(',')]
+
+        for user_pk in user_pks:
+            user_obj = User.objects.get(pk=user_pk)
 
             try:
                 request_runner = ProjectRemovalRequestRunner(
