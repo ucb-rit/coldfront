@@ -58,7 +58,6 @@ class ProjectJoinView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
             messages.error(self.request, message)
             return False
 
-
         if project_users.exists():
             project_user = project_users.first()
             if project_user.status.name == 'Active':

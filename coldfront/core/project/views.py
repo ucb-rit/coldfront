@@ -720,7 +720,6 @@ class ProjectAddUsersSearchView(LoginRequiredMixin, UserPassesTestMixin, Templat
         else:
             return super().dispatch(request, *args, **kwargs)
 
-
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
         context['user_search_form'] = UserSearchForm()
