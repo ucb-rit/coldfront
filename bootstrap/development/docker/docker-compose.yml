@@ -54,7 +54,7 @@ services:
       - ../../..:/var/www/coldfront_app/coldfront
 
   qcluster:
-    image: coldfront-qcluster
+    image: coldfront-qcluster:${IMAGE_TAG:-latest}
     volumes:
       - ../../..:/var/www/coldfront_app/coldfront
 
