@@ -16,7 +16,13 @@ from coldfront.core.project.forms_.new_project_forms.request_forms import SavioP
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectRechargeExtraFieldsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import VectorProjectDetailsForm
-from coldfront.core.project.models import Project
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterDetailsForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterExistingPIForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterNewPIForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterExistingManagerForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterNewManagerForm
+from coldfront.core.project.forms_.new_project_forms.request_forms import StandaloneClusterReviewAndSubmitForm
+from coldfront.core.project.models import Project, ProjectUser, ProjectUserRoleChoice, ProjectUserStatusChoice
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import SavioProjectAllocationRequest
@@ -27,7 +33,11 @@ from coldfront.core.project.models import savio_project_request_recharge_state_s
 from coldfront.core.project.models import VectorProjectAllocationRequest
 from coldfront.core.project.utils_.new_project_utils import send_new_project_request_admin_notification_email
 from coldfront.core.project.utils_.new_project_utils import send_new_project_request_pi_notification_email
+from coldfront.core.project.utils_.new_project_utils import create_project_with_compute_allocation
+from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunnerFactory
+from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
 from coldfront.core.resource.models import Resource
+from coldfront.core.resource.models import ResourceType
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
@@ -35,6 +45,7 @@ from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 
 from collections import OrderedDict
 
@@ -915,3 +926,320 @@ class VectorProjectRequestView(LoginRequiredMixin, UserPassesTestMixin,
         allocation.save()
 
         return project
+    
+# =============================================================================
+# STANDALONE CLUSTER
+# =============================================================================
+
+
+class StandaloneClusterRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
+                                SessionWizardView):
+    FORMS = [
+                
+        ('details', StandaloneClusterDetailsForm),
+        ('existing_pi', StandaloneClusterExistingPIForm),
+        ('new_pi', StandaloneClusterNewPIForm),
+        ('existing_manager', StandaloneClusterExistingManagerForm),
+        ('new_manager', StandaloneClusterNewManagerForm),
+        ('review_and_submit', StandaloneClusterReviewAndSubmitForm),
+    ]
+
+    TEMPLATES = {
+        'details': 'project/project_request/standalone_cluster/project_details.html',
+        'existing_pi':
+            'project/project_request/standalone_cluster/project_existing_pi.html',
+        'new_pi':
+            'project/project_request/standalone_cluster/project_new_pi.html',
+        'existing_manager':
+            'project/project_request/standalone_cluster/project_existing_manager.html',
+        'new_manager':
+            'project/project_request/standalone_cluster/project_new_manager.html',
+        'review_and_submit': 
+            'project/project_request/standalone_cluster/review_and_submit.html',
+    }
+
+    form_list = [
+        StandaloneClusterDetailsForm,
+        StandaloneClusterExistingPIForm,
+        StandaloneClusterNewPIForm,
+        StandaloneClusterExistingManagerForm,
+        StandaloneClusterNewManagerForm,
+        StandaloneClusterReviewAndSubmitForm,
+    ]
+
+    logger = logging.getLogger(__name__)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Define a lookup table from form name to step number.
+        self.step_numbers_by_form_name = {
+            name: i for i, (name, _) in enumerate(self.FORMS)}
+        
+    def test_func(self):
+        if self.request.user.is_superuser:
+            return True
+        message = (
+            'You do not have permission to create a standalone cluster.')
+        messages.error(self.request, message)
+
+    def get_context_data(self, form, **kwargs):
+        context = super().get_context_data(form=form, **kwargs)
+        current_step = int(self.steps.current)
+        self.__set_data_from_previous_steps(current_step, context)
+        return context
+
+    def get_template_names(self):
+        return [self.TEMPLATES[self.FORMS[int(self.steps.current)][0]]]
+
+    def done(self, form_list, **kwargs):
+        """Perform processing and store information in a request
+        object."""
+        redirect_url = '/'
+        try:
+            form_data = session_wizard_all_form_data(
+                form_list, kwargs['form_dict'], len(self.form_list))
+            with transaction.atomic():
+                pi = self.__handle_pi_data(form_data)
+                manager = self.__handle_manager_data(form_data)
+                project = self.__handle_create_new_standalone_cluster(
+                                form_data, pi, manager)
+                redirect_url = '/project/' + str(project.pk) + '/'
+        except Exception as e:
+            self.logger.exception(e)
+            message = 'Unexpected failure. Please contact an administrator.'
+            messages.error(self.request, message)
+        else:
+            # TODO: More informative message?
+            message = (
+                'Thank you for your submission. It will be reviewed and '
+                'processed by administrators.')
+            messages.success(self.request, message)
+
+        return HttpResponseRedirect(redirect_url)
+
+    @staticmethod
+    def condition_dict():
+        view = StandaloneClusterRequestWizard
+        return {
+            '2': view.show_new_pi_form_condition,
+            '4': view.show_new_manager_form_condition,
+        }
+
+    def show_new_pi_form_condition(self):
+        step_name = 'existing_pi'
+        step = str(self.step_numbers_by_form_name[step_name])
+        cleaned_data = self.get_cleaned_data_for_step(step) or {}
+        return cleaned_data.get('PI', None) is None
+    
+    def show_new_manager_form_condition(self):
+        step_name = 'existing_manager'
+        step = str(self.step_numbers_by_form_name[step_name])
+        cleaned_data = self.get_cleaned_data_for_step(step) or {}
+        return not cleaned_data.get('manager', False)        
+
+    def __handle_pi_data(self, form_data):
+        """Return the requested PI. If the PI did not exist, create a
+        new User and UserProfile."""
+        # If an existing PI was selected, return the existing User object.
+        step_number = self.step_numbers_by_form_name['existing_pi']
+        data = form_data[step_number]
+        if data['PI']:
+            return data['PI']
+
+        # Create a new User object intended to be a new PI.
+        step_number = self.step_numbers_by_form_name['new_pi']
+        data = form_data[step_number]
+        email = data['email']
+        try:
+            pi = User.objects.create(
+                username=email,
+                first_name=data['first_name'],
+                last_name=data['last_name'],
+                email=email,
+                is_active=True)
+        except IntegrityError as e:
+            self.logger.error(f'User {email} unexpectedly exists.')
+            raise e
+
+        # Set the user's middle name in the UserProfile; generate a PI request.
+        try:
+            pi_profile = pi.userprofile
+        except UserProfile.DoesNotExist as e:
+            self.logger.error(
+                f'User {email} unexpectedly has no UserProfile.')
+            raise e
+        pi_profile.middle_name = data['middle_name']
+        pi_profile.upgrade_request = utc_now_offset_aware()
+        pi_profile.save()
+
+        # Create an unverified, primary EmailAddress for the new User object.
+        try:
+            EmailAddress.objects.create(
+                user=pi,
+                email=email,
+                verified=False,
+                primary=True)
+        except IntegrityError as e:
+            self.logger.error(
+                f'EmailAddress {email} unexpectedly already exists.')
+            raise e
+
+        return pi
+    
+    def __handle_manager_data(self, form_data):
+        """Return the requested manager. If the manager did not exist, create a
+        new User and UserProfile."""
+        # If an existing manager was selected, return the existing User object.
+        step_number = self.step_numbers_by_form_name['existing_manager']
+        data = form_data[step_number]
+        if data['manager']:
+            return data['manager']
+
+        # Create a new User object intended to be a new manager.
+        step_number = self.step_numbers_by_form_name['new_manager']
+        data = form_data[step_number]
+        email = data['email']
+        try:
+            manager = User.objects.create(
+                username=email,
+                first_name=data['first_name'],
+                last_name=data['last_name'],
+                email=email,
+                is_active=True)
+        except IntegrityError as e:
+            self.logger.error(f'User {email} unexpectedly exists.')
+            raise e
+
+        # Set the user's middle name in the UserProfile; 
+        # generate a manager request.
+        try:
+            manager_profile = manager.userprofile
+        except UserProfile.DoesNotExist as e:
+            self.logger.error(
+                f'User {email} unexpectedly has no UserProfile.')
+            raise e
+        manager_profile.middle_name = data['middle_name']
+        manager_profile.upgrade_request = utc_now_offset_aware()
+        manager_profile.save()
+
+        # Create an unverified, primary EmailAddress for the new User object.
+        try:
+            EmailAddress.objects.create(
+                user=manager,
+                email=email,
+                verified=False,
+                primary=True)
+        except IntegrityError as e:
+            self.logger.error(
+                f'EmailAddress {email} unexpectedly already exists.')
+            raise e
+
+        return manager
+
+    def __handle_create_new_standalone_cluster(self, form_data, pi, manager):
+        """Create a new project and an allocation to the primary Compute
+        resource."""
+        step_number = self.step_numbers_by_form_name['details']
+        data = self.__set_data_from_previous_steps(step_number, form_data)
+        project_data = form_data[step_number]
+        print(data)
+
+        resource_type, _ = ResourceType.objects.get_or_create(
+            name='Cluster', description='Cluster servers')
+        
+        try:
+            resource_name = project_data["name"].upper() + " Compute"
+            resource = Resource.objects.create(
+                name=resource_name, resource_type=resource_type
+            )
+            resource.description = project_data["description"]
+            resource.save()
+        except IntegrityError as e:
+            self.logger.error(
+                f'Resource {project_data["name"]} unexpectedly already exists.')
+            raise e
+        
+        # TODO: How many units should I allocate?
+        num_service_units = settings.ALLOCATION_MAX
+        project = create_project_with_compute_allocation(project_data['name'], 
+                                                         resource, 
+                                                         num_service_units)
+        
+        pi_role = ProjectUserRoleChoice.objects.get(name='Principal Investigator')
+        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
+        active_status = ProjectUserStatusChoice.objects.get(name='Active')
+        pi_project_user = ProjectUser.objects.create(
+            user=pi, project=project, role=pi_role, status=active_status)
+        manager_project_user = ProjectUser.objects.create(
+            user=manager, project=project, role=manager_role, 
+            status=active_status)
+        
+        project_users = [pi_project_user, manager_project_user]
+
+        runner_factory = NewProjectUserRunnerFactory()
+        for project_user in project_users:
+            runner = runner_factory.get_runner(
+                project_user, NewProjectUserSource.AUTO_ADDED,
+                email_strategy=DropEmailStrategy())
+            runner.run()
+
+        return project
+
+    def __set_data_from_previous_steps(self, step, dictionary):
+        """Update the given dictionary with data from previous steps."""
+        details_step = self.step_numbers_by_form_name['details']
+        existing_pi_step = self.step_numbers_by_form_name['existing_pi']
+        new_pi_step = self.step_numbers_by_form_name['new_pi']
+        existing_manager_step = self.step_numbers_by_form_name['existing_manager']
+        new_manager_step = self.step_numbers_by_form_name['new_manager']
+        if step > new_pi_step:
+            existing_pi_form_data = self.get_cleaned_data_for_step(
+                str(existing_pi_step))
+            new_pi_form_data = self.get_cleaned_data_for_step(str(new_pi_step))
+            if existing_pi_form_data['PI'] is not None:
+                pi = existing_pi_form_data['PI']
+                pi_string = f'{pi.first_name} {pi.last_name} ({pi.email})'
+                dictionary.update({
+                    'breadcrumb_pi': (
+                        f'Existing PI: {pi_string}'),
+                    'pi': pi_string
+                })
+            else:
+                first_name = new_pi_form_data['first_name']
+                last_name = new_pi_form_data['last_name']
+                email = new_pi_form_data['email']
+                pi_string = f'{first_name} {last_name} ({email})'
+                dictionary.update({
+                    'breadcrumb_pi': (
+                        f'New PI: {pi_string}'),
+                    'pi': pi_string
+                })
+
+        if step > new_manager_step:
+            existing_manager_form_data = self.get_cleaned_data_for_step(
+                str(existing_manager_step))
+            new_manager_form_data = self.get_cleaned_data_for_step(str(new_manager_step))
+            if existing_manager_form_data['manager'] is not None:
+                manager = existing_manager_form_data['manager']
+                dictionary.update({
+                    'breadcrumb_manager': (
+                        f'Existing manager: {manager.first_name} {manager.last_name} '
+                        f'({manager.email})'),
+                    'manager': (f'{manager.first_name} {manager.last_name} ({manager.email})')
+                })
+            else:
+                first_name = new_manager_form_data['first_name']
+                last_name = new_manager_form_data['last_name']
+                email = new_manager_form_data['email']
+                manager_string = f'{first_name} {last_name} ({email})'
+                dictionary.update({
+                    'breadcrumb_manager': (
+                        f'New manager: {manager_string}'),
+                    'manager': manager_string
+                })
+
+        if step > details_step:
+            details_form_data = self.get_cleaned_data_for_step(
+                str(details_step))
+            name = details_form_data['name']
+            dictionary.update({'breadcrumb_project': name.title()})
