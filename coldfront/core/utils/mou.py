@@ -34,17 +34,22 @@ def get_mou_filename(request_obj):
     from coldfront.core.allocation.models import SecureDirRequest
     from coldfront.core.project.models import SavioProjectAllocationRequest
 
-    fs = settings.FILE_STORAGE
+    project_name = request_obj.project.name
+    last_name = ''
     type_ = ''
+
+    fs = settings.FILE_STORAGE
     if isinstance(request_obj, SavioProjectAllocationRequest):
+        last_name = request_obj.pi.last_name
         type_ += fs['details']['NEW_PROJECT_REQUEST_MOU']['filename_type']
     elif isinstance(request_obj, AllocationAdditionRequest):
+        last_name = request_obj.requester.last_name
         type_ += fs[
             'details']['SERVICE_UNITS_PURCHASE_REQUEST_MOU']['filename_type']
     elif isinstance(request_obj, SecureDirRequest):
+        last_name = request_obj.pi.last_name
         type_ += fs['details']['SECURE_DIRECTORY_REQUEST_MOU']['filename_type']
-    project_name = request_obj.project.name
-    last_name = request_obj.requester.last_name
+
     filename = f'{project_name}_{last_name}_{type_}.pdf'
     return filename
 

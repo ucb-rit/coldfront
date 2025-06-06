@@ -1,0 +1,34 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+  Secure Directory Request: Directory Name
+{% endblock %}
+
+
+{% block content %}
+
+  <h1>Secure Directory: Directory Name</h1><hr>
+
+  <ol class="breadcrumb">
+    <li>{{ breadcrumb_project }}</li>
+    <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+    <li>{{ breadcrumb_pi }}</li>
+    <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+    <li>{{ breadcrumb_rdm_consultation }}</li>
+  </ol>
+
+  <p>Please provide the name of the secure directory you are requesting.</p>
+
+  <p>
+    For example, to request the secure directories <em>{{ scratch_path }}/{{ directory_name_prefix }}example</em> and
+    <em>{{ groups_path }}/{{ directory_name_prefix }}example</em>, you would provide <strong>example</strong>.
+  </p>
+  <p>
+    Note that you will receive both a groups and a scratch secure directory upon approval of this request.
+    Both directories will have the same name on the cluster.
+  </p>
+
+  {{ block.super }}
+
+{% endblock %}

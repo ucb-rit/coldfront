@@ -20,12 +20,10 @@ from coldfront.core.allocation.models import (Allocation,
                                               AllocationStatusChoice,
                                               AllocationUserAttribute,
                                               AllocationUserStatusChoice)
-from coldfront.core.allocation.utils import get_allocation_user_cluster_access_status
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.allocation.utils import get_project_compute_resource_name
 # from coldfront.core.grant.models import Grant
-from coldfront.core.allocation.utils_.secure_dir_utils import \
-    pi_eligible_to_request_secure_dir
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import is_project_eligible_for_secure_dirs
 from coldfront.core.billing.utils.queries import is_project_billing_id_required_and_missing
 from coldfront.core.project.forms import (ProjectAddUserForm,
                                           ProjectAddUsersToAllocationForm,
@@ -48,6 +46,7 @@ from coldfront.core.project.utils import render_project_compute_usage
 from coldfront.core.project.utils_.addition_utils import can_project_purchase_service_units
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunnerFactory
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
+from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.project.utils_.renewal_utils import is_any_project_pi_renewable
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
@@ -139,8 +138,7 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 allocation_obj.allocationuserattribute_set.select_related(
                     'allocation_user__user'
                 ).filter(
-                    allocation_attribute_type__name='Cluster Account Status',
-                    value__in=['Pending - Add', 'Processing', 'Active'])
+                    allocation_attribute_type__name='Cluster Account Status')
             for status in statuses:
                 username = status.allocation_user.user.username
                 cluster_access_statuses[username] = status.value
@@ -266,10 +264,14 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         context['cluster_name'] = get_project_compute_resource_name(
             self.object).replace(' Compute', '')
 
-        # Only active PIs of active FCAs, ICAs and Condos can request
-        # secure directories
-        context['can_request_sec_dir'] = \
-            pi_eligible_to_request_secure_dir(self.request.user)
+        # Display the "Request a Secure Directory" button when the functionality
+        # is enabled, the project is eligible, and the user is allowed to update
+        # the project.
+        context['request_secure_directory_visible'] = (
+            flag_enabled('SECURE_DIRS_REQUESTABLE') and
+            is_project_eligible_for_secure_dirs(self.object) and
+            (self.request.user.is_superuser or
+             context.get('is_allowed_to_update_project', False)))
 
         # show survey responses if available
         allocation_requests = SavioProjectAllocationRequest.objects.filter(
@@ -1118,8 +1120,9 @@ class ProjectUserDetail(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
             else:
                 try:
                     cluster_access_status = \
-                        get_allocation_user_cluster_access_status(
-                            allocation_obj, project_user_obj.user).value
+                        allocation_obj.allocationuserattribute_set.get(
+                            allocation_user__user=project_user_obj.user,
+                            allocation_attribute_type__name='Cluster Account Status').value
                 except AllocationUserAttribute.DoesNotExist:
                     cluster_access_status = 'None'
                 except AllocationUserAttribute.MultipleObjectsReturned:

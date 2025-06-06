@@ -1,0 +1,33 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+{{ PRIMARY_CLUSTER_NAME }} Project Request - Billing ID
+{% endblock %}
+
+
+{% block content %}
+
+<h1>{{ PRIMARY_CLUSTER_NAME }}: Billing ID</h1><hr>
+
+<ol class="breadcrumb">
+  <li>Allowance: {{ computing_allowance.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>Allocation Period: {{ allocation_period.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>{{ breadcrumb_pi }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>
+    {% if breadcrumb_pooling %}
+      Pooling
+    {% else %}
+      Not Pooling
+    {% endif %}
+  </li>
+</ol>
+
+<p>Please provide an LBL Project ID, which may be used for billing:</p>
+
+{{ block.super }}
+
+{% endblock %}

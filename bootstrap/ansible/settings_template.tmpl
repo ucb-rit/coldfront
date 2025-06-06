@@ -21,7 +21,7 @@ CENTER_BASE_URL = '{{ full_host_path }}'
 CENTER_HELP_URL = CENTER_BASE_URL + '/help'
 CENTER_PROJECT_RENEWAL_HELP_URL = CENTER_BASE_URL + '/help'
 
-EMAIL_HOST = '{{ email_host}}'
+EMAIL_HOST = '{{ email_host }}'
 EMAIL_PORT = {{ email_port }}
 EMAIL_SUBJECT_PREFIX = '{{ email_subject_prefix }}'
 # A list of admin email addresses to be notified about new requests and other
@@ -62,8 +62,13 @@ STREAM_LOGS_TO_STDOUT = True
 STREAM_LOGS_TO_STDOUT = False
 {% endif %}
 
+# TODO: Ideally, come up with an approach wherein admins may subscribe to
+#  individual types of events.
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = {{ request_approval_cc_list }}
+# A list of admin email addresses to notify when a project-user removal request
+# is processed.
+PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST = {{ project_user_removal_request_processed_email_admin_list }}
 
 {% if allow_all_jobs | bool %}
 # Allow all jobs, bypassing all checks at job submission time.
@@ -298,6 +303,8 @@ FLAGS = {
     'SECURE_DIRS_REQUESTABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SERVICE_UNITS_PURCHASABLE': [{'condition': 'boolean', 'value': {{ flag_brc_enabled }}}],
     'SSO_ENABLED': [{'condition': 'boolean', 'value': {{ flag_sso_enabled }}}],
+    'USER_DEPARTMENTS_ENABLED': [{'condition': 'app installed', 'value': 'coldfront.plugins.departments'}],
+    'HARDWARE_PROCUREMENTS_ENABLED': [{'condition': 'app installed', 'value': 'coldfront.plugins.hardware_procurements'}],
     'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': {{ flag_mou_generation_enabled }}}],
     'RENEWAL_SURVEY_ENABLED': [{'condition': 'boolean', 'value': {{ flag_renewal_survey_enabled }}}],
 }
@@ -317,6 +324,47 @@ if (not FLAGS['SSO_ENABLED'][0]['value'] and
     raise ImproperlyConfigured(
         'LINK_LOGIN_ENABLED should only be enabled when SSO_ENABLED is '
         'enabled.')
+
+{% if plugin_departments_enabled is defined and plugin_departments_enabled | bool %}
+#------------------------------------------------------------------------------
+# Plugin: departments
+#------------------------------------------------------------------------------
+
+EXTRA_EXTRA_APPS += [
+    'coldfront.plugins.departments'
+]
+
+DEPARTMENTS_DEPARTMENT_DISPLAY_NAME = '{{ plugin_departments_department_display_name }}'
+DEPARTMENTS_DEPARTMENT_DATA_SOURCE = '{{ plugin_departments_department_data_source }}'
+{% endif %}
+
+{% if plugin_hardware_procurements_enabled is defined and plugin_hardware_procurements_enabled | bool -%}
+#------------------------------------------------------------------------------
+# Plugin: hardware_procurements
+#------------------------------------------------------------------------------
+
+EXTRA_EXTRA_APPS += [
+    'coldfront.plugins.hardware_procurements'
+]
+
+HARDWARE_PROCUREMENTS_CONFIG = {
+    'DATA_SOURCE': '{{ plugin_hardware_procurements_data_source_modules_by_short_name[plugin_hardware_procurements.data_source]}}',
+    {% if plugin_hardware_procurements.data_source == 'cached' -%}
+    'OPTIONS': {
+        'cache_key': '{{ plugin_hardware_procurements.data_source_options.cache_key }}',
+        'cached_data_source': '{{ plugin_hardware_procurements_data_source_modules_by_short_name[plugin_hardware_procurements.data_source_options.cached_data_source] }}',
+        'cached_data_source_options': {{ plugin_hardware_procurements.data_source_options.cached_data_source_options | to_json }},
+    },
+    {%- else -%}
+    'OPTIONS': {% if plugin_hardware_procurements.data_source_options is not none -%}
+      {{ plugin_hardware_procurements.data_source_options | to_json }}
+    {%- else -%}
+      {}
+    {%- endif -%},
+    {%- endif %}
+}
+{%- endif -%}
+
 
 {% if file_storage_backend == 'google_drive' %}
 #------------------------------------------------------------------------------

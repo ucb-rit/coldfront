@@ -1,0 +1,30 @@
+{% extends "common/wizard_base.html" %}
+
+{% load feature_flags %}
+
+
+{% block title %}
+{{ PRIMARY_CLUSTER_NAME }} Project Request - New PI
+{% endblock %}
+
+
+{% block content %}
+
+<h1>{{ PRIMARY_CLUSTER_NAME }}: Principal Investigator</h1><hr>
+
+<ol class="breadcrumb">
+  <li>Allowance: {{ computing_allowance.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>Allocation Period: {{ allocation_period.name }}</li>
+</ol>
+
+<p>Provide details about a new user, who will be a Principal Investigator for the project. An existing user should have been selected in the previous step.</p>
+
+{% flag_enabled 'LRC_ONLY' as lrc_only %}
+{% if lrc_only %}
+  <p>Note: Only LBL employees, users with an "@lbl.gov" email, can be a PI.</p>
+{% endif %}
+
+{{ block.super }}
+
+{% endblock %}

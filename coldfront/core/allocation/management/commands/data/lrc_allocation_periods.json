@@ -23,5 +23,10 @@
         "name": "Allowance Year 2025 - 2026",
         "start_date": "2025-10-01",
         "end_date": "2026-09-30"
+    },
+    {
+        "name": "Allowance Year 2026 - 2027",
+        "start_date": "2026-10-01",
+        "end_date": "2027-09-30"
     }
 ]

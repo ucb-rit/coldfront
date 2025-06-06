@@ -15,6 +15,7 @@ def settings_value(name):
         'CENTER_HELP_EMAIL',
         'CENTER_HELP_URL',
         'CENTER_USER_GUIDE',
+        'DEPARTMENTS_DEPARTMENT_DISPLAY_NAME',
         'DISPLAY_TIME_ZONE',
         'EMAIL_PROJECT_REVIEW_CONTACT',
         'PORTAL_NAME',
@@ -60,4 +61,4 @@ def get_value_from_dict(dict_data, key):
     usage example {{ your_dict|get_value_from_dict:your_key }}
     """
     if key:
-        return dict_data.get(key)
+        return dict_data.get(key, "")

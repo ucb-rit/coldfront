@@ -76,6 +76,43 @@ User Profile{% if not requester_is_viewed_user %}: {{ viewed_user.username }}{% 
             <td>You do not have a cluster account.</td>
           {% endif %}
         </tr>
+
+        {% flag_enabled 'USER_DEPARTMENTS_ENABLED' as user_departments_enabled %}
+        {% if user_departments_enabled %}
+        <tr>
+          <th scope="row">
+            {{ department_display_name }}s:
+          </th>
+          <td>
+            {% if auth_department_list|length == 0 and non_auth_department_list|length == 0 %}
+              -
+            {% else %}
+              <ul class="float-left">
+                {% for department in auth_department_list %}
+                  <li>
+                    {{ department }}
+                    <span class="badge badge-success" title="Verified by an institutional data source.">
+                      <i class="fas fa-check"></i>
+                    </span>
+                  </li>
+                {% endfor %}
+                {% for department in non_auth_department_list %}
+                  <li>
+                    {{ department }}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% if requester_is_viewed_user %}
+              <a href="{% url 'update-departments' %}" class="btn btn-secondary float-right">
+                <i class="far fa-edit" aria-hidden="true"></i>
+                Update
+              </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+
 <!--        {% comment %}-->
 <!--        <tr>-->
 <!--          <th scope="row">PI Status:</th>-->
@@ -97,20 +134,7 @@ User Profile{% if not requester_is_viewed_user %}: {{ viewed_user.username }}{% 
 <!--          </td>-->
 <!--        </tr>-->
 <!--        {% endcomment %}-->
-        <tr>
-          <th scope="row" nowrap>Phone Number: </th>
-          <td>
-            {% if viewed_user.userprofile.phone_number %}
-              {{ viewed_user.userprofile.phone_number }}
-              <a href="{% url 'user-profile-update' %}" class="btn btn-secondary float-right">
-                <i class="far fa-edit" aria-hidden="true"></i>
-                Update
-              </a>
-            {% else %}
-                -
-            {% endif %}
-          </td>
-        </tr>
+
         {% flag_enabled 'LRC_ONLY' as lrc_only %}
         {% if lrc_only %}
           <tr>

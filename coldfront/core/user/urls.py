@@ -4,8 +4,9 @@ from django.contrib.auth.views import PasswordResetCompleteView
 from django.contrib.auth.views import PasswordResetConfirmView
 from django.contrib.auth.views import PasswordResetDoneView
 from django.contrib.auth.views import PasswordResetView
-from django.urls import path, reverse_lazy
+from django.urls import include, path, reverse_lazy
 
+from flags.urls import flagged_path
 from flags.urls import flagged_paths
 
 import coldfront.core.user.views as user_views
@@ -80,7 +81,6 @@ with flagged_paths('BASIC_AUTH_ENABLED') as f_path:
                name='password-reset-complete'),
     ]
 
-
 with flagged_paths('LINK_LOGIN_ENABLED') as f_path:
     urlpatterns += [
         f_path('request-login-link/',
@@ -90,6 +90,17 @@ with flagged_paths('LINK_LOGIN_ENABLED') as f_path:
                link_login_views.LinkLoginView.as_view(),
                name='link-login'),
     ]
+
+
+# Note: The feature flag generally abstracts away the check for whether the app
+# is installed. However, the app module is still resolved, which may be
+# problematic if it is not installed, so the check is manually done here.
+if 'coldfront.plugins.departments' in settings.INSTALLED_APPS:
+    urlpatterns.append(
+        flagged_path(
+            'USER_DEPARTMENTS_ENABLED',
+            '',
+            include('coldfront.plugins.departments.urls')))
 
 
 with flagged_paths('SSO_ENABLED') as f_path:

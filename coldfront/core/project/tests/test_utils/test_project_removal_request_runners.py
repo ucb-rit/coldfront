@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.conf import settings
 from django.core import mail
 
 from coldfront.api.statistics.utils import create_project_allocation
@@ -606,6 +607,8 @@ class TestProjectRemovalRequestProcessingRunner(TestRemovalRequestRunnerBase):
         expected_from = settings.EMAIL_SENDER
         expected_to = {
             user.email for user in [self.user1, self.pi1, self.manager]}
+        expected_to.update(
+            settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST)
         user_name = f'{self.user1.first_name} {self.user1.last_name}'
         pi_name = f'{self.pi1.first_name} {self.pi1.last_name}'
         project_name = self.project1.name

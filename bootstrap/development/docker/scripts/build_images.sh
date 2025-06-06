@@ -39,3 +39,8 @@ docker build \
     -f bootstrap/development/docker/images/db-postgres-shell.Dockerfile \
     --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
     -t coldfront-db-postgres-shell:$IMAGE_TAG .
+
+docker build \
+    -f bootstrap/development/docker/images/qcluster.Dockerfile \
+    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
+    -t coldfront-qcluster:$IMAGE_TAG .

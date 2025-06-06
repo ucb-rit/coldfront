@@ -1,10 +1,17 @@
+import copy
+
+from datetime import datetime
+
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
 
 def job_query_filtering(job_list, data):
-    if data.get('status'):
-        job_list = job_list.filter(
-            jobstatus__icontains=data.get('status'))
+    status = data.get('status')
+    if status:
+        if status == 'COMPLETING':
+            job_list = job_list.filter(jobstatus__in=['COMPLETED', 'COMPLETING'])
+        else:
+            job_list = job_list.filter(jobstatus__icontains=status)
 
     if data.get('jobslurmid'):
         job_list = job_list.filter(
@@ -70,3 +77,44 @@ def job_query_filtering(job_list, data):
             job_list = job_list.filter(enddate__gt=end_date)
 
     return job_list
+
+
+class JobSearchFilterSessionStorage(object):
+    """A class that stores job search filters in the user's session for
+    retrieval."""
+
+    def __init__(self, request):
+        self._request = request
+        self._session_key = 'job_search_filters'
+        self._date_keys = ('submitdate', 'startdate', 'enddate')
+        self._date_format = '%m/%d/%Y, %H:%M:%S'
+
+    def get(self):
+        if self._session_key not in self._request.session:
+            return {}
+
+        serialized_filters = self._request.session[self._session_key]
+
+        return self._deserialize_filters(serialized_filters)
+
+    def set(self, filters):
+        self._request.session[self._session_key] = self._serialize_filters(
+            filters)
+
+    def _deserialize_filters(self, filters):
+        filters_copy = copy.deepcopy(filters)
+        for date_key in self._date_keys:
+            serialized_date = filters_copy.get(date_key, None)
+            if serialized_date is not None:
+                filters_copy[date_key] = datetime.strptime(
+                    serialized_date, self._date_format)
+        return filters_copy
+
+    def _serialize_filters(self, filters):
+        filters_copy = copy.deepcopy(filters)
+        for date_key in self._date_keys:
+            unserialized_date = filters_copy.get(date_key, None)
+            if unserialized_date is not None:
+                filters_copy[date_key] = datetime.strftime(
+                    unserialized_date, self._date_format)
+        return filters_copy

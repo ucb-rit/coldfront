@@ -33,8 +33,14 @@
       {% endwith %}
     </p>
     <p class="card-text text-justify">
-      <strong>Name: </strong>
+      <strong>Project Name: </strong>
       {{ secure_dir_request.project.name }}
+    </p>
+    <p class="card-text text-justify">
+      <strong>PI: </strong>
+      {% with pi=secure_dir_request.pi %}
+        {{ pi.first_name }} {{ pi.last_name }} ({{ pi.email }})
+      {% endwith %}
     </p>
     <p class="card-text text-justify">
       <strong>Department: </strong>

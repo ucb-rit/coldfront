@@ -53,6 +53,11 @@ services:
     volumes:
       - ../../..:/var/www/coldfront_app/coldfront
 
+  qcluster:
+    image: coldfront-qcluster
+    volumes:
+      - ../../..:/var/www/coldfront_app/coldfront
+
 volumes:
   db-postgres:
     external: false

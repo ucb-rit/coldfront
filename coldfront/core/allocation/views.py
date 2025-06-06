@@ -42,10 +42,13 @@ from coldfront.core.allocation.signals import (allocation_activate_user,
 from coldfront.core.allocation.utils import (generate_guauge_data_from_usage,
                                              get_user_resources,
                                              generate_user_su_pie_data)
+from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirectory
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)
 from coldfront.core.resource.models import Resource
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import get_domain_url, import_from_settings
 from coldfront.core.utils.mail import send_email_template
@@ -98,14 +101,11 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
 
         pk = self.kwargs.get('pk')
         allocation_obj = get_object_or_404(Allocation, pk=pk)
+        secure_directory = SecureDirectory(allocation_obj)
 
-        is_pi = allocation_obj.project.projectuser_set.filter(
-            user=self.request.user,
-            role__name='Principal Investigator',
-            status__name='Active').exists()
-
-        if is_pi:
-            return True
+        if self._is_secure_dir_allocation(allocation_obj):
+            if secure_directory.user_can_manage(self.request.user):
+                return True
 
         user_can_access_project = allocation_obj.project.projectuser_set.filter(
             user=self.request.user, status__name__in=['Active', 'New', ]).exists()
@@ -122,53 +122,6 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         context = super().get_context_data(**kwargs)
         pk = self.kwargs.get('pk')
         allocation_obj = get_object_or_404(Allocation, pk=pk)
-        allocation_users = allocation_obj.allocationuser_set.order_by('user__username')
-
-        # Manually display "Service Units" for each user if applicable.
-        # TODO: Avoid doing this manually.
-        kwargs = {
-            'allocation_attribute_type__name__in': [
-                'Service Units', 'Billing Activity'],
-        }
-        has_service_units = allocation_obj.allocationattribute_set.filter(
-            **kwargs)
-        allocation_user_su_usages = {}
-        allocation_user_billing_ids = {}
-        for allocation_user in allocation_users:
-            username = allocation_user.user.username
-            user_attributes = \
-                allocation_user.allocationuserattribute_set.select_related(
-                    'allocationuserattributeusage'
-                ).filter(**kwargs)
-            try:
-                su_attribute = user_attributes.filter(
-                    allocation_attribute_type__name='Service Units').first()
-                usage = str(su_attribute.allocationuserattributeusage.value)
-            except (AllocationUserAttribute.DoesNotExist,
-                    AttributeError,
-                    ValueError):
-                usage = '0.00'
-            allocation_user_su_usages[username] = usage
-            if not flag_enabled('LRC_ONLY'):
-                continue
-            try:
-                billing_attribute = user_attributes.filter(
-                    allocation_attribute_type__name='Billing Activity').first()
-                billing_id = BillingActivity.objects.get(
-                    pk=int(billing_attribute.value)).full_id()
-            except (AllocationUserAttribute.DoesNotExist,
-                    AttributeError,
-                    BillingActivity.DoesNotExist,
-                    ValueError):
-                billing_id = 'N/A'
-            allocation_user_billing_ids[username] = billing_id
-
-        context['has_service_units'] = has_service_units
-        context['allocation_user_su_usages'] = allocation_user_su_usages
-        if flag_enabled('LRC_ONLY'):
-            context['allocation_user_billing_ids'] = \
-                allocation_user_billing_ids
-
         if self.request.user.is_superuser:
             attributes_with_usage = [attribute for attribute in allocation_obj.allocationattribute_set.all(
             ).order_by('allocation_attribute_type__name') if hasattr(attribute, 'allocationattributeusage')]
@@ -182,26 +135,6 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
 
             attributes = [attribute for attribute in allocation_obj.allocationattribute_set.filter(
                 allocation_attribute_type__is_private=False)]
-
-        # Annotate each attribute with a display value.
-        filtered_attributes = []
-        for attribute in attributes:
-            is_billing_activity = (
-                attribute.allocation_attribute_type.name == 'Billing Activity')
-            if is_billing_activity:
-                attribute.display_name = 'Billing ID'
-                try:
-                    attribute.display_value = BillingActivity.objects.get(
-                        pk=int(attribute.value)).full_id()
-                except (BillingActivity.DoesNotExist, ValueError):
-                    attribute.display_value = attribute.value
-                if flag_enabled('LRC_ONLY'):
-                    filtered_attributes.append(attribute)
-            else:
-                attribute.display_name = str(attribute)
-                attribute.display_value = attribute.value
-                filtered_attributes.append(attribute)
-
         guage_data = []
         invalid_attributes = []
         for attribute in attributes_with_usage:
@@ -230,7 +163,6 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
 
         context['guage_data'] = guage_data
         context['attributes_with_usage'] = attributes_with_usage
-        context['attributes'] = filtered_attributes
 
         # Can the user update the project?
         if self.request.user.is_superuser:
@@ -245,14 +177,6 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         else:
             context['is_allowed_to_update_project'] = False
 
-        # Filter users by whether they have been removed from the allocation.
-        allocation_user_status_choice_removed = \
-            AllocationUserStatusChoice.objects.get(name='Removed')
-        context['allocation_users'] = \
-            allocation_users.exclude(status=allocation_user_status_choice_removed)
-        context['allocation_users_removed_from_proj'] = \
-            allocation_users.filter(status=allocation_user_status_choice_removed)
-
         if self.request.user.is_superuser:
             notes = allocation_obj.allocationusernote_set.all()
         else:
@@ -262,24 +186,7 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         context['notes'] = notes
         context['ALLOCATION_ENABLE_ALLOCATION_RENEWAL'] = ALLOCATION_ENABLE_ALLOCATION_RENEWAL
 
-        context['secure_dir'] = \
-            allocation_obj.resources.filter(
-                name__icontains='Directory').exists()
-
-        can_edit_users = False
-        if allocation_obj.project.projectuser_set.filter(
-                user=self.request.user,
-                role__name='Principal Investigator',
-                status__name='Active').exists():
-            can_edit_users = True
-
-        if self.request.user.is_superuser:
-            can_edit_users = True
-
-        context['can_edit_users'] = can_edit_users
-
-        pie_data = generate_user_su_pie_data(allocation_user_su_usages.items())
-        context['pie_data'] = pie_data
+        self._update_context(allocation_obj, attributes, context)
 
         return context
 
@@ -421,6 +328,161 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
             context['allocation'] = allocation_obj
 
             return render(request, self.template_name, context)
+
+    def _update_context(self, allocation_obj, attributes, context):
+        """Update the given context (to be passed to the template), in
+        part based on the type of the Allocation."""
+        # Annotate each attribute with a display value.
+        filtered_attributes = []
+        for attribute in attributes:
+            is_billing_activity = (
+                attribute.allocation_attribute_type.name == 'Billing Activity')
+            if is_billing_activity:
+                attribute.display_name = 'Billing ID'
+                try:
+                    attribute.display_value = BillingActivity.objects.get(
+                        pk=int(attribute.value)).full_id()
+                except (BillingActivity.DoesNotExist, ValueError):
+                    attribute.display_value = attribute.value
+                if flag_enabled('LRC_ONLY'):
+                    filtered_attributes.append(attribute)
+            else:
+                attribute.display_name = str(attribute)
+                attribute.display_value = attribute.value
+                filtered_attributes.append(attribute)
+        context['attributes'] = filtered_attributes
+
+        # Only display non-removed users in the table of users.
+        allocation_users = allocation_obj.allocationuser_set.order_by(
+            'user__username')
+        context['allocation_users'] = allocation_users.exclude(
+            status__name='Removed')
+
+        # Add additional context for compute allocations.
+        if self._is_compute_allocation(allocation_obj):
+            self._add_compute_specific_context(
+                allocation_obj, allocation_users, context)
+
+        # Add additional context for secure directory allocations.
+        if self._is_secure_dir_allocation(allocation_obj):
+            self._add_secure_dir_specific_context(allocation_obj, context)
+
+    def _add_compute_specific_context(self, allocation_obj, allocation_users,
+                                      context):
+        """Update the given context, given that the Allocation is a
+        compute allocation."""
+        # Display service units usage for each AllocationUser in the table.
+        context['allocation_user_usages_visible'] = True
+        service_units_filter = {
+            'allocation_attribute_type__name': 'Service Units',
+        }
+        allocation_user_su_usages = {}
+        for allocation_user in allocation_users:
+            attributes = \
+                allocation_user.allocationuserattribute_set.select_related(
+                    'allocationuserattributeusage'
+                ).filter(**service_units_filter)
+            try:
+                su_attribute = attributes.first()
+                usage = str(su_attribute.allocationuserattributeusage.value)
+            except (AllocationUserAttribute.DoesNotExist,
+                    AttributeError,
+                    ValueError):
+                usage = '0.00'
+            allocation_user_su_usages[allocation_user.user.username] = usage
+        context['allocation_user_su_usages'] = allocation_user_su_usages
+
+        pie_data = generate_user_su_pie_data(allocation_user_su_usages.items())
+        context['pie_data'] = pie_data
+
+        # Display a separate table of removed users.
+        context['removed_users_visible'] = True
+        context['allocation_users_removed_from_proj'] = allocation_users.filter(
+            status__name='Removed')
+
+        # For LRC deployments, display the billing ID(s) for each user.
+        is_lrc = flag_enabled('LRC_ONLY')
+        if is_lrc:
+            self._add_lrc_billing_id_context(
+                allocation_obj, allocation_users, context)
+
+    def _add_lrc_billing_id_context(self, allocation_obj, allocation_users,
+                                    context):
+        """Update the given context, given that the Allocation and
+        AllocationUsers have associated LRC billing IDs.
+
+            - For all AllocationUsers, render the billing ID used for
+              the monthly user account fee.
+            - If the allowance is a recharge allowance, for all
+              Allocation Users, render the billing ID used for the
+              monthly recharge fee.
+        """
+        # User account fee billing IDs
+        context['user_account_fee_billing_ids_visible'] = True
+        if context['user_account_fee_billing_ids_visible']:
+            user_account_fee_billing_ids = {}
+            for allocation_user in allocation_users:
+                user = allocation_user.user
+                try:
+                    billing_activity = user.userprofile.billing_activity
+                    billing_id = billing_activity.full_id()
+                except (AttributeError, ValueError):
+                    billing_id = 'N/A'
+                user_account_fee_billing_ids[user.username] = billing_id
+            context['user_account_fee_billing_ids'] = \
+                user_account_fee_billing_ids
+
+        # Recharge fee billing IDs
+        computing_allowance_interface = ComputingAllowanceInterface()
+        allowance_resource = \
+            computing_allowance_interface.allowance_from_project(
+                allocation_obj.project)
+        context['recharge_fee_billing_ids_visible'] = ComputingAllowance(
+            allowance_resource).is_recharge()
+        if context['recharge_fee_billing_ids_visible']:
+            billing_activity_filter = {
+                'allocation_attribute_type__name': 'Billing Activity'
+            }
+            recharge_fee_billing_ids = {}
+            for allocation_user in allocation_users:
+                attributes = allocation_obj.allocationattribute_set.filter(
+                    **billing_activity_filter)
+                try:
+                    billing_attribute = attributes.first()
+                    billing_id = BillingActivity.objects.get(
+                        pk=int(billing_attribute.value)).full_id()
+                except (AllocationUserAttribute.DoesNotExist,
+                        AttributeError,
+                        BillingActivity.DoesNotExist,
+                        ValueError):
+                    billing_id = 'N/A'
+                recharge_fee_billing_ids[allocation_user.user.username] = \
+                    billing_id
+            context['recharge_fee_billing_ids'] = recharge_fee_billing_ids
+
+    def _add_secure_dir_specific_context(self, allocation_obj, context):
+        """Update the given context, given that the Allocation is a
+        secure directory allocation."""
+        secure_directory = SecureDirectory(allocation_obj)
+        # Allow users to be added/removed by privileged users.
+        add_remove_users_buttons_visible = secure_directory.user_can_manage(
+            self.request.user)
+        context['add_remove_users_buttons_visible'] = \
+            add_remove_users_buttons_visible
+
+    @staticmethod
+    def _is_compute_allocation(allocation_obj):
+        """Return whether the Allocation represents access to compute
+        resources."""
+        return allocation_obj.resources.filter(
+            name__endswith=' Compute').exists()
+
+    @staticmethod
+    def _is_secure_dir_allocation(allocation_obj):
+        """Return whether the Allocation represents access to a secure
+        directory."""
+        return allocation_obj.resources.filter(
+            name__endswith=' P2/P3 Directory').exists()
 
 
 class AllocationListView(LoginRequiredMixin, UserPassesTestMixin, ListView):

@@ -1,0 +1,28 @@
+{% extends "common/wizard_base.html" %}
+
+
+{% block title %}
+{{ PRIMARY_CLUSTER_NAME }} Project Request - Instructional Computing Allowance Details
+{% endblock %}
+
+
+{% block content %}
+
+<h1>{{ PRIMARY_CLUSTER_NAME }}: Instructional Computing Allowance Details</h1><hr>
+
+<ol class="breadcrumb">
+  <li>Allowance: {{ computing_allowance.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>Allocation Period: {{ allocation_period.name }}</li>
+  <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
+  <li>{{ breadcrumb_pi }}</li>
+</ol>
+
+<p>
+  Please provide the following details to acquire an Instructional Compute
+  Allowance on {{ PRIMARY_CLUSTER_NAME }}.
+</p>
+
+{{ block.super }}
+
+{% endblock %}
