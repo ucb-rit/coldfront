@@ -336,6 +336,25 @@ class TestSlurmJobListView(TestJobBase):
         helper_test_status_colors(['COMPLETING'], 'success')
         helper_test_status_colors(['RUNNING'], 'primary')
 
+    def test_completing_status(self):
+        """Testing that searching COMPLETING jobs also returns COMPLETED jobs"""
+        # create 2 jobs with COMPLETING and COMPLETED status
+        self.job1.jobstatus = 'COMPLETING'
+        self.job1.save()
+        self.job1.refresh_from_db()
+        self.job2.jobstatus = 'COMPLETED'
+        self.job2.save()
+        self.job2.refresh_from_db()
+        job3 = Job.objects.create(jobslurmid='12346', jobstatus='FAILED')
+        job3.save()
+        job3.refresh_from_db()
+
+        url = reverse('slurm-job-list') + '?show_all_jobs=on&status=COMPLETING'
+        response = self.get_response(self.admin, url)
+        self.assertContains(response, self.job1.jobslurmid)
+        self.assertContains(response, self.job2.jobslurmid)
+        self.assertNotContains(response, job3.jobslurmid)
+
     def test_search_form_validation_errors(self):
         """Testing error messages raised from JobSearchForm validation"""
 

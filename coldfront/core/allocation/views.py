@@ -47,6 +47,8 @@ from coldfront.core.billing.models import BillingActivity
 from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)
 from coldfront.core.resource.models import Resource
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import get_domain_url, import_from_settings
 from coldfront.core.utils.mail import send_email_template
@@ -365,8 +367,7 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         if self._is_secure_dir_allocation(allocation_obj):
             self._add_secure_dir_specific_context(allocation_obj, context)
 
-    @staticmethod
-    def _add_compute_specific_context(allocation_obj, allocation_users,
+    def _add_compute_specific_context(self, allocation_obj, allocation_users,
                                       context):
         """Update the given context, given that the Allocation is a
         compute allocation."""
@@ -394,15 +395,55 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         pie_data = generate_user_su_pie_data(allocation_user_su_usages.items())
         context['pie_data'] = pie_data
 
-        # For LRC deployments, display the billing ID associated with each user.
-        # TODO: Consider only displaying this for Recharge projects.
-        context['allocation_user_billing_ids_visible'] = flag_enabled(
-            'LRC_ONLY')
-        if context['allocation_user_billing_ids_visible']:
+        # Display a separate table of removed users.
+        context['removed_users_visible'] = True
+        context['allocation_users_removed_from_proj'] = allocation_users.filter(
+            status__name='Removed')
+
+        # For LRC deployments, display the billing ID(s) for each user.
+        is_lrc = flag_enabled('LRC_ONLY')
+        if is_lrc:
+            self._add_lrc_billing_id_context(
+                allocation_obj, allocation_users, context)
+
+    def _add_lrc_billing_id_context(self, allocation_obj, allocation_users,
+                                    context):
+        """Update the given context, given that the Allocation and
+        AllocationUsers have associated LRC billing IDs.
+
+            - For all AllocationUsers, render the billing ID used for
+              the monthly user account fee.
+            - If the allowance is a recharge allowance, for all
+              Allocation Users, render the billing ID used for the
+              monthly recharge fee.
+        """
+        # User account fee billing IDs
+        context['user_account_fee_billing_ids_visible'] = True
+        if context['user_account_fee_billing_ids_visible']:
+            user_account_fee_billing_ids = {}
+            for allocation_user in allocation_users:
+                user = allocation_user.user
+                try:
+                    billing_activity = user.userprofile.billing_activity
+                    billing_id = billing_activity.full_id()
+                except (AttributeError, ValueError):
+                    billing_id = 'N/A'
+                user_account_fee_billing_ids[user.username] = billing_id
+            context['user_account_fee_billing_ids'] = \
+                user_account_fee_billing_ids
+
+        # Recharge fee billing IDs
+        computing_allowance_interface = ComputingAllowanceInterface()
+        allowance_resource = \
+            computing_allowance_interface.allowance_from_project(
+                allocation_obj.project)
+        context['recharge_fee_billing_ids_visible'] = ComputingAllowance(
+            allowance_resource).is_recharge()
+        if context['recharge_fee_billing_ids_visible']:
             billing_activity_filter = {
                 'allocation_attribute_type__name': 'Billing Activity'
             }
-            allocation_user_billing_ids = {}
+            recharge_fee_billing_ids = {}
             for allocation_user in allocation_users:
                 attributes = allocation_obj.allocationattribute_set.filter(
                     **billing_activity_filter)
@@ -415,14 +456,9 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                         BillingActivity.DoesNotExist,
                         ValueError):
                     billing_id = 'N/A'
-                allocation_user_billing_ids[allocation_user.user.username] = \
+                recharge_fee_billing_ids[allocation_user.user.username] = \
                     billing_id
-            context['allocation_user_billing_ids'] = allocation_user_billing_ids
-
-        # Display a separate table of removed users.
-        context['removed_users_visible'] = True
-        context['allocation_users_removed_from_proj'] = allocation_users.filter(
-            status__name='Removed')
+            context['recharge_fee_billing_ids'] = recharge_fee_billing_ids
 
     def _add_secure_dir_specific_context(self, allocation_obj, context):
         """Update the given context, given that the Allocation is a

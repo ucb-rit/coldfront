@@ -159,6 +159,40 @@ plugin_departments_department_display_name: "Department"
 plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.calnet_ldap.CalNetLdapDataSourceBackend"
 
 #------------------------------------------------------------------------------
+# Plugin: hardware_procurements
+#------------------------------------------------------------------------------
+
+plugin_hardware_procurements_enabled: false
+
+# A mapping from short names of data sources to associated module paths.
+plugin_hardware_procurements_data_source_modules_by_short_name:
+  cached: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.cached.CachedDataSourceBackend'
+  dummy: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.dummy.DummyDataSourceBackend'
+  google_sheets: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.google_sheets.GoogleSheetsDataSourceBackend'
+
+# # TODO: Uncomment only the section relevant to the specified data source.
+
+# # Settings: 'cached' backend.
+# plugin_hardware_procurements:
+#   data_source: 'cached'
+#   data_source_options:
+#     cache_key: 'hardware_procurements_data'
+#     cached_data_source: 'google_sheets'
+#     cached_data_source_options:
+#       config_file_path: '/path/to/data-source-options-file.json'
+
+# # Settings: 'google_sheets' backend.
+# plugin_hardware_procurements:
+#   data_source: 'google_sheets'
+#   data_source_options:
+#     config_file_path: '/path/to/data-source-options-file.json'
+
+# # Settings: 'dummy' backend.
+# plugin_hardware_procurements:
+#   data_source: 'dummy'
+#   data_source_options:
+
+#------------------------------------------------------------------------------
 # User-facing strings
 #------------------------------------------------------------------------------
 
@@ -326,6 +360,10 @@ sentry_dsn: ""
 # # events.
 # # TODO: Set these addresses to yours.
 # email_admin_list: []
+# # A list of admin email addresses to be notified about audits of allocation
+# # periods.
+# # TODO: Set these addresses to yours.
+# allocation_period_audit_email_admin_list: []
 # # A list of email addresses to CC when certain requests are processed.
 # # TODO: Set these addresses to yours.
 # request_approval_cc_list: []
@@ -387,6 +425,10 @@ sentry_dsn: ""
 # # events.
 # # TODO: Set these addresses to yours.
 # email_admin_list: []
+# # A list of admin email addresses to be notified about audits of allocation
+# # periods.
+# # TODO: Set these addresses to yours.
+# allocation_period_audit_email_admin_list: []
 # # A list of email addresses to CC when certain requests are processed.
 # # TODO: Set these addresses to yours.
 # request_approval_cc_list: []
@@ -446,6 +488,10 @@ sentry_dsn: ""
 # # A list of admin email addresses to be notified about new requests and other
 # # events.
 # email_admin_list: ['placeholder@dev.dev']
+# # A list of admin email addresses to be notified about audits of allocation
+# # periods.
+# # TODO: Set these addresses to yours.
+# allocation_period_audit_email_admin_list: ['placeholder@dev.dev']
 # # A list of email addresses to CC when certain requests are processed.
 # # TODO: Set these addresses to yours.
 # request_approval_cc_list: ['placeholder@dev.dev']

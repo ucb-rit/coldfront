@@ -38,7 +38,6 @@ INSTALLED_APPS += [
     'django_q',
     'simple_history',
     'durationwidget',
-    'phonenumber_field'
 ]
 
 # Fork-specific Additional Apps

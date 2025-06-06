@@ -1,0 +1,10 @@
+The audit of <code>AllocationPeriod</code> "{{ allocation_period_name }}" succeeded.
+
+<ol>
+  {% for check_result in check_results %}
+    <li>
+      <span style="font-size: 1.2em;">&#x1F7E2;</span>
+      {{ check_result.html_message|safe }}
+    </li>
+  {% endfor %}
+</ol>

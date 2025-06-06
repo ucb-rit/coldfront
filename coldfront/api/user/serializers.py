@@ -37,7 +37,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = (
             'id', 'user', 'is_pi', 'middle_name', 'cluster_uid',
-            'phone_number', 'access_agreement_signed_date', 'billing_activity',
+            'access_agreement_signed_date', 'billing_activity',
             'host_user', 'host_user_lbl_email')
 
     def __init__(self, *args, **kwargs):
