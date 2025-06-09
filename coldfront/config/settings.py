@@ -208,6 +208,10 @@ SETTINGS_EXPORT = []
 # Django 3.2: Set DEFAULT_AUTO_FIELD.
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
+SWAGGER_SETTINGS = {
+    'DEFAULT_INFO': 'coldfront.api.utils.urls.api_info'
+}
+
 # ------------------------------------------------------------------------------
 # Accounting settings
 # ------------------------------------------------------------------------------
