@@ -365,6 +365,10 @@ REST_FRAMEWORK = {
     ],
 }
 
+SWAGGER_SETTINGS = {
+    'DEFAULT_INFO': 'coldfront.api.utils.urls.api_info'
+}
+
 # The number of hours for which a newly created authentication token will be
 # valid.
 TOKEN_EXPIRATION_HOURS = 24
