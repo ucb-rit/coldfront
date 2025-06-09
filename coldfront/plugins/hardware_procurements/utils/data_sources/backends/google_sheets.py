@@ -6,6 +6,8 @@ from collections import defaultdict
 from datetime import date
 from datetime import datetime
 
+from flags.state import flag_enabled
+
 from ... import HardwareProcurement
 from .base import BaseDataSourceBackend
 
@@ -57,11 +59,18 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             'hardware_type',
             'hardware_specification_details',
             'procurement_start_date',
-            'jira_ticket',
             'order_received_date',
             'installed_date',
             'expected_retirement_date',
         ]
+
+        if flag_enabled('BRC_ONLY'):
+            keys.append('jira_ticket')
+        elif flag_enabled('LRC_ONLY'):
+            keys.append('buyer')
+            keys.append('project_id')
+            keys.append('requisition_id')
+            keys.append('po_pcard')
 
         # Maintain HardwareProcurement "copy numbers". Refer to the
         # HardwareProcurement class for more details.
@@ -78,6 +87,10 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
                 except Exception as e:
                     cleaned_value = 'Unknown'
                 entry[key] = cleaned_value
+
+            if flag_enabled('LRC_ONLY'):
+                if entry['buyer'] != 'PI':
+                    continue
 
             pi_emails_str = ','.join(sorted(entry['pi_emails']))
             hardware_type_str = entry['hardware_type']
