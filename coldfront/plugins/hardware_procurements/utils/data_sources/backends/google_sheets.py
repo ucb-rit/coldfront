@@ -2,18 +2,17 @@ import gspread
 import json
 import os
 
+from abc import abstractmethod
 from collections import defaultdict
 from datetime import date
 from datetime import datetime
-
-from flags.state import flag_enabled
 
 from ... import HardwareProcurement
 from .base import BaseDataSourceBackend
 
 
 class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
-    """A backend that fetches hardware procurement data from a Google
+    """An interface that fetches hardware procurement data from a Google
     Sheet."""
 
     DATE_FORMAT = '%m/%d/%Y'
@@ -64,13 +63,8 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             'expected_retirement_date',
         ]
 
-        if flag_enabled('BRC_ONLY'):
-            keys.append('jira_ticket')
-        elif flag_enabled('LRC_ONLY'):
-            keys.append('buyer')
-            keys.append('project_id')
-            keys.append('requisition_id')
-            keys.append('po_pcard')
+        for key in self._extra_columns:
+            keys.append(key)
 
         # Maintain HardwareProcurement "copy numbers". Refer to the
         # HardwareProcurement class for more details.
@@ -88,9 +82,8 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
                     cleaned_value = 'Unknown'
                 entry[key] = cleaned_value
 
-            if flag_enabled('LRC_ONLY'):
-                if entry['buyer'] != 'PI':
-                    continue
+            if self._should_exclude_procurement(entry):
+                continue
 
             pi_emails_str = ','.join(sorted(entry['pi_emails']))
             hardware_type_str = entry['hardware_type']
@@ -128,7 +121,7 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
             - expected_retirement_date
             - initial_inquiry_date
             - installed_date
-            - order_received_date
+            - order_received_data
             - pi_emails
             - poc_emails
             - procurement_start_date
@@ -181,6 +174,13 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
 
         return value
 
+    @property
+    @abstractmethod
+    def _extra_columns(self):
+        """Return a tuple of strs denoting the names of extra columns
+        specific to the deployment."""
+        pass
+
     def _fetch_sheet_data(self):
         """Open the spreadsheet and specific tab, and return all values
         strictly after the header row."""
@@ -209,3 +209,42 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
         a dict."""
         with open(config_file_path, 'r') as f:
             return json.load(f)
+
+    @abstractmethod
+    def _should_exclude_procurement(self, procurement):
+        """Return whether the given cleaned dict representing a
+        procurement fetched from the sheet should be excluded."""
+        pass
+
+
+class BRCGoogleSheetsDataSourceBackend(GoogleSheetsDataSourceBackend):
+    """A backend that fetches hardware procurement data from a Google
+    Sheet, specifically for BRC."""
+
+    @property
+    def _extra_columns(self):
+        return (
+            'jira_ticket',
+        )
+
+    def _should_exclude_procurement(self, procurement):
+        return False
+
+
+class LRCGoogleSheetsDataSourceBackend(GoogleSheetsDataSourceBackend):
+    """A backend that fetches hardware procurement data from a Google
+    Sheet, specifically for LRC."""
+
+    @property
+    def _extra_columns(self):
+        return (
+            'buyer',
+            'project_id',
+            'requisition_id',
+            'po_pcard',
+        )
+
+    def _should_exclude_procurement(self, procurement):
+        if procurement['buyer'] != 'PI':
+            return True
+        return False
