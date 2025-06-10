@@ -1,30 +1,20 @@
+from abc import ABC
 from datetime import date
 from unittest.mock import patch
 
 import pytest
 
-from ....utils.data_sources.backends.google_sheets import GoogleSheetsDataSourceBackend
-from .utils import GOOGLE_SHEET_COLUMNS, assert_procurement_expected
+from .utils import assert_procurement_expected
+from .utils import BRC_GOOGLE_SHEET_COLUMNS
+from .utils import LRC_GOOGLE_SHEET_COLUMNS
+
+from ....utils.data_sources.backends.google_sheets import BRCGoogleSheetsDataSourceBackend
+from ....utils.data_sources.backends.google_sheets import LRCGoogleSheetsDataSourceBackend
 
 
-@pytest.fixture
-def backend_from_google_sheet_columns():
-    """Return a GoogleSheetsDataSourceBackend based on the columns
-    defined in GOOGLE_SHEET_COLUMNS, and with a header row index of
-    1."""
-    backend = GoogleSheetsDataSourceBackend(
-        credentials={},
-        sheet_id="",
-        sheet_tab="",
-        sheet_columns=GOOGLE_SHEET_COLUMNS,
-        header_row_index=1,
-    )
-    return backend
-
-
-@pytest.mark.component
-class TestGoogleSheetsDataSourceBackendComponent:
-    """Component tests for GoogleSheetsDataSourceBackend."""
+class GoogleSheetsDataSourceBackendComponentTestBase(ABC):
+    """Abstract component tests for subclasses of
+    GoogleSheetsDataSourceBackend."""
 
     def _assert_fetch_output(
         self,
@@ -172,6 +162,64 @@ class TestGoogleSheetsDataSourceBackendComponent:
         )
 
 
+@pytest.mark.component
+class TestBRCGoogleSheetsDataSourceBackendComponent(
+    GoogleSheetsDataSourceBackendComponentTestBase
+):
+    """Component tests for BRCGoogleSheetsDataSourceBackend."""
+
+    @pytest.fixture
+    def backend_from_google_sheet_columns(self):
+        """Return a BRCGoogleSheetsDataSourceBackend based on the columns
+        defined in BRC_GOOGLE_SHEET_COLUMNS, and with a header row index
+        of 1."""
+        backend = BRCGoogleSheetsDataSourceBackend(
+            credentials={},
+            sheet_id="",
+            sheet_tab="",
+            sheet_columns=BRC_GOOGLE_SHEET_COLUMNS,
+            header_row_index=1,
+        )
+        return backend
+
+    @pytest.fixture
+    def expected_hardware_procurements_data(self, brc_expected_hardware_procurements_data):
+        return brc_expected_hardware_procurements_data
+
+    @pytest.fixture
+    def google_sheet_data(self, brc_google_sheet_data):
+        return brc_google_sheet_data
+
+
+@pytest.mark.component
+class TestLRCGoogleSheetsDataSourceBackendComponent(
+    GoogleSheetsDataSourceBackendComponentTestBase
+):
+    """Component tests for LRCGoogleSheetsDataSourceBackend."""
+
+    @pytest.fixture
+    def backend_from_google_sheet_columns(self):
+        """Return an LRCGoogleSheetsDataSourceBackend based on the
+        columns defined in LRC_GOOGLE_SHEET_COLUMNS, and with a header
+        row index of 1."""
+        backend = LRCGoogleSheetsDataSourceBackend(
+            credentials={},
+            sheet_id="",
+            sheet_tab="",
+            sheet_columns=LRC_GOOGLE_SHEET_COLUMNS,
+            header_row_index=1,
+        )
+        return backend
+
+    @pytest.fixture
+    def expected_hardware_procurements_data(self, lrc_expected_hardware_procurements_data):
+        return lrc_expected_hardware_procurements_data
+
+    @pytest.fixture
+    def google_sheet_data(self, lrc_google_sheet_data):
+        return lrc_google_sheet_data
+
+
 @pytest.mark.unit
 class TestGoogleSheetsDataSourceBackendUnit:
     """Unit tests for GoogleSheetsDataSourceBackend."""
@@ -194,7 +242,7 @@ class TestGoogleSheetsDataSourceBackendUnit:
     )
     def test_clean_sheet_value_dates(self, column_name, value, expected_cleaned_value):
         kwargs = self._get_backend_kwargs()
-        backend = GoogleSheetsDataSourceBackend(**kwargs)
+        backend = BRCGoogleSheetsDataSourceBackend(**kwargs)
         cleaned_value = backend._clean_sheet_value(column_name, value)
         assert cleaned_value == expected_cleaned_value
 
@@ -216,7 +264,7 @@ class TestGoogleSheetsDataSourceBackendUnit:
     )
     def test_clean_sheet_value_emails(self, column_name, value, expected_cleaned_value):
         kwargs = self._get_backend_kwargs()
-        backend = GoogleSheetsDataSourceBackend(**kwargs)
+        backend = BRCGoogleSheetsDataSourceBackend(**kwargs)
         cleaned_value = backend._clean_sheet_value(column_name, value)
         assert cleaned_value == expected_cleaned_value
 
@@ -238,18 +286,18 @@ class TestGoogleSheetsDataSourceBackendUnit:
     )
     def test_clean_sheet_value_status(self, column_name, value, expected_cleaned_value):
         kwargs = self._get_backend_kwargs()
-        backend = GoogleSheetsDataSourceBackend(**kwargs)
+        backend = BRCGoogleSheetsDataSourceBackend(**kwargs)
         cleaned_value = backend._clean_sheet_value(column_name, value)
         assert cleaned_value == expected_cleaned_value
 
     def test_clean_sheet_value_status_unexpected(self):
         kwargs = self._get_backend_kwargs()
-        backend = GoogleSheetsDataSourceBackend(**kwargs)
+        backend = BRCGoogleSheetsDataSourceBackend(**kwargs)
         with pytest.raises(ValueError, match="Unexpected status"):
             backend._clean_sheet_value("status", "unknown")
 
     def test_fetch_sheet_data_empty_credentials(self):
-        backend = GoogleSheetsDataSourceBackend(
+        backend = BRCGoogleSheetsDataSourceBackend(
             credentials={},
             sheet_id="mock_sheet_id",
             sheet_tab="mock_tab",
@@ -274,7 +322,7 @@ class TestGoogleSheetsDataSourceBackendUnit:
                 ["Value1", "Value2"],
             ]
 
-            backend = GoogleSheetsDataSourceBackend(
+            backend = BRCGoogleSheetsDataSourceBackend(
                 credentials=mock_credentials,
                 sheet_id=sheet_id,
                 sheet_tab=sheet_tab,
@@ -307,7 +355,7 @@ class TestGoogleSheetsDataSourceBackendUnit:
     )
     def test_gsheet_column_to_index(self, column_str, expected_index):
         kwargs = self._get_backend_kwargs()
-        backend = GoogleSheetsDataSourceBackend(**kwargs)
+        backend = BRCGoogleSheetsDataSourceBackend(**kwargs)
         index = backend._gsheet_column_to_index(column_str)
         assert index == expected_index
 
@@ -325,7 +373,7 @@ class TestGoogleSheetsDataSourceBackendUnit:
         kwargs = self._get_backend_kwargs()
         del kwargs[kwarg]
         with pytest.raises(KeyError):
-            GoogleSheetsDataSourceBackend(**kwargs)
+            BRCGoogleSheetsDataSourceBackend(**kwargs)
 
     @pytest.mark.parametrize(
         ["kwarg", "value"],
@@ -341,16 +389,40 @@ class TestGoogleSheetsDataSourceBackendUnit:
         kwargs = self._get_backend_kwargs()
         kwargs[kwarg] = value
         with pytest.raises(AssertionError):
-            GoogleSheetsDataSourceBackend(**kwargs)
+            BRCGoogleSheetsDataSourceBackend(**kwargs)
 
     def test_init_sets_attributes(self):
         kwargs = self._get_backend_kwargs()
-        backend = GoogleSheetsDataSourceBackend(**kwargs)
+        backend = BRCGoogleSheetsDataSourceBackend(**kwargs)
         assert backend._credentials == kwargs["credentials"]
         assert backend._sheet_id == kwargs["sheet_id"]
         assert backend._sheet_tab == kwargs["sheet_tab"]
         assert backend._sheet_columns == kwargs["sheet_columns"]
         assert backend._header_row_index == kwargs["header_row_index"]
+
+    @pytest.mark.parametrize(
+        ["procurement_data", "expected_exclusion_brc", "expected_exclusion_lrc"],
+        [
+            ({"buyer": "PI"}, False, False),
+            ({"buyer": "Not PI"}, False, True),
+        ],
+    )
+    def test_should_exclude_procurement_brc(
+        self, procurement_data, expected_exclusion_brc, expected_exclusion_lrc
+    ):
+        kwargs = self._get_backend_kwargs()
+
+        brc_backend = BRCGoogleSheetsDataSourceBackend(**kwargs)
+        assert (
+            brc_backend._should_exclude_procurement(procurement_data)
+            == expected_exclusion_brc
+        )
+
+        lrc_backend = LRCGoogleSheetsDataSourceBackend(**kwargs)
+        assert (
+            lrc_backend._should_exclude_procurement(procurement_data)
+            == expected_exclusion_lrc
+        )
 
     @staticmethod
     def _get_backend_kwargs(
