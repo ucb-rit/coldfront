@@ -8,7 +8,6 @@ from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from model_utils.models import TimeStampedModel
-from phonenumber_field.modelfields import PhoneNumberField
 from rest_framework.authtoken.models import Token
 from simple_history.models import HistoricalRecords
 
@@ -29,7 +28,6 @@ class UserProfile(models.Model):
         null=True
     )
 
-    phone_number = PhoneNumberField(blank=True, null=True)
     access_agreement_signed_date = models.DateTimeField(blank=True, null=True)
     upgrade_request = models.DateTimeField(blank=True, null=True)
 

@@ -490,6 +490,58 @@ class TestProjectRemovalRequestListView(TestBase):
                             completed_removal_request.requester.username)
 
         self.client.logout()
+    
+    def test_removing_users(self):
+        """Test that removing multiple users works and doesn't error."""
+
+        # add user3 to project1
+        self.user3 = User.objects.create(
+            email='user3@email.com',
+            first_name='Normal',
+            last_name='User3',
+            username='user3')
+        self.user3.set_password(self.password)
+        self.user3.save()
+        ProjectUser.objects.create(
+            project=self.project1,
+            user=self.user3,
+            role=ProjectUserRoleChoice.objects.get(name='User'),
+            status=ProjectUserStatusChoice.objects.get(name='Active'))
+
+        # log-in as superuser
+        self.user1.is_superuser = True
+        self.user1.save()
+        self.client.login(username=self.user1.username, password=self.password)
+
+        # navigate to the remove-users
+        url = reverse('project-remove-users', kwargs={'pk': self.project1.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        # Assert all 3 users are listed
+        self.assertContains(response, self.user1.username)
+        self.assertContains(response, self.user2.username)
+        self.assertContains(response, self.user3.username)
+
+        # Remove 2 users
+        data = {
+            'user_pks': f'{self.user2.pk},{self.user3.pk}'
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+        
+        # Check if the request was processed
+        self.assertRedirects(response, reverse('project-detail', kwargs={'pk': self.project1.pk}))
+        
+        # Check that 2 users are no longer listed on the project page
+        url = reverse('project-detail', kwargs={'pk': self.project1.pk})
+        response = self.client.get(url)
+
+        self.assertContains(response, self.user1.username)
+        self.assertNotContains(response, self.user2.username)
+        self.assertNotContains(response, self.user3.username)
+
+        self.client.logout()
 
 
 class TestProjectRemovalRequestUpdateStatusView(TestBase):

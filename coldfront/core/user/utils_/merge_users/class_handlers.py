@@ -147,7 +147,6 @@ class UserProfileHandler(ClassHandler):
             'is_pi',
             # Only the destination user should have a cluster UID.
             # 'cluster_uid',
-            'phone_number',
             'access_agreement_signed_date',
             'billing_activity',
         ]

@@ -92,12 +92,10 @@ class Command(BaseCommand):
         receiver_list = emails
 
         if audit_successful:
-            green_circle = '\u1f7e2'
-            subject = f'{subject_prefix}: Success {green_circle}'
+            subject = f'{subject_prefix}: Success'
             template_base_name = 'audit_success'
         else:
-            red_circle = '\u1f534'
-            subject = f'{subject_prefix}: Failure {red_circle}'
+            subject = f'{subject_prefix}: Failure'
             template_base_name = 'audit_failure'
 
         template_name = os.path.join(template_dir, f'{template_base_name}.txt')

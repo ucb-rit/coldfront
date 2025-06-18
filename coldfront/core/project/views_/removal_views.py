@@ -83,7 +83,8 @@ class ProjectRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
              'last_name': ele.user.last_name,
              'email': ele.user.email,
              'role': ele.role,
-             'status': ele.status.name}
+             'status': ele.status.name,
+             'pk': ele.user.pk, }
 
             for ele in query_set if ele.user != self.request.user
         ]
@@ -104,50 +105,47 @@ class ProjectRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
         pk = self.kwargs.get('pk')
         project_obj = get_object_or_404(Project, pk=pk)
 
-        users_to_remove_list, users_pending_removal = self.get_users_to_remove(project_obj)
+        users_to_remove_list, users_pending_removal = self.get_users_to_remove(
+            project_obj)
+
         context = {}
         context['project'] = get_object_or_404(Project, pk=pk)
         context['users_pending_removal'] = users_pending_removal
-
-        page = request.GET.get('page', 1)
-
-        paginator = Paginator(users_to_remove_list, 25)
-        try:
-            users_to_remove = paginator.page(page)
-        except PageNotAnInteger:
-            users_to_remove = paginator.page(1)
-        except EmptyPage:
-            users_to_remove = paginator.page(paginator.num_pages)
-
-        context['users_to_remove'] = users_to_remove
+        context['users_to_remove'] = users_to_remove_list
 
         return render(request, self.template_name, context)
+
 
     def post(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
         project_obj = get_object_or_404(Project, pk=pk)
-        user_obj = User.objects.get(
-            username=self.request.POST['username'])
 
-        try:
-            request_runner = ProjectRemovalRequestRunner(
-                self.request.user, user_obj, project_obj)
-            runner_result = request_runner.run()
-            success_messages, error_messages = request_runner.get_messages()
+        user_pks = [
+            int(user_pk)
+            for user_pk in self.request.POST.get('user_pks').split(',')]
 
-            if runner_result:
-                request_runner.send_emails()
-                for m in success_messages:
-                    messages.success(request, m)
-            else:
-                for m in error_messages:
-                    messages.error(request, m)
+        for user_pk in user_pks:
+            user_obj = User.objects.get(pk=user_pk)
 
-        except Exception as e:
-            logger.exception(e)
-            error_message = \
-                'Unexpected error. Please contact an administrator.'
-            messages.error(self.request, error_message)
+            try:
+                request_runner = ProjectRemovalRequestRunner(
+                    self.request.user, user_obj, project_obj)
+                runner_result = request_runner.run()
+                success_messages, error_messages = request_runner.get_messages()
+
+                if runner_result:
+                    request_runner.send_emails()
+                    for m in success_messages:
+                        messages.success(request, m)
+                else:
+                    for m in error_messages:
+                        messages.error(request, m)
+
+            except Exception as e:
+                logger.exception(e)
+                error_message = \
+                    'Unexpected error. Please contact an administrator.'
+                messages.error(self.request, error_message)
 
         return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': pk}))
 

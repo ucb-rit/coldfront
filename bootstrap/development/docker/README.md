@@ -8,6 +8,9 @@ Note that these steps must be run from the root directory of the repo.
    sh bootstrap/development/docker/scripts/build_images.sh
    ```
 
+   Notes:
+      - An optional argument may be specified to build the images with a specific tag. This may be useful for testing updated images (e.g., from different branches) without overriding existing images.
+
 2. Retrieve a `cilogon.yml` file containing CILogon credentials that will be provided for you. Place it in the Docker configuration directory.
 
    ```bash
@@ -63,6 +66,7 @@ Note that these steps must be run from the root directory of the repo.
 
    Notes:
      - Some services (e.g., `web`) are expected to be failing at this point.
+     - If the `IMAGE_TAG` environment variable is set, Docker Compose will use images with the specified tag.
 
 7. Run Django scripts to set up the database and perform other tasks. You must provide the name of your Docker project.
 
