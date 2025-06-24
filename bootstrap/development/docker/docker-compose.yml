@@ -50,6 +50,7 @@ services:
     image: coldfront-web:${IMAGE_TAG:-latest}
     ports:
       - ${WEB_PORT}:80
+      - 5678:5678
     volumes:
       - ../../..:/var/www/coldfront_app/coldfront
 
