@@ -17,10 +17,10 @@ from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.models import ProjectUserStatusChoice
 from coldfront.core.project.models import SavioProjectAllocationRequest
+from coldfront.core.project.utils_.computing_allowance_eligibility_manager import ComputingAllowanceEligibilityManager
 from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.project.utils_.renewal_utils import get_pi_active_unique_project
-from coldfront.core.project.utils_.renewal_utils import has_non_denied_renewal_request
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_admin_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pi_notification_email
 from coldfront.core.project.utils_.renewal_utils import send_new_allocation_renewal_request_pooling_notification_email
@@ -352,13 +352,20 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             pi = tmp['PI'].user
             allocation_period = tmp['allocation_period']
 
-            # If the PI already has a non-denied request for the period, raise
-            # an exception. Such PIs are not selectable in the 'pi_selection'
-            # step, but a request could have been created between selection and
-            # final submission.
-            if has_non_denied_renewal_request(pi, allocation_period):
+            # If the PI is ineligible for a renewal request for the computing
+            # allowance for the period, raise an exception. Such PIs are not
+            # selectable in the 'pi_selection' step, but a request could have
+            # been created beteween selection and final submission.
+            computing_allowance_eligibility_manager = \
+                ComputingAllowanceEligibilityManager(
+                    self.computing_allowance,
+                    allocation_period=allocation_period)
+            is_pi_eligible = \
+                computing_allowance_eligibility_manager.is_user_eligible(
+                    pi, is_renewal=True)
+            if not is_pi_eligible:
                 raise Exception(
-                    f'PI {pi.username} already has a non-denied '
+                    f'PI {pi.username} is ineligible to make an '
                     f'AllocationRenewalRequest for AllocationPeriod '
                     f'{allocation_period.name}.')
 
@@ -632,13 +639,20 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             pi = tmp['PI'].user
             allocation_period = tmp['allocation_period']
 
-            # If the PI already has a non-denied request for the period, raise
-            # an exception. Such PIs are not selectable in the 'pi_selection'
-            # step, but a request could have been created between selection and
-            # final submission.
-            if has_non_denied_renewal_request(pi, allocation_period):
+            # If the PI is ineligible for a renewal request for the computing
+            # allowance for the period, raise an exception. Such PIs are not
+            # selectable in the 'pi_selection' step, but a request could have
+            # been created beteween selection and final submission.
+            computing_allowance_eligibility_manager = \
+                ComputingAllowanceEligibilityManager(
+                    self.computing_allowance,
+                    allocation_period=allocation_period)
+            is_pi_eligible = \
+                computing_allowance_eligibility_manager.is_user_eligible(
+                    pi, is_renewal=True)
+            if not is_pi_eligible:
                 raise Exception(
-                    f'PI {pi.username} already has a non-denied '
+                    f'PI {pi.username} is ineligible to make an '
                     f'AllocationRenewalRequest for AllocationPeriod '
                     f'{allocation_period.name}.')
 
