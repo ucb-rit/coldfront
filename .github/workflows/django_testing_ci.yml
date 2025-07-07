@@ -15,7 +15,7 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-20.04 # Default github actions environment for Linux
+    runs-on: ubuntu-22.04
 
     services:
       postgres: # Set up a database container with the following specifications
@@ -52,7 +52,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/venv
-        key: ${{ runner.os }}-python310-packages-${{ hashFiles('requirements.txt') }}
+        key: ${{ runner.os }}-python-310-packages-${{ hashFiles('requirements.txt') }}
 
     - if: ${{ steps.cache-python.outputs.cache-hit != 'true' }} # If a cache is not found
       name: Install Python packages
@@ -86,6 +86,24 @@ jobs:
         sudo mkdir "/media/Service Units Purchase Request MOUs/"
         sudo mkdir "/media/Secure Directory Request MOUs/"
         sudo chmod -R 777 "/media/"
+
+    - name: Run pytest unit tests
+      run: |
+        source ~/venv/bin/activate
+        export django_secret_key=`openssl rand -base64 64`
+        pytest -m unit
+
+    - name: Run pytest component tests
+      run: |
+        source ~/venv/bin/activate
+        export django_secret_key=`openssl rand -base64 64`
+        pytest -m component
+
+    # - name: Run pytest acceptance tests
+    #   run: |
+    #     source ~/venv/bin/activate
+    #     export django_secret_key=`openssl rand -base64 64`
+    #     pytest -m acceptance
 
     - name: Run Tests
       run: |

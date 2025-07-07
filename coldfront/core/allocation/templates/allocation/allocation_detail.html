@@ -222,13 +222,25 @@ Allocation Detail
             <th scope="col">Email</th>
             <th scope="col">Cluster Username</th>
 <!--            <th scope="col">Last Modified</th>-->
+
             {% if allocation_user_usages_visible %}
               <th scope="col">Usage</th>
             {% endif %}
-            {% flag_enabled 'LRC_ONLY' as lrc_only %}
-            {% if lrc_only %}
-              <th scope="col">Billing ID</th>
+
+            {% if user_account_fee_billing_ids_visible %}
+              <th scope="col">
+                Billing ID for User Account Fee
+                {% include "portal/info_hover_popup.html" with title="Billing ID for User Account Fee" content="This billing ID is charged every month for maintaining the user's account." %}
+              </th>
             {% endif %}
+
+            {% if recharge_fee_billing_ids_visible %}
+              <th scope="col">
+                Billing ID for Recharge Fee
+                {% include "portal/info_hover_popup.html" with title="Billing ID for Recharge Fee" content="This billing ID is charged every month for computing time used by the user under this project during the month." %}
+              </th>
+            {% endif %}
+
           </tr>
         </thead>
         <tbody>
@@ -246,13 +258,27 @@ Allocation Detail
               </td>
             {% endif %}
 <!--            <td>{{ user.modified|date:"M. d, Y" }}</td>-->
-            {% if allocation_user_usages_visible %}
-              <td>{{ allocation_user_su_usages|get_value_from_dict:user.user.username }}</td>
-            {% endif %}
-            {% flag_enabled 'LRC_ONLY' as lrc_only %}
-            {% if lrc_only %}
-              <td>{{ allocation_user_billing_ids|get_value_from_dict:user.user.username}}</td>
-            {% endif %}
+
+            {% with username=user.user.username %}
+              {% if allocation_user_usages_visible %}
+                <td>
+                  {{ allocation_user_su_usages|get_value_from_dict:username }}
+                </td>
+              {% endif %}
+
+              {% if user_account_fee_billing_ids_visible %}
+                <td>
+                  {{ user_account_fee_billing_ids|get_value_from_dict:username }}
+                </td>
+              {% endif %}
+
+              {% if recharge_fee_billing_ids_visible %}
+                <td>
+                  {{ recharge_fee_billing_ids|get_value_from_dict:username }}
+                </td>
+              {% endif %}
+            {% endwith %}
+
           </tr>
           {% endfor %}
         </tbody>
@@ -347,6 +373,9 @@ Allocation Detail
 <script>
 
   $(document).ready(function () {
+
+    $('[data-toggle="popover"]').popover();
+
     var guage_data = {{ guage_data | safe }};
     var pie_data = {{ pie_data | safe }};
   drawGauges(guage_data);

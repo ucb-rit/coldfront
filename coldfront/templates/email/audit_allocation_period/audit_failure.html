@@ -1,0 +1,14 @@
+The audit of <code>AllocationPeriod</code> "{{ allocation_period_name}}" failed.
+
+<ol>
+  {% for check_result in check_results %}
+    <li>
+      {% if check_result.success %}
+        <span style="font-size: 1.2em;">&#x1F7E2;</span>
+      {% else %}
+        <span style="font-size: 1.2em;">&#x1F534;</span>
+      {% endif %}
+      {{ check_result.html_message|safe }}
+    </li>
+  {% endfor %}
+</ol>

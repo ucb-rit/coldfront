@@ -29,18 +29,18 @@ class RequestListItem:
     """
 
     def __init__(self):
-        num = None
-        title = None
-        num_pending = None
-        table = None
-        pending_queryset = None
-        complete_queryset = None
-        button_path = None
-        button_arg1 = None
-        button_arg2 = None
-        button_text = None
-        id = None
-        help_text = None
+        self.num = None
+        self.title = None
+        self.num_pending = None
+        self.table = None
+        self.pending_queryset = None
+        self.complete_queryset = None
+        self.button_path = None
+        self.button_arg1 = None
+        self.button_arg2 = None
+        self.button_text = None
+        self.id = None
+        self.help_text = None
 
 
 class RequestHubView(LoginRequiredMixin,
@@ -118,6 +118,62 @@ class RequestHubView(LoginRequiredMixin,
             'Showing your cluster access requests.'
 
         return cluster_request_object
+
+    def get_hardware_procurement_request(self):
+        """Populates a RequestListItem with data for hardware
+        procurement requests"""
+
+        # Note: These imports are placed here because the hardware_procurements
+        #  plugin may not necessarily be installed.
+        from coldfront.plugins.hardware_procurements.utils import UserInfoDict
+        from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
+
+        user = self.request.user
+
+        fetch_hardware_procurements_kwargs = {}
+        if not self.show_all_requests:
+            user_data = UserInfoDict.from_user(user)
+            fetch_hardware_procurements_kwargs['user_data'] = user_data
+
+        pending_hardware_procurements, complete_hardware_procurements = [], []
+        for hardware_procurement in fetch_hardware_procurements(
+                **fetch_hardware_procurements_kwargs):
+            status = hardware_procurement['status']
+            # TODO: Avoid hard-coding statuses.
+            if status == 'Pending':
+                pending_hardware_procurements.append(hardware_procurement)
+            elif status == 'Complete' or status == 'Retired':
+                complete_hardware_procurements.append(hardware_procurement)
+
+        pending_hardware_procurements.sort(reverse=True)
+        complete_hardware_procurements.sort(reverse=True)
+
+        pending_hardware_procurements = [
+            hp.get_renderable_data() for hp in pending_hardware_procurements]
+        complete_hardware_procurements = [
+            hp.get_renderable_data() for hp in complete_hardware_procurements]
+
+        hardware_procurement_request_obj = RequestListItem()
+        hardware_procurement_request_obj.num = self.paginators
+        hardware_procurement_request_obj.pending_queryset = \
+            self.create_paginator(pending_hardware_procurements)
+        hardware_procurement_request_obj.complete_queryset = \
+            self.create_paginator(complete_hardware_procurements)
+        hardware_procurement_request_obj.num_pending = len(
+            pending_hardware_procurements)
+        hardware_procurement_request_obj.title = 'Hardware Procurement Requests'
+        hardware_procurement_request_obj.table = (
+            'hardware_procurements/'
+            'hardware_procurement_request_list_table.html')
+        hardware_procurement_request_obj.button_path = (
+            'hardware-procurement-list')
+        hardware_procurement_request_obj.button_text = (
+            'Go To Hardware Procurement Requests Main Page')
+        hardware_procurement_request_obj.id = (
+            'hardware_procurement_request_section')
+        hardware_procurement_request_obj.help_text = (
+            'Showing your hardware procurement requests.')
+        return hardware_procurement_request_obj
 
     def get_project_removal_request(self):
         """Populates a RequestListItem with data for project removal requests"""
@@ -584,29 +640,34 @@ class RequestHubView(LoginRequiredMixin,
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        requests = ['cluster_account_request',
-                    'project_removal_request',
-                    'savio_project_request',
-                    'vector_project_request',
-                    'project_join_request',
-                    'project_renewal_request',
-                    'su_purchase_request']
+        # Add your existing request types to this list.
+        requests = [
+            'cluster_account_request',
+            'project_removal_request',
+            'savio_project_request',
+            'vector_project_request',
+            'project_join_request',
+            'project_renewal_request',
+            'su_purchase_request',
+        ]
 
         if flag_enabled('SECURE_DIRS_REQUESTABLE'):
             requests += ['secure_dir_request',
                          'secure_dir_join_request',
                          'secure_dir_remove_request']
 
+        if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
+            requests.append('hardware_procurement_request')
+
         context['show_all'] = ((self.request.user.is_superuser or
                                 self.request.user.is_staff) and
                                self.show_all_requests)
 
-        for request in requests:
-            request_obj = eval(f'self.get_{request}()')
+        for req in requests:
+            request_obj = eval(f'self.get_{req}()')
             if context['show_all']:
-                request_obj.help_text = f'Showing all {request_obj.title} ' \
-                                        f'in {settings.PORTAL_NAME}.'
-            context[f'{request}_obj'] = request_obj
+                request_obj.help_text = f'Showing all {request_obj.title} in {settings.PORTAL_NAME}.'
+            context[f'{req}_obj'] = request_obj
 
         context['admin_staff'] = (self.request.user.is_superuser or
                                   self.request.user.is_staff)
