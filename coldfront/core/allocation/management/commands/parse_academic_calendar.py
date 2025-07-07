@@ -1,8 +1,10 @@
 import requests
 import io
+import os
 import pypdf
 import json
 from django.core.management.base import BaseCommand
+
 
 EXAMPLE_JSON ='''[
     {
@@ -47,6 +49,7 @@ EXAMPLE_JSON ='''[
     }
 ]'''
 
+
 class Command(BaseCommand):
     help = 'Parse the UCB academic calendar and output JSON entries.'
 
@@ -57,11 +60,6 @@ class Command(BaseCommand):
             help='The calendar year for the PDF to parse. e.g. "2025-26"'
         )
         parser.add_argument(
-            '--api-key',
-            required=True,
-            help='API key '
-        )
-        parser.add_argument(
             '--api',
             required=False,
             default='openai',
@@ -70,10 +68,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         year = options['calendar_year']
-        api_key = options['api_key']
         api = options['api']
         pdf_url = f'https://registrar.berkeley.edu/wp-content/uploads/UCB_AcademicCalendar_{year}.pdf'
-        
+
         # Fetch the PDF
         response = requests.get(pdf_url)
         if response.status_code != 200:
@@ -89,20 +86,63 @@ class Command(BaseCommand):
             text += page.extract_text()
         parsed_data = ''
 
+        prompt = (
+            f'You can only output JSON. Please parse the following UCB '
+            f'academic calendar text into JSON format:\n\n{text}\n\nFollow '
+            f'this JSON format:\n\n {EXAMPLE_JSON}.\n\nWe only care about the '
+            f'semester names and dates. Do not include any other information.')
+
         if api == 'openai':
             from openai import OpenAI
-            client = OpenAI(api_key=api_key)
 
-            response = client.responses.create(
-                model='gpt-4',
-                input='You can only output JSON. Please parse the following '
-                f'UCB academic calendar text into JSON format:\n\n{text}\n\n'
-                f'Follow this JSON format:\n\n {EXAMPLE_JSON}.\n\nWe only care'
-                f'about the semester names and dates. Do not include any other '
-                f'information.'
+            client_kwargs = {}
+
+            api_key = os.environ.get('OPENAI_API_KEY')
+            if not api_key:
+                self.stdout.write(
+                    self.style.ERROR(
+                        'Please set the OPENAI_API_KEY environment variable.'))
+                return
+            client_kwargs['api_key'] = api_key
+
+            api_url = os.environ.get('OPENAI_API_BASE_URL')
+            if not api_url:
+                self.stdout.write(
+                    self.style.WARNING(
+                        'No OPENAI_API_BASE_URL set. Using default.'))
+            else:
+                client_kwargs['base_url'] = api_url
+
+            model = os.environ.get('OPENAI_MODEL')
+            if not model:
+                model = 'openai/gpt-4o'
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'No OPENAI_MODEL set. Using default: {model}.'))
+
+            client = OpenAI(**client_kwargs)
+
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        'role': 'user',
+                        'content': prompt,
+                    },
+                ]
             )
-            
-            parsed_data = response.output_text
+
+            parsed_data = response.choices[-1].message.content.strip()
+
+            # Remove markdown code blocks if present.
+            if parsed_data.startswith('```json'):
+                parsed_data = parsed_data[7:]  # Remove ```json
+            elif parsed_data.startswith('```'):
+                parsed_data = parsed_data[3:]   # Remove ```
+            if parsed_data.endswith('```'):
+                parsed_data = parsed_data[:-3]  # Remove closing ```
+
+            parsed_data = parsed_data.strip()
         else:
             self.stdout.write(self.style.ERROR(
                 'Unsupported API: {}'.format(api)))
@@ -115,4 +155,3 @@ class Command(BaseCommand):
         except json.JSONDecodeError as e:
             self.stdout.write(self.style.ERROR(
                 'Failed to parse JSON: {}'.format(e)))
-                
