@@ -96,13 +96,13 @@ class ComputingAllowanceEligibilityManager(object):
             if self._computing_allowance.is_periodic():
 
                 existing_renewal_requests = self._existing_renewal_requests(
-                    user, self._allocation_period)
+                    self._allocation_period, user)
                 if existing_renewal_requests.exists():
                     return False
 
                 existing_new_project_requests = \
                     self._existing_new_project_requests(
-                        user, self._allocation_period)
+                        self._allocation_period, user)
                 if existing_new_project_requests.exists():
                     return False
 
