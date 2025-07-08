@@ -815,7 +815,7 @@ class TestStartAllocationPeriod(TestBase):
                 allocation=allocation, user=user,
                 status=active_allocation_status)
             allocation_user_allowance = Decimal(
-                random.randint(1, allocation_allowance))
+                random.randint(1, int(allocation_allowance)))
             allocation_user_attribute = AllocationUserAttribute.objects.create(
                 allocation_attribute_type=service_units_type,
                 allocation=allocation,
@@ -823,7 +823,7 @@ class TestStartAllocationPeriod(TestBase):
                 value=str(allocation_user_allowance))
 
             allocation_user_usage = Decimal(
-                random.randint(1, allocation_user_allowance))
+                random.randint(1, int(allocation_user_allowance)))
             allocation_user_attribute_usage = \
                 allocation_user_attribute.allocationuserattributeusage
             allocation_user_attribute_usage.value = allocation_user_usage
