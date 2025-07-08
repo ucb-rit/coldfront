@@ -71,3 +71,15 @@ RUN /app/venv/bin/pip install --upgrade pip setuptools wheel && \
     /app/venv/bin/pip install jinja2 pyyaml
 
 ENV PATH="/app/venv/bin:$PATH"
+
+############################
+# Stage 4: db-postgres-shell
+############################
+
+FROM coldfront-app-base AS coldfront-db-postgres-shell
+
+RUN dnf install -y gnupg
+
+RUN dnf module install -y postgresql:15
+
+WORKDIR /var/www/coldfront_app/coldfront

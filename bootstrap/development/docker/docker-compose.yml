@@ -28,19 +28,20 @@ services:
     image: coldfront-app-base:${IMAGE_TAG:-latest}
     command: ["python3", "-m", "smtpd", "-d", "-n", "-c", "DebuggingServer", "0.0.0.0:1025"]
 
-  # db-postgres-shell:
-  #   image: coldfront-db-postgres-shell:${IMAGE_TAG:-latest}
-  #   environment:
-  #     POSTGRES_HOST: db-postgres
-  #     POSTGRES_DB: ${DB_NAME}
-  #     POSTGRES_USER: admin
-  #     POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-  #   secrets:
-  #     - mode: 444
-  #       source: db-postgres.postgres_password
-  #       target: postgres_password
-  #   volumes:
-  #     - ../../..:/var/www/coldfront_app/coldfront
+  db-postgres-shell:
+    image: coldfront-db-postgres-shell:${IMAGE_TAG:-latest}
+    command: ["sleep", "infinity"]
+    environment:
+      POSTGRES_HOST: db-postgres
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - mode: 444
+        source: db-postgres.postgres_password
+        target: postgres_password
+    volumes:
+      - ../../..:/var/www/coldfront_app/coldfront
 
   app-shell:
     image: coldfront-app-base:${IMAGE_TAG:-latest}
