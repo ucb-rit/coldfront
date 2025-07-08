@@ -1,7 +1,7 @@
 from coldfront.api.user.views import IdentityLinkingRequestViewSet
 from coldfront.api.user.views import ObtainActiveUserExpiringAuthToken
 from coldfront.api.user.views import UserViewSet
-from django.conf.urls import url
+from django.urls import re_path
 from rest_framework.routers import DefaultRouter
 
 
@@ -13,7 +13,7 @@ router.register(r'users', UserViewSet, basename='users')
 urlpatterns = router.urls
 
 urlpatterns.append(
-    url(
+    re_path(
         r'^api_token_auth/', ObtainActiveUserExpiringAuthToken.as_view(),
         name='api_token_auth')
 )
