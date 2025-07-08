@@ -34,6 +34,7 @@ INSTALLED_APPS = [
 # Additional Apps
 INSTALLED_APPS += [
     'crispy_forms',
+    'crispy_bootstrap4',
     'sslserver',
     'django_q',
     'simple_history',
@@ -179,6 +180,7 @@ MESSAGE_TAGS = {
     messages.ERROR: 'danger',
 }
 
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap4'
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 STATIC_URL = '/static/'
