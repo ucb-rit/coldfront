@@ -5,8 +5,8 @@ from coldfront.api.allocation.views import AllocationUserAttributeViewSet
 from coldfront.api.allocation.views import AllocationUserViewSet
 from coldfront.api.allocation.views import HistoricalAllocationAttributeViewSet
 from coldfront.api.allocation.views import HistoricalAllocationUserAttributeViewSet
-from django.conf.urls import url
 from django.urls import include
+from django.urls import re_path
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested.routers import NestedSimpleRouter
 
@@ -42,8 +42,8 @@ router.register(r'cluster_access_requests',
 urlpatterns = router.urls
 
 urlpatterns.extend([
-    url('^', include(allocations_router.urls)),
-    url('^', include(allocation_attributes_router.urls)),
-    url('^', include(allocation_users_router.urls)),
-    url('^', include(allocation_user_attributes_router.urls)),
+    re_path('^', include(allocations_router.urls)),
+    re_path('^', include(allocation_attributes_router.urls)),
+    re_path('^', include(allocation_users_router.urls)),
+    re_path('^', include(allocation_user_attributes_router.urls)),
 ])
