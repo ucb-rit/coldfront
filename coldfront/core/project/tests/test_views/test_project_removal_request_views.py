@@ -875,7 +875,7 @@ class TestProjectRemovalRequestCompleteStatusView(TestBase):
             AllocationUserStatusChoice.objects.get(name='Removed')
 
         allocation_user.refresh_from_db()
-        self.assertEquals(allocation_user.status,
+        self.assertEqual(allocation_user.status,
                           allocation_user_status_choice_removed)
 
         cluster_account_status = \
@@ -883,7 +883,7 @@ class TestProjectRemovalRequestCompleteStatusView(TestBase):
                 allocation_attribute_type=AllocationAttributeType.objects.get(
                     name='Cluster Account Status'))
 
-        self.assertEquals(cluster_account_status.value, 'Denied')
+        self.assertEqual(cluster_account_status.value, 'Denied')
 
         self.client.logout()
 
