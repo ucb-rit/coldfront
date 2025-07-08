@@ -4,6 +4,7 @@ bibtexparser
 blessed
 chardet
 coverage
+crispy-bootstrap4
 Django
 django-allauth
 django-constance
