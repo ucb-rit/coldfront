@@ -25,10 +25,12 @@ services:
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf
 
   email-server:
-    image: coldfront-email-server:${IMAGE_TAG:-latest}
+    image: coldfront-app-base:${IMAGE_TAG:-latest}
+    command: ["python3", "-m", "smtpd", "-d", "-n", "-c", "DebuggingServer", "0.0.0.0:1025"]
 
   db-postgres-shell:
     image: coldfront-db-postgres-shell:${IMAGE_TAG:-latest}
+    command: ["sleep", "infinity"]
     environment:
       POSTGRES_HOST: db-postgres
       POSTGRES_DB: ${DB_NAME}
@@ -42,19 +44,22 @@ services:
       - ../../..:/var/www/coldfront_app/coldfront
 
   app-shell:
-    image: coldfront-app-shell:${IMAGE_TAG:-latest}
+    image: coldfront-app-base:${IMAGE_TAG:-latest}
+    command: ["sleep", "infinity"]
     volumes:
       - ../../..:/var/www/coldfront_app/coldfront
 
   web:
-    image: coldfront-web:${IMAGE_TAG:-latest}
+    image: coldfront-app-base:${IMAGE_TAG:-latest}
+    command: ["python3", "manage.py", "runserver", "0.0.0.0:80"]
     ports:
       - ${WEB_PORT}:80
     volumes:
       - ../../..:/var/www/coldfront_app/coldfront
 
   qcluster:
-    image: coldfront-qcluster:${IMAGE_TAG:-latest}
+    image: coldfront-app-base:${IMAGE_TAG:-latest}
+    command: ["python3", "manage.py", "qcluster"]
     volumes:
       - ../../..:/var/www/coldfront_app/coldfront
 
