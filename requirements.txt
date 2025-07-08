@@ -17,7 +17,7 @@ django-googledrive-storage
 django-model-utils
 django-phonenumber-field
 django-picklefield
-django-q2
+django-q
 django-redis
 django-sesame
 django-settings-export
