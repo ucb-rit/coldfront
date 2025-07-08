@@ -6,41 +6,22 @@ else
   IMAGE_TAG="$1"
 fi
 
-docker build \
-    -f bootstrap/development/docker/images/os.Dockerfile \
-    -t coldfront-os:$IMAGE_TAG .
+docker buildx use default
 
-docker build \
-    -f bootstrap/development/docker/images/app-config.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-app-config:$IMAGE_TAG bootstrap/development/docker
+docker buildx build \
+    --target coldfront-os \
+    --tag coldfront-os:$IMAGE_TAG \
+    --cache-from=type=local,src=/tmp/.buildx-cache \
+    .
 
-docker build \
-    -f bootstrap/development/docker/images/app-base.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-app-base:$IMAGE_TAG .
+docker buildx build \
+    --target coldfront-app-base \
+    --tag coldfront-app-base:$IMAGE_TAG \
+    --cache-from=type=local,src=/tmp/.buildx-cache \
+    .
 
-docker build \
-    -f bootstrap/development/docker/images/app-shell.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-app-shell:$IMAGE_TAG .
-
-docker build \
-    -f bootstrap/development/docker/images/web.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-web:$IMAGE_TAG .
-
-docker build \
-    -f bootstrap/development/docker/images/email-server.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-email-server:$IMAGE_TAG .
-
-docker build \
-    -f bootstrap/development/docker/images/db-postgres-shell.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-db-postgres-shell:$IMAGE_TAG .
-
-docker build \
-    -f bootstrap/development/docker/images/qcluster.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-qcluster:$IMAGE_TAG .
+docker buildx build \
+    --target coldfront-app-config \
+    --tag coldfront-app-config:$IMAGE_TAG \
+    --cache-from=type=local,src=/tmp/.buildx-cache \
+    .
