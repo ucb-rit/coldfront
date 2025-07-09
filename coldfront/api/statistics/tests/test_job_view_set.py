@@ -402,7 +402,7 @@ class TestJobList(TestJobBase):
         json = response.json()
         self.assertEqual(json['count'], 6)
         jobs = json['results']
-        prev_submitdate = datetime.utcfromtimestamp(0)
+        prev_submitdate = datetime.fromtimestamp(0, tz=None)
         for job in jobs:
             self.assertIn('submitdate', job)
             submitdate = datetime.strptime(
