@@ -708,7 +708,6 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         if step > new_pi_step:
             existing_pi_form_data = self.get_cleaned_data_for_step(
                 str(existing_pi_step))
-            new_pi_form_data = self.get_cleaned_data_for_step(str(new_pi_step))
             if existing_pi_form_data['PI'] is not None:
                 pi = existing_pi_form_data['PI']
                 dictionary.update({
@@ -717,6 +716,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                         f'({pi.email})'),
                 })
             else:
+                new_pi_form_data = self.get_cleaned_data_for_step(
+                    str(new_pi_step))
                 first_name = new_pi_form_data['first_name']
                 last_name = new_pi_form_data['last_name']
                 email = new_pi_form_data['email']

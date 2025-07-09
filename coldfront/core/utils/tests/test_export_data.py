@@ -965,8 +965,8 @@ class TestNewProjectSurveyResponses(TestBase):
         for index, item in enumerate(output):
             project_name = item.pop('project_name')
             project_title = item.pop('project_title')
-            self.assertEquals(project_name, self.fixtures[index].project.name)
-            self.assertEquals(project_title, self.fixtures[index].project.title)
+            self.assertEqual(project_name, self.fixtures[index].project.name)
+            self.assertEqual(project_title, self.fixtures[index].project.title)
             self.assertDictEqual(item['new_project_survey_responses'], self.fixtures[index].survey_answers)
 
         err.seek(0)
@@ -984,8 +984,8 @@ class TestNewProjectSurveyResponses(TestBase):
         for index, item in enumerate(reader):
             project_name = item.pop('project_name')
             project_title = item.pop('project_title')
-            self.assertEquals(project_name, self.fixtures[index].project.name)
-            self.assertEquals(project_title, self.fixtures[index].project.title)
+            self.assertEqual(project_name, self.fixtures[index].project.name)
+            self.assertEqual(project_title, self.fixtures[index].project.title)
             self.assertDictEqual(item, self.fixtures[index].survey_answers)
 
         err.seek(0)
@@ -1003,8 +1003,8 @@ class TestNewProjectSurveyResponses(TestBase):
         for index, item in enumerate(reader):
             project_name = item.pop('project_name')
             project_title = item.pop('project_title')
-            self.assertEquals(project_name, self.filtered_fixtures[index].project.name)
-            self.assertEquals(project_title, self.filtered_fixtures[index].project.title)
+            self.assertEqual(project_name, self.filtered_fixtures[index].project.name)
+            self.assertEqual(project_title, self.filtered_fixtures[index].project.title)
             self.assertDictEqual(item, self.filtered_fixtures[index].survey_answers)
 
         err.seek(0)

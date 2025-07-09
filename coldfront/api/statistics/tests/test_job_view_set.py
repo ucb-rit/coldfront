@@ -402,7 +402,7 @@ class TestJobList(TestJobBase):
         json = response.json()
         self.assertEqual(json['count'], 6)
         jobs = json['results']
-        prev_submitdate = datetime.utcfromtimestamp(0)
+        prev_submitdate = datetime.fromtimestamp(0, tz=None)
         for job in jobs:
             self.assertIn('submitdate', job)
             submitdate = datetime.strptime(
@@ -481,7 +481,7 @@ class TestJobSerializer(TestJobBase):
 
     def test_invalid_datetime_format(self):
         """Test that requests with improperly formatted dates fail."""
-        bad_time = datetime.now().strftime(self.date_format).replace(' ', 'X')
+        bad_time = datetime.now().strftime(self.date_format).replace(' ', 'XX')
         fields = dict()
         for field in ('submitdate', 'startdate', 'enddate'):
             fields[field] = bad_time

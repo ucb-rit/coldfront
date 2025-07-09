@@ -564,20 +564,28 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         project_selection_form_step = self.step_numbers_by_form_name[
             'project_selection']
         if step > project_selection_form_step:
-            data = self.get_cleaned_data_for_step(
-                str(project_selection_form_step))
-            if data:
-                dictionary.update(data)
-                dictionary['requested_project'] = data['project']
+            try:
+                data = self.get_cleaned_data_for_step(
+                    str(project_selection_form_step))
+            except KeyError:
+                pass
+            else:
+                if data:
+                    dictionary.update(data)
+                    dictionary['requested_project'] = data['project']
 
         new_project_details_form_step = self.step_numbers_by_form_name[
             'new_project_details']
         if step > new_project_details_form_step:
-            data = self.get_cleaned_data_for_step(
-                str(new_project_details_form_step))
-            if data:
-                dictionary.update(data)
-                dictionary['requested_project'] = data['name']
+            try:
+                data = self.get_cleaned_data_for_step(
+                    str(new_project_details_form_step))
+            except KeyError:
+                pass
+            else:
+                if data:
+                    dictionary.update(data)
+                    dictionary['requested_project'] = data['name']
 
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
