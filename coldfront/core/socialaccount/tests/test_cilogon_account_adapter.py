@@ -55,7 +55,7 @@ class TestCILogonAccountAdapter(TestBase):
                 f'{response.wsgi_request.user.username}.')
             redirect_url = reverse('home')
         elif process == AuthProcess.CONNECT:
-            expected_message = 'The social account has been connected.'
+            expected_message = 'The third-party account has been connected.'
             redirect_url = reverse('socialaccount_connections')
         else:
             raise ValueError('Unexpected auth process.')
