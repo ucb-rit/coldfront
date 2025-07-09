@@ -481,7 +481,7 @@ class TestJobSerializer(TestJobBase):
 
     def test_invalid_datetime_format(self):
         """Test that requests with improperly formatted dates fail."""
-        bad_time = datetime.now().strftime(self.date_format).replace(' ', 'X')
+        bad_time = datetime.now().strftime(self.date_format).replace(' ', 'XX')
         fields = dict()
         for field in ('submitdate', 'startdate', 'enddate'):
             fields[field] = bad_time
