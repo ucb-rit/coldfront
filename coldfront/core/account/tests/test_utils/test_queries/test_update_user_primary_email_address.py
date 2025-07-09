@@ -116,20 +116,11 @@ class TestUpdateUserPrimaryEmailAddress(TestBase):
     def test_unsets_other_primary_email_addresses(self):
         """Test that the method unsets the "primary" fields of other
         EmailAddresses belonging to the User."""
-        kwargs = {
-            'user': self.user,
-            'verified': True,
-            'primary': False,
-        }
-        for i in range(3):
-            kwargs['email'] = f'{i}@email.com'
-            EmailAddress.objects.create(**kwargs)
-        # Bypass the "save" method, which prevents multiple primary addresses,
-        # by using the "update" method.
-        EmailAddress.objects.filter(user=self.user).update(primary=True)
-        user_primary_emails = EmailAddress.objects.filter(
-            user=self.user, primary=True)
-        self.assertEqual(user_primary_emails.count(), 3)
+        old_primary = EmailAddress.objects.create(
+            email='user@email.com',
+            user=self.user,
+            verified=True,
+            primary=True)
 
         new_primary = EmailAddress.objects.create(
             user=self.user,
@@ -143,3 +134,6 @@ class TestUpdateUserPrimaryEmailAddress(TestBase):
             user=self.user, primary=True)
         self.assertEqual(user_primary_emails.count(), 1)
         self.assertEqual(user_primary_emails.first().pk, new_primary.pk)
+
+        old_primary.refresh_from_db()
+        self.assertFalse(old_primary.primary)
