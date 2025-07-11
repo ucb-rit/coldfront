@@ -1,6 +1,6 @@
 ---
 
-- name: MyBRC/LRC User Portal VM Playbook - Rocky 8.10
+- name: MyBRC/LRC User Portal VM Playbook - EL8
   gather_facts: true
   hosts:
     - all
