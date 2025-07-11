@@ -12,22 +12,26 @@ docker buildx build \
     --target coldfront-os \
     --tag coldfront-os:$IMAGE_TAG \
     --cache-from=type=local,src=/tmp/.buildx-cache \
+    --load \
     .
 
 docker buildx build \
     --target coldfront-app-base \
     --tag coldfront-app-base:$IMAGE_TAG \
     --cache-from=type=local,src=/tmp/.buildx-cache \
+    --load \
     .
 
 docker buildx build \
     --target coldfront-app-config \
     --tag coldfront-app-config:$IMAGE_TAG \
     --cache-from=type=local,src=/tmp/.buildx-cache \
+    --load \
     .
 
 docker buildx build \
     --target coldfront-db-postgres-shell \
     --tag coldfront-db-postgres-shell:$IMAGE_TAG \
     --cache-from=type=local,src=/tmp/.buildx-cache \
+    --load \
     .
