@@ -1,0 +1,27 @@
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "almalinux/8"
+  config.vbguest.auto_update = false
+
+  config.vm.synced_folder ".", "/vagrant/coldfront_app/coldfront"
+
+  config.vm.provision "shell", inline: "/vagrant/coldfront_app/coldfront/bootstrap/development/vm/configure_firewalld.sh", privileged: true
+  config.vm.provision "shell", inline: "dnf install -y epel-release", privileged: true
+
+  # Run Ansible from the Vagrant VM (using new modular Rocky 8 playbook)
+  config.vm.provision "ansible_local" do |ansible|
+    ansible.playbook = "/vagrant/coldfront_app/coldfront/bootstrap/ansible-almalinux8/playbook.yml"
+    ansible.galaxy_role_file = "/vagrant/coldfront_app/coldfront/bootstrap/ansible-almalinux8/requirements.yml"
+    ansible.galaxy_roles_path = "/home/vagrant/.ansible/roles"
+    # https://github.com/hashicorp/vagrant/issues/10958#issuecomment-724431455
+    ansible.galaxy_command = "ansible-galaxy collection install --requirements-file %{role_file} --collections-path /home/vagrant/.ansible/collections --force && ansible-galaxy install --role-file=%{role_file} --roles-path=%{roles_path} --force"
+  end
+
+  config.vm.network :forwarded_port, host: 8880, guest: 80
+
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 4096
+    v.cpus = 2
+  end
+
+end
