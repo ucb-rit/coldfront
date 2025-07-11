@@ -1,5 +1,5 @@
 systemctl enable firewalld
-service firewalld start
+systemctl start firewalld
 
 if ! firewall-cmd --list-all-zones | grep -q cf_dev
 then

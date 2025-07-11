@@ -1,0 +1,874 @@
+---
+
+- name: MyBRC/LRC User Portal VM Playbook - EL8
+  gather_facts: true
+  hosts:
+    - all
+    - "{{ domain }}"
+  become: true
+  become_user: root
+  become_method: sudo
+
+  vars:
+    cwd: "{{ lookup('env', 'PWD') }} "
+    provisioning_tasks: true
+    common_tasks: true
+    python_version_long: 3.13.5
+    python_version_short: 3.13
+    postgres_version: 15
+    postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
+
+  vars_files:
+    - "../../main.yml"
+
+  environment:
+    PATH: "/opt/python{{ python_version_short }}/bin:{{ ansible_env.PATH }}"
+
+  tasks:
+    # Provisioning tasks that can generally be skipped after the first time.
+    - name: Run Provisioning Tasks
+      block:
+        - name: Stop and disable NetworkManager service
+          service:
+            name: NetworkManager
+            state: stopped
+            enabled: false
+
+        - name: Ensure SELinux Python bindings are installed
+          yum:
+            name: python3-libselinux
+            state: present
+
+        - name: Disable SELinux
+          ansible.posix.selinux:
+            policy: targeted
+            state: disabled
+          vars:
+            ansible_python_interpreter: /usr/libexec/platform-python
+
+        # Ensure EPEL 8 is enabled.
+        - name: Ensure EPEL 8 is enabled
+          yum:
+            name: epel-release
+            state: present
+
+        # Install yum packages.
+
+        - name: Install required packages
+          yum:
+            name:
+              - bzip2-devel
+              - curl
+              - gcc
+              - git
+              - libcurl-devel
+              - libffi-devel
+              - make
+              - openssl
+              - openssl-devel
+              - readline-devel
+              - sqlite-devel
+              - wget
+              - zlib-devel
+            state: present
+
+        - name: Install remote wkhtmltopdf RPM
+          yum:
+            name: https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox-0.12.6.1-2.almalinux8.x86_64.rpm
+            state: present
+            disable_gpg_check: true
+
+        # Install Python.
+        - name: Create a Python build directory
+          file:
+            path: /usr/local/src/python
+            state: directory
+            mode: 0755
+
+        - name: Download Python {{ python_version_long }}
+          get_url:
+            url: https://www.python.org/ftp/python/{{ python_version_long }}/Python-{{ python_version_long }}.tgz
+            dest: /usr/local/src/python/Python-{{ python_version_long }}.tgz
+            mode: 0644
+
+        - name: Extract Python {{ python_version_long }}
+          unarchive:
+            src: /usr/local/src/python/Python-{{ python_version_long }}.tgz
+            dest: /usr/local/src/python
+            remote_src: true
+
+        - name: Configure Python {{ python_version_long }}
+          command: ./configure --prefix=/opt/python3.13 --enable-optimizations --with-ensurepip=install --enable-shared
+          args:
+            chdir: /usr/local/src/python/Python-{{ python_version_long }}
+            creates: /usr/local/src/python/Python-{{ python_version_long }}/Makefile
+
+        - name: Build Python {{ python_version_long }}
+          command: make -j "{{ ansible_processor_vcpus | default(2) }}"
+          args:
+            chdir: /usr/local/src/python/Python-{{ python_version_long }}
+            creates: /usr/local/src/python/Python-{{ python_version_long }}/python
+
+        - name: Install Python {{ python_version_long }}
+          command: make altinstall
+          args:
+            chdir: /usr/local/src/python/Python-{{ python_version_long }}
+            creates: /opt/python3.13/bin/python{{ python_version_short }}
+
+        - name: Ensure Python {{ python_version_short }} is executable
+          file:
+            path: /opt/python3.13/bin/python3.13
+            mode: 0755
+            state: file
+
+        - name: Create ld.so.conf.d file for Python {{ python_version_short }}
+          copy:
+            dest: /etc/ld.so.conf.d/python{{ python_version_short }}.conf
+            content: "/opt/python{{ python_version_short }}/lib\n"
+            owner: root
+            group: root
+            mode: 0644
+
+        - name: Run ldconfig to update shared library cache
+          command: ldconfig
+
+        # Install web packages.
+
+        - name: Install required web packages
+          yum:
+            name:
+              - httpd
+              - httpd-devel
+              - mod_ssl
+            state: present
+
+        # Install and configure Redis.
+
+        - name: Install Redis
+          yum:
+            name: redis
+            state: present
+
+        - name: Set Redis password
+          lineinfile:
+            path: /etc/redis.conf
+            regexp: '^requirepass '
+            insertafter: '^# requirepass foobared'
+            line: 'requirepass {{ redis_passwd }}'
+
+        - name: Restart and enable Redis
+          service:
+            name: redis
+            state: restarted
+            enabled: true
+
+        # Install and configure Supervisord.
+
+        - name: Install Supervisor
+          yum:
+            name: supervisor
+            state: present
+
+        - name: Create a Systemd drop-in directory for overriding Supervisor configuration
+          file:
+            path: /etc/systemd/system/supervisord.service.d
+            state: directory
+            mode: 0755
+
+        - name: Create a Systemd drop-in file for overriding Supervisor configuration
+          file:
+            path: /etc/systemd/system/supervisord.service.d/override.conf
+            state: touch
+            mode: 0644
+
+        - name: Configure Systemd to only start Supervisor after the codebase has been mounted (dev only)
+          ini_file:
+            path: /etc/systemd/system/supervisord.service.d/override.conf
+            section: 'Unit'
+            option: 'After'
+            value: '{{ codebase_mount_systemd_unit }}'
+          when: codebase_mount_systemd_unit is defined
+
+        - name: Configure Systemd Supervisor ExecStop, ExecReload, and Restart behavior
+          ini_file:
+            path: /etc/systemd/system/supervisord.service.d/override.conf
+            section: 'Service'
+            option: '{{ item.option }}'
+            value: '{{ item.value }}'
+          with_items:
+            - { option: 'ExecStop', value: '/usr/bin/supervisorctl shutdown'}
+            - { option: 'ExecReload', value: '/usr/bin/supervisorctl reload'}
+            - { option: 'Restart', value: 'always'}
+
+        # ini_file is included in community.general.
+        - name: Set django_q command in supervisord.conf
+          ini_file:
+            path: /etc/supervisord.conf
+            section: 'program:django_q'
+            option: 'command'
+            value: '{{ git_prefix }}/venv/bin/python3 {{ git_prefix }}/{{ reponame }}/manage.py qcluster'
+
+        - name: Set django_q stopasgroup in supervisord.conf
+          ini_file:
+            path: /etc/supervisord.conf
+            section: 'program:django_q'
+            option: 'stopasgroup'
+            value: 'true'
+
+        - name: Set django_q numprocs in supervisord.conf
+          ini_file:
+            path: /etc/supervisord.conf
+            section: 'program:django_q'
+            option: 'numprocs'
+            value: '1'
+
+        - name: Set django_q autorestart in supervisord.conf
+          ini_file:
+            path: /etc/supervisord.conf
+            section: 'program:django_q'
+            option: 'autorestart'
+            value: 'true'
+
+        - name: Reload, restart and enable Supervisord
+          systemd:
+            name: supervisord
+            daemon_reload: true
+            state: restarted
+            enabled: true
+
+        # Install and configure PostgreSQL.
+
+        - name: Enable PowerTools repository
+          command: dnf config-manager --set-enabled powertools
+          become: true
+
+        - name: Disable built-in PostgreSQL module
+          command: dnf -qy module disable postgresql
+          become: true
+
+        - name: Ensure perl-IPC-Run is installed
+          yum:
+            name: perl-IPC-Run
+            state: present
+
+        - name: Add Postgres yum repository
+          yum_repository:
+            name: postgres-repository
+            description: postgres repository
+            baseurl: https://download.postgresql.org/pub/repos/yum/{{ postgres_version }}/redhat/rhel-8.10-x86_64/
+            gpgkey: https://yum.postgresql.org/keys/PGDG-RPM-GPG-KEY-RHEL
+
+        - name: Install Postgresql packages
+          yum:
+            name:
+              - 'postgresql{{ postgres_version }}'
+              - 'postgresql{{ postgres_version }}-libs'
+              - 'postgresql{{ postgres_version }}-devel'
+              - 'postgresql{{ postgres_version }}-test'
+              - 'postgresql{{ postgres_version }}-server'
+            state: present
+
+        - name: Check if PostgreSQL is initialized
+          stat:
+            path: /var/lib/pgsql/{{ postgres_version }}/data/PG_VERSION
+          register: pgdata_dir_version
+
+        - name: Initialize PostgreSQL if not already initialized
+          command: /usr/pgsql-{{ postgres_version }}/bin/postgresql-{{ postgres_version_dotless }}-setup initdb
+          when: not pgdata_dir_version.stat.exists
+
+        - name: Start and enable PostgreSQL service
+          service:
+            name: postgresql-{{ postgres_version }}
+            state: started
+            enabled: true
+
+        # Create Django application log files and set up log rotation.
+
+        - name: Create a parent directory for storing Django application logs
+          file:
+            path: "{{ log_path }}"
+            state: directory
+            mode: 0775
+            owner: "{{ djangooperator }}"
+            group: apache
+
+        - name: Create a log file for Django portal logs
+          copy:
+            content: ""
+            force: false
+            dest: "{{ log_path }}/{{ portal_log_file }}"
+            mode: 0660
+            owner: "{{ djangooperator }}"
+            group: apache
+
+        - name: Create a log file for Django API logs
+          copy:
+            content: ""
+            force: false
+            dest: "{{ log_path }}/{{ api_log_file }}"
+            mode: 0660
+            owner: "{{ djangooperator }}"
+            group: apache
+
+        # Create the Django MEDIA_ROOT directory and subdirectories for file
+        # storage if required.
+
+        - name: Create Django MEDIA_ROOT directory if required
+          file:
+            path: "{{ django_media_root }}"
+            state: directory
+            mode: 0775
+            owner: "{{ djangooperator }}"
+            group: apache
+          when: django_media_root is defined
+
+        - name: Create directories for MOUs if required
+          file:
+            path: "{{ django_media_root }}/{{ item }}"
+            state: directory
+            mode: 0775
+            owner: "{{ djangooperator }}"
+            group: apache
+          loop:
+            - "{{ new_project_request_mou_path }}"
+            - "{{ secure_directory_request_mou_path }}"
+            - "{{ service_units_purchase_request_mou_path }}"
+          when: django_media_root is defined and item is defined and file_storage_backend == "file_system"
+
+        - name: Configure logrotate to rotate the Django API and portal logs
+          template:
+            src: "{{ git_prefix }}/{{ reponame }}/bootstrap/ansible/logrotate.tmpl"
+            dest: /etc/logrotate.d/{{ logrotate_entry_name }}
+
+        - name: Check if an existent directory is given for backing up Django API and portal logs
+          stat:
+            path: "{{ (log_backup_dir_path | default('', true) | length > 0) | ternary(log_backup_dir_path, '/dev/null') }}"
+          register: log_backup_dir_info
+
+        - name: Install a cron job to back up rotated Django API and portal logs if a directory is given
+          # This job is installed to /var/spool/cron/root.
+          ansible.builtin.cron:
+            name: "Back up rotated Django API and portal logs"
+            minute: "0"
+            hour: "0"
+            day: "15"
+            job: "mv {{ log_path }}/*.gz {{ log_backup_dir_path }}"
+          when: log_backup_dir_info.stat.exists and log_backup_dir_info.stat.isdir
+
+        # Prepare the Python virtual environment for the Django application.
+
+        - name: Create Python virtual environment directory
+          file:
+            path: "{{ git_prefix }}/venv"
+            state: directory
+            mode: 0755
+            owner: "{{ djangooperator }}"
+            group: apache
+
+        - name: Initialize Python virtual environment
+          shell: >
+              test -f {{ git_prefix }}/venv/bin/activate
+              || (python{{ python_version_short }} -m venv {{ git_prefix }}/venv
+              && echo created)
+          register: venv_register
+          become_user: "{{ djangooperator }}"
+          changed_when: venv_register.stdout == "created"
+
+        - name: Ensure packaging is installed in the venv for Ansible pip module
+          shell: "{{ git_prefix }}/venv/bin/pip3 install packaging"
+          become_user: "{{ djangooperator }}"
+
+        - name: Upgrade pip
+          pip:
+            name: pip
+            executable: "{{ git_prefix }}/venv/bin/pip3"
+            state: latest
+          vars:
+            ansible_python_interpreter: "{{ git_prefix }}/venv/bin/python3"
+
+        # Install Django application dependencies, including psycopg2,
+        # required to create the PostgreSQL database and user, and mod-wsgi,
+        # required to configure apache.
+
+        - name: Install Django application dependencies
+          pip:
+            requirements: "{{ git_prefix }}/{{ reponame }}/requirements.txt"
+            executable: "{{ git_prefix }}/venv/bin/pip3"
+          become_user: "{{ djangooperator }}"
+          environment: # needed as pg_config isn't in PATH by default
+            PATH: "{{ ansible_env.PATH }}:/usr/pgsql-{{ postgres_version }}/bin"
+          vars:
+            ansible_python_interpreter: "{{ git_prefix }}/venv/bin/python3"
+
+        - name: Add Oracle yum repository
+          yum_repository:
+            name: oracle-repository
+            description: oracle repository
+            baseurl: https://yum.oracle.com/repo/OracleLinux/OL8/oracle/instantclient21/x86_64/
+            # https://linux.oracle.com/security/gpg/
+            gpgkey: https://yum.oracle.com/RPM-GPG-KEY-oracle-ol8
+          when: install_billing_validation_package
+
+        - name: Install Oracle dependency for Python package for validating LBL billing IDs
+          yum:
+            name:
+              - oracle-instantclient-basic.x86_64
+            state: present
+          when: install_billing_validation_package
+
+        # TODO: If this raises an error, the token is exposed in stderr.
+        - name: Install the Python package for validating LBL billing IDs
+          pip:
+            name: 'git+https://{{ billing_validation_repo_username }}:{{ billing_validation_repo_token }}@{{ billing_validation_repo_host }}'
+            executable: '{{ git_prefix }}/venv/bin/pip3'
+          when: install_billing_validation_package
+          no_log: true
+          vars:
+            ansible_python_interpreter: "{{ git_prefix }}/venv/bin/python3"
+
+        # Create a PostgreSQL user and database for the Django application.
+
+        - name: Create a PostgreSQL admin user
+          postgresql_user:
+            name: "{{ db_admin_user }}"
+            password: "{{ db_admin_passwd }}"
+            role_attr_flags: CREATEDB
+          become_user: postgres
+          vars:
+            ansible_python_interpreter: "{{ git_prefix }}/venv/bin/python3"
+
+        - name: Create a new PostgreSQL database under the admin user
+          postgresql_db:
+            name: "{{ db_name }}"
+            owner: "{{ db_admin_user }}"
+          become_user: postgres
+          vars:
+            ansible_python_interpreter: "{{ git_prefix }}/venv/bin/python3"
+
+        # Configure Apache.
+
+        - name: Check if the mod_wsgi module from Python {{ python_version_short }} is installed to Apache
+          stat:
+            path: /etc/httpd/conf.modules.d/02-wsgi.conf
+          register: mod_wsgi_installed
+
+        - name: Install the mod_wsgi module from Python {{ python_version_short }} to Apache
+          shell: "{{ git_prefix }}/venv/bin/mod_wsgi-express install-module --modules-directory /etc/httpd/modules > /etc/httpd/conf.modules.d/02-wsgi.conf"
+          when: not mod_wsgi_installed.stat.exists
+
+      when: provisioning_tasks == true
+      tags: provisioning
+
+    # Production only provisioning tasks.
+    - name: Run Production provisioning Tasks
+      block:
+        ## BRC-only
+        - name: BRC-only Production Tasks
+          block:
+            # Don't do anything as there aren't any provisioning-specific tasks yet.
+            - meta: noop
+          when: flag_brc_enabled
+
+        ## LRC-only
+        - name: LRC-only Production Tasks
+          block:
+
+            # Send logs to LBL.
+
+            - name: Update syslog config to send logs to LBL central server
+              blockinfile:
+                state: present
+                destfile: /etc/rsyslog.conf
+                insertbefore: "# ### begin forwarding rule ###"
+                block: |
+                  # Send copy of logs to LBL's central syslog server
+                  *.* @syslog.lbl.gov
+
+            - name: Restart rsyslog
+              service:
+                name: rsyslog
+                state: restarted
+                enabled: true
+
+            # Configure the firewall.
+
+            - name: Start and enable firewalld service
+              service:
+                name: firewalld
+                state: started
+                enabled: true
+
+            - name: Permit http traffic in public zone
+              ansible.posix.firewalld:
+                zone: public
+                service: http
+                state: enabled
+                permanent: true
+
+            - name: Run Cloudflare Tasks
+              block:
+                # 443/tcp should only be allowed in Cloudflare IP ranges.
+                # https://commons.lbl.gov/pages/viewpage.action?pageId=203489943
+                - name: Do not permit https traffic in public zone
+                  ansible.posix.firewalld:
+                    zone: public
+                    service: https
+                    state: disabled
+                    permanent: true
+
+                - name: Deny 443/tcp in public zone
+                  ansible.posix.firewalld:
+                    zone: public
+                    port: 443/tcp
+                    state: disabled
+                    permanent: true
+
+                - name: Create firewalld zone for Cloudflare IP ranges
+                  ansible.posix.firewalld:
+                    zone: cloudflare
+                    state: present
+                    permanent: true
+
+                # Firewalld must be reloaded after zone transactions.
+                # https://docs.ansible.com/ansible/latest/collections/ansible/posix/firewalld_module.html#notes
+                - name: Reload firewalld service
+                  service:
+                    name: firewalld
+                    state: reloaded
+
+                - name: Add Cloudflare IP ranges to Cloudflare zone
+                  ansible.posix.firewalld:
+                    zone: cloudflare
+                    source: "{{ item }}"
+                    permanent: true
+                    state: enabled
+                  loop: "{{ cloudflare_ip_ranges }}"
+
+                - name: Permit http and https traffic in Cloudflare zone
+                  ansible.posix.firewalld:
+                    zone: cloudflare
+                    service: "{{ item }}"
+                    state: enabled
+                    permanent: true
+                  loop:
+                    - http
+                    - https
+
+                # Log the original client IP address of each request instead of the Cloudflare IP.
+                # Source: https://support.cloudflare.com/hc/en-us/articles/200170786-Restoring-original-visitor-IPs#C5XWe97z77b3XZV
+                - name: Update httpd combined LogFormat in accordance with mod_remoteip
+                  lineinfile:
+                    path: /etc/httpd/conf/httpd.conf
+                    regexp: '^    LogFormat .+ combined$'
+                    line: '    LogFormat "%a %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined'
+
+              when: cloudflare_enabled
+
+            - name: Reload firewalld service
+              service:
+                name: firewalld
+                state: reloaded
+
+          when: flag_lrc_enabled
+
+      when: provisioning_tasks == true and deployment == "prod"
+      tags: provisioning
+
+    # Staging only provisioning tasks.
+    - name: Run Staging Provisioning Tasks
+      block:
+        # Don't do anything as there aren't any provisioning-specific tasks yet.
+        - meta: noop
+      # Uncomment when tasks are added.
+      # when: provisioning_tasks == true and deployment == "staging"
+      tags: provisioning
+
+    # Development only provisioning tasks.
+    - name: Run Development Provisioning Tasks
+      block:
+
+        - name: Install vim
+          yum:
+            name: vim
+            state: present
+        
+        - name: Register user home directory
+          user:
+            name: "{{ djangooperator }}"
+          register: user
+
+        - name: Add dev QOL lines to .bashrc
+          blockinfile:
+            path: "{{ user.home }}/.bashrc"
+            block: |
+              # Upon login, navigate to the ColdFront directory and source the virtual environment.
+              cd {{ git_prefix }}/{{ reponame }}
+              source ../venv/bin/activate
+              # Restart Apache with a keyword.
+              alias reload="sudo service httpd reload"
+          become_user: "{{ djangooperator }}"
+
+      when: provisioning_tasks == true and deployment == "dev"
+      tags: provisioning
+
+    # Non-provisioning tasks common to development and production.
+    # Meant to be re-run frequently.
+    - name: Run Common Tasks
+      block:
+
+        # Configure Apache.
+
+        - name: Create a WSGI configuration file from a template if SSL is disabled
+          template:
+            src: "{{ git_prefix }}/{{ reponame }}/bootstrap/ansible/wsgi_conf.tmpl"
+            dest: /etc/httpd/conf.d/{{ wsgi_conf_file_name }}
+          when: not ssl_enabled
+
+        - name: Create a WSGI configuration file from a template if SSL is enabled
+          template:
+            src: "{{ git_prefix }}/{{ reponame }}/bootstrap/ansible/wsgi_conf_ssl.tmpl"
+            dest: /etc/httpd/conf.d/{{ wsgi_conf_file_name }}
+          when: ssl_enabled
+
+        # Configure the Django application.
+
+        - name: Copy the ColdFront local_settings.py file from the sample
+          copy:
+            src: "{{ git_prefix }}/{{ reponame }}/coldfront/config/local_settings.py.sample"
+            dest: "{{ git_prefix }}/{{ reponame }}/coldfront/config/local_settings.py"
+
+        - name: Copy the ColdFront local_strings.py file from the sample
+          copy:
+            src: "{{ git_prefix }}/{{ reponame }}/coldfront/config/local_strings.py.sample"
+            dest: "{{ git_prefix }}/{{ reponame }}/coldfront/config/local_strings.py"
+
+        - name: Create the deployment-specific _settings.py file from a template
+          template:
+            src: "{{ git_prefix }}/{{ reponame }}/bootstrap/ansible/settings_template.tmpl"
+            dest: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}/config/{{ deployment }}_settings.py"
+
+        - name: Create the deployment-specific password reset email subject text file from a template
+          template:
+            src: "{{ git_prefix }}/{{ reponame }}/bootstrap/ansible/password_reset_subject_template.tmpl"
+            dest: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}/core/user/templates/user/passwords/password_reset_subject.txt"
+
+        # Ensure services are updated, running, and enabled. Avoid restarting
+        # them to avoid disruptions to operations.
+
+        - name: Ensure that Redis service is running and enabled
+          service:
+            name: redis
+            state: started
+            enabled: true
+
+        - name: Ensure that Supervisord service is running and enabled
+          service:
+            name: supervisord
+            state: started
+            enabled: true
+
+        - name: Ensure that PostgreSQL service is reloaded and enabled
+          service:
+            name: postgresql-{{ postgres_version }}
+            state: reloaded
+            enabled: true
+
+        - block:
+          # Allow pip installation of private git repo for mou generation.
+
+          - name: Register user home directory
+            user:
+              name: "{{ djangooperator }}"
+            register: user
+
+          - name: Check if github in known_hosts
+            shell: ssh-keygen -F github.com
+            register: github_known_hosts
+            become_user: "{{ djangooperator }}"
+            changed_when: false
+            failed_when: false
+
+          - name: Add github.com to known_hosts
+            shell: "ssh-keyscan github.com >> {{ user.home }}/.ssh/known_hosts"
+            become_user: "{{ djangooperator }}"
+            when: github_known_hosts.rc != 0
+
+          - name: Copy deploy key to user's .ssh directory
+            copy:
+              src: "{{ mou_generator_deploy_key_path }}"
+              dest: "{{ user.home }}/.ssh/id_mou_generator"
+              owner: "{{ djangooperator }}"
+              group: "{{ djangooperator }}"
+              mode: 0600
+            become_user: "{{ djangooperator }}"
+          
+          - name: Add id_mou_generator to ssh config
+            blockinfile:
+              path: "{{ user.home }}/.ssh/config"
+              block: |
+                Host github.com
+                  IdentityFile ~/.ssh/id_mou_generator
+              create: true
+
+          # Note: only updates if the version set in mou-generator/setup.py increases.
+          # Otherwise, force reinstall with pip and the --force-reinstall flag.
+          - name: Install mou generation package
+            pip:
+              name: git+ssh://git@github.com/ucb-rit/mou-generator.git
+              executable: "{{ git_prefix }}/venv/bin/pip3"
+            become_user: "{{ djangooperator }}"
+            environment:
+              GIT_SSH_COMMAND: "ssh -o BatchMode=yes"
+            vars:
+              ansible_python_interpreter: "{{ git_prefix }}/venv/bin/python3"
+
+          when: flag_mou_generation_enabled
+
+        # Install Django application dependencies
+
+        - name: Install Django application dependencies
+          pip:
+            requirements: "{{ git_prefix }}/{{ reponame }}/requirements.txt"
+            executable: "{{ git_prefix }}/venv/bin/pip3"
+          become_user: "{{ djangooperator }}"
+          environment: # needed as pg_config isn't in PATH by default
+            PATH: "{{ ansible_env.PATH }}:/usr/pgsql-{{ postgres_version }}/bin"
+          vars:
+            ansible_python_interpreter: "{{ git_prefix }}/venv/bin/python3"
+
+        # Run Django management commands.
+
+        - name: Run Django management command - initial_setup
+          django_manage:
+            command: initial_setup
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+
+        - name: Run Django management command - migrate
+          django_manage:
+            command: migrate
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+
+        - name: Run Django management command - add_accounting_defaults
+          django_manage:
+            command: add_accounting_defaults
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+
+        - name: Run Django management command - create_allocation_periods
+          django_manage:
+            command: create_allocation_periods
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+
+        - name: Run Django management command - add_allowance_defaults
+          django_manage:
+            command: add_allowance_defaults
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+
+        - name: Run Django management command - add_directory_defaults
+          django_manage:
+            command: add_directory_defaults
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+
+        - name: Run Django management command - create_staff_group
+          django_manage:
+            command: create_staff_group
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+
+        - name: Run Django management command - collectstatic
+          django_manage:
+            command: collectstatic --noinput
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+
+        - name: Run Django management command - schedule_allocation_period_audits
+          django_manage:
+            command: schedule_allocation_period_audits {{ allocation_period_audit_email_admin_list | join(' ') }} --schedule --month {{ flag_next_period_renewal_requestable_month | int - 1 }}
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+          when: allocation_period_audit_email_admin_list is defined and allocation_period_audit_email_admin_list | length > 0
+
+        # Plugin: hardware_procurements: If the plugin is enabled and caching is
+        #  enabled, schedule a refresh of the cache every 60 minutes, if not
+        #  already scheduled.
+        # TODO: (Low priority) Make the interval configurable.
+        - name: Run Django management command - refresh_hardware_procurements_cache --schedule --interval 60
+          django_manage:
+            command: refresh_hardware_procurements_cache --schedule --interval 60
+            app_path: "{{ git_prefix }}/{{ reponame }}"
+            settings: "config.settings"
+            pythonpath: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}"
+            virtualenv: "{{ git_prefix }}/venv"
+          become_user: "{{ djangooperator }}"
+          when: plugin_hardware_procurements_enabled and plugin_hardware_procurements.data_source == "cached"
+
+        # Grant Apache read access to Django application files.
+
+        - name: Grant Apache read access to the application's parent directory
+          file:
+            path: "{{ git_prefix }}"
+            state: directory
+            mode: 0755
+            group: apache
+          when: chmod_tasks
+
+        - name: Grant Apache recursive read access to the application directory
+          file:
+            path: "{{ git_prefix }}/{{ reponame }}"
+            state: directory
+            recurse: true
+            mode: "u=rwX,g=rX,o=rX"
+            group: apache
+          when: chmod_tasks
+
+        # Gracefully restart Apache so that processes handle current requests
+        # before being replaced by a new process.
+        - name: Reload httpd service
+          service:
+            name: httpd
+            state: reloaded
+            enabled: true
+
+        # supervisorctl is included in community.general.
+        - name: Ensure that a Supervisor worker is running a django_q cluster
+          supervisorctl:
+            name: 'django_q'
+            state: restarted
+
+      when: provisioning_tasks == true or common_tasks == true
+      tags:
+        - provisioning
+        - common
