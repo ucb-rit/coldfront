@@ -26,10 +26,13 @@ Log In
           <br><br>
         </p>
         <p>
-          <a href="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:lbl.gov' %}" class="btn btn-primary btn-lg" role="button">
-            <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-            Log In
-          </a>
+          <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:lbl.gov' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button class="btn btn-primary btn-lg" type="submit" role="button">
+              <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+              Log In
+            </button>
+          </form>
         </p>
         <hr>
       </div>
@@ -46,10 +49,13 @@ Log In
           I do not have a Berkeley Lab Identity, but I do have a CalNet ID.
         </p>
         <p>
-          <a href="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:berkeley.edu' %}" class="btn btn-secondary btn-lg" role="button">
-            <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-            Log In
-          </a>
+          <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:berkeley.edu' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button class="btn btn-secondary btn-lg" type="submit" role="button">
+              <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+              Log In
+            </button>
+          </form>
         </p>
         <hr>
       </div>
@@ -66,10 +72,13 @@ Log In
           I do not have a Berkeley Lab Identity, and I do not have a CalNet ID.
         </p>
         <p>
-          <a href="{% provider_login_url 'cilogon' process='login' auth_params='initialidp=https://accounts.google.com/o/oauth2/auth' %}" class="btn btn-secondary btn-lg" role="button">
-            <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-            Log In
-          </a>
+          <form action="{% provider_login_url 'cilogon' process='login' auth_params='initialidp=https://accounts.google.com/o/oauth2/auth' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button class="btn btn-secondary btn-lg" type="submit" role="button">
+              <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+              Log In
+            </button>
+          </form>
         </p>
         <hr>
       </div>
