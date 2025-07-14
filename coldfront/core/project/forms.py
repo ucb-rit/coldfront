@@ -1,5 +1,3 @@
-import datetime
-
 from django import forms
 from django.core.validators import MinLengthValidator
 from django.shortcuts import get_object_or_404
@@ -7,9 +5,14 @@ from django.db.models import Q
 
 from coldfront.core.project.models import (Project, ProjectReview,
                                            ProjectUserRoleChoice)
+from coldfront.core.project.utils_.computing_allowance_eligibility_manager import ComputingAllowanceEligibilityManager
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
+from django.contrib.auth.models import User
 from coldfront.core.user.utils_.host_user_utils import eligible_host_project_users
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.resource.utils import get_compute_resource_names
+
+import datetime
 
 
 EMAIL_DIRECTOR_PENDING_PROJECT_REVIEW_EMAIL = import_from_settings(
@@ -230,6 +233,86 @@ class ReviewStatusForm(forms.Form):
         validators=[MinLengthValidator(10)],
         required=False,
         widget=forms.Textarea(attrs={'rows': 3}))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        status = cleaned_data.get('status', 'Pending')
+        # Require justification for denials.
+        if status == 'Denied':
+            justification = cleaned_data.get('justification', '')
+            if not justification.strip():
+                raise forms.ValidationError(
+                    'Please provide a justification for your decision.')
+        return cleaned_data
+
+
+# note: from coldfront\core\project\forms_\new_project_forms\request_forms.py
+class PIChoiceField(forms.ModelChoiceField):
+
+    def label_from_instance(self, obj):
+        return f'{obj.first_name} {obj.last_name} ({obj.email})'
+
+
+class ReviewEligibilityForm(ReviewStatusForm):
+
+    PI = PIChoiceField(
+        label='Principal Investigator',
+        queryset=User.objects.none(),
+        required=False,
+        widget=DisabledChoicesSelectWidget(),
+        help_text= 'Please confirm the PI for this project. If the PI is ' \
+                   'listed, select them from the dropdown and do not fill ' \
+                   'out the PI information fields. If the PI is not ' \
+                   'listed, empty the field and provide the PI\'s ' \
+                   'information below.')
+    first_name = forms.CharField(max_length=30, required=False)
+    middle_name = forms.CharField(max_length=30, required=False)
+    last_name = forms.CharField(max_length=150, required=False)
+    email = forms.EmailField(max_length=100, required=False)
+
+    field_order=['PI', 'first_name', 'middle_name', 'last_name', 'email',
+                 'status', 'justification']
+
+    def __init__(self, *args, **kwargs):
+        self.computing_allowance = kwargs.pop('computing_allowance', None)
+        self.allocation_period = kwargs.pop('allocation_period', None)
+        super().__init__(*args, **kwargs)
+        if self.computing_allowance is not None:
+            self.computing_allowance = ComputingAllowance(
+                self.computing_allowance)
+            self.disable_pi_choices()
+        self.exclude_pi_choices()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pi = self.cleaned_data['PI']
+        if pi is not None and pi not in self.fields['PI'].queryset:
+            raise forms.ValidationError(f'Invalid selection {pi.username}.')
+
+        # TODO: This doesn't include the clean_email method from
+        #  SavioProjectNewPIForm.
+
+        return cleaned_data
+
+    def disable_pi_choices(self):
+        """Prevent certain Users, who should be displayed, from being
+        selected as PIs."""
+        computing_allowance_eligibility_manager = \
+            ComputingAllowanceEligibilityManager(
+                self.computing_allowance,
+                allocation_period=self.allocation_period)
+
+        disable_user_pks = \
+            computing_allowance_eligibility_manager.get_ineligible_users(
+                pks_only=True)
+
+        self.fields['PI'].widget.disabled_choices = disable_user_pks
+
+    def exclude_pi_choices(self):
+        """Exclude certain Users from being displayed as PI options."""
+        # Exclude any user that does not have an email address or is inactive.
+        self.fields['PI'].queryset = User.objects.exclude(
+            Q(email__isnull=True) | Q(email__exact='') | Q(is_active=False))
 
     def clean(self):
         cleaned_data = super().clean()
