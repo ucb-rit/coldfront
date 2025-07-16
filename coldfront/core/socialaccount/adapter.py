@@ -2,7 +2,7 @@ from allauth.account.internal.emailkit import valid_email_or_none
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_email as user_email_func
 from allauth.account.utils import user_username
-from allauth.exceptions import ImmediateHttpResponse
+from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.providers.base import AuthProcess
 from coldfront.core.account.utils.login_activity import LoginActivityVerifier
