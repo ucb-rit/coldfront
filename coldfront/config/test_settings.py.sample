@@ -195,9 +195,6 @@ HARDWARE_PROCUREMENTS_CONFIG = {
 #------------------------------------------------------------------------------
 
 Q_CLUSTER = {
-    # Prevent a warning about preserving database connections when
-    # sync=True.
-    'orm': 'default',
     'retry': 2 * 24 * 60 * 60,
     'sync': True,
     'timeout': 24 * 60 * 60,
