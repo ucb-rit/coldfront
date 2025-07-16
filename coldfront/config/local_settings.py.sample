@@ -42,7 +42,7 @@ SITE_ID = 1
 REQUEST_APPROVAL_CC_LIST = []
 
 # The regex for a valid LBL billing ID (six digits, a hyphen, three digits.)
-LBL_BILLING_ID_REGEX = "^\d{6}-\d{3}$"
+LBL_BILLING_ID_REGEX = r"^\d{6}-\d{3}$"
 
 #------------------------------------------------------------------------------
 # General Center Information

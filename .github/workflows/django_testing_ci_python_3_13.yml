@@ -88,13 +88,13 @@ jobs:
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest -m unit
+        pytest coldfront/ -m unit
 
     - name: Run pytest component tests
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest -m component
+        pytest coldfront/ -m component
 
     # - name: Run pytest acceptance tests
     #   run: |

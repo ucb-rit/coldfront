@@ -838,13 +838,13 @@ class TestStartAllocationPeriod(TestBase):
     def extract_deactivation_message_entries(message, dry_run=False):
         """Given a line relating to Project deactivation, return the
         outputted Project ID and name."""
-        pattern_template = (
-            '{0} Project (?P<project_id>\d+) \((?P<project_name>[a-z0-9_]+)\) '
-            'and reset Service Units\.')
         if dry_run:
-            pattern = pattern_template.format('Would deactivate')
+            prefix = 'Would deactivate'
         else:
-            pattern = pattern_template.format('Deactivated')
+            prefix = 'Deactivated'
+        pattern = (
+            rf'{prefix} Project (?P<project_id>\d+) '
+            rf'\((?P<project_name>[a-z0-9_]+)\) and reset Service Units\.')
         return re.match(pattern, message).groups()
 
     @staticmethod
@@ -852,8 +852,8 @@ class TestStartAllocationPeriod(TestBase):
         """Given a line relating to request processing, return the
         outputted request ID and number of service units."""
         pattern_template = (
-            f'{{0}} {model.__name__} (?P<request_id>\d+) with '
-            f'(?P<num_service_units>[0-9.]+) service units.')
+            rf'{{0}} {model.__name__} (?P<request_id>\d+) with '
+            rf'(?P<num_service_units>[0-9.]+) service units.')
         if dry_run:
             pattern = pattern_template.format('Would process')
         else:
