@@ -158,7 +158,7 @@ class BaseTestMixin(object):
     def parse_urls_from_str(s):
         """Return a list of URLs parsed from the given string, in the
         order that they appear."""
-        return re.findall('(?P<url>https?://[^\s]+)', s)
+        return re.findall(r'(?P<url>https?://[^\s]+)', s)
 
     @staticmethod
     def sign_user_access_agreement(user):
