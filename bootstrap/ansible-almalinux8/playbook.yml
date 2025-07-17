@@ -420,7 +420,7 @@
         # TODO: If this raises an error, the token is exposed in stderr.
         - name: Install the Python package for validating LBL billing IDs
           pip:
-            name: 'git+https://{{ billing_validation_repo_username }}:{{ billing_validation_repo_token }}@{{ billing_validation_repo_host }}'  # TODO: Specify a branch via @branch_name.
+            name: 'git+https://{{ billing_validation_repo_username }}:{{ billing_validation_repo_token }}@{{ billing_validation_repo_host }}@upgrade/rocky8-python3.13'  # TODO: Update this once the upgrade PR is merged.
             executable: '{{ git_prefix }}/venv/bin/pip3'
           when: install_billing_validation_package
           no_log: true
@@ -715,7 +715,7 @@
           # Otherwise, force reinstall with pip and the --force-reinstall flag.
           - name: Install mou generation package
             pip:
-              name: git+ssh://git@github.com/ucb-rit/mou-generator.git@upgrade/rocky8-python3.13  # TODO: Update this once the the upgrade PR is merged.
+              name: git+ssh://git@github.com/ucb-rit/mou-generator.git@upgrade/rocky8-python3.13  # TODO: Update this once the upgrade PR is merged.
               executable: "{{ git_prefix }}/venv/bin/pip3"
             become_user: "{{ djangooperator }}"
             environment:
