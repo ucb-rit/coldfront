@@ -67,6 +67,7 @@
               - openssl
               - openssl-devel
               - readline-devel
+              - redhat-rpm-config
               - sqlite-devel
               - wget
               - zlib-devel
