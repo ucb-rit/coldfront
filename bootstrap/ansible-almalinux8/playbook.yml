@@ -73,7 +73,7 @@
               - zlib-devel
             state: present
 
-        - name: Install remote wkhtmltopdf RPM
+        - name: Install remote wkhtmltopdf RPM to /usr/local/bin/wkhtmltopdf
           yum:
             name: https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox-0.12.6.1-2.almalinux8.x86_64.rpm
             state: present
@@ -421,7 +421,7 @@
         # TODO: If this raises an error, the token is exposed in stderr.
         - name: Install the Python package for validating LBL billing IDs
           pip:
-            name: 'git+https://{{ billing_validation_repo_username }}:{{ billing_validation_repo_token }}@{{ billing_validation_repo_host }}'
+            name: 'git+https://{{ billing_validation_repo_username }}:{{ billing_validation_repo_token }}@{{ billing_validation_repo_host }}@upgrade/rocky8-python3.13'  # TODO: Update this once the upgrade PR is merged.
             executable: '{{ git_prefix }}/venv/bin/pip3'
           when: install_billing_validation_package
           no_log: true
@@ -716,7 +716,7 @@
           # Otherwise, force reinstall with pip and the --force-reinstall flag.
           - name: Install mou generation package
             pip:
-              name: git+ssh://git@github.com/ucb-rit/mou-generator.git
+              name: git+ssh://git@github.com/ucb-rit/mou-generator.git@upgrade/rocky8-python3.13  # TODO: Update this once the upgrade PR is merged.
               executable: "{{ git_prefix }}/venv/bin/pip3"
             become_user: "{{ djangooperator }}"
             environment:
