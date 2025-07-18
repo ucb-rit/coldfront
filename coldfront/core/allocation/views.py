@@ -46,6 +46,7 @@ from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirectory
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.project.models import (Project, ProjectUser,
                                            ProjectUserStatusChoice)
+from coldfront.core.project.utils import is_primary_cluster_project
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
@@ -433,6 +434,8 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                 user_account_fee_billing_ids
 
         # Recharge fee billing IDs
+        if not is_primary_cluster_project(allocation_obj.project):
+            return
         computing_allowance_interface = ComputingAllowanceInterface()
         allowance_resource = \
             computing_allowance_interface.allowance_from_project(
