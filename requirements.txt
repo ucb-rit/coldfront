@@ -48,7 +48,7 @@ pytest
 pytest-django
 python-dateutil==2.8.0
 python-memcached==1.59
-pytz==2018.9
+pytz==2025.2
 redis==3.2.1
 requests==2.22.0
 sentry-sdk==1.5.6
