@@ -261,7 +261,8 @@ def deactivate_project_and_allocation(project, change_reason=None):
 
 
 def is_primary_cluster_project(project):
-    """Return the Project is associated with the primary cluster."""
+    """Return whether the Project is associated with the primary
+    cluster."""
     project_compute_resource_name = get_project_compute_resource_name(project)
     primary_cluster_resource_name = get_primary_compute_resource_name()
     return project_compute_resource_name == primary_cluster_resource_name
