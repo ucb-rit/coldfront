@@ -51,7 +51,11 @@ EXAMPLE_JSON ='''[
 
 
 class Command(BaseCommand):
-    help = 'Parse the UCB academic calendar and output JSON entries.'
+    help = (
+        'Parse the UCB academic calendar and output JSON entries. Note: To use '
+        'this command, you must install openai and pypdf via Pip.')
+    # TODO: Once Python has been upgraded, these may be re-included in
+    #  requirements.txt.
 
     def add_arguments(self, parser):
         parser.add_argument(
