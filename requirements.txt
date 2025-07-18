@@ -34,7 +34,7 @@ future==0.17.1
 gspread==3.6.0
 humanize==0.5.1
 idna==2.8
-iso8601==0.1.16
+iso8601==2.1.0
 ldap3==2.9.1
 mod-wsgi
 oauth2client==4.1.3
