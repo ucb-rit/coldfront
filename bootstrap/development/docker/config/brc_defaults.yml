@@ -25,6 +25,8 @@ plugin_hardware_procurements:
   data_source: 'dummy'
   data_source_options:
 
+plugin_user_restrictions_enabled: false
+
 portal_name: MyBRC
 program_name_long: Berkeley Research Computing
 program_name_short: BRC

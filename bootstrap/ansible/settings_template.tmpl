@@ -309,6 +309,7 @@ FLAGS = {
     'HARDWARE_PROCUREMENTS_ENABLED': [{'condition': 'app installed', 'value': 'coldfront.plugins.hardware_procurements'}],
     'MOU_GENERATION_ENABLED': [{'condition': 'boolean', 'value': {{ flag_mou_generation_enabled }}}],
     'RENEWAL_SURVEY_ENABLED': [{'condition': 'boolean', 'value': {{ flag_renewal_survey_enabled }}}],
+    'USER_RESTRICTIONS_ENABLED': [{'condition': 'app installed', 'value': 'coldfront.plugins.user_restrictions'}],
 }
 
 # Enforce that boolean flags are consistent with each other.
@@ -367,6 +368,15 @@ HARDWARE_PROCUREMENTS_CONFIG = {
 }
 {%- endif -%}
 
+{% if plugin_user_restrictions_enabled is defined and plugin_user_restrictions_enabled | bool -%}
+#------------------------------------------------------------------------------
+# Plugin: user_restrictions
+#------------------------------------------------------------------------------
+
+EXTRA_EXTRA_APPS += [
+    'coldfront.plugins.user_restrictions'
+]
+{%- endif -%}
 
 {% if file_storage_backend == 'google_drive' %}
 #------------------------------------------------------------------------------
