@@ -25,6 +25,8 @@ plugin_hardware_procurements:
   data_source: 'dummy'
   data_source_options:
 
+plugin_user_restrictions_enabled: true
+
 portal_name: MyLRC
 program_name_long: Laboratory Research Computing
 program_name_short: LRC
