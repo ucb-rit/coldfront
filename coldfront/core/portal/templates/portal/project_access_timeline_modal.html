@@ -1,0 +1,231 @@
+<!-- Project Access Timeline Modal -->
+<div class="modal fade" id="projectAccessTimelineModal{{ project.id }}" tabindex="-1" role="dialog" aria-labelledby="projectAccessTimelineModalLabel{{ project.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="projectAccessTimelineModalLabel{{ project.id }}">
+          Project Access Tracking - {{ project.name }}
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        {% if project.tracking_status.error %}
+          <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-triangle"></i>
+            {{ project.tracking_status.error }}
+          </div>
+        {% else %}
+          <div class="mb-3">
+            <p><strong>Status:</strong> {{ project.tracking_status.message }}</p>
+            {% if project.tracking_status.details %}
+              {% if project.tracking_status.details.request_date %}
+                <p><strong>Request Date:</strong> {{ project.tracking_status.details.request_date|date:"M d, Y g:i A" }}</p>
+              {% endif %}
+              {% if project.tracking_status.details.reason %}
+                <p><strong>Request Reason:</strong> {{ project.tracking_status.details.reason }}</p>
+              {% endif %}
+            {% endif %}
+          </div>
+
+          <!-- Dell Design System Progress Tracker -->
+          <div class="dds__progress-tracker" role="list" aria-label="Project access progress">
+            <ol class="dds__progress-tracker__list">
+              {% for step in project.tracking_status.steps %}
+                <li class="dds__progress-tracker__list-item {% if step.completed %}dds__progress-tracker__list-item--completed{% elif step.current %}dds__progress-tracker__list-item--current{% endif %}" role="listitem">
+                  <span class="dds__progress-tracker__list-item-label">
+                    {% if step.completed %}
+                      <svg class="dds__progress-tracker__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M6.5 11.793l-4.146-4.147a.5.5 0 0 0-.708.708l4.5 4.5a.5.5 0 0 0 .708 0l8-8a.5.5 0 0 0-.708-.708L6.5 11.793z"/>
+                      </svg>
+                    {% elif step.current %}
+                      <span class="dds__progress-tracker__number" aria-hidden="true">{{ forloop.counter }}</span>
+                    {% else %}
+                      <span class="dds__progress-tracker__number" aria-hidden="true">{{ forloop.counter }}</span>
+                    {% endif %}
+                    <span class="dds__progress-tracker__text">{{ step.label }}</span>
+                  </span>
+                </li>
+              {% endfor %}
+            </ol>
+          </div>
+
+          <div class="mt-4">
+            <small class="text-muted">
+              <i class="fas fa-info-circle"></i>
+              The timeline shows your current progress in gaining cluster access for this project.
+              {% if project.tracking_status.status.value == 'Directly Added by PI' %}
+                Since you were directly added by a PI, some steps were skipped.
+              {% endif %}
+            </small>
+          </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Dell Design System Progress Tracker Styles */
+.dds__progress-tracker {
+  margin: 2rem 0;
+}
+
+.dds__progress-tracker__list {
+  display: flex;
+  justify-content: space-between;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: relative;
+}
+
+.dds__progress-tracker__list::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #e7e7e7;
+  z-index: -1;
+  transform: translateY(-50%);
+}
+
+.dds__progress-tracker__list-item {
+  flex: 1;
+  text-align: center;
+  position: relative;
+}
+
+.dds__progress-tracker__list-item-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dds__progress-tracker__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 2px solid #e7e7e7;
+  color: #6c757d;
+  font-weight: 600;
+  font-size: 0.875rem;
+  position: relative;
+  z-index: 1;
+}
+
+.dds__progress-tracker__icon {
+  width: 2rem;
+  height: 2rem;
+  fill: #ffffff;
+  background-color: #0072c9;
+  border-radius: 50%;
+  padding: 0.25rem;
+  position: relative;
+  z-index: 1;
+}
+
+.dds__progress-tracker__text {
+  font-size: 0.875rem;
+  color: #333;
+  max-width: 120px;
+}
+
+.dds__progress-tracker__list-item--completed .dds__progress-tracker__number {
+  display: none;
+}
+
+.dds__progress-tracker__list-item--completed::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -50%;
+  right: 50%;
+  height: 2px;
+  background-color: #0072c9;
+  z-index: 0;
+  transform: translateY(-50%);
+}
+
+.dds__progress-tracker__list-item:first-child::before {
+  display: none;
+}
+
+.dds__progress-tracker__list-item--current .dds__progress-tracker__number {
+  background-color: #0072c9;
+  border-color: #0072c9;
+  color: #ffffff;
+}
+
+.dds__progress-tracker__list-item--current .dds__progress-tracker__text {
+  font-weight: 600;
+}
+
+.dds__progress-tracker__list-item--current::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -50%;
+  right: 50%;
+  height: 2px;
+  background-color: #0072c9;
+  z-index: 0;
+  transform: translateY(-50%);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dds__progress-tracker__list {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dds__progress-tracker__list::before {
+    top: 0;
+    bottom: 0;
+    left: 1rem;
+    width: 2px;
+    height: auto;
+    transform: none;
+  }
+
+  .dds__progress-tracker__list-item {
+    text-align: left;
+    margin-bottom: 2rem;
+  }
+
+  .dds__progress-tracker__list-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .dds__progress-tracker__list-item-label {
+    flex-direction: row;
+  }
+
+  .dds__progress-tracker__list-item::before {
+    top: -1rem;
+    bottom: -1rem;
+    left: 1rem;
+    width: 2px;
+    height: auto;
+    transform: translateX(-50%);
+  }
+
+  .dds__progress-tracker__list-item--completed::before,
+  .dds__progress-tracker__list-item--current::before {
+    top: -1rem;
+    bottom: 50%;
+  }
+}
+</style>

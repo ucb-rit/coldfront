@@ -1,0 +1,23 @@
+{% extends "common/base.html" %}
+{% load static %}
+{% load portal_tags %}
+
+{% block title %}Condo Allocation Entry Detail{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <h1>Condo Allocation Entry Detail</h1>
+  <hr>
+  <div class="card">
+    <div class="card-body">
+      {% for col in decommission_detail_columns %}
+        <div class="row mb-2">
+          <div class="col-sm-4 font-weight-bold">{{ col }}:</div>
+          <div class="col-sm-8">{{ alert.record|get_item:col }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  <a href="{% url 'decommission_details' %}" class="btn btn-primary mt-3">Back to Decommission Alerts</a>
+</div>
+{% endblock %}

@@ -145,6 +145,9 @@
                 <th scope="col" class="text-nowrap">
                   Service Units
                 </th>
+                <th scope="col" class="text-nowrap">
+                  Project Access Tracking
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -169,6 +172,16 @@
                     {% include "allocation/cluster_access_badge.html" with status=project.display_status %}
                   </td>
                   <td>{{ project.rendered_compute_usage }}</td>
+                  <td>
+                    {% if project.has_tracking %}
+                      <a href="#" data-toggle="modal" data-target="#projectAccessTimelineModal{{ project.pk }}">
+                        View Details
+                      </a>
+                      {% include "portal/project_access_timeline_modal.html" with project=project %}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>

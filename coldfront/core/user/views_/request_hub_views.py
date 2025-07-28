@@ -21,6 +21,8 @@ from coldfront.core.project.models import (ProjectUserRemovalRequest,
 from coldfront.core.project.utils_.permissions_utils import \
     is_user_manager_or_pi_of_project
 
+from coldfront.core.project.utils_.join_request_tracker import JoinRequestTracker
+
 
 class RequestListItem:
     """
@@ -325,12 +327,20 @@ class RequestHubView(LoginRequiredMixin,
                 project_user__status__name__in=['Active', 'Denied'],
                 *args).order_by('-modified')
 
+        # Add tracking status to pending join requests
+        pending_with_tracking = self._add_tracking_status_to_join_requests(
+            project_join_request_pending)
+
+        # Add tracking status to complete join requests
+        complete_with_tracking = self._add_tracking_status_to_join_requests(
+            project_join_request_complete)
+
         proj_join_request_object.num = self.paginators
         proj_join_request_object.pending_queryset = \
-            self.create_paginator(project_join_request_pending)
+            self.create_paginator(pending_with_tracking)
 
         proj_join_request_object.complete_queryset = \
-            self.create_paginator(project_join_request_complete)
+            self.create_paginator(complete_with_tracking)
 
         proj_join_request_object.num_pending = \
             project_join_request_pending.count()
@@ -349,6 +359,33 @@ class RequestHubView(LoginRequiredMixin,
             'reasonable time frame.')
 
         return proj_join_request_object
+
+    def _add_tracking_status_to_join_requests(self, join_requests_queryset):
+        """Add tracking status information to each join request in the queryset"""
+        # Convert queryset to list to allow modification
+        join_requests_list = list(join_requests_queryset)
+
+        # Add tracking status to each join request
+        for join_request in join_requests_list:
+            project = join_request.project_user.project
+            user = join_request.project_user.user
+            try:
+                tracker = JoinRequestTracker(user, project)
+                tracking_status = tracker.get_status()
+
+                # For request hub, we want to show tracking if there's a valid status
+                can_view = tracking_status.get('can_view', False)
+                has_valid_status = tracking_status.get('status') is not None
+
+                join_request.has_tracking = can_view or has_valid_status
+                join_request.tracking_status = tracking_status
+                join_request.tracking_error = tracking_status.get('error')
+            except Exception as e:
+                join_request.has_tracking = False
+                join_request.tracking_status = None
+                join_request.tracking_error = None
+
+        return join_requests_list
 
     def get_project_renewal_request(self):
         """Populates a RequestListItem with data for project renewal

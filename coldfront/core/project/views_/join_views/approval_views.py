@@ -30,7 +30,8 @@ from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserR
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
 
-
+from coldfront.core.project.utils_.join_request_tracker import JoinRequestTracker
+import logging
 logger = logging.getLogger(__name__)
 
 
@@ -341,5 +342,35 @@ class ProjectJoinRequestListView(LoginRequiredMixin, UserPassesTestMixin,
             join_requests = paginator.page(paginator.num_pages)
 
         context['join_request_list'] = join_requests
+
+        # In coldfront/core/project/views_/join_views/approval_views.py
+        # Replace the tracking code in ProjectJoinRequestListView.get_context_data() with:
+
+        # Add tracking status to each join request
+        for join_request in join_requests:
+            project = join_request.project_user.project
+            user = join_request.project_user.user
+            try:
+                tracker = JoinRequestTracker(user, project)
+                tracking_status = tracker.get_status()
+
+                # Debug logging
+                logger.debug(f"Tracking status for {user.username} on {project.name}: "
+                             f"can_view={tracking_status.get('can_view')}, "
+                             f"status={tracking_status.get('status')}")
+
+                # For admin view, we always want to show tracking if there's a valid status
+                can_view = tracking_status.get('can_view', False)
+                has_valid_status = tracking_status.get('status') is not None
+
+                join_request.has_tracking = can_view or has_valid_status
+                join_request.tracking_status = tracking_status
+                join_request.tracking_error = tracking_status.get('error')
+            except Exception as e:
+                logger.error(f"Failed to get tracking status for user {user.username} "
+                             f"on project {project.name}: {e}")
+                join_request.has_tracking = False
+                join_request.tracking_status = None
+                join_request.tracking_error = None
 
         return context
