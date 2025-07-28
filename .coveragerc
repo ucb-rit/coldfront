@@ -1,0 +1,33 @@
+[run]
+source = coldfront
+omit =
+    */migrations/*
+    */tests/*
+    */venv/*
+    */env/*
+    manage.py
+    */settings/*
+    */config/*
+    */__pycache__/*
+    */static/*
+    */media/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+[html]
+directory = htmlcov
+title = ColdFront Test Coverage Report
+
+[xml]
+output = coverage.xml

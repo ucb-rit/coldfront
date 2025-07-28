@@ -29,7 +29,8 @@ from coldfront.core.project.utils import send_project_join_notification_email
 from coldfront.core.project.views import ProjectListView
 from coldfront.core.user.utils_.host_user_utils import is_lbl_employee
 from coldfront.core.user.utils_.host_user_utils import needs_host
-
+from coldfront.core.project.utils_.join_request_tracker import JoinRequestTracker
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -296,6 +297,20 @@ class ProjectJoinListView(ProjectListView, UserPassesTestMixin):
                                                & Q(status__name__in=['New', 'Active', ])
                                                & Q(projectuser__status__name__in=['Pending - Add']))
         join_requests = annotate_queryset_with_cluster_name(join_requests)
+
+        # Add tracking status to each join request
+        for project in join_requests:
+            try:
+                tracker = JoinRequestTracker(self.request.user, project)
+                tracking_status = tracker.get_status()
+                project.has_tracking = tracking_status.get('can_view', False)
+                project.tracking_status = tracking_status
+                project.tracking_error = tracking_status.get('error')
+            except Exception as e:
+                logger.error(f"Failed to get tracking status for project {project.name}: {e}")
+                project.has_tracking = False
+                project.tracking_status = None
+                project.tracking_error = None
 
         context['join_requests'] = join_requests
         context['not_joinable'] = not_joinable
