@@ -83,11 +83,3 @@ RUN dnf install -y gnupg
 RUN dnf module install -y postgresql:15
 
 WORKDIR /var/www/coldfront_app/coldfront
-
-############################
-# Stage 5: email-server
-############################
-
-FROM coldfront-app-base AS coldfront-email-server
-
-RUN pip install aiosmtpd
