@@ -25,8 +25,8 @@ services:
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf
 
   email-server:
-    image: coldfront-app-base:${IMAGE_TAG:-latest}
-    command: ["python3", "-m", "smtpd", "-d", "-n", "-c", "DebuggingServer", "0.0.0.0:1025"]
+    image: coldfront-email-server:${IMAGE_TAG:-latest}
+    command: ["python3", "-m", "aiosmtpd", "-n", "-l", "0.0.0.0:1025", "-c", "aiosmtpd.handlers.Debugging"]
 
   db-postgres-shell:
     image: coldfront-db-postgres-shell:${IMAGE_TAG:-latest}

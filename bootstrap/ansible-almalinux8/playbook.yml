@@ -71,6 +71,7 @@
               - sqlite-devel
               - wget
               - zlib-devel
+              - postfix
             state: present
 
         - name: Install remote wkhtmltopdf RPM to /usr/local/bin/wkhtmltopdf
