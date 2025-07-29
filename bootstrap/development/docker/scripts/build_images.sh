@@ -35,10 +35,3 @@ docker buildx build \
     --cache-from=type=local,src=/tmp/.buildx-cache \
     --load \
     .
-
-docker buildx build \
-    --target coldfront-email-server \
-    --tag coldfront-email-server:$IMAGE_TAG \
-    --cache-from=type=local,src=/tmp/.buildx-cache \
-    --load \
-    .
