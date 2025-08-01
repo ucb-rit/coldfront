@@ -100,7 +100,7 @@
             remote_src: true
 
         - name: Configure Python {{ python_version_long }}
-          command: ./configure --prefix=/opt/python3.13 --enable-optimizations --with-ensurepip=install --enable-shared
+          command: ./configure --prefix=/opt/python{{ python_version_short }} --enable-optimizations --with-ensurepip=install --enable-shared
           args:
             chdir: /usr/local/src/python/Python-{{ python_version_long }}
             creates: /usr/local/src/python/Python-{{ python_version_long }}/Makefile
@@ -115,11 +115,11 @@
           command: make altinstall
           args:
             chdir: /usr/local/src/python/Python-{{ python_version_long }}
-            creates: /opt/python3.13/bin/python{{ python_version_short }}
+            creates: /opt/python{{ python_version_short }}/bin/python{{ python_version_short }}
 
         - name: Ensure Python {{ python_version_short }} is executable
           file:
-            path: /opt/python3.13/bin/python3.13
+            path: /opt/python{{ python_version_short }}/bin/python{{ python_version_short }}
             mode: 0755
             state: file
 
@@ -657,6 +657,12 @@
 
         # Ensure services are updated, running, and enabled. Avoid restarting
         # them to avoid disruptions to operations.
+
+        - name: Ensure that postfix service is running and enabled
+          service:
+            name: postfix
+            state: started
+            enabled: true
 
         - name: Ensure that Redis service is running and enabled
           service:
