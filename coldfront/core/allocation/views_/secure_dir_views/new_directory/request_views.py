@@ -266,9 +266,13 @@ class SecureDirRequestWizard(LoginRequiredMixin,
         rdm_consultation_step = self.step_numbers_by_form_name[
             'rdm_consultation']
         if step > rdm_consultation_step:
-            rdm_consultation_form_data = self.get_cleaned_data_for_step(
-                str(rdm_consultation_step))
-            has_consulted_rdm = (
-                'Yes' if rdm_consultation_form_data else 'No')
+            try:
+                rdm_consultation_form_data = self.get_cleaned_data_for_step(
+                    str(rdm_consultation_step))
+            except KeyError:
+                has_consulted_rdm = 'No'
+            else:
+                has_consulted_rdm = (
+                    'Yes' if rdm_consultation_form_data else 'No')
             dictionary['breadcrumb_rdm_consultation'] = (
                 f'Consulted RDM: {has_consulted_rdm}')

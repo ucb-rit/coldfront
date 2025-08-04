@@ -698,10 +698,14 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         allocation_period_form_step = \
             self.step_numbers_by_form_name['allocation_period']
         if step > allocation_period_form_step:
-            allocation_period_form_data = self.get_cleaned_data_for_step(
-                str(allocation_period_form_step))
-            if allocation_period_form_data:
-                dictionary.update(allocation_period_form_data)
+            try:
+                allocation_period_form_data = self.get_cleaned_data_for_step(
+                    str(allocation_period_form_step))
+            except KeyError:
+                pass
+            else:
+                if allocation_period_form_data:
+                    dictionary.update(allocation_period_form_data)
 
         existing_pi_step = self.step_numbers_by_form_name['existing_pi']
         new_pi_step = self.step_numbers_by_form_name['new_pi']
