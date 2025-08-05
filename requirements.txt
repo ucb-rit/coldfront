@@ -14,6 +14,7 @@ django-filter==2.3.0
 django-flags==5.0.10
 django-formtools==2.2
 django-googledrive-storage==1.6.0
+django-maintenance-mode
 django-model-utils==4.1.1
 django-phonenumber-field==5.1.0
 django-picklefield==2.0

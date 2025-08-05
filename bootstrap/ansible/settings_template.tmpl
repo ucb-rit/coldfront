@@ -401,3 +401,22 @@ Q_CLUSTER = {
         'password': '{{ redis_passwd }}',
     }
 }
+
+#------------------------------------------------------------------------------
+# django-maintenance-mode settings
+#------------------------------------------------------------------------------
+
+# Note: This should be the last-defined middleware.
+EXTRA_EXTRA_MIDDLEWARE += [
+    'maintenance_mode.middleware.MaintenanceModeMiddleware',
+]
+
+{% if enable_maintenance_mode is defined and enable_maintenance_mode | bool -%}
+MAINTENANCE_MODE = True
+{%- else -%}
+MAINTENANCE_MODE = False
+{%- endif %}
+MAINTENANCE_MODE_IGNORE_ADMIN_SITE = True
+MAINTENANCE_MODE_IGNORE_ANONYMOUS_USER = True
+MAINTENANCE_MODE_IGNORE_STAFF = True
+MAINTENANCE_MODE_IGNORE_SUPERUSER = True
