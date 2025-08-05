@@ -413,10 +413,19 @@ EXTRA_EXTRA_MIDDLEWARE += [
 
 {% if enable_maintenance_mode is defined and enable_maintenance_mode | bool -%}
 MAINTENANCE_MODE = True
-{%- else -%}
-MAINTENANCE_MODE = False
-{%- endif %}
+# In maintenance mode, users may still log in by manually accessing the login
+# URLs. All other views are blocked for non-staff, non-superuser users.
 MAINTENANCE_MODE_IGNORE_ADMIN_SITE = True
-MAINTENANCE_MODE_IGNORE_ANONYMOUS_USER = True
 MAINTENANCE_MODE_IGNORE_STAFF = True
 MAINTENANCE_MODE_IGNORE_SUPERUSER = True
+MAINTENANCE_MODE_IGNORE_URLS = [
+    r'^/accounts/cilogon/login/$',
+    r'^/accounts/cilogon/login/callback/$',
+    # TODO: Uncomment this line to allow API access in maintenance mode.
+    #  Users authenticated for the API via token authentication are
+    #  treated as anonymous, so they are blocked unless they are staff
+    #  or superuser.
+    # r'^/api',
+    r'^/user/logout$',  # Note: There is no trailing slash.
+]
+{%- endif %}
