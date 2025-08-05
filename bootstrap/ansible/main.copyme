@@ -17,7 +17,7 @@ djangoprojname: coldfront
 
 enable_django_debug_toolbar: false
 # Prevent non-staff, non-superusers from accessing website pages.
-enable_maintenance_mode: true
+enable_maintenance_mode: false
 
 ###############################################################################
 # BRC/LRC Config
