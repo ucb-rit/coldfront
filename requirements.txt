@@ -15,6 +15,7 @@ django-filter
 django-flags
 django-formtools
 django-googledrive-storage
+django-maintenance-mode
 django-model-utils
 django-phonenumber-field
 django-picklefield
