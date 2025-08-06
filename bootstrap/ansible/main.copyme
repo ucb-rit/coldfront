@@ -166,9 +166,10 @@ plugin_hardware_procurements_enabled: false
 
 # A mapping from short names of data sources to associated module paths.
 plugin_hardware_procurements_data_source_modules_by_short_name:
+  brc_google_sheets: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.google_sheets.BRCGoogleSheetsDataSourceBackend'
   cached: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.cached.CachedDataSourceBackend'
   dummy: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.dummy.DummyDataSourceBackend'
-  google_sheets: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.google_sheets.GoogleSheetsDataSourceBackend'
+  lrc_google_sheets: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.google_sheets.LRCGoogleSheetsDataSourceBackend'
 
 # # TODO: Uncomment only the section relevant to the specified data source.
 
@@ -177,13 +178,13 @@ plugin_hardware_procurements_data_source_modules_by_short_name:
 #   data_source: 'cached'
 #   data_source_options:
 #     cache_key: 'hardware_procurements_data'
-#     cached_data_source: 'google_sheets'
+#     cached_data_source: 'brc_google_sheets'
 #     cached_data_source_options:
 #       config_file_path: '/path/to/data-source-options-file.json'
 
-# # Settings: 'google_sheets' backend.
+# # Settings: 'brc_google_sheets' backend.
 # plugin_hardware_procurements:
-#   data_source: 'google_sheets'
+#   data_source: 'brc_google_sheets'
 #   data_source_options:
 #     config_file_path: '/path/to/data-source-options-file.json'
 
@@ -191,6 +192,12 @@ plugin_hardware_procurements_data_source_modules_by_short_name:
 # plugin_hardware_procurements:
 #   data_source: 'dummy'
 #   data_source_options:
+
+# # Settings: 'lrc_google_sheets' backend.
+# plugin_hardware_procurements:
+#   data_source: 'lrc_google_sheets'
+#   data_source_options:
+#     config_file_path: '/path/to/data-source-options-file.json'
 
 #------------------------------------------------------------------------------
 # User-facing strings
