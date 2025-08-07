@@ -14,6 +14,7 @@ python_files = [
     # collecting legacy unittest acceptance tests.
     "tests/pytest/test*.py",
     "tests/pytest/*/test*.py",
+    "coldfront/tests/*/test*.py",
 ]
 testpaths = [
     "tests/pytest/",
