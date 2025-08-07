@@ -1,0 +1,3 @@
+The audit of AllocationPeriod "{{ allocation_period_name }}" failed due to an exception.
+
+Review the audit task here: {{ task_url }}.

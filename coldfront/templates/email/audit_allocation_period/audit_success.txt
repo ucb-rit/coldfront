@@ -1,0 +1,5 @@
+The audit of AllocationPeriod "{{ allocation_period_name }}" succeeded.
+
+{% for check_result in check_results %}
+  (SUCCEEDED) {{ check_result.message }}
+{% endfor %}

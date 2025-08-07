@@ -213,7 +213,6 @@ class UserProfileUpdate(LoginRequiredMixin, FormView):
         user.first_name = cleaned_data['first_name']
         user.last_name = cleaned_data['last_name']
         user.userprofile.middle_name = cleaned_data['middle_name']
-        user.userprofile.phone_number = cleaned_data['phone_number']
 
         user.userprofile.save()
         user.save()
@@ -228,7 +227,7 @@ class UserProfileUpdate(LoginRequiredMixin, FormView):
         initial['first_name'] = user.first_name
         initial['middle_name'] = user.userprofile.middle_name
         initial['last_name'] = user.last_name
-        initial['phone_number'] = user.userprofile.phone_number
+
         return initial
 
 

@@ -38,7 +38,7 @@ INSTALLED_APPS += [
     'django_q',
     'simple_history',
     'durationwidget',
-    'phonenumber_field'
+    'maintenance_mode',
 ]
 
 # Fork-specific Additional Apps
@@ -146,6 +146,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django_settings_export.settings_export',
+                'maintenance_mode.context_processors.maintenance_mode',
                 'coldfront.core.utils.context_processors.allocation_navbar_visibility',
                 'coldfront.core.utils.context_processors.constance_config',
                 'coldfront.core.utils.context_processors.current_allowance_year_allocation_period',

@@ -16,6 +16,8 @@ reponame: coldfront
 djangoprojname: coldfront
 
 enable_django_debug_toolbar: false
+# Prevent non-staff, non-superusers from accessing website pages.
+enable_maintenance_mode: false
 
 ###############################################################################
 # BRC/LRC Config
@@ -360,6 +362,10 @@ sentry_dsn: ""
 # # events.
 # # TODO: Set these addresses to yours.
 # email_admin_list: []
+# # A list of admin email addresses to be notified about audits of allocation
+# # periods.
+# # TODO: Set these addresses to yours.
+# allocation_period_audit_email_admin_list: []
 # # A list of email addresses to CC when certain requests are processed.
 # # TODO: Set these addresses to yours.
 # request_approval_cc_list: []
@@ -421,6 +427,10 @@ sentry_dsn: ""
 # # events.
 # # TODO: Set these addresses to yours.
 # email_admin_list: []
+# # A list of admin email addresses to be notified about audits of allocation
+# # periods.
+# # TODO: Set these addresses to yours.
+# allocation_period_audit_email_admin_list: []
 # # A list of email addresses to CC when certain requests are processed.
 # # TODO: Set these addresses to yours.
 # request_approval_cc_list: []
@@ -480,6 +490,10 @@ sentry_dsn: ""
 # # A list of admin email addresses to be notified about new requests and other
 # # events.
 # email_admin_list: ['placeholder@dev.dev']
+# # A list of admin email addresses to be notified about audits of allocation
+# # periods.
+# # TODO: Set these addresses to yours.
+# allocation_period_audit_email_admin_list: ['placeholder@dev.dev']
 # # A list of email addresses to CC when certain requests are processed.
 # # TODO: Set these addresses to yours.
 # request_approval_cc_list: ['placeholder@dev.dev']

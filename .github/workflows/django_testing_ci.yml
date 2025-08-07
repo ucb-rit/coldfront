@@ -1,0 +1,113 @@
+# Github Actions workflow that runs the test suite on the master branch
+# every night, as well as tests new pull requests.
+
+name: Django Testing CI
+
+on:
+  schedule: # Run every night at 3 AM
+    - cron: '0 10 * * *' # 10 AM UTC = 3 AM PST
+  push: # Run when pushes are made on the master and develop branch
+    branches: [ "master", "develop" ]
+  pull_request: # Runs when pull request to develop or master is opened,
+                # reopened, or updated with a new commit.
+    branches: [ "master", "develop" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-22.04
+
+    services:
+      postgres: # Set up a database container with the following specifications
+        image: postgres:15.2-alpine3.17
+        env:
+          POSTGRES_DB: cf_brc_db
+          POSTGRES_PASSWORD: test
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: test
+        ports:
+        - 5432:5432
+        options: >- # Actions run continues when database health is asserted
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps: # Steps to run to set up testing
+    - name: Checkout the current commit
+      uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+
+    - name: Cache and/or Install apache2-dev needed for testing suite
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+          packages: apache2-dev
+
+    - name: Cache Python packages # Use a cached installation of Python packages
+      id: cache-python
+      uses: actions/cache@v3
+      with:
+        path: ~/venv
+        key: ${{ runner.os }}-python-310-packages-${{ hashFiles('requirements.txt') }}
+
+    - if: ${{ steps.cache-python.outputs.cache-hit != 'true' }} # If a cache is not found
+      name: Install Python packages
+      run: |
+        python3.10 -m venv ~/venv
+        source ~/venv/bin/activate
+        pip install -r requirements.txt
+
+    - name: Create settings files from samples and create log files needed for testing
+      run: |
+        # Create log files
+        sudo mkdir -p /var/log/user_portals/cf_mybrc
+        sudo touch /var/log/user_portals/cf_mybrc/cf_mybrc_portal.log
+        sudo touch /var/log/user_portals/cf_mybrc/cf_mybrc_api.log
+        
+        # Modify log file permssions to allow testing to function properly
+        sudo chmod 775 /var/log/user_portals/cf_mybrc
+        sudo chmod 666 /var/log/user_portals/cf_mybrc/cf_mybrc_portal.log
+        sudo chmod 666 /var/log/user_portals/cf_mybrc/cf_mybrc_api.log
+        
+        # Give Apache permission to logs
+        sudo chown -R :www-data /var/log/user_portals/cf_mybrc
+        
+        # Get setting configuration from samples
+        cp coldfront/config/local_strings.py.sample coldfront/config/local_strings.py
+        cp coldfront/config/local_settings.py.sample coldfront/config/local_settings.py
+        cp coldfront/config/test_settings.py.sample coldfront/config/test_settings.py
+
+        # Create MOU directories
+        sudo mkdir -p "/media/New Project Request MOUs/"
+        sudo mkdir "/media/Service Units Purchase Request MOUs/"
+        sudo mkdir "/media/Secure Directory Request MOUs/"
+        sudo chmod -R 777 "/media/"
+
+    - name: Run pytest unit tests
+      run: |
+        source ~/venv/bin/activate
+        export django_secret_key=`openssl rand -base64 64`
+        pytest -m unit
+
+    - name: Run pytest component tests
+      run: |
+        source ~/venv/bin/activate
+        export django_secret_key=`openssl rand -base64 64`
+        pytest -m component
+
+    # - name: Run pytest acceptance tests
+    #   run: |
+    #     source ~/venv/bin/activate
+    #     export django_secret_key=`openssl rand -base64 64`
+    #     pytest -m acceptance
+
+    - name: Run Tests
+      run: |
+        source ~/venv/bin/activate
+        export django_secret_key=`openssl rand -base64 64`
+        python manage.py migrate
+        python manage.py test
