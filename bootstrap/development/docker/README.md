@@ -119,3 +119,47 @@ Note that these steps must be run from the root directory of the repo.
          user.is_superuser = True
          user.save()
          ```
+
+### Enabling the debugger for the web service
+
+The web service may be augmented to allow a debugger to be attached to it. Below are instructions on this for Visual Studio Code, although the process should be similar for other IDEs that support the Debug Adapter Protocol:
+
+1. In the `.vscode` directory, add or update a file named `launch.json`:
+
+   ```json
+   {
+     "version": "0.2.0",
+     "configurations": [
+       {
+         "name": "Attach to Docker Django",
+         "type": "python",
+         "request": "attach",
+         "connect": {
+           "host": "localhost",
+           "port": 5678
+         },
+         "pathMappings": [
+           {
+             "localRoot": "${workspaceFolder}/coldfront",
+             "remoteRoot": "/var/www/coldfront_app/coldfront"
+           }
+         ]
+       }
+     ]
+   }
+   ```
+
+   This file configures how Visual Studio Code attaches its debugger to the running Django application inside the Docker `web` container, specifying the connection details and mapping local source files to their locations inside the container.
+
+   Notes:
+     - In the above example, `localRoot` assumes that `.vscode` is in the parent directory of the repository. Adjust the key as needed.
+
+2. Set the `DEBUGPY` environment variable to `1` on the host.
+
+   ```bash
+   export DEBUGPY=1
+   ```
+
+3. Bring up Docker Compose as specified above in the same session where the environment variable is set.
+
+4. In Visual Studio Code, select "Run and Debug" in the left pane. At the top of the component, select "Attach to Docker Django" and click the play button ("Start debugging" button) to start the debugger. Note: When `DEBUGPY=1`, the web server will not run until the play button is clicked, because it waits for a client to attach first.
