@@ -1,0 +1,19 @@
+{% extends "common/base.html" %} 
+{% load static %}
+
+{% block title %}
+{{ PORTAL_NAME }} - Maintenance
+{% endblock %}
+
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-xs-12">
+        <div class="alert alert-danger" role="alert">
+          <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>  The system is currently undergoing maintenance.
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -18,6 +18,7 @@ prod_settings.py
 staging_settings.py
 local_settings.py
 local_strings.py
+maintenance_mode_state.txt
 password_reset_subject.txt
 coldfront.db*
 *.code-workspace
