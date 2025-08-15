@@ -428,4 +428,6 @@ MAINTENANCE_MODE_IGNORE_URLS = [
     r'^/user/logout$',  # Note: There is no trailing slash.
 ]
 MAINTENANCE_MODE_STATE_FILE_PATH = '/tmp/maintenance_mode_state.txt'
+{%- else -%}
+MAINTENANCE_MODE = False
 {%- endif %}
