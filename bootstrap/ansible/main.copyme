@@ -71,6 +71,9 @@ stream_logs_to_stdout: false
 # Apache settings
 #------------------------------------------------------------------------------
 
+# The number of threads to run per Apache process.
+apache_num_threads_per_process: 10
+
 # The name of the copy of the generated WSGI template in the Apache directory.
 # TODO: For LRC, use the substring 'cf_mylrc'.
 wsgi_conf_file_name: cf_mybrc_wsgi.conf
