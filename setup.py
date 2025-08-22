@@ -36,7 +36,7 @@ setup(
         'django-sslserver==0.20',
         'django-su==0.8.0',
         'doi2bib==0.3.0',
-        'future==0.17.1',
+        'future==1.0.0',
         'humanize==0.5.1',
         'idna==2.8',
         'pyparsing==2.3.1',
