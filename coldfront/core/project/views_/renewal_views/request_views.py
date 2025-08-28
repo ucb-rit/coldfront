@@ -155,6 +155,50 @@ class AllocationRenewalMixin(object):
         request_kwargs['request_time'] = utc_now_offset_aware()
         return AllocationRenewalRequest.objects.create(**request_kwargs)
 
+    def get_context_data(self, form, **kwargs):
+        context = super().get_context_data(form=form, **kwargs)
+        current_step = int(self.steps.current)
+        self._set_data_from_previous_steps(current_step, context)
+
+        if current_step == self.step_numbers_by_form_name['renewal_survey']:
+            context['renewal_survey_url'] = get_renewal_survey_url(
+                context['allocation_period'].name,
+                context['PI'].user,
+                context['requested_project'].name,
+                self.request.user)
+
+        if current_step == self.step_numbers_by_form_name['review_and_submit']:
+            if self.__billing_id_required():
+                billing_activity_manager = ProjectBillingActivityManager(
+                    context['requested_project'])
+                prev_billing_activity = \
+                    billing_activity_manager.billing_activity
+                prev_billing_id = (
+                    prev_billing_activity.full_id()
+                    if prev_billing_activity else 'None')
+                context['prev_billing_id'] = prev_billing_id
+
+                billing_id = context.get('billing_id', 'None')
+
+                context['billing_id_change_requested'] = (
+                    billing_id != prev_billing_id)
+
+        return context
+
+    def get_form_initial(self, step):
+        step = int(step)
+
+        # Pre-fill the billing ID update form with the project's current one.
+        if step == self.step_numbers_by_form_name['billing_id']:
+            if self.__billing_id_required():
+                billing_activity_manager = ProjectBillingActivityManager(
+                    self.project_obj)
+                billing_id = billing_activity_manager.billing_activity.full_id()
+                if billing_id is not None:
+                    return {'billing_id': billing_id}
+
+        return super().get_form_initial(str(step))
+
     @staticmethod
     def send_emails(request_obj):
         """Send emails to various recipients based on the given, newly-
@@ -186,6 +230,25 @@ class AllocationRenewalMixin(object):
                 logger.error(
                     f'Failed to send notification email. Details:\n')
                 logger.exception(e)
+
+    def show_billing_id_form_condition(self):
+        """Only show form for providing a billing ID when it is
+        required."""
+        # TODO: Should it not be shown when pooling?
+        if not self.__billing_id_required():
+            return False
+        return True
+
+    def show_renewal_survey_form_condition(self):
+        """Only show the renewal survey form if a survey is required."""
+        return flag_enabled('RENEWAL_SURVEY_ENABLED')
+
+    @staticmethod
+    def __billing_id_required():
+        """Return whether a billing ID should be requested from the
+        user. The form for requesting it will be included based on
+        additional factors."""
+        return flag_enabled('LRC_ONLY')
 
     def _get_service_units_to_allocate(self, allocation_period):
         """Return the number of service units to allocate to the project
@@ -235,6 +298,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         ProjectRenewalPoolingPreferenceForm,
         ProjectRenewalProjectSelectionForm,
         SavioProjectDetailsForm,
+        BillingIDValidationForm,
         SavioProjectSurveyForm,
         ProjectRenewalSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
@@ -272,22 +336,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             'Project.')
         messages.error(self.request, message)
 
-    def get_context_data(self, form, **kwargs):
-        context = super().get_context_data(form=form, **kwargs)
-        current_step = int(self.steps.current)
-        self.__set_data_from_previous_steps(current_step, context)
-
-        if current_step == self.step_numbers_by_form_name['renewal_survey']:
-            context['renewal_survey_url'] = get_renewal_survey_url(
-                context['allocation_period'].name,
-                context['PI'].user,
-                context['requested_project'].name,
-                self.request.user)
-
-        # TODO: Copy from the other function / use mixin.
-
-        return context
-
     def get_form_kwargs(self, step=None):
         kwargs = {}
         step = int(step)
@@ -296,7 +344,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         elif step == self.step_numbers_by_form_name['pi_selection']:
             kwargs['computing_allowance'] = self.computing_allowance
             tmp = {}
-            self.__set_data_from_previous_steps(step, tmp)
+            self._set_data_from_previous_steps(step, tmp)
             kwargs['allocation_period_pk'] = getattr(
                 tmp.get('allocation_period', None), 'pk', None)
             project_pks = []
@@ -314,13 +362,13 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             kwargs['project_pks'] = project_pks
         elif step == self.step_numbers_by_form_name['pooling_preference']:
             tmp = {}
-            self.__set_data_from_previous_steps(step, tmp)
+            self._set_data_from_previous_steps(step, tmp)
             kwargs['currently_pooled'] = ('current_project' in tmp and
                                           tmp['current_project'].is_pooled())
         elif step == self.step_numbers_by_form_name['project_selection']:
             kwargs['computing_allowance'] = self.computing_allowance
             tmp = {}
-            self.__set_data_from_previous_steps(step, tmp)
+            self._set_data_from_previous_steps(step, tmp)
             kwargs['pi_pk'] = tmp['PI'].user.pk
             form_class = ProjectRenewalPoolingPreferenceForm
             choices = (
@@ -336,7 +384,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             kwargs['computing_allowance'] = self.computing_allowance
         elif step == self.step_numbers_by_form_name['renewal_survey']:
             tmp = {}
-            self.__set_data_from_previous_steps(step, tmp)
+            self._set_data_from_previous_steps(step, tmp)
             kwargs['project_name'] = tmp['requested_project'].name
             kwargs['allocation_period_name'] = tmp['allocation_period'].name
             kwargs['pi_username'] = tmp['PI'].user.username
@@ -358,7 +406,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             form_data = session_wizard_all_form_data(
                 form_list, kwargs['form_dict'], len(self.form_list))
             tmp = {}
-            self.__set_data_from_previous_steps(len(self.FORMS), tmp)
+            self._set_data_from_previous_steps(len(self.FORMS), tmp)
             pi = tmp['PI'].user
             allocation_period = tmp['allocation_period']
 
@@ -428,18 +476,10 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         return {
             '3': view.show_project_selection_form_condition,
             '4': view.show_new_project_forms_condition,
-            '5': view.show_new_project_forms_condition,
-            '6': view.show_renewal_survey_form_condition,
+            '5': view.show_billing_id_form_condition,
+            '6': view.show_new_project_forms_condition,
+            '7': view.show_renewal_survey_form_condition,
         }
-
-    # TODO: Include in mixin?
-    def show_billing_id_form_condition(self):
-        """Only show form for providing a billing ID when it is
-        required."""
-        # TODO: Should it not be shown when pooling?
-        if not self.__billing_id_required():
-            return False
-        return True
 
     def show_new_project_forms_condition(self):
         """Only show the forms needed for a new Project if the pooling
@@ -465,18 +505,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             form_class.POOLED_TO_UNPOOLED_OLD,
         )
         return cleaned_data.get('preference', None) in preferences
-
-    def show_renewal_survey_form_condition(self):
-        """Only show the renewal survey form if a survey is required."""
-        return flag_enabled('RENEWAL_SURVEY_ENABLED')
-
-    # TODO: Include in mixin?
-    @staticmethod
-    def __billing_id_required():
-        """Return whether a billing ID should be requested from the
-        user. The form for requesting it will be included based on
-        additional factors."""
-        return flag_enabled('LRC_ONLY')
 
     def __get_survey_data(self, form_data):
         """Return provided survey data."""
@@ -562,7 +590,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             project_pk = sorted(list(intersection))[0]
             return Project.objects.get(pk=project_pk)
 
-    def __set_data_from_previous_steps(self, step, dictionary):
+    def _set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""
         dictionary['computing_allowance'] = self.computing_allowance
         computing_allowance_wrapper = ComputingAllowance(
@@ -635,6 +663,12 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                     dictionary.update(data)
                     dictionary['requested_project'] = data['name']
 
+        billing_id_form_step = self.step_numbers_by_form_name['billing_id']
+        if step > billing_id_form_step:
+            data = self.get_cleaned_data_for_step(str(billing_id_form_step))
+            if data:
+                dictionary.update(data)
+
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                                                UserPassesTestMixin,
@@ -687,7 +721,7 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             'project-detail', kwargs={'pk': self.project_obj.pk})
         try:
             tmp = {}
-            self.__set_data_from_previous_steps(len(self.FORMS), tmp)
+            self._set_data_from_previous_steps(len(self.FORMS), tmp)
             pi = tmp['PI'].user
             allocation_period = tmp['allocation_period']
 
@@ -732,50 +766,6 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
 
         return HttpResponseRedirect(redirect_url)
 
-    def get_context_data(self, form, **kwargs):
-        context = super().get_context_data(form=form, **kwargs)
-        current_step = int(self.steps.current)
-        self.__set_data_from_previous_steps(current_step, context)
-
-        if current_step == self.step_numbers_by_form_name['renewal_survey']:
-            context['renewal_survey_url'] = get_renewal_survey_url(
-                context['allocation_period'].name,
-                context['PI'].user,
-                context['requested_project'].name,
-                self.request.user)
-
-        # TODO: Can this function be placed in the mixin too?
-        if current_step == self.step_numbers_by_form_name['review_and_submit']:
-            if self.__billing_id_required():
-                # TODO: self.project_obj may not be present in the other view.
-                billing_activity_manager = ProjectBillingActivityManager(
-                    self.project_obj)
-                prev_billing_activity = \
-                    billing_activity_manager.billing_activity
-                prev_billing_id = (
-                    prev_billing_activity.full_id()
-                    if prev_billing_activity else 'None')
-                context['prev_billing_id'] = prev_billing_id
-
-                billing_id = context.get('billing_id', 'None')
-
-                context['billing_id_change_requested'] = (
-                    billing_id != prev_billing_id)
-
-        return context
-
-    # TODO: Can this be placed in the mixin?
-    def get_form_initial(self, step):
-        step = int(step)
-        if step == self.step_numbers_by_form_name['billing_id']:
-            if self.__billing_id_required():
-                billing_activity_manager = ProjectBillingActivityManager(
-                    self.project_obj)
-                billing_id = billing_activity_manager.billing_activity.full_id()
-                if billing_id is not None:
-                    return {'billing_id': billing_id}
-        return super().get_form_initial(str(step))
-
     def get_form_kwargs(self, step=None):
         kwargs = {}
         step = int(step)
@@ -784,13 +774,13 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         elif step == self.step_numbers_by_form_name['pi_selection']:
             kwargs['computing_allowance'] = self.computing_allowance
             tmp = {}
-            self.__set_data_from_previous_steps(step, tmp)
+            self._set_data_from_previous_steps(step, tmp)
             kwargs['allocation_period_pk'] = getattr(
                 tmp.get('allocation_period', None), 'pk', None)
             kwargs['project_pks'] = [self.project_obj.pk]
         elif step == self.step_numbers_by_form_name['renewal_survey']:
             tmp = {}
-            self.__set_data_from_previous_steps(step, tmp)
+            self._set_data_from_previous_steps(step, tmp)
             kwargs['project_name'] = tmp['requested_project'].name
             kwargs['allocation_period_name'] = tmp['allocation_period'].name
             kwargs['pi_username'] = tmp['PI'].user.username
@@ -832,31 +822,11 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         should be included."""
         view = AllocationRenewalRequestUnderProjectView
         return {
-            '2': view.show_renewal_survey_form_condition,
+            '2': view.show_billing_id_form_condition,
+            '3': view.show_renewal_survey_form_condition,
         }
 
-    # TODO: Include in mixin?
-    def show_billing_id_form_condition(self):
-        """Only show form for providing a billing ID when it is
-        required."""
-        # TODO: Should it not be shown when pooling?
-        if not self.__billing_id_required():
-            return False
-        return True
-
-    def show_renewal_survey_form_condition(self):
-        """Only show the renewal survey form if a survey is required."""
-        return flag_enabled('RENEWAL_SURVEY_ENABLED')
-
-    # TODO: Include in mixin?
-    @staticmethod
-    def __billing_id_required():
-        """Return whether a billing ID should be requested from the
-        user. The form for requesting it will be included based on
-        additional factors."""
-        return flag_enabled('LRC_ONLY')
-
-    def __set_data_from_previous_steps(self, step, dictionary):
+    def _set_data_from_previous_steps(self, step, dictionary):
         """Update the given dictionary with data from previous steps."""
         allocation_period_form_step = self.step_numbers_by_form_name[
             'allocation_period']
