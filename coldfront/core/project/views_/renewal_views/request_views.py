@@ -133,28 +133,6 @@ class AllocationRenewalMixin(object):
                 'LRC_ONLY.')
         self.interface = ComputingAllowanceInterface()
 
-    @staticmethod
-    def create_allocation_renewal_request(requester, pi, computing_allowance,
-                                          allocation_period, pre_project,
-                                          post_project, 
-                                          new_project_request=None,
-                                          billing_activity=None):
-        """Create a new AllocationRenewalRequest."""
-        request_kwargs = dict()
-        request_kwargs['requester'] = requester
-        request_kwargs['pi'] = pi
-        request_kwargs['computing_allowance'] = computing_allowance
-        request_kwargs['allocation_period'] = allocation_period
-        request_kwargs['status'] = \
-            AllocationRenewalRequestStatusChoice.objects.get(
-                name='Under Review')
-        request_kwargs['pre_project'] = pre_project
-        request_kwargs['post_project'] = post_project
-        request_kwargs['new_project_request'] = new_project_request
-        request_kwargs['billing_activity'] = billing_activity
-        request_kwargs['request_time'] = utc_now_offset_aware()
-        return AllocationRenewalRequest.objects.create(**request_kwargs)
-
     def get_context_data(self, form, **kwargs):
         context = super().get_context_data(form=form, **kwargs)
         current_step = int(self.steps.current)
@@ -168,7 +146,7 @@ class AllocationRenewalMixin(object):
                 self.request.user)
 
         if current_step == self.step_numbers_by_form_name['review_and_submit']:
-            if self.__billing_id_required():
+            if self._billing_id_required():
                 billing_activity_manager = ProjectBillingActivityManager(
                     context['requested_project'])
                 prev_billing_activity = \
@@ -190,7 +168,7 @@ class AllocationRenewalMixin(object):
 
         # Pre-fill the billing ID update form with the project's current one.
         if step == self.step_numbers_by_form_name['billing_id']:
-            if self.__billing_id_required():
+            if self._billing_id_required():
                 billing_activity_manager = ProjectBillingActivityManager(
                     self.project_obj)
                 billing_id = billing_activity_manager.billing_activity.full_id()
@@ -235,7 +213,7 @@ class AllocationRenewalMixin(object):
         """Only show form for providing a billing ID when it is
         required."""
         # TODO: Should it not be shown when pooling?
-        if not self.__billing_id_required():
+        if not self._billing_id_required():
             return False
         return True
 
@@ -244,11 +222,33 @@ class AllocationRenewalMixin(object):
         return flag_enabled('RENEWAL_SURVEY_ENABLED')
 
     @staticmethod
-    def __billing_id_required():
+    def _billing_id_required():
         """Return whether a billing ID should be requested from the
         user. The form for requesting it will be included based on
         additional factors."""
         return flag_enabled('LRC_ONLY')
+
+    @staticmethod
+    def _create_allocation_renewal_request(requester, pi, computing_allowance,
+                                           allocation_period, pre_project,
+                                           post_project,
+                                           new_project_request=None,
+                                           billing_activity=None):
+        """Create a new AllocationRenewalRequest."""
+        request_kwargs = dict()
+        request_kwargs['requester'] = requester
+        request_kwargs['pi'] = pi
+        request_kwargs['computing_allowance'] = computing_allowance
+        request_kwargs['allocation_period'] = allocation_period
+        request_kwargs['status'] = \
+            AllocationRenewalRequestStatusChoice.objects.get(
+                name='Under Review')
+        request_kwargs['pre_project'] = pre_project
+        request_kwargs['post_project'] = post_project
+        request_kwargs['new_project_request'] = new_project_request
+        request_kwargs['billing_activity'] = billing_activity
+        request_kwargs['request_time'] = utc_now_offset_aware()
+        return AllocationRenewalRequest.objects.create(**request_kwargs)
 
     def _get_service_units_to_allocate(self, allocation_period):
         """Return the number of service units to allocate to the project
@@ -261,6 +261,18 @@ class AllocationRenewalMixin(object):
                 allocation_period=allocation_period))
         return prorated_allocation_amount(
             num_service_units, utc_now_offset_aware(), allocation_period)
+
+    @staticmethod
+    def _validate_pi_request_eligibility(pi, allocation_period):
+        """If the PI already has a non-denied request for the period,
+        raise an exception. Such PIs are not selectable in the
+        'pi_selection' step, but a request could have been created
+        between selection and final submission."""
+        if has_non_denied_renewal_request(pi, allocation_period):
+            raise Exception(
+                f'PI {pi.username} already has a non-denied '
+                f'AllocationRenewalRequest for AllocationPeriod '
+                f'{allocation_period.name}.')
 
 
 class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
@@ -410,17 +422,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             pi = tmp['PI'].user
             allocation_period = tmp['allocation_period']
 
-            # If the PI already has a non-denied request for the period, raise
-            # an exception. Such PIs are not selectable in the 'pi_selection'
-            # step, but a request could have been created between selection and
-            # final submission.
-            if has_non_denied_renewal_request(pi, allocation_period):
-                raise Exception(
-                    f'PI {pi.username} already has a non-denied '
-                    f'AllocationRenewalRequest for AllocationPeriod '
-                    f'{allocation_period.name}.')
-
-
+            self._validate_pi_request_eligibility(pi, allocation_period)
 
             with transaction.atomic():
 
@@ -451,7 +453,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                     renewal_request_kwargs['billing_activity'] = \
                         billing_activity
 
-                request = self.create_allocation_renewal_request(
+                request = self._create_allocation_renewal_request(
                     self.request.user, pi, self.computing_allowance,
                     allocation_period, tmp['current_project'],
                     requested_project, **renewal_request_kwargs)
@@ -725,17 +727,7 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             pi = tmp['PI'].user
             allocation_period = tmp['allocation_period']
 
-            # If the PI already has a non-denied request for the period, raise
-            # an exception. Such PIs are not selectable in the 'pi_selection'
-            # step, but a request could have been created between selection and
-            # final submission.
-            if has_non_denied_renewal_request(pi, allocation_period):
-                raise Exception(
-                    f'PI {pi.username} already has a non-denied '
-                    f'AllocationRenewalRequest for AllocationPeriod '
-                    f'{allocation_period.name}.')
-
-
+            self._validate_pi_request_eligibility(pi, allocation_period)
 
             with transaction.atomic():
 
@@ -750,7 +742,7 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                     renewal_request_kwargs['billing_activity'] = \
                         billing_activity
 
-                request = self.create_allocation_renewal_request(
+                request = self._create_allocation_renewal_request(
                     self.request.user, pi, self.computing_allowance,
                     allocation_period, self.project_obj, self.project_obj,
                     **renewal_request_kwargs)
