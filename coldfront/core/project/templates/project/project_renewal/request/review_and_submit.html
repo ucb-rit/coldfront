@@ -56,6 +56,12 @@ Project Renewal - Review and Submit
         <th>Number of Service Units</th>
         <td>{{ allocation_amount }}</td>
       </tr>
+      {% if billing_id %}
+      <tr>
+        <th>Billing ID Update</th>
+        <td>{{ prev_billing_id }} --> {{ billing_id }}</td>
+      </tr>
+      {% endif %}
     </tbody>
   </table>
 </div>
