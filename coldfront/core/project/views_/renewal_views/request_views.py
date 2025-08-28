@@ -223,11 +223,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         'pooling_preference': 'pooling_preference.html',
         'project_selection': 'project_selection.html',
         'new_project_details': 'new_project_details.html',
-
-
-        'billing_id': 'billing_id.html',  # TODO: Tentative positioning
-
-
+        'billing_id': 'billing_id.html',
         'new_project_survey': 'new_project_survey.html',
         'renewal_survey': 'project_renewal_survey.html',
         'review_and_submit': 'review_and_submit.html',
@@ -756,10 +752,15 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                     self.project_obj)
                 prev_billing_activity = \
                     billing_activity_manager.billing_activity
-                if prev_billing_activity:
-                    context['prev_billing_id'] = prev_billing_activity.full_id()
-                else:
-                    context['prev_billing_id'] = 'None'
+                prev_billing_id = (
+                    prev_billing_activity.full_id()
+                    if prev_billing_activity else 'None')
+                context['prev_billing_id'] = prev_billing_id
+
+                billing_id = context.get('billing_id', 'None')
+
+                context['billing_id_change_requested'] = (
+                    billing_id != prev_billing_id)
 
         return context
 
