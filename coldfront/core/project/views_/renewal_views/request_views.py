@@ -6,6 +6,7 @@ from coldfront.core.allocation.utils import prorated_allocation_amount
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.utils.billing_activity_managers import ProjectBillingActivityManager
 from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
+from coldfront.core.billing.utils.validation import is_billing_id_valid
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectAllocationPeriodForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectDetailsForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
@@ -43,6 +44,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import UserPassesTestMixin
+from django.contrib.auth.models import User
 from django.core.exceptions import ImproperlyConfigured
 from django.db import IntegrityError
 from django.db import transaction
@@ -156,10 +158,9 @@ class AllocationRenewalMixin(object):
                     if prev_billing_activity else 'None')
                 context['prev_billing_id'] = prev_billing_id
 
-                billing_id = context.get('billing_id', 'None')
+                billing_id = context.get('billing_id', None)
 
-                context['billing_id_change_requested'] = (
-                    billing_id != prev_billing_id)
+                context['billing_id_change_requested'] = billing_id is not None
 
         return context
 
@@ -210,12 +211,20 @@ class AllocationRenewalMixin(object):
                 logger.exception(e)
 
     def show_billing_id_form_condition(self):
-        """Only show form for providing a billing ID when it is
-        required."""
-        # TODO: Should it not be shown when pooling?
-        if not self._billing_id_required():
-            return False
-        return True
+        """Only show the form for providing a billing ID when:
+            - A billing ID is required,
+            - The PI is already a PI of the requested project*, and
+            - The requested project either has no billing ID or has an
+              invalid billing ID**.
+
+        *The billing update occurs immediately upon submission. The
+        requester is only authorized to make this change to a project
+        that the PI is already a part of.
+
+        **There is no need to ask for an updated billing ID if the
+        current one is already valid. (This will be supported by a
+        dedicated UI for updating billing IDs in the future.)"""
+        raise NotImplementedError
 
     def show_renewal_survey_form_condition(self):
         """Only show the renewal survey form if a survey is required."""
@@ -248,6 +257,16 @@ class AllocationRenewalMixin(object):
         request_kwargs['request_time'] = utc_now_offset_aware()
         return AllocationRenewalRequest.objects.create(**request_kwargs)
 
+    def _get_or_set_cached_value(self, cache_key, compute_func):
+        """Retrieve a value from the cache (backed by the extra data in
+        the view's storage class), or compute and cache it if not
+        present."""
+        if cache_key in self.storage.extra_data:
+            return self.storage.extra_data[cache_key]
+        value = compute_func()
+        self.storage.extra_data[cache_key] = value
+        return value
+
     def _get_service_units_to_allocate(self, allocation_period):
         """Return the number of service units to allocate to the project
         if the renewal were to be approved now for the given
@@ -259,6 +278,33 @@ class AllocationRenewalMixin(object):
                 allocation_period=allocation_period))
         return prorated_allocation_amount(
             num_service_units, utc_now_offset_aware(), allocation_period)
+
+    def _is_pi_of_project(self, user, project):
+        """Return whether the given User is a PI (not necessarily an
+        active PI) of the given Project."""
+        if user is None or project is None:
+            return False
+        cache_key = f'is_pi_of_project_{user.pk}_{project.pk}'
+        return self._get_or_set_cached_value(
+            cache_key,
+            lambda: user in project.pis(active_only=False))
+
+    def _project_has_valid_billing_id(self, project):
+        """Return whether the given project has a valid billing ID."""
+        if project is None:
+            return False
+
+        cache_key = f'project_has_valid_billing_id_{project.pk}'
+
+        def compute_validity():
+            """Compute whether the given project has a valid billing ID."""
+            billing_activity_manager = ProjectBillingActivityManager(project)
+            billing_activity = billing_activity_manager.billing_activity
+            if billing_activity is None:
+                return False
+            return is_billing_id_valid(billing_activity.full_id())
+
+        return self._get_or_set_cached_value(cache_key, compute_validity)
 
     @staticmethod
     def _validate_pi_request_eligibility(pi, allocation_period):
@@ -480,6 +526,27 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             '7': view.show_renewal_survey_form_condition,
         }
 
+    def show_billing_id_form_condition(self):
+        """Conditionally show the form for providing a billing ID. See
+        logic described in the parent method's docstring."""
+        if not self._billing_id_required():
+            return False
+
+        billing_id_form_step = self.step_numbers_by_form_name['billing_id']
+        tmp = {}
+        self._set_data_from_previous_steps(billing_id_form_step, tmp)
+
+        project = tmp.get('requested_project', None)
+        if isinstance(project, Project):
+            pi_project_user = tmp.get('PI', None)
+            pi = pi_project_user.user if pi_project_user else None
+            if isinstance(pi, User) and not self._is_pi_of_project(pi, project):
+                return False
+            if self._project_has_valid_billing_id(project):
+                return False
+
+        return True
+
     def show_new_project_forms_condition(self):
         """Only show the forms needed for a new Project if the pooling
         preference is to create one."""
@@ -664,9 +731,13 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
 
         billing_id_form_step = self.step_numbers_by_form_name['billing_id']
         if step > billing_id_form_step:
-            data = self.get_cleaned_data_for_step(str(billing_id_form_step))
-            if data:
-                dictionary.update(data)
+            try:
+                data = self.get_cleaned_data_for_step(str(billing_id_form_step))
+            except KeyError:
+                pass
+            else:
+                if data:
+                    dictionary.update(data)
 
 
 class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
@@ -780,6 +851,18 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             self._TEMPLATES_DIR, template_file_name)
         return [resolved_template_name]
 
+    def show_billing_id_form_condition(self):
+        """Conditionally show the form for providing a billing ID. See
+        logic described in the parent method's docstring."""
+        if not self._billing_id_required():
+            return False
+
+        project = self.project_obj
+        if self._project_has_valid_billing_id(project):
+            return False
+
+        return True
+
     def test_func(self):
         """Allow superusers and users who are active Managers or
         Principal Investigators on the Project and who have signed the
@@ -845,6 +928,10 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
 
         billing_id_form_step = self.step_numbers_by_form_name['billing_id']
         if step > billing_id_form_step:
-            data = self.get_cleaned_data_for_step(str(billing_id_form_step))
-            if data:
-                dictionary.update(data)
+            try:
+                data = self.get_cleaned_data_for_step(str(billing_id_form_step))
+            except KeyError:
+                pass
+            else:
+                if data:
+                    dictionary.update(data)
