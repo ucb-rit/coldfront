@@ -882,9 +882,6 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
 
             self.update_pre_projects_of_future_period_requests()
 
-            if self.should_update_billing_activity():
-                self.update_billing_activity()
-
             self.handle_by_preference()
             self.complete_request(self.num_service_units)
         self.send_email()
@@ -984,10 +981,6 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
             logger.exception(
                 f'Failed to send notification email. Details:\n{e}')
 
-    def should_update_billing_activity(self):
-        """Return whether a billing activity needs to be set."""
-        return self.request_obj.billing_activity is not None
-
     def update_allocation(self, old_project_status):
         """Perform allocation-related handling. Use the given
         ProjectStatusChoice, which the post_project had prior to being
@@ -1027,27 +1020,6 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
             allocation=Decimal(new_value))
 
         return allocation, new_value
-
-    def update_billing_activity(self):
-        """Update the BillingActivity of the selected project to the one
-        provided by the requester."""
-        billing_activity_manager = ProjectBillingActivityManager(
-            self.request_obj.post_project)
-
-        prev_billing_activity = billing_activity_manager.billing_activity
-        prev_billing_activity_pk = (
-            prev_billing_activity.pk
-            if prev_billing_activity is not None
-            else None)
-
-        new_billing_activity = self.request_obj.billing_activity
-
-        billing_activity_manager.billing_activity = new_billing_activity
-
-        logger.info(
-            f'Updated BillingActivity of Project '
-            f'{self.request_obj.post_project.name} from '
-            f'{prev_billing_activity_pk} to {new_billing_activity.pk}.')
 
     def update_existing_user_allocations(self, value):
         """Perform user-allocation-related handling.

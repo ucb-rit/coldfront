@@ -232,8 +232,7 @@ class AllocationRenewalMixin(object):
     def _create_allocation_renewal_request(requester, pi, computing_allowance,
                                            allocation_period, pre_project,
                                            post_project,
-                                           new_project_request=None,
-                                           billing_activity=None):
+                                           new_project_request=None):
         """Create a new AllocationRenewalRequest."""
         request_kwargs = dict()
         request_kwargs['requester'] = requester
@@ -246,7 +245,6 @@ class AllocationRenewalMixin(object):
         request_kwargs['pre_project'] = pre_project
         request_kwargs['post_project'] = post_project
         request_kwargs['new_project_request'] = new_project_request
-        request_kwargs['billing_activity'] = billing_activity
         request_kwargs['request_time'] = utc_now_offset_aware()
         return AllocationRenewalRequest.objects.create(**request_kwargs)
 
@@ -417,15 +415,16 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         try:
             form_data = session_wizard_all_form_data(
                 form_list, kwargs['form_dict'], len(self.form_list))
+
             tmp = {}
             self._set_data_from_previous_steps(len(self.FORMS), tmp)
+
             pi = tmp['PI'].user
             allocation_period = tmp['allocation_period']
 
             self._validate_pi_request_eligibility(pi, allocation_period)
 
             with transaction.atomic():
-
                 # If a new Project was requested, create it along with a
                 # SavioProjectAllocationRequest.
                 new_project_request = None
@@ -450,15 +449,13 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                 if billing_id is not None:
                     billing_activity = \
                         get_or_create_billing_activity_from_full_id(billing_id)
-                    renewal_request_kwargs['billing_activity'] = \
-                        billing_activity
+                # TODO: Update BillingActivities immediately.
 
+                # Create an AllocationRenewalRequest.
                 request = self._create_allocation_renewal_request(
                     self.request.user, pi, self.computing_allowance,
                     allocation_period, tmp['current_project'],
                     requested_project, **renewal_request_kwargs)
-
-
 
             self.send_emails(request)
         except Exception as e:
@@ -724,13 +721,13 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         try:
             tmp = {}
             self._set_data_from_previous_steps(len(self.FORMS), tmp)
+
             pi = tmp['PI'].user
             allocation_period = tmp['allocation_period']
 
             self._validate_pi_request_eligibility(pi, allocation_period)
 
             with transaction.atomic():
-
                 renewal_request_kwargs = {}
 
                 # Create a BillingActivity for the requested billing ID if
@@ -739,15 +736,13 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
                 if billing_id is not None:
                     billing_activity = \
                         get_or_create_billing_activity_from_full_id(billing_id)
-                    renewal_request_kwargs['billing_activity'] = \
-                        billing_activity
+                # TODO: Update BillingActivities immediately.
 
+                # Create an AllocationRenewalRequest.
                 request = self._create_allocation_renewal_request(
                     self.request.user, pi, self.computing_allowance,
                     allocation_period, self.project_obj, self.project_obj,
                     **renewal_request_kwargs)
-
-
 
             self.send_emails(request)
         except Exception as e:

@@ -67,6 +67,20 @@ Project Renewal - Review and Submit
 </div>
 
 
+{% if billing_id_change_requested %}
+  <p>
+    The following changes will occur immediately upon submission:
+  </p>
+  <ol>
+    <li>
+      The LBL Project ID used for billing for {{ requested_project }} will be
+      updated from {{ prev_billing_id}} to {{ billing_id }}.
+    </li>
+    {% comment %} TODO: Note what specifically will change? {% endcomment %}
+  <ol>
+{% endif %}
+
+
 <p>
   The following changes will occur if the request is approved:
 </p>
@@ -88,12 +102,6 @@ Project Renewal - Review and Submit
     Requested Project {{ requested_project }} will be granted
     {{ allocation_amount }} service units.
   </li>
-  {% if billing_id_change_requested %}
-    <li>
-      The LBL Project ID used for billing for {{ requested_project }} will be
-      updated from {{ prev_billing_id}} to {{ billing_id }}.
-    </li>
-  {% endif %}
 </ol>
 
 {{ block.super }}
