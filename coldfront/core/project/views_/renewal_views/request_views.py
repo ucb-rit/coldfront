@@ -5,6 +5,7 @@ from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.utils import prorated_allocation_amount
 from coldfront.core.billing.forms import BillingIDValidationForm
 from coldfront.core.billing.utils.billing_activity_managers import ProjectBillingActivityManager
+from coldfront.core.billing.utils.queries import find_and_replace_billing_activity
 from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
 from coldfront.core.billing.utils.validation import is_billing_id_valid
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectAllocationPeriodForm
@@ -306,6 +307,70 @@ class AllocationRenewalMixin(object):
 
         return self._get_or_set_cached_value(cache_key, compute_validity)
 
+    def _update_project_billing_activities(self, project, billing_id):
+        """Update the following BillingActivity objects associated with
+        the given Project to a BillingActivity representing the given
+        billing ID str:
+            - The default BillingActivity of the Project,
+            - Any associated ProjectUser's BillingActivity that matches
+              the replaced BillingActivity of the Project, and
+            - Any associated User's BillingActivity that matches the
+              replaced BillingActivity of the Project.
+
+        If the Project does not already have a BillingActivity, the only
+        associated ProjectUsers and Users that would be updated are
+        those that also do not already have one.
+
+        A find-and-replace ensures that differing BilingActivities
+        (potentially belonging to other PIs) are not updated, especially
+        for Users.
+
+        Catch all exceptions that would prevent the HTTP response.
+        """
+        try:
+            project_manager = ProjectBillingActivityManager(project)
+            prev_billing_activity = project_manager.billing_activity
+
+            with transaction.atomic():
+                new_billing_activity = \
+                    get_or_create_billing_activity_from_full_id(billing_id)
+                if prev_billing_activity == new_billing_activity:
+                    # Nothing to do.
+                    return
+                _, update_counts = find_and_replace_billing_activity(
+                    prev_billing_activity, new_billing_activity, project)
+        except Exception as e:
+            logger.exception(e)
+            error_message = (
+                'Failed to update LBL Project ID. Please contact an '
+                'administrator.')
+            messages.error(self.request, error_message)
+        else:
+            success_message = (
+                f'Updated LBL Project ID for {project.name} to {billing_id}.')
+            messages.success(self.request, success_message)
+
+            # Log the update.
+            try:
+                prev_billing_activity_str = (
+                    (f'{prev_billing_activity.full_id()} '
+                    f'({prev_billing_activity.pk})')
+                    if prev_billing_activity else 'None')
+                new_billing_activity_str = (
+                    f'{new_billing_activity.full_id()} '
+                    f'({new_billing_activity.pk})')
+                project_str = f'{project.name} ({project.pk})'
+                associated_updates_str = (
+                    f'Updated it for {update_counts.get("project_user", 0)} '
+                    f'associated ProjectUser(s) and '
+                    f'{update_counts.get("user", 0)} associated User(s).')
+                logger.info(
+                    f'Updated BillingActivity for Project {project_str} from '
+                    f'{prev_billing_activity_str} to '
+                    f'{new_billing_activity_str}. {associated_updates_str}')
+            except Exception as e:
+                pass
+
     @staticmethod
     def _validate_pi_request_eligibility(pi, allocation_period):
         """If the PI already has a non-denied request for the period,
@@ -458,11 +523,12 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         """Perform processing and store information in a request
         object."""
         redirect_url = '/'
+        tmp = {}
+
         try:
             form_data = session_wizard_all_form_data(
                 form_list, kwargs['form_dict'], len(self.form_list))
 
-            tmp = {}
             self._set_data_from_previous_steps(len(self.FORMS), tmp)
 
             pi = tmp['PI'].user
@@ -489,14 +555,6 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
                     'new_project_request': new_project_request,
                 }
 
-                # Create a BillingActivity for the requested billing ID if
-                # needed.
-                billing_id = tmp.get('billing_id', None)
-                if billing_id is not None:
-                    billing_activity = \
-                        get_or_create_billing_activity_from_full_id(billing_id)
-                # TODO: Update BillingActivities immediately.
-
                 # Create an AllocationRenewalRequest.
                 request = self._create_allocation_renewal_request(
                     self.request.user, pi, self.computing_allowance,
@@ -509,6 +567,11 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             messages.error(self.request, self.error_message)
         else:
             messages.success(self.request, self.success_message)
+
+        billing_id = tmp.get('billing_id', None)
+        if billing_id is not None:
+            self._update_project_billing_activities(
+                requested_project, billing_id)
 
         return HttpResponseRedirect(redirect_url)
 
@@ -789,8 +852,9 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         object."""
         redirect_url = reverse(
             'project-detail', kwargs={'pk': self.project_obj.pk})
+        tmp = {}
+
         try:
-            tmp = {}
             self._set_data_from_previous_steps(len(self.FORMS), tmp)
 
             pi = tmp['PI'].user
@@ -799,21 +863,10 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             self._validate_pi_request_eligibility(pi, allocation_period)
 
             with transaction.atomic():
-                renewal_request_kwargs = {}
-
-                # Create a BillingActivity for the requested billing ID if
-                # needed.
-                billing_id = tmp.get('billing_id', None)
-                if billing_id is not None:
-                    billing_activity = \
-                        get_or_create_billing_activity_from_full_id(billing_id)
-                # TODO: Update BillingActivities immediately.
-
                 # Create an AllocationRenewalRequest.
                 request = self._create_allocation_renewal_request(
                     self.request.user, pi, self.computing_allowance,
-                    allocation_period, self.project_obj, self.project_obj,
-                    **renewal_request_kwargs)
+                    allocation_period, self.project_obj, self.project_obj)
 
             self.send_emails(request)
         except Exception as e:
@@ -821,6 +874,11 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
             messages.error(self.request, self.error_message)
         else:
             messages.success(self.request, self.success_message)
+
+        billing_id = tmp.get('billing_id', None)
+        if billing_id is not None:
+            self._update_project_billing_activities(
+                self.project_obj, billing_id)
 
         return HttpResponseRedirect(redirect_url)
 

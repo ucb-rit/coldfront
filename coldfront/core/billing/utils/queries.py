@@ -4,6 +4,7 @@ import re
 from collections import namedtuple
 
 from django.contrib.auth.models import User
+from django.db import transaction
 
 from flags.state import flag_enabled
 
@@ -13,12 +14,82 @@ from coldfront.core.allocation.models import AllocationUserAttribute
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.billing.models import BillingActivity
 from coldfront.core.billing.models import BillingProject
+from coldfront.core.billing.utils.billing_activity_managers import ProjectBillingActivityManager
+from coldfront.core.billing.utils.billing_activity_managers import ProjectUserBillingActivityManager
+from coldfront.core.billing.utils.billing_activity_managers import UserBillingActivityManager
 from coldfront.core.project.models import Project
 from coldfront.core.resource.utils import get_computing_allowance_project_prefixes
 from coldfront.core.user.models import UserProfile
 
 
 logger = logging.getLogger(__name__)
+
+
+def find_and_replace_billing_activity(find_obj, replace_obj, project_obj,
+                                      dry_run=False):
+    """Find and replace all instances of the given old BillingActivity
+    with the given new BillingActivity within the given Project.
+
+    This includes:
+        - The Project's default BillingActivity instance
+        - BillingActivity instances associated with ProjectUsers
+        - BillingActivity instances associated with Users (via
+          ProjectUser)
+
+    Return a list of BillingActivityManager instances that are found to
+    have the old instance and are (or would be, in the dry run case)
+    replaced, as well as a count of how many of each type were found.
+
+    Parameters:
+        - find_obj (BillingActivity): The old instance to find. This may
+            be None, in which case entities will only be updated if they
+            have no BillingActivity.
+        - replace_obj (BillingActivity): The new instance to replace old
+            instances with
+        - project_obj (Project): A Project instance
+        - dry_run (bool): If True, return the proposed changes without
+            applying them
+
+    Returns:
+        - A list of BillingActivityManager instances
+    """
+    assert isinstance(find_obj, BillingActivity) or find_obj is None
+    assert isinstance(replace_obj, BillingActivity)
+    assert isinstance(project_obj, Project)
+
+    billing_activity_managers = []
+    update_counts = {
+        'project': 0,
+        'project_user': 0,
+        'user': 0,
+    }
+
+    if find_obj == replace_obj:
+        return billing_activity_managers, update_counts
+
+    project_manager = ProjectBillingActivityManager(project_obj)
+    if project_manager.billing_activity == find_obj:
+        billing_activity_managers.append(project_manager)
+        update_counts['project'] += 1
+
+    project_user_objs = project_obj.projectuser_set.all()
+    for project_user_obj in project_user_objs:
+        project_user_manager = ProjectUserBillingActivityManager(
+            project_user_obj)
+        if project_user_manager.billing_activity == find_obj:
+            billing_activity_managers.append(project_user_manager)
+            update_counts['project_user'] += 1
+        user_manager = UserBillingActivityManager(project_user_obj.user)
+        if user_manager.billing_activity == find_obj:
+            billing_activity_managers.append(user_manager)
+            update_counts['user'] += 1
+
+    if not dry_run:
+        with transaction.atomic():
+            for manager in billing_activity_managers:
+                manager.billing_activity = replace_obj
+
+    return billing_activity_managers, update_counts
 
 
 def get_billing_activity_from_full_id(full_id):
