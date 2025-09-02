@@ -1,0 +1,7 @@
+Status	Initial Inquiry Date	PI Name (first last)	PI Email	POC Name (optional)	POC Email (optional)	Hardware Type	Hardware Specification Details	Procurement Start Date	Project ID	Requisition ID	PO/PCard	Order Received Date	Installed Date	Expected Retirement Date    Buyer
+Active	01/01/1970	PI One	pi1@email.com	POC One	poc1@email.com	CPU	CPU Details 1	01/02/1970	000000-001	00001	00001	01/03/1970			PI
+Complete	01/01/1970	PI Two	pi2@email.com			Storage	Storage Details 1	01/02/1970	000000-002	00002	00002	01/03/1970	01/04/1970	01/04/1975	PI
+Active	01/01/1970	PI One	pi1@email.com	POC Two	poc2@email.com	CPU	CPU Details 2		000000-003	00003	00003				PI
+Inactive	01/01/1970	PI One, PI Two	pi1@email.com, pi2@email.com			GPU	GPU Details 1								PI
+Retired	01/01/1970	PI Two	pi2@email.com	POC One, POC Two	poc1@email.com, poc2@email.com	Storage	Storage Details 2	01/02/1970	000000-004	00004	00004	01/03/1970	01/04/1970	01/04/1972	PI
+Retired	01/01/1970	Non PI One	non_pi1@email.com			Storage	Storage Details 2	01/02/1970	000000-005	00005	00005	01/03/1970	01/04/1970	01/04/1972	Non-PI
