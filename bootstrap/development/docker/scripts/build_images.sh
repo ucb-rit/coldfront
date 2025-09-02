@@ -21,26 +21,6 @@ docker build \
     -t coldfront-app-base:$IMAGE_TAG .
 
 docker build \
-    -f bootstrap/development/docker/images/app-shell.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-app-shell:$IMAGE_TAG .
-
-docker build \
-    -f bootstrap/development/docker/images/web.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-web:$IMAGE_TAG .
-
-docker build \
-    -f bootstrap/development/docker/images/email-server.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-email-server:$IMAGE_TAG .
-
-docker build \
     -f bootstrap/development/docker/images/db-postgres-shell.Dockerfile \
     --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
     -t coldfront-db-postgres-shell:$IMAGE_TAG .
-
-docker build \
-    -f bootstrap/development/docker/images/qcluster.Dockerfile \
-    --build-arg BASE_IMAGE_TAG=$IMAGE_TAG \
-    -t coldfront-qcluster:$IMAGE_TAG .
