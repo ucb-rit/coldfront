@@ -17,8 +17,9 @@ from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
+from coldfront.core.project.utils_.computing_allowance_eligibility_manager import ComputingAllowanceEligibilityManager
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcessingRunner
-from coldfront.core.project.utils_.renewal_utils import has_non_denied_renewal_request
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 from coldfront.core.utils.common import utc_now_offset_aware
@@ -110,6 +111,8 @@ class Command(BaseCommand):
 
         seen_pi_emails = set()
 
+        interface = ComputingAllowanceInterface()
+
         for input_dict in input_dicts:
             for key in input_dict:
                 input_dict[key] = input_dict[key].strip()
@@ -128,13 +131,21 @@ class Command(BaseCommand):
                 continue
             seen_pi_emails.add(pi_email)
 
-            # Validate that the PI does not already have a non-'Denied'
+            # Validate that the PI is eligible to make a
             # AllocationRenewalRequest for this period.
             pi = self._get_user_with_email(pi_email)
-            if (isinstance(pi, User) and
-                    has_non_denied_renewal_request(pi, allocation_period)):
-                already_renewed.append(pi)
-                continue
+            if isinstance(pi, User):
+                computing_allowance = ComputingAllowance(
+                    interface.allowance_from_code(post_project_name[:3]))
+                computing_allowance_eligibility_manager = \
+                    ComputingAllowanceEligibilityManager(
+                        computing_allowance,
+                        allocation_period=allocation_period)
+                is_user_eligible = \
+                    computing_allowance_eligibility_manager.is_user_eligible(pi)
+                if not is_user_eligible:
+                    already_renewed.append(pi)
+                    continue
 
             # Validate that the pre-Project exists, if given. The PI may have
             # previously not had a Project.
