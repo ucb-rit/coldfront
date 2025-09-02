@@ -1,0 +1,65 @@
+{% extends "common/base.html" %}
+{% load feature_flags %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+New Standalone Cluster - New PI
+{% endblock %}
+
+
+{% block head %}
+{{ wizard.form.media }}
+{% endblock %}
+
+{% block content %}
+<script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
+<h1>New Standalone Cluster: Principal Investigator</h1><hr>
+
+<p>Provide details about a new user, who will be a Principal Investigator for the project. An existing user should have been selected in the previous step.</p>
+
+{% flag_enabled 'LRC_ONLY' as lrc_only %}
+{% if lrc_only %}
+  <p>Note: Only LBL employees, users with an "@lbl.gov" email, can be a PI.</p>
+{% endif %}
+
+<form action="" method="post">
+  {% csrf_token %}
+  <table>
+    {{ wizard.management_form }}
+    {% if wizard.form.forms %}
+      {{ wizard.form.management_form }}
+      {% for form in wizard.form.forms %}
+        {{ form|crispy }}
+        <hr>
+      {% endfor %}
+    {% else %}
+      {{ wizard.form|crispy }}
+    {% endif %}
+  </table>
+  {% if wizard.steps.prev %}
+    <button
+        class="btn btn-secondary"
+        formnovalidate="formnovalidate"
+        name="wizard_goto_step"
+        type="submit"
+        value="{{ wizard.steps.first }}">
+      First Step
+    </button>
+    <button
+        class="btn btn-secondary"
+        formnovalidate="formnovalidate"
+        name="wizard_goto_step"
+        type="submit"
+        value="{{ wizard.steps.prev }}">
+      Previous Step
+    </button>
+  {% endif %}
+  <input class="btn btn-primary" type="submit" value="Next Step"/>
+</form>
+<br>
+
+<p>Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}</p>
+
+{% endblock %}

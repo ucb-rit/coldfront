@@ -1,0 +1,78 @@
+{% extends "common/base.html" %}
+{% load feature_flags %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+New Standalone Cluster - Existing PI
+{% endblock %}
+
+
+{% block head %}
+{{ wizard.form.media }}
+{% endblock %}
+
+
+{% block content %}
+<script type="text/javascript" src="{% static 'common/js/leave_form_alert.js' %}"></script>
+<script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
+<link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
+
+<h1>New Standalone Cluster: Principal Investigator</h1><hr>
+
+<p>Select an existing user to be a Principal Investigator of the project. You may search for the user in the selection field. If the desired user is not listed, you may skip this step and specify information for a new PI in the next step.</p>
+{% flag_enabled 'LRC_ONLY' as lrc_only %}
+{% if lrc_only %}
+  <p>Note: Only LBL employees, users with an "@lbl.gov" email, can be selected as a PI.</p>
+{% endif %}
+
+{% if allowance_is_one_per_pi %}
+  <p>Note: Each PI may only have one {{ computing_allowance.name }} at a time, so any that have pending requests or active allocations are not selectable.</p>
+{% endif %}
+
+<form action="" method="post">
+  {% csrf_token %}
+  <table>
+    {{ wizard.management_form }}
+    {% if wizard.form.forms %}
+      {{ wizard.form.management_form }}
+      {% for form in wizard.form.forms %}
+        {{ form|crispy }}
+      {% endfor %}
+    {% else %}
+      {{ wizard.form|crispy }}
+    {% endif %}
+  </table>
+  {% if wizard.steps.prev %}
+    <button
+        class="btn btn-secondary"
+        formnovalidate="formnovalidate"
+        name="wizard_goto_step"
+        type="submit"
+        value="{{ wizard.steps.first }}">
+      First Step
+    </button>
+    <button
+        class="btn btn-secondary"
+        formnovalidate="formnovalidate"
+        name="wizard_goto_step"
+        type="submit"
+        value="{{ wizard.steps.prev }}">
+      Previous Step
+    </button>
+  {% endif %}
+  <input class="btn btn-primary" type="submit" value="Next Step"/>
+</form>
+<br>
+
+<p>Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}</p>
+
+<script>
+  $('select').selectize({
+    create: false,
+    sortField: 'text'
+  })
+</script>
+
+{% endblock %}

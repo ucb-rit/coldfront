@@ -66,6 +66,11 @@ urlpatterns += [
              condition_dict=new_project_request_views.SavioProjectRequestWizard.condition_dict(),
          ),
          name='new-project-request'),
+    path('new-standalone-cluster-request/',
+         new_project_request_views.StandaloneClusterRequestWizard.as_view(
+             condition_dict=new_project_request_views.StandaloneClusterRequestWizard.condition_dict(),
+         ),
+         name='new-standalone-cluster-request'),
     path('new-project-pending-request-list/',
          new_project_approval_views.SavioProjectRequestListView.as_view(
              completed=False),
