@@ -30,7 +30,7 @@ def find_and_replace_billing_activity(find_obj, replace_obj, project_obj,
     """Find and replace all instances of the given old BillingActivity
     with the given new BillingActivity within the given Project.
 
-    This includes:
+    These include:
         - The Project's default BillingActivity instance
         - BillingActivity instances associated with ProjectUsers
         - BillingActivity instances associated with Users (via
@@ -52,37 +52,18 @@ def find_and_replace_billing_activity(find_obj, replace_obj, project_obj,
 
     Returns:
         - A list of BillingActivityManager instances
+        - A dict with counts of how many of each type were found and
+          updated (or would be updated)
     """
     assert isinstance(find_obj, BillingActivity) or find_obj is None
     assert isinstance(replace_obj, BillingActivity)
     assert isinstance(project_obj, Project)
 
-    billing_activity_managers = []
-    update_counts = {
-        'project': 0,
-        'project_user': 0,
-        'user': 0,
-    }
-
     if find_obj == replace_obj:
-        return billing_activity_managers, update_counts
+        return [], {'project': 0, 'project_user': 0, 'user': 0}
 
-    project_manager = ProjectBillingActivityManager(project_obj)
-    if project_manager.billing_activity == find_obj:
-        billing_activity_managers.append(project_manager)
-        update_counts['project'] += 1
-
-    project_user_objs = project_obj.projectuser_set.all()
-    for project_user_obj in project_user_objs:
-        project_user_manager = ProjectUserBillingActivityManager(
-            project_user_obj)
-        if project_user_manager.billing_activity == find_obj:
-            billing_activity_managers.append(project_user_manager)
-            update_counts['project_user'] += 1
-        user_manager = UserBillingActivityManager(project_user_obj.user)
-        if user_manager.billing_activity == find_obj:
-            billing_activity_managers.append(user_manager)
-            update_counts['user'] += 1
+    billing_activity_managers, update_counts = find_billing_activity(
+        find_obj, project_obj)
 
     if not dry_run:
         with transaction.atomic():
@@ -90,6 +71,62 @@ def find_and_replace_billing_activity(find_obj, replace_obj, project_obj,
                 manager.billing_activity = replace_obj
 
     return billing_activity_managers, update_counts
+
+
+def find_billing_activity(billing_activity_obj, project_obj):
+    """Find all instances of the given BillingActivity within the given
+    Project.
+
+    These include:
+        - The Project's default BillingActivity instance
+        - BillingActivity instances associated with ProjectUsers
+        - BillingActivity instances associated with Users (via
+          ProjectUser)
+
+    Return a list of BillingActivityManager instances that are found to
+    have the BillingActivity, as well as a count of how many of each
+    type were found.
+
+    Parameters:
+        - billing_activity_obj (BillingActivity): The instance to find.
+            This may be None, in which case entities will only be
+            returned if they have no BillingActivity.
+        - project_obj (Project): A Project instance
+
+    Returns:
+        - A list of BillingActivityManager instances
+        - A dict with counts of how many of each type were found
+    """
+    assert (
+        isinstance(billing_activity_obj, BillingActivity) or
+        billing_activity_obj is None)
+    assert isinstance(project_obj, Project)
+
+    billing_activity_managers = []
+    find_counts = {
+        'project': 0,
+        'project_user': 0,
+        'user': 0,
+    }
+
+    project_manager = ProjectBillingActivityManager(project_obj)
+    if project_manager.billing_activity == billing_activity_obj:
+        billing_activity_managers.append(project_manager)
+        find_counts['project'] += 1
+
+    project_user_objs = project_obj.projectuser_set.all()
+    for project_user_obj in project_user_objs:
+        project_user_manager = ProjectUserBillingActivityManager(
+            project_user_obj)
+        if project_user_manager.billing_activity == billing_activity_obj:
+            billing_activity_managers.append(project_user_manager)
+            find_counts['project_user'] += 1
+        user_manager = UserBillingActivityManager(project_user_obj.user)
+        if user_manager.billing_activity == billing_activity_obj:
+            billing_activity_managers.append(user_manager)
+            find_counts['user'] += 1
+
+    return billing_activity_managers, find_counts
 
 
 def get_billing_activity_from_full_id(full_id):
