@@ -150,24 +150,7 @@ class AllocationRenewalMixin(object):
 
         if current_step == self.step_numbers_by_form_name['review_and_submit']:
             if self._billing_id_required():
-                billing_id = context.get('billing_id', None)
-                billing_id_change_requested = billing_id is not None
-                context['billing_id_change_requested'] = \
-                    billing_id_change_requested
-                if billing_id_change_requested:
-                    project = context['requested_project']
-                    if isinstance(project, Project):
-                        billing_activity_manager = \
-                            ProjectBillingActivityManager(project)
-                        prev_billing_activity = \
-                            billing_activity_manager.billing_activity
-                        prev_billing_id = (
-                            prev_billing_activity.full_id()
-                            if prev_billing_activity else 'None')
-                    else:
-                        # A new Project is being created.
-                        prev_billing_id = 'None'
-                    context['prev_billing_id'] = prev_billing_id
+                self._add_context_data_for_billing_ids(context)
 
         return context
 
@@ -236,6 +219,36 @@ class AllocationRenewalMixin(object):
     def show_renewal_survey_form_condition(self):
         """Only show the renewal survey form if a survey is required."""
         return flag_enabled('RENEWAL_SURVEY_ENABLED')
+
+    def _add_context_data_for_billing_ids(self, context):
+        """Update the given context data dict with context variables
+        about a billing ID update, if requested.
+
+        This adds the following context variables:
+            - billing_id_change_requested: Whether the requester filled
+                in the form for changing the requested project's billing
+                ID
+            - prev_billing_id: (conditional) The previous billing ID of
+                the requested project. This is only set if a change was
+                requested.
+        """
+        billing_id = context.get('billing_id', None)
+        billing_id_change_requested = billing_id is not None
+        context['billing_id_change_requested'] = billing_id_change_requested
+        if billing_id_change_requested:
+            project = context['requested_project']
+            if isinstance(project, Project):
+                billing_activity_manager = ProjectBillingActivityManager(
+                    project)
+                prev_billing_activity = \
+                    billing_activity_manager.billing_activity
+                prev_billing_id = (
+                    prev_billing_activity.full_id()
+                    if prev_billing_activity else 'None')
+            else:
+                # A new Project is being created.
+                prev_billing_id = 'None'
+            context['prev_billing_id'] = prev_billing_id
 
     @staticmethod
     def _billing_id_required():
