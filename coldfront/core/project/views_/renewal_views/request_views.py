@@ -150,18 +150,24 @@ class AllocationRenewalMixin(object):
 
         if current_step == self.step_numbers_by_form_name['review_and_submit']:
             if self._billing_id_required():
-                billing_activity_manager = ProjectBillingActivityManager(
-                    context['requested_project'])
-                prev_billing_activity = \
-                    billing_activity_manager.billing_activity
-                prev_billing_id = (
-                    prev_billing_activity.full_id()
-                    if prev_billing_activity else 'None')
-                context['prev_billing_id'] = prev_billing_id
-
                 billing_id = context.get('billing_id', None)
-
-                context['billing_id_change_requested'] = billing_id is not None
+                billing_id_change_requested = billing_id is not None
+                context['billing_id_change_requested'] = \
+                    billing_id_change_requested
+                if billing_id_change_requested:
+                    project = context['requested_project']
+                    if isinstance(project, Project):
+                        billing_activity_manager = \
+                            ProjectBillingActivityManager(project)
+                        prev_billing_activity = \
+                            billing_activity_manager.billing_activity
+                        prev_billing_id = (
+                            prev_billing_activity.full_id()
+                            if prev_billing_activity else 'None')
+                    else:
+                        # A new Project is being created.
+                        prev_billing_id = 'None'
+                    context['prev_billing_id'] = prev_billing_id
 
         return context
 
