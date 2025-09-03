@@ -1,20 +1,19 @@
-from coldfront.core.allocation.models import AllocationPeriod
+from http import HTTPStatus
+
+from django.urls import reverse
+
 from coldfront.core.allocation.models import AllocationRenewalRequest
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserRoleChoice
-from coldfront.core.project.models import ProjectUserStatusChoice
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.tests.test_base import enable_deployment
 from coldfront.core.utils.tests.test_base import TestBase
-from django.urls import reverse
-from http import HTTPStatus
 
 
-class TestAllocationRenewalRequestUnderProjectView(TestBase):
-    """A class for testing AllocationRenewalRequestUnderProjectView."""
+class TestAllocationRenewalRequestUnderProjectViewMixin(object):
+    """A mixin for testing AllocationRenewalRequestUnderProjectView
+    functionality common to both deployments."""
 
     def setUp(self):
         """Set up test data."""
@@ -32,20 +31,9 @@ class TestAllocationRenewalRequestUnderProjectView(TestBase):
             computing_allowance.name)
 
         project_name = f'{project_name_prefix}_project'
-        active_project_status = ProjectStatusChoice.objects.get(name='Active')
-        project = Project.objects.create(
-            name=project_name,
-            title=project_name,
-            status=active_project_status)
-        pi_role = ProjectUserRoleChoice.objects.get(
-            name='Principal Investigator')
-        active_project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Active')
-        project_user = ProjectUser.objects.create(
-            project=project,
-            role=pi_role,
-            status=active_project_user_status,
-            user=self.user)
+        project = self.create_active_project_with_pi(
+            project_name, self.user, create_compute_allocation=True)
+        project_user = ProjectUser.objects.get(project=project, user=self.user)
         return project, project_user
 
     @staticmethod
@@ -65,10 +53,41 @@ class TestAllocationRenewalRequestUnderProjectView(TestBase):
         """Return the name of the request view."""
         return 'allocation_renewal_request_under_project_view'
 
+    def test_post_sets_request_request_time(self):
+        """Test that a POST request sets the request_time of the renewal
+        request."""
+        with enable_deployment(self._deployment_name):
+            project, pi_project_user = self._create_project_to_renew()
+
+            pre_time = utc_now_offset_aware()
+
+            allocation_period = get_current_allowance_year_period()
+
+            self._send_post_requests(
+                allocation_period, project, pi_project_user)
+
+            post_time = utc_now_offset_aware()
+
+            requests = AllocationRenewalRequest.objects.all()
+            self.assertEqual(requests.count(), 1)
+            request = requests.first()
+            self.assertTrue(pre_time <= request.request_time <= post_time)
+
+
+class TestBRCAllocationRenewalRequestUnderProjectView(TestAllocationRenewalRequestUnderProjectViewMixin,
+                                                      TestBase):
+    """A class for testing AllocationRenewalRequestUnderProjectView on
+    the BRC deployment."""
+
+    @enable_deployment('BRC')
+    def setUp(self):
+        """Set up test data."""
+        super().setUp()
+        self._deployment_name = 'BRC'
+
     def _send_post_requests(self, allocation_period, project, pi_project_user):
         """Send the necessary POST requests to the view for the given
-        AllocationPeriod, Project, and PI ProjectUser. Optionally
-        include sample renewal survey answers."""
+        AllocationPeriod, Project, and PI ProjectUser."""
         view_name = self._request_view_name()
         current_step_key = f'{view_name}-current_step'
 
@@ -87,14 +106,14 @@ class TestAllocationRenewalRequestUnderProjectView(TestBase):
         form_data.append(pi_selection_form_data)
 
         renewal_survey_form_data = {
-            '2-was_survey_completed': True,
-            current_step_key: '2',
+            '3-was_survey_completed': True,
+            current_step_key: '3',
         }
         form_data.append(renewal_survey_form_data)
 
         review_and_submit_form_data = {
-            '3-confirmation': True,
-            current_step_key: '3',
+            '4-confirmation': True,
+            current_step_key: '4',
         }
         form_data.append(review_and_submit_form_data)
 
@@ -107,22 +126,61 @@ class TestAllocationRenewalRequestUnderProjectView(TestBase):
             else:
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    def test_post_sets_request_request_time(self):
-        """Test that a POST request sets the request_time of the renewal
-        request."""
-        project, pi_project_user = self._create_project_to_renew()
 
-        pre_time = utc_now_offset_aware()
+class TestLRCAllocationRenewalRequestUnderProjectView(TestAllocationRenewalRequestUnderProjectViewMixin,
+                                                      TestBase):
+    """A class for testing AllocationRenewalRequestUnderProjectView on
+    the LRC deployment."""
 
-        allocation_period = get_current_allowance_year_period()
+    @enable_deployment('LRC')
+    def setUp(self):
+        """Set up test data."""
+        super().setUp()
+        self._deployment_name = 'LRC'
 
-        self._send_post_requests(
-            allocation_period, project, pi_project_user)
+    def _send_post_requests(self, allocation_period, project, pi_project_user):
+        """Send the necessary POST requests to the view for the given
+        AllocationPeriod, Project, and PI ProjectUser."""
+        view_name = self._request_view_name()
+        current_step_key = f'{view_name}-current_step'
 
-        post_time = utc_now_offset_aware()
+        form_data = []
 
-        requests = AllocationRenewalRequest.objects.all()
-        self.assertEqual(requests.count(), 1)
-        request = requests.first()
-        self.assertTrue(pre_time <= request.request_time <= post_time)
+        allocation_period_form_data = {
+            '0-allocation_period': allocation_period.pk,
+            current_step_key: '0',
+        }
+        form_data.append(allocation_period_form_data)
 
+        pi_selection_form_data = {
+            '1-PI': pi_project_user.pk,
+            current_step_key: '1',
+        }
+        form_data.append(pi_selection_form_data)
+
+        billing_id_form_data = {
+            '2-billing_id': '000000-000',
+            current_step_key: '2',
+        }
+        form_data.append(billing_id_form_data)
+
+        renewal_survey_form_data = {
+            '3-was_survey_completed': True,
+            current_step_key: '3',
+        }
+        form_data.append(renewal_survey_form_data)
+
+        review_and_submit_form_data = {
+            '4-confirmation': True,
+            current_step_key: '4',
+        }
+        form_data.append(review_and_submit_form_data)
+
+        url = self._project_renew_url(project.pk)
+        for i, data in enumerate(form_data):
+            response = self.client.post(url, data)
+            if i == len(form_data) - 1:
+                self.assertRedirects(
+                    response, self._project_detail_url(project.pk))
+            else:
+                self.assertEqual(response.status_code, HTTPStatus.OK)
