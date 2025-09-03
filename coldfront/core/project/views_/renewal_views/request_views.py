@@ -160,9 +160,11 @@ class AllocationRenewalMixin(object):
         # Pre-fill the billing ID update form with the project's current one.
         if step == self.step_numbers_by_form_name['billing_id']:
             if self._billing_id_required():
-                billing_activity_manager = ProjectBillingActivityManager(
-                    self.project_obj)
-                billing_id = billing_activity_manager.billing_activity.full_id()
+                tmp = {}
+                self._set_data_from_previous_steps(step, tmp)
+                billing_id = \
+                    self._get_requested_project_current_billing_id_or_none(
+                        tmp['requested_project'])
                 if billing_id is not None:
                     return {'billing_id': billing_id}
 
@@ -236,19 +238,10 @@ class AllocationRenewalMixin(object):
         billing_id_change_requested = billing_id is not None
         context['billing_id_change_requested'] = billing_id_change_requested
         if billing_id_change_requested:
-            project = context['requested_project']
-            if isinstance(project, Project):
-                billing_activity_manager = ProjectBillingActivityManager(
-                    project)
-                prev_billing_activity = \
-                    billing_activity_manager.billing_activity
-                prev_billing_id = (
-                    prev_billing_activity.full_id()
-                    if prev_billing_activity else 'None')
-            else:
-                # A new Project is being created.
-                prev_billing_id = 'None'
-            context['prev_billing_id'] = prev_billing_id
+            prev_billing_id = \
+                self._get_requested_project_current_billing_id_or_none(
+                    context['requested_project'])
+            context['prev_billing_id'] = str(prev_billing_id)
 
     @staticmethod
     def _billing_id_required():
@@ -286,6 +279,25 @@ class AllocationRenewalMixin(object):
         value = compute_func()
         self.storage.extra_data[cache_key] = value
         return value
+
+    @staticmethod
+    def _get_requested_project_current_billing_id_or_none(project):
+        """Return the current billing ID (str) of the requested project
+        if it has one, or None.
+
+        If the requested project is new, the input is a str, so it has
+        no billing ID. Return None.
+        """
+        if isinstance(project, Project):
+            billing_activity_manager = ProjectBillingActivityManager(project)
+            billing_activity = billing_activity_manager.billing_activity
+            billing_id = (
+                billing_activity.full_id()
+                if billing_activity is not None else None)
+        else:
+            # A new Project is being created.
+            billing_id = None
+        return billing_id
 
     def _get_service_units_to_allocate(self, allocation_period):
         """Return the number of service units to allocate to the project
