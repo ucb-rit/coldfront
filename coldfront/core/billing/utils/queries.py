@@ -4,6 +4,7 @@ import re
 from collections import namedtuple
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 from flags.state import flag_enabled
@@ -116,11 +117,15 @@ def find_billing_activity(billing_activity_obj, project_obj):
 
     project_user_objs = project_obj.projectuser_set.all()
     for project_user_obj in project_user_objs:
-        project_user_manager = ProjectUserBillingActivityManager(
-            project_user_obj)
-        if project_user_manager.billing_activity == billing_activity_obj:
-            billing_activity_managers.append(project_user_manager)
-            find_counts['project_user'] += 1
+        try:
+            project_user_manager = ProjectUserBillingActivityManager(
+                project_user_obj)
+            if project_user_manager.billing_activity == billing_activity_obj:
+                billing_activity_managers.append(project_user_manager)
+                find_counts['project_user'] += 1
+        except ObjectDoesNotExist:
+            # There may not be an AllocationUser yet.
+            pass
         user_manager = UserBillingActivityManager(project_user_obj.user)
         if user_manager.billing_activity == billing_activity_obj:
             billing_activity_managers.append(user_manager)
