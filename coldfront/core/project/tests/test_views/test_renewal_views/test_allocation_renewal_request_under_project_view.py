@@ -114,6 +114,10 @@ class TestAllocationRenewalRequestUnderProjectViewMixin(object):
             else:
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
+    @override_settings(
+        BILLING_VALIDATOR_BACKEND=(
+            'coldfront.core.billing.utils.validation.backends.dummy.'
+            'DummyValidatorBackend'))
     def test_post_sets_request_request_time(self):
         """Test that a POST request sets the request_time of the renewal
         request."""
