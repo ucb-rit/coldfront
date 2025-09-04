@@ -142,10 +142,14 @@ class AllocationRenewalMixin(object):
         self._set_data_from_previous_steps(current_step, context)
 
         if current_step == self.step_numbers_by_form_name['renewal_survey']:
+            if isinstance(context['requested_project'], Project):
+                requested_project_name = context['requested_project'].name
+            else:
+                requested_project_name = context['requested_project']
             context['renewal_survey_url'] = get_renewal_survey_url(
                 context['allocation_period'].name,
                 context['PI'].user,
-                context['requested_project'].name,
+                requested_project_name,
                 self.request.user)
 
         if current_step == self.step_numbers_by_form_name['review_and_submit']:
@@ -537,7 +541,10 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         elif step == self.step_numbers_by_form_name['renewal_survey']:
             tmp = {}
             self._set_data_from_previous_steps(step, tmp)
-            kwargs['project_name'] = tmp['requested_project'].name
+            if isinstance(tmp['requested_project'], Project):
+                kwargs['project_name'] = tmp['requested_project'].name
+            else:
+                kwargs['project_name'] = tmp['requested_project']
             kwargs['allocation_period_name'] = tmp['allocation_period'].name
             kwargs['pi_username'] = tmp['PI'].user.username
 
@@ -928,7 +935,11 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         elif step == self.step_numbers_by_form_name['renewal_survey']:
             tmp = {}
             self._set_data_from_previous_steps(step, tmp)
-            kwargs['project_name'] = tmp['requested_project'].name
+            requested_project = tmp['requested_project']
+            if isinstance(requested_project, Project):
+                kwargs['project_name'] = tmp['requested_project'].name
+            else:
+                kwargs['project_name'] = tmp['requested_project']
             kwargs['allocation_period_name'] = tmp['allocation_period'].name
             kwargs['pi_username'] = tmp['PI'].user.username
         return kwargs
