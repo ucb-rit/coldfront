@@ -21,6 +21,9 @@ from flags.state import disable_flag
 from flags.state import enable_flag
 from flags.state import flag_enabled
 
+from coldfront.core.allocation.models import Allocation
+from coldfront.core.allocation.models import AllocationStatusChoice
+from coldfront.core.allocation.utils import get_project_compute_resource_name
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
@@ -105,9 +108,11 @@ class BaseTestMixin(object):
         sys.stdout = sys.__stdout__
 
     @staticmethod
-    def create_active_project_with_pi(project_name, pi_user):
+    def create_active_project_with_pi(project_name, pi_user,
+                                      create_compute_allocation=False):
         """Create an 'Active' Project with the given name and the given
-        user as its PI. Return the Project."""
+        user as its PI. Return the Project. Optionally create an
+        associated active compute Allocation."""
         active_project_status = ProjectStatusChoice.objects.get(name='Active')
         project = Project.objects.create(
             name=project_name,
@@ -122,6 +127,15 @@ class BaseTestMixin(object):
             role=pi_role,
             status=active_project_user_status,
             user=pi_user)
+
+        if create_compute_allocation:
+            resource_name = get_project_compute_resource_name(project)
+            compute_resource = Resource.objects.get(name=resource_name)
+            status = AllocationStatusChoice.objects.get(name='Active')
+            allocation = Allocation.objects.create(
+                project=project, status=status)
+            allocation.resources.add(compute_resource)
+
         return project
 
     def create_test_user(self):

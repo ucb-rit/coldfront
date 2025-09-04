@@ -7,6 +7,7 @@ from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoic
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.allocation.utils import prorated_allocation_amount
+from coldfront.core.billing.utils.billing_activity_managers import ProjectBillingActivityManager
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import ProjectStatusChoice

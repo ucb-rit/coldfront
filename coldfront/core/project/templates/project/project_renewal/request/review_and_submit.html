@@ -14,7 +14,7 @@ Project Renewal - Review and Submit
 <ol class="breadcrumb">
   <li>Allocation Period: {{ allocation_period.name }}</li>
   <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
-  <li>PI: {{ PI.user.username}}, Current Project: {{ current_project }}</li>
+  <li>PI: {{ PI.user.username }}, Current Project: {{ current_project }}</li>
   <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
   <li>Preference: {{ breadcrumb_pooling_preference }}</li>
   <li>&nbsp;<i class="fas fa-angle-double-right"></i>&nbsp;</li>
@@ -56,9 +56,28 @@ Project Renewal - Review and Submit
         <th>Number of Service Units</th>
         <td>{{ allocation_amount }}</td>
       </tr>
+      {% if billing_id_change_requested %}
+      <tr>
+        <th>Billing ID Update</th>
+        <td>{{ prev_billing_id }} &rarr; {{ billing_id }}</td>
+      </tr>
+      {% endif %}
     </tbody>
   </table>
 </div>
+
+
+{% if billing_id_change_requested %}
+  <p>
+    The following changes will occur immediately upon submission:
+  </p>
+  <ol>
+    <li>
+      The LBL Project ID used for billing for {{ requested_project }} will be
+      updated from {{ prev_billing_id }} to {{ billing_id }}.
+    </li>
+  </ol>
+{% endif %}
 
 
 <p>
