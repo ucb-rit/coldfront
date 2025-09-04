@@ -142,14 +142,10 @@ class AllocationRenewalMixin(object):
         self._set_data_from_previous_steps(current_step, context)
 
         if current_step == self.step_numbers_by_form_name['renewal_survey']:
-            if isinstance(context['requested_project'], Project):
-                requested_project_name = context['requested_project'].name
-            else:
-                requested_project_name = context['requested_project']
             context['renewal_survey_url'] = get_renewal_survey_url(
                 context['allocation_period'].name,
                 context['PI'].user,
-                requested_project_name,
+                context['requested_project'].name,
                 self.request.user)
 
         if current_step == self.step_numbers_by_form_name['review_and_submit']:
@@ -289,10 +285,10 @@ class AllocationRenewalMixin(object):
         """Return the current billing ID (str) of the requested project
         if it has one, or None.
 
-        If the requested project is new, the input is a str, so it has
-        no billing ID. Return None.
+        If the requested project is new, it has no primary key, so it
+        has no billing ID. Return None.
         """
-        if isinstance(project, Project):
+        if project.pk is not None:
             billing_activity_manager = ProjectBillingActivityManager(project)
             billing_activity = billing_activity_manager.billing_activity
             billing_id = (
@@ -541,10 +537,7 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         elif step == self.step_numbers_by_form_name['renewal_survey']:
             tmp = {}
             self._set_data_from_previous_steps(step, tmp)
-            if isinstance(tmp['requested_project'], Project):
-                kwargs['project_name'] = tmp['requested_project'].name
-            else:
-                kwargs['project_name'] = tmp['requested_project']
+            kwargs['project_name'] = tmp['requested_project'].name
             kwargs['allocation_period_name'] = tmp['allocation_period'].name
             kwargs['pi_username'] = tmp['PI'].user.username
 
@@ -638,7 +631,9 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
         self._set_data_from_previous_steps(billing_id_form_step, tmp)
 
         project = tmp.get('requested_project', None)
-        if isinstance(project, Project):
+        # If the requested project is new, it has no primary key, and therefore
+        # no billing ID.
+        if isinstance(project, Project) and project.pk is not None:
             pi_project_user = tmp.get('PI', None)
             pi = pi_project_user.user if pi_project_user else None
             if isinstance(pi, User) and not self._is_pi_of_project(pi, project):
@@ -828,7 +823,9 @@ class AllocationRenewalRequestView(LoginRequiredMixin, UserPassesTestMixin,
             else:
                 if data:
                     dictionary.update(data)
-                    dictionary['requested_project'] = data['name']
+                    # Create a temporary Project object with just the name for
+                    # use in subsequent steps.
+                    dictionary['requested_project'] = Project(name=data['name'])
 
         billing_id_form_step = self.step_numbers_by_form_name['billing_id']
         if step > billing_id_form_step:
@@ -935,11 +932,7 @@ class AllocationRenewalRequestUnderProjectView(LoginRequiredMixin,
         elif step == self.step_numbers_by_form_name['renewal_survey']:
             tmp = {}
             self._set_data_from_previous_steps(step, tmp)
-            requested_project = tmp['requested_project']
-            if isinstance(requested_project, Project):
-                kwargs['project_name'] = tmp['requested_project'].name
-            else:
-                kwargs['project_name'] = tmp['requested_project']
+            kwargs['project_name'] = tmp['requested_project'].name
             kwargs['allocation_period_name'] = tmp['allocation_period'].name
             kwargs['pi_username'] = tmp['PI'].user.username
         return kwargs
