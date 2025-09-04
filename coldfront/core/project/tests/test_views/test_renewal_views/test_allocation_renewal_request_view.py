@@ -68,91 +68,31 @@ class TestAllocationRenewalRequestViewMixin(object):
         """Return the name of the request view."""
         return 'allocation_renewal_request_view'
 
-    def _send_post_requests_pooled_to_pooled_same(self, allocation_period,
-                                                  pi_project_user,
-                                                  billing_id=None):
+    def _send_post_requests_for_pooling_preference(self, pooling_preference,
+                                                   allocation_period,
+                                                   pi_project_user,
+                                                   project_to_pool_with_pk=None,
+                                                   new_project_dict=None,
+                                                   billing_id=None):
         """Send the necessary POST requests to the view to simulate the
-        requester opting to keep the PI's allowance pooled under the
-        same project.
+        given pooling preference case.
 
         Optionally provide a billing ID.
 
         Parameters:
+            - pooling_preference (str): The pooling preference to
+                simulate. Options are defined in the
+                AllowanceRenewalRequest model.
             - allocation_period (AllocationPeriod): The AllocationPeriod
                 to renew under
-            - pi_project_user (ProjectUser): The ProjectUser representing
-                the PI of the project being renewed
-            - billing_id (str): An optional billing ID to provide
-        """
-        view_name = self._request_view_name()
-        current_step_key = f'{view_name}-current_step'
-
-        form_data = []
-
-        allocation_period_form_data = {
-            '0-allocation_period': allocation_period.pk,
-            current_step_key: '0',
-        }
-        form_data.append(allocation_period_form_data)
-
-        pi_selection_form_data = {
-            '1-PI': pi_project_user.pk,
-            current_step_key: '1',
-        }
-        form_data.append(pi_selection_form_data)
-
-        pooling_preference_form_data = {
-            '2-preference': AllocationRenewalRequest.POOLED_TO_POOLED_SAME,
-            current_step_key: '2',
-        }
-        form_data.append(pooling_preference_form_data)
-
-        if billing_id is not None:
-            billing_id_form_data = {
-                '5-billing_id': billing_id,
-                current_step_key: '5',
-            }
-            form_data.append(billing_id_form_data)
-
-        renewal_survey_form_data = {
-            '7-was_survey_completed': True,
-            current_step_key: '7',
-        }
-        form_data.append(renewal_survey_form_data)
-
-        review_and_submit_form_data = {
-            '8-confirmation': True,
-            current_step_key: '8',
-        }
-        form_data.append(review_and_submit_form_data)
-
-        url = self._renew_pi_allocation_url()
-        for i, data in enumerate(form_data):
-            response = self.client.post(url, data)
-            if i == len(form_data) - 1:
-                self.assertRedirects(response, reverse('home'))
-            else:
-                self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def _send_post_requests_pooled_to_unpooled_new(self, allocation_period,
-                                                  pi_project_user,
-                                                  new_project_dict,
-                                                  billing_id=None):
-        """Send the necessary POST requests to the view to simulate the
-        requester opting to stop pooling the PI's allowance under their
-        current project and instead start a new project.
-
-        Optionally provide a billing ID.
-
-        Parameters:
-            - allocation_period (AllocationPeriod): The AllocationPeriod
-                to renew under
-            - pi_project_user (ProjectUser): The ProjectUser representing
-                the PI of the source project. The PI's allowance will be
-                moved to the new project.
+            - pi_project_user (ProjectUser): The ProjectUser
+                representing the PI whose allowance is being renewed
+            - project_to_pool_with_pk (int): The primary key of the
+                Project to pool with. This is only considered in some
+                cases.
             - new_project_dict (dict): A dictionary of data for creating
-                the new project. The dictionary should contain the keys
-                'name', 'title', and 'description'.
+                a new project. This is only considered when creating a
+                new project.
             - billing_id (str): An optional billing ID to provide
         """
         view_name = self._request_view_name()
@@ -173,18 +113,33 @@ class TestAllocationRenewalRequestViewMixin(object):
         form_data.append(pi_selection_form_data)
 
         pooling_preference_form_data = {
-            '2-preference': AllocationRenewalRequest.POOLED_TO_UNPOOLED_NEW,
+            '2-preference': pooling_preference,
             current_step_key: '2',
         }
         form_data.append(pooling_preference_form_data)
 
-        new_project_details_form_data = {
-            '4-name': new_project_dict['name'],
-            '4-title': new_project_dict['title'],
-            '4-description': new_project_dict['description'],
-            current_step_key: '4',
-        }
-        form_data.append(new_project_details_form_data)
+        project_selection_preferences = (
+            AllocationRenewalRequest.UNPOOLED_TO_POOLED,
+            AllocationRenewalRequest.POOLED_TO_POOLED_DIFFERENT,
+            AllocationRenewalRequest.POOLED_TO_UNPOOLED_OLD,
+        )
+        if pooling_preference in project_selection_preferences:
+            project_selection_form_data = {
+                '3-project': project_to_pool_with_pk,
+                current_step_key: '3',
+            }
+            form_data.append(project_selection_form_data)
+
+        if (pooling_preference ==
+                AllocationRenewalRequest.POOLED_TO_UNPOOLED_NEW):
+            assert new_project_dict is not None
+            new_project_details_form_data = {
+                '4-name': new_project_dict['name'],
+                '4-title': new_project_dict['title'],
+                '4-description': new_project_dict['description'],
+                current_step_key: '4',
+            }
+            form_data.append(new_project_details_form_data)
 
         if billing_id is not None:
             billing_id_form_data = {
@@ -193,152 +148,14 @@ class TestAllocationRenewalRequestViewMixin(object):
             }
             form_data.append(billing_id_form_data)
 
-        new_project_survey_form_data = {
-            '6-scope_and_intent': 'a' * 50,
-            '6-computational_aspects': 'b' * 50,
-            current_step_key: '6',
-        }
-        form_data.append(new_project_survey_form_data)
-
-        renewal_survey_form_data = {
-            '7-was_survey_completed': True,
-            current_step_key: '7',
-        }
-        form_data.append(renewal_survey_form_data)
-
-        review_and_submit_form_data = {
-            '8-confirmation': True,
-            current_step_key: '8',
-        }
-        form_data.append(review_and_submit_form_data)
-
-        url = self._renew_pi_allocation_url()
-        for i, data in enumerate(form_data):
-            response = self.client.post(url, data)
-            if i == len(form_data) - 1:
-                self.assertRedirects(response, reverse('home'))
-            else:
-                self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def _send_post_requests_unpooled_to_pooled(self, allocation_period,
-                                               pi_project_user, target_project,
-                                               billing_id=None):
-        """Send the necessary POST requests to the view to simulate the
-        requester opting to start pooling the PI's allowance under a
-        different project.
-
-        Optionally provide a billing ID.
-
-        Parameters:
-            - allocation_period (AllocationPeriod): The AllocationPeriod
-                to renew under
-            - pi_project_user (ProjectUser): The ProjectUser representing
-                the PI of the source project. The PI's allowance will be
-                moved to target_project.
-            - target_project (Project): The Project to start pooling the
-                PI's allowance under
-            - billing_id (str): An optional billing ID to provide
-        """
-        view_name = self._request_view_name()
-        current_step_key = f'{view_name}-current_step'
-
-        form_data = []
-
-        allocation_period_form_data = {
-            '0-allocation_period': allocation_period.pk,
-            current_step_key: '0',
-        }
-        form_data.append(allocation_period_form_data)
-
-        pi_selection_form_data = {
-            '1-PI': pi_project_user.pk,
-            current_step_key: '1',
-        }
-        form_data.append(pi_selection_form_data)
-
-        pooling_preference_form_data = {
-            '2-preference': AllocationRenewalRequest.UNPOOLED_TO_POOLED,
-            current_step_key: '2',
-        }
-        form_data.append(pooling_preference_form_data)
-
-        project_selection_form_data = {
-            '3-project': target_project.pk,
-            current_step_key: '3',
-        }
-        form_data.append(project_selection_form_data)
-
-        if billing_id is not None:
-            billing_id_form_data = {
-                '5-billing_id': billing_id,
-                current_step_key: '5',
+        if (pooling_preference ==
+                AllocationRenewalRequest.POOLED_TO_UNPOOLED_NEW):
+            new_project_survey_form_data = {
+                '6-scope_and_intent': 'a' * 50,
+                '6-computational_aspects': 'b' * 50,
+                current_step_key: '6',
             }
-            form_data.append(billing_id_form_data)
-
-        renewal_survey_form_data = {
-            '7-was_survey_completed': True,
-            current_step_key: '7',
-        }
-        form_data.append(renewal_survey_form_data)
-
-        review_and_submit_form_data = {
-            '8-confirmation': True,
-            current_step_key: '8',
-        }
-        form_data.append(review_and_submit_form_data)
-
-        url = self._renew_pi_allocation_url()
-        for i, data in enumerate(form_data):
-            response = self.client.post(url, data)
-            if i == len(form_data) - 1:
-                self.assertRedirects(response, reverse('home'))
-            else:
-                self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def _send_post_requests_unpooled_to_unpooled(self, allocation_period,
-                                                 pi_project_user,
-                                                 billing_id=None):
-        """Send the necessary POST requests to the view to simulate the
-        requester opting to keep the PI's allowance unpooled.
-
-        Optionally provide a billing ID.
-
-        Parameters:
-            - allocation_period (AllocationPeriod): The AllocationPeriod
-                to renew under
-            - pi_project_user (ProjectUser): The ProjectUser representing
-                the PI of the project being renewed
-            - billing_id (str): An optional billing ID to provide
-        """
-        view_name = self._request_view_name()
-        current_step_key = f'{view_name}-current_step'
-
-        form_data = []
-
-        allocation_period_form_data = {
-            '0-allocation_period': allocation_period.pk,
-            current_step_key: '0',
-        }
-        form_data.append(allocation_period_form_data)
-
-        pi_selection_form_data = {
-            '1-PI': pi_project_user.pk,
-            current_step_key: '1',
-        }
-        form_data.append(pi_selection_form_data)
-
-        pooling_preference_form_data = {
-            '2-preference': AllocationRenewalRequest.UNPOOLED_TO_UNPOOLED,
-            current_step_key: '2',
-        }
-        form_data.append(pooling_preference_form_data)
-
-        if billing_id is not None:
-            billing_id_form_data = {
-                '5-billing_id': billing_id,
-                current_step_key: '5',
-            }
-            form_data.append(billing_id_form_data)
+            form_data.append(new_project_survey_form_data)
 
         renewal_survey_form_data = {
             '7-was_survey_completed': True,
@@ -378,7 +195,8 @@ class TestAllocationRenewalRequestViewMixin(object):
             if self._deployment_name == 'LRC':
                 kwargs['billing_id'] = '000000-000'
 
-            self._send_post_requests_unpooled_to_unpooled(
+            self._send_post_requests_for_pooling_preference(
+                AllocationRenewalRequest.UNPOOLED_TO_UNPOOLED,
                 allocation_period, pi_project_user, **kwargs)
 
             post_time = utc_now_offset_aware()
@@ -465,8 +283,9 @@ class TestLRCAllocationRenewalRequestView(TestAllocationRenewalRequestViewMixin,
         # is not included, despite the fact that the billing ID is invalid,
         # because the PI is not already a PI of the project.
         allocation_period = get_current_allowance_year_period()
-        self._send_post_requests_unpooled_to_pooled(
-            allocation_period, src_pi_project_user, dst_project)
+        self._send_post_requests_for_pooling_preference(
+            AllocationRenewalRequest.UNPOOLED_TO_POOLED, allocation_period,
+            src_pi_project_user, dst_project.pk)
 
         # Check that the request was created.
         requests = AllocationRenewalRequest.objects.all()
@@ -518,8 +337,9 @@ class TestLRCAllocationRenewalRequestView(TestAllocationRenewalRequestViewMixin,
                 'A new project to create to test that billing IDs are set.'),
         }
 
-        self._send_post_requests_pooled_to_unpooled_new(
-            allocation_period, pi_project_user, new_project_dict,
+        self._send_post_requests_for_pooling_preference(
+            AllocationRenewalRequest.POOLED_TO_UNPOOLED_NEW, allocation_period,
+            pi_project_user, new_project_dict=new_project_dict,
             billing_id=new_billing_id)
 
         # Check that the request was created.
@@ -622,8 +442,9 @@ class TestLRCAllocationRenewalRequestView(TestAllocationRenewalRequestViewMixin,
             new_billing_id)
 
         allocation_period = get_current_allowance_year_period()
-        self._send_post_requests_pooled_to_pooled_same(
-            allocation_period, pi_project_user, billing_id=new_billing_id)
+        self._send_post_requests_for_pooling_preference(
+            AllocationRenewalRequest.POOLED_TO_POOLED_SAME, allocation_period,
+            pi_project_user, billing_id=new_billing_id)
 
         # Check that only the entities that referenced the old billing ID were
         # updated.
