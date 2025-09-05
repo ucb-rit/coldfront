@@ -308,6 +308,7 @@ def send_allocation_renewal_available_email(project,
             reverse('renew-pi-allocation-landing')),
         'support_email': settings.CENTER_HELP_EMAIL,
         'signature': settings.EMAIL_SIGNATURE,
+        'signature_html': settings.EMAIL_SIGNATURE.replace('\n', '<br>'),
     }
 
     sender = settings.EMAIL_SENDER
