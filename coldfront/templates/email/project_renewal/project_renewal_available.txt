@@ -5,7 +5,7 @@ Your {{ computing_allowance_name_long }} will expire on {{ current_allocation_pe
 To renew a PI's {{ computing_allowance_name_short }} under {{ project_name }}:
 
 1. Visit the project page: {{ project_detail_url }}, and click on the "Renew Allowance" button.
-2. Select the "{{ next_allocation_period_name }}" period and the PI. (If there are multiple PIs, they must be renewed separately).
+2. Select the "{{ next_allocation_period_name }}" period and the PI. (If there are multiple PIs, they must be renewed separately.)
 3. Fill out the usage survey. Note: This is not the final step of the renewal form.
 4. Review your selections and submit.
 
