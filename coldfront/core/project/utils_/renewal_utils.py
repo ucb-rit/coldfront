@@ -290,7 +290,7 @@ def send_allocation_renewal_available_email(project,
 
     subject = (
         f'Action Required: Renew {project.name} '
-        f'{computing_allowance_name_long}(s)')
+        f'{computing_allowance_name_long}')
 
     context = {
         'project_name': project.name,
