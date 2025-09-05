@@ -1,4 +1,5 @@
 {% load feature_flags %}
+{% flag_enabled 'LRC_ONLY' as lrc_only %}
 
 <p>Dear project managers of {{ project_name }},</p>
 
@@ -9,6 +10,7 @@
 <ol>
   <li>Visit the <a href="{{ project_detail_url }}">project</a> page, and click on the "Renew Allowance" button.</li>
   <li>Select the "{{ next_allocation_period_name }}" period and the PI. (If there are multiple PIs, they must be renewed separately.)</li>
+  {% if lrc_only %}<li>If the project's LBL Project ID is invalid, you will be prompted to provide a valid one.</li>{% endif %}
   <li>Fill out the usage survey. Note: This is not the final step of the renewal form.</li>
   <li>Review your selections and submit.</li>
 </ol>
@@ -23,7 +25,6 @@
 
 <p>If a PI would like to move their {{ computing_allowance_name_short }} to a different project, their pooling preferences may be updated <a href="{{ general_renewal_url }}">here</a>.</p>
 
-{% flag_enabled 'LRC_ONLY' as lrc_only %}
 <p>Please take this opportunity to review the project's users, and remove any inactive users on the project page. {% if lrc_only %}Note that removal from the project does not delete the user's cluster account, so monthly user account fees may still apply. To request user cluster account deletion, please contact us.{% endif %}</p>
 
 <p>If you have any questions, please contact us at {{ support_email }}.</p>
