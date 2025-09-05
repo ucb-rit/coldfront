@@ -272,28 +272,30 @@ def pis_with_renewal_requests_pks(allocation_period, computing_allowance=None,
             f).values_list('pi__pk', flat=True))
 
 
-def send_allocation_renewal_available_email(project, current_allocation_period,
+def send_allocation_renewal_available_email(project,
+                                            computing_allowance_name_long,
+                                            computing_allowance_name_short,
+                                            current_allocation_period,
                                             next_allocation_period,
                                             num_service_units):
     """Send a notification email to applicable project managers and PIs
     of the given Project, notifying them that the project's computing
-    allowance, which is active under the given current AllocationPeriod,
-    will expire soon, and will need to be renewed for the given next
-    AllocationPeriod, which will grant the given number of service
-    units."""
+    allowance (with the given long and short names), which is active
+    under the given current AllocationPeriod, will expire soon, and will
+    need to be renewed for the given next AllocationPeriod, which will
+    grant the given number of service units."""
     email_enabled = import_from_settings('EMAIL_ENABLED', False)
     if not email_enabled:
         return
 
-    computing_allowance_name_short = None
-
     subject = (
         f'Action Required: Renew {project.name} '
-        f'{computing_allowance_name_short}')
+        f'{computing_allowance_name_long}(s)')
 
     context = {
         'project_name': project.name,
         'computing_allowance_name_short': computing_allowance_name_short,
+        'computing_allowance_name_long': computing_allowance_name_long,
         'current_allocation_period_end_date': \
             current_allocation_period.end_date,
         'next_allocation_period_start_date': next_allocation_period.start_date,
@@ -682,6 +684,10 @@ class AllowanceRenewalAvailableEmailSender(object):
         assert self._computing_allowance.is_renewal_supported()
 
         self._computing_allowance_interface = ComputingAllowanceInterface()
+        self._allowance_name_long = self._computing_allowance.get_name()
+        self._allowance_name_short = \
+            self._computing_allowance_interface.name_short_from_name(
+                self._allowance_name_long)
         self._num_service_units = \
             self._computing_allowance_interface.service_units_from_name(
                 self._computing_allowance.get_name())
@@ -698,7 +704,8 @@ class AllowanceRenewalAvailableEmailSender(object):
         for project in eligible_projects:
             try:
                 self._process_email(
-                    project, self._current_allocation_period,
+                    project, self._allowance_name_long,
+                    self._allowance_name_short, self._current_allocation_period,
                     self._next_allocation_period, self._num_service_units)
             except Exception as e:
                 logger.exception(
@@ -729,14 +736,17 @@ class AllowanceRenewalAvailableEmailSender(object):
             status__name='Active')
         return active_projects_with_allowance
 
-    def _process_email(self, project, current_allocation_period,
-                       next_allocation_period, num_service_units):
+    def _process_email(self, project, computing_allowance_name_long,
+                       computing_allowance_name_short,
+                       current_allocation_period, next_allocation_period,
+                       num_service_units):
         """Process, via the email strategy, an email for the given
         Project."""
         email_method = send_allocation_renewal_available_email
         email_args = (
-            project, current_allocation_period, next_allocation_period,
-            num_service_units)
+            project, computing_allowance_name_long,
+            computing_allowance_name_short, current_allocation_period,
+            next_allocation_period, num_service_units)
         self._email_strategy.process_email(email_method, *email_args)
 
 
