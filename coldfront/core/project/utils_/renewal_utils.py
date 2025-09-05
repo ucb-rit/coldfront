@@ -301,7 +301,7 @@ def send_allocation_renewal_available_email(project,
         'next_allocation_period_start_date': next_allocation_period.start_date,
         'next_allocation_period_end_date': next_allocation_period.end_date,
         'next_allocation_period_name': next_allocation_period.name,
-        'project_detail_url': project_detail_url(project),
+        'project_detail_url': build_absolute_url(project_detail_url(project)),
         'num_service_units': num_service_units,
         'requests_url': build_absolute_url(reverse('request-hub')),
         'general_renewal_url': build_absolute_url(
