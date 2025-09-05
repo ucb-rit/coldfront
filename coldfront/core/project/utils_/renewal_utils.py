@@ -691,7 +691,7 @@ class AllowanceRenewalAvailableEmailSender(object):
                 self._allowance_name_long)
         self._num_service_units = \
             self._computing_allowance_interface.service_units_from_name(
-                self._computing_allowance.get_name())
+                self._allowance_name_long)
 
         self._email_strategy = validate_email_strategy_or_get_default(
             email_strategy=email_strategy)
