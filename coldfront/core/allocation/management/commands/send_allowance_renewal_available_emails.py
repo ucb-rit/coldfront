@@ -60,7 +60,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(message))
         else:
             user_confirmation = input(
-                'This will send emails to {num_emails} projects. Are you sure '
+                f'This will send emails to {num_emails} projects. Are you sure '
                 f'you wish to proceed? [Y/y/N/n]: ')
             if user_confirmation.strip().lower() != 'y':
                 self.stdout.write(self.style.WARNING('Operation cancelled.'))
