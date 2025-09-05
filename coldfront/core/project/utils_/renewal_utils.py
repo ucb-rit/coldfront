@@ -38,6 +38,7 @@ from django.db.models import Q
 from django.urls import reverse
 from urllib.parse import urljoin
 
+import io
 import logging
 import os
 
@@ -700,7 +701,7 @@ class AllowanceRenewalAvailableEmailSender(object):
                     project, self._current_allocation_period,
                     self._next_allocation_period, self._num_service_units)
             except Exception as e:
-                self.logger.exception(
+                logger.exception(
                     f'Failed to process allowance renewal reminder email for '
                     f'Project {project.name} ({project.pk}). Details:\n{e}')
                 failures.append(project)
@@ -711,7 +712,8 @@ class AllowanceRenewalAvailableEmailSender(object):
         is not ready."""
         try:
             call_command(
-                'audit_allocation_period', self._next_allocation_period.name)
+                'audit_allocation_period', self._next_allocation_period.name,
+                stdout=io.StringIO(), stderr=io.StringIO())
         except AuditFailure as e:
             raise e
 

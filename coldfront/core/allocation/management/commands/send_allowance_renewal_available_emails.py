@@ -56,7 +56,7 @@ class Command(BaseCommand):
 
         num_emails = len(email_strategy.get_queue())
         if dry_run:
-            message = f'Would send {num_emails} emails.'
+            message = f'Would send emails to {num_emails} projects.'
             self.stdout.write(self.style.WARNING(message))
         else:
             user_confirmation = input(
