@@ -1,3 +1,5 @@
+{% load feature_flags %}
+
 <p>Dear project managers of {{ project_name }},</p>
 
 <p>Your {{ computing_allowance_name_long }} will expire on {{ current_allocation_period_end_date }}. You may now request to renew the free allowance for {{ next_allocation_period_name }}, which runs from {{ next_allocation_period_start_date }} to {{ next_allocation_period_end_date }}.</p>
@@ -20,6 +22,9 @@
 </ul>
 
 <p>If a PI would like to move their {{ computing_allowance_name_short }} to a different project, their pooling preferences may be updated <a href="{{ general_renewal_url }}">here</a>.</p>
+
+{% flag_enabled 'LRC_ONLY' as lrc_only %}
+<p>Please take this opportunity to review the project's users, and remove any inactive users on the project page. {% if lrc_only %}Note that removal from the project does not delete the user's cluster account, so monthly user account fees may still apply. To request user cluster account deletion, please contact us.{% endif %}</p>
 
 <p>If you have any questions, please contact us at {{ support_email }}.</p>
 
