@@ -1,4 +1,5 @@
 from coldfront.api.statistics.utils import set_project_user_allocation_value
+from coldfront.core.allocation.management.commands.audit_allocation_period import AuditFailure
 from coldfront.core.allocation.models import AllocationAttribute
 from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationPeriod
@@ -6,7 +7,6 @@ from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.utils import get_project_compute_allocation
-from coldfront.core.allocation.utils import prorated_allocation_amount
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import ProjectStatusChoice
@@ -19,6 +19,7 @@ from coldfront.core.resource.utils_.allowance_utils.computing_allowance import C
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.statistics.models import ProjectTransaction
 from coldfront.core.statistics.models import ProjectUserTransaction
+from coldfront.core.utils.common import build_absolute_url
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import project_detail_url
@@ -26,15 +27,20 @@ from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.common import validate_num_service_units
 from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
 from coldfront.core.utils.mail import send_email_template
+
 from collections import namedtuple
 from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.db import transaction
 from django.db.models import Q
 from django.urls import reverse
 from urllib.parse import urljoin
+
+import io
 import logging
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -264,6 +270,58 @@ def pis_with_renewal_requests_pks(allocation_period, computing_allowance=None,
     return set(
         AllocationRenewalRequest.objects.filter(
             f).values_list('pi__pk', flat=True))
+
+
+def send_allocation_renewal_available_email(project,
+                                            computing_allowance_name_long,
+                                            computing_allowance_name_short,
+                                            current_allocation_period,
+                                            next_allocation_period,
+                                            num_service_units):
+    """Send a notification email to applicable project managers and PIs
+    of the given Project, notifying them that the project's computing
+    allowance (with the given long and short names), which is active
+    under the given current AllocationPeriod, will expire soon, and will
+    need to be renewed for the given next AllocationPeriod, which will
+    grant the given number of service units."""
+    email_enabled = import_from_settings('EMAIL_ENABLED', False)
+    if not email_enabled:
+        return
+
+    subject = (
+        f'Action Required: Renew {project.name} '
+        f'{computing_allowance_name_long}')
+
+    context = {
+        'project_name': project.name,
+        'computing_allowance_name_short': computing_allowance_name_short,
+        'computing_allowance_name_long': computing_allowance_name_long,
+        'current_allocation_period_end_date': \
+            current_allocation_period.end_date,
+        'next_allocation_period_start_date': next_allocation_period.start_date,
+        'next_allocation_period_end_date': next_allocation_period.end_date,
+        'next_allocation_period_name': next_allocation_period.name,
+        'project_detail_url': build_absolute_url(project_detail_url(project)),
+        'num_service_units': num_service_units,
+        'requests_url': build_absolute_url(reverse('request-hub')),
+        'general_renewal_url': build_absolute_url(
+            reverse('renew-pi-allocation-landing')),
+        'support_email': settings.CENTER_HELP_EMAIL,
+        'signature': settings.EMAIL_SIGNATURE,
+        'signature_html': settings.EMAIL_SIGNATURE.replace('\n', '<br>'),
+    }
+
+    sender = settings.EMAIL_SENDER
+    receiver_list = project.managers_and_pis_emails()
+
+    template_dir = 'email/project_renewal'
+    template_base_name = 'project_renewal_available'
+    template_name = os.path.join(template_dir, f'{template_base_name}.txt')
+    html_template = os.path.join(template_dir, f'{template_base_name}.html')
+
+    send_email_template(
+        subject, template_name, context, sender, receiver_list,
+        html_template=html_template)
 
 
 def send_allocation_renewal_request_approval_email(request, num_service_units):
@@ -605,6 +663,93 @@ def set_allocation_renewal_request_eligibility(request, status, justification,
     }
     request.status = allocation_renewal_request_state_status(request)
     request.save()
+
+
+class AllowanceRenewalAvailableEmailSender(object):
+    """A class that sends emails to eligible project owners, notifying
+    them that allowance renewal is available."""
+
+    def __init__(self, current_allocation_period, next_allocation_period,
+                 computing_allowance, email_strategy=None):
+        assert isinstance(current_allocation_period, AllocationPeriod)
+        assert isinstance(next_allocation_period, AllocationPeriod)
+        assert isinstance(computing_allowance, ComputingAllowance)
+
+        self._current_allocation_period = current_allocation_period
+
+        self._next_allocation_period = next_allocation_period
+        self._assert_allocation_period_ready()
+
+        self._computing_allowance = computing_allowance
+        assert self._computing_allowance.is_renewable()
+        assert self._computing_allowance.is_renewal_supported()
+
+        self._computing_allowance_interface = ComputingAllowanceInterface()
+        self._allowance_name_long = self._computing_allowance.get_name()
+        self._allowance_name_short = \
+            self._computing_allowance_interface.name_short_from_name(
+                self._allowance_name_long)
+        self._num_service_units = \
+            self._computing_allowance_interface.service_units_from_name(
+                self._allowance_name_long, is_timed=True,
+                allocation_period=self._next_allocation_period)
+
+        self._email_strategy = validate_email_strategy_or_get_default(
+            email_strategy=email_strategy)
+
+    def run(self):
+        """Gather a list of relevant Projects, and send emails to them
+        using the email strategy. Return a list of Projects for which
+        email processing failed."""
+        eligible_projects = self._get_eligible_projects()
+        failures = []
+        for project in eligible_projects:
+            try:
+                self._process_email(
+                    project, self._allowance_name_long,
+                    self._allowance_name_short, self._current_allocation_period,
+                    self._next_allocation_period, self._num_service_units)
+            except Exception as e:
+                logger.exception(
+                    f'Failed to process allowance renewal reminder email for '
+                    f'Project {project.name} ({project.pk}). Details:\n{e}')
+                failures.append(project)
+        return failures
+
+    def _assert_allocation_period_ready(self):
+        """Raise an AuditFailure if the provided next AllocationPeriod
+        is not ready."""
+        try:
+            call_command(
+                'audit_allocation_period', self._next_allocation_period.name,
+                stdout=io.StringIO(), stderr=io.StringIO())
+        except AuditFailure as e:
+            raise e
+
+    def _get_eligible_projects(self):
+        """Return a list of Projects that are eligible to receive a
+        reminder email: currently "Active" ones that have the
+        computing allowance."""
+        project_name_prefix = \
+            self._computing_allowance_interface.code_from_name(
+                self._computing_allowance.get_name())
+        active_projects_with_allowance = Project.objects.filter(
+            name__startswith=project_name_prefix,
+            status__name='Active')
+        return active_projects_with_allowance
+
+    def _process_email(self, project, computing_allowance_name_long,
+                       computing_allowance_name_short,
+                       current_allocation_period, next_allocation_period,
+                       num_service_units):
+        """Process, via the email strategy, an email for the given
+        Project."""
+        email_method = send_allocation_renewal_available_email
+        email_args = (
+            project, computing_allowance_name_long,
+            computing_allowance_name_short, current_allocation_period,
+            next_allocation_period, num_service_units)
+        self._email_strategy.process_email(email_method, *email_args)
 
 
 class AllocationRenewalRunnerBase(object):
