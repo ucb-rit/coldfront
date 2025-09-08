@@ -11,4 +11,6 @@ RUN /var/www/coldfront_app/venv/bin/pip install --upgrade pip wheel && \
     /var/www/coldfront_app/venv/bin/pip install setuptools==68.2.2 && \
     /var/www/coldfront_app/venv/bin/pip install -r requirements.txt
 
+RUN /var/www/coldfront_app/venv/bin/pip install debugpy
+
 ENV PATH="/var/www/coldfront_app/venv/bin:$PATH"
