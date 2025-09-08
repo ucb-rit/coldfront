@@ -635,6 +635,10 @@
 
         # Configure Apache.
 
+        - name: Set apache_num_processes based on number of CPUs
+          set_fact:
+            apache_num_processes: "{{ apache_num_processes | default(ansible_processor_vcpus | default(ansible_processor_count) | default(4)) }}"
+
         - name: Create a WSGI configuration file from a template if SSL is disabled
           template:
             src: "{{ git_prefix }}/{{ reponame }}/bootstrap/ansible/wsgi_conf.tmpl"
