@@ -5,9 +5,15 @@ name: Django Testing CI - Python 3.13
 
 on:
   push:
-    branches: ["upgrade/rocky8-python3.13-main"]
+    branches: [
+      "upgrade/rocky8-python3.13-main",
+      "upgrade/rocky8-python3.13-develop"
+    ]
   pull_request:
-    branches: ["upgrade/rocky8-python3.13-main"]
+    branches: [
+      "upgrade/rocky8-python3.13-main",
+      "upgrade/rocky8-python3.13-develop"
+    ]
 
 jobs:
   build:
