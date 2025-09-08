@@ -22,6 +22,11 @@
     - "../../main.yml"
 
   tasks:
+
+    - name: Fail due to deprecation
+      fail:
+        msg: "This playbook is deprecated and should not be used. Please use the AlmaLinux 8 playbook instead."
+
     # Provisioning tasks that can generally be skipped after the first time.
     - name: Run Provisioning Tasks
       block:
