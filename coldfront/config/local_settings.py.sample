@@ -479,10 +479,16 @@ except ImportError:
                 pass
 
 # Update extra apps based on potentially-updated variables.
-EXTRA_APPS += EXTRA_EXTRA_APPS
+try:
+    EXTRA_APPS += EXTRA_EXTRA_APPS
+except NameError:
+    pass  # EXTRA_EXTRA_APPS not defined
 
 # Update extra middleware based on potentially-updated variables.
-EXTRA_MIDDLEWARE += EXTRA_EXTRA_MIDDLEWARE
+try:
+    EXTRA_MIDDLEWARE += EXTRA_EXTRA_MIDDLEWARE
+except NameError:
+    pass  # EXTRA_EXTRA_MIDDLEWARE not defined
 
 # Update logging settings based on potentially-updated variables.
 LOGGING['handlers']['file']['filename'] = LOG_PATH
