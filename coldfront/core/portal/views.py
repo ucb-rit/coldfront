@@ -8,6 +8,8 @@ from django.db.models import Count, Q, Sum
 from django.shortcuts import render
 from django.views.decorators.cache import cache_page
 
+import logging
+
 from flags.state import flag_enabled
 
 from coldfront.core.allocation.models import (Allocation,
@@ -20,33 +22,91 @@ from coldfront.core.portal.utils import (generate_allocations_chart_data,
                                          generate_publication_by_year_chart_data,
                                          generate_resources_chart_data,
                                          generate_total_grants_by_agency_chart_data)
-from coldfront.core.project.models import Project, ProjectUserJoinRequest
+from coldfront.core.project.models import Project, ProjectUserJoinRequest, ProjectUser
 from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
 from coldfront.core.project.utils import render_project_compute_usage
+from coldfront.core.project.utils_.join_request_tracker import JoinRequestTracker
 
 from django.contrib.auth.decorators import login_required
 
 
 # from coldfront.core.publication.models import Publication
 # from coldfront.core.research_output.models import ResearchOutput
+from coldfront.core.project.utils_.join_request_tracker import JoinRequestTracker
+
+logger = logging.getLogger(__name__)
 
 
 def home(request):
-
     def _compute_project_user_cluster_access_statuses(_user):
         """Return a dict mapping each Project object that the given User
         is associated with to a str describing the user's access to the
         cluster under the project."""
         statuses = {}
 
-        cluster_access_attributes = AllocationUserAttribute.objects.filter(
-            allocation_attribute_type__name='Cluster Account Status',
-            allocation_user__user=_user)
-        for attribute in cluster_access_attributes:
-            _project = attribute.allocation.project
-            statuses[_project] = attribute.value
+        # Get all allocations for the user's projects
+        from coldfront.core.allocation.models import Allocation, AllocationUser
 
+        # Get all active project users for the user
+        project_users = ProjectUser.objects.filter(
+            user=_user,
+            status__name__in=['Active', 'Pending - Add']
+        ).select_related('project')
+
+        for project_user in project_users:
+            project = project_user.project
+
+            # Try to find a compute allocation for this project
+            compute_allocation = None
+            try:
+                # Look for any allocation with a compute resource
+                allocations = Allocation.objects.filter(
+                    project=project,
+                    status__name__in=['Active', 'New', 'Renewal Requested', 'Payment Pending', 'Payment Requested',
+                                      'Paid']
+                ).prefetch_related('resources')
+
+                for allocation in allocations:
+                    if allocation.resources.filter(name__icontains='Compute').exists():
+                        compute_allocation = allocation
+                        break
+            except:
+                pass
+
+            if compute_allocation:
+                # Check if user has allocation user record
+                try:
+                    allocation_user = compute_allocation.allocationuser_set.get(user=_user)
+
+                    # Try to get cluster account status
+                    cluster_access_attrs = AllocationUserAttribute.objects.filter(
+                        allocation_user=allocation_user,
+                        allocation_attribute_type__name='Cluster Account Status'
+                    )
+
+                    if cluster_access_attrs.exists():
+                        statuses[project] = cluster_access_attrs.first().value
+                    else:
+                        # User is in allocation but no cluster status yet
+                        if project_user.status.name == 'Pending - Add':
+                            statuses[project] = 'Pending - Add'
+                        else:
+                            statuses[project] = 'Pending - Add'
+                except AllocationUser.DoesNotExist:
+                    # User not in allocation yet
+                    if project_user.status.name == 'Pending - Add':
+                        statuses[project] = 'Pending - Add'
+                    else:
+                        statuses[project] = 'None'
+            else:
+                # No compute allocation found
+                if project_user.status.name == 'Pending - Add':
+                    statuses[project] = 'Pending - Add'
+                else:
+                    statuses[project] = 'None'
+
+        # Check for pending removal requests
         for project_user_removal_request in \
                 ProjectUserRemovalRequest.objects.filter(
                     project_user__user=_user, status__name='Pending'):
@@ -61,7 +121,7 @@ def home(request):
         project_list = Project.objects.filter(
             (Q(status__name__in=['New', 'Active', 'Inactive']) &
              Q(projectuser__user=request.user) &
-             Q(projectuser__status__name__in=['Active', 'Pending - Remove']))
+             Q(projectuser__status__name__in=['Active', 'Pending - Add']))
         ).distinct().order_by('name')
 
         access_states = _compute_project_user_cluster_access_statuses(
@@ -77,24 +137,38 @@ def home(request):
                 rendered_compute_usage = 'Unexpected error'
             project.rendered_compute_usage = rendered_compute_usage
 
+            # Add tracking status for each project
+            try:
+                tracker = JoinRequestTracker(request.user, project)
+                tracking_status = tracker.get_status()
+                # Convert to object-like access for template
+                project.has_tracking = tracking_status.get('can_view', False)
+                project.tracking_status = tracking_status
+                project.tracking_error = tracking_status.get('error')
+            except Exception as e:
+                logger.error(f"Failed to get tracking status for project {project.name}: {e}")
+                project.has_tracking = False
+                project.tracking_status = None
+                project.tracking_error = None
+
         if has_cluster_access(request.user):
             context['cluster_username'] = request.user.username
 
         allocation_list = Allocation.objects.filter(
-           Q(status__name__in=['Active', 'New', 'Renewal Requested', ]) &
-           Q(project__status__name__in=['Active', 'New']) &
-           Q(project__projectuser__user=request.user) &
-           Q(project__projectuser__status__name__in=['Active', ]) &
-           Q(allocationuser__user=request.user) &
-           Q(allocationuser__status__name__in=['Active', ])
+            Q(status__name__in=['Active', 'New', 'Renewal Requested', ]) &
+            Q(project__status__name__in=['Active', 'New']) &
+            Q(project__projectuser__user=request.user) &
+            Q(project__projectuser__status__name__in=['Active', ]) &
+            Q(allocationuser__user=request.user) &
+            Q(allocationuser__status__name__in=['Active', ])
         ).distinct().order_by('-created')
         context['project_list'] = project_list
         context['allocation_list'] = allocation_list
 
         num_join_requests = ProjectUserJoinRequest.objects.filter(
-                project_user__status__name='Pending - Add',
-                project_user__user=request.user
-            ).order_by('project_user', '-created').distinct('project_user').count()
+            project_user__status__name='Pending - Add',
+            project_user__user=request.user
+        ).order_by('project_user', '-created').distinct('project_user').count()
         context['num_join_requests'] = num_join_requests
 
         context['pending_removal_request_projects'] = [

@@ -43,6 +43,7 @@ Project List
         <th scope="col" class="text-nowrap">PIs</th>
         <th scope="col">Title</th>
         <th scope="col">Cluster</th>
+        <th scope="col" class="text-nowrap">Request Status</th>
       </tr>
     </thead>
     <tbody>
@@ -53,6 +54,16 @@ Project List
           <td>{% for pi in project.pis %}{{ pi.username }}<br>{% endfor %}</td>
           <td style="text-align: justify; text-justify: inter-word;">{{ project.title }}</td>
           <td>{{ project.cluster_name|upper }}</td>
+          <td>
+            {% if project.has_tracking %}
+              <a href="#" data-toggle="modal" data-target="#projectAccessTimelineModal{{ project.pk }}">
+                <i class="fas fa-clock"></i> View Timeline
+              </a>
+              {% include "portal/project_access_timeline_modal.html" with project=project %}
+            {% else %}
+              <span class="badge badge-warning">Pending Approval</span>
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
     </tbody>

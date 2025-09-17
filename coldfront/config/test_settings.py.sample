@@ -1,5 +1,12 @@
 import os
 
+# Define variables that local_settings.py expects before importing
+EXTRA_EXTRA_APPS = []
+EXTRA_EXTRA_MIDDLEWARE = []
+STREAM_LOGS_TO_STDOUT = False
+CILOGON_APP_CLIENT_ID = ''
+CILOGON_APP_SECRET = ''
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -56,18 +63,13 @@ DATABASES = {
 LOG_PATH = '/var/log/user_portals/cf_mybrc/cf_mybrc_portal.log'
 API_LOG_PATH = '/var/log/user_portals/cf_mybrc/cf_mybrc_api.log'
 
-STREAM_LOGS_TO_STDOUT = False
-
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = ['test@test.test']
 # A list of admin email addresses to notify when a project-user removal request
 # is processed.
 PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST = ['test@test.test']
 
-# Extra apps to be included.
-EXTRA_EXTRA_APPS = []
-# Extra middleware to be included.
-EXTRA_EXTRA_MIDDLEWARE = []
+# Additional extra apps and middleware are added below
 
 #------------------------------------------------------------------------------
 # Django Cache settings
@@ -134,8 +136,7 @@ SESSION_COOKIE_SECURE = False
 # Django All-Auth settings
 #------------------------------------------------------------------------------
 
-CILOGON_APP_CLIENT_ID = ''
-CILOGON_APP_SECRET = ''
+# CILOGON_APP_CLIENT_ID and CILOGON_APP_SECRET are defined above before imports
 
 #------------------------------------------------------------------------------
 # django debug toolbar settings
@@ -170,9 +171,7 @@ FLAGS = {
 # Plugin: departments
 #------------------------------------------------------------------------------
 
-EXTRA_EXTRA_APPS += [
-    'coldfront.plugins.departments'
-]
+EXTRA_EXTRA_APPS.append('coldfront.plugins.departments')
 
 DEPARTMENTS_DEPARTMENT_DISPLAY_NAME = 'Department'
 DEPARTMENTS_DEPARTMENT_DATA_SOURCE = 'coldfront.plugins.departments.utils.data_sources.backends.dummy.DummyDataSourceBackend'
@@ -181,9 +180,7 @@ DEPARTMENTS_DEPARTMENT_DATA_SOURCE = 'coldfront.plugins.departments.utils.data_s
 # Plugin: hardware_procurements
 #------------------------------------------------------------------------------
 
-EXTRA_EXTRA_APPS += [
-    'coldfront.plugins.hardware_procurements'
-]
+EXTRA_EXTRA_APPS.append('coldfront.plugins.hardware_procurements')
 
 HARDWARE_PROCUREMENTS_CONFIG = {
     'DATA_SOURCE': 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.dummy.DummyDataSourceBackend',
@@ -199,3 +196,6 @@ Q_CLUSTER = {
     'sync': True,
     'timeout': 24 * 60 * 60,
 }
+
+# Now import base settings after defining all required variables
+from .settings import *
