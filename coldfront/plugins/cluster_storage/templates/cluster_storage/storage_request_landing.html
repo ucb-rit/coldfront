@@ -1,0 +1,21 @@
+{% extends "common/base.html" %}
+
+
+{% block title %}
+  Free Faculty Storage
+{% endblock %}
+
+
+{% block content %}
+  <h1>Free Faculty Storage under {{ project.name }}</h1><hr>
+
+  {% comment %}TODO{% endcomment %}
+  <p>
+    Placeholder paragraph describing this service.
+  </p>
+
+  <a class="btn btn-primary" href="{% url 'storage-request' project.pk %}">
+    Continue
+  </a>
+
+{% endblock %}
