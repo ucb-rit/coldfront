@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import path
 from django.views.generic import TemplateView
 
@@ -15,6 +16,8 @@ import coldfront.core.project.views_.removal_views as removal_views
 import coldfront.core.project.views_.renewal_views.approval_views as renewal_approval_views
 import coldfront.core.project.views_.renewal_views.request_views as renewal_request_views
 import coldfront.core.utils.views.mou_views as mou_views
+
+
 
 
 urlpatterns = [
@@ -273,18 +276,21 @@ with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
 
 
 # Cluster storage
-from coldfront.plugins.cluster_storage.views import StorageRequestLandingView
-from coldfront.plugins.cluster_storage.views import StorageRequestView
+# Note: The feature flag generally abstracts away the check for whether the app
+# is installed. However, the app module is still resolved, which may be
+# problematic if it is not installed, so the check is manually done here.
+if 'coldfront.plugins.cluster_storage' in settings.INSTALLED_APPS:
+     from coldfront.plugins.cluster_storage.views import StorageRequestLandingView
+     from coldfront.plugins.cluster_storage.views import StorageRequestView
 
-
-with flagged_paths('CLUSTER_STORAGE_ENABLED') as path:
-    flagged_url_patterns += [
-        path('<int:pk>/storage-request-landing',
-             StorageRequestLandingView.as_view(),
-             name='storage-request-landing'),
-        path('<int:pk>/storage-request',
-             StorageRequestView.as_view(),
-             name='storage-request'),
-    ]
+     with flagged_paths('CLUSTER_STORAGE_ENABLED') as path:
+          flagged_url_patterns += [
+               path('<int:pk>/storage-request-landing',
+                    StorageRequestLandingView.as_view(),
+                    name='storage-request-landing'),
+               path('<int:pk>/storage-request',
+                    StorageRequestView.as_view(),
+                    name='storage-request'),
+          ]
 
 urlpatterns = urlpatterns + flagged_url_patterns
