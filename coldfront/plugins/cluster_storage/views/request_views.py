@@ -13,7 +13,7 @@ from coldfront.plugins.cluster_storage.forms import StorageRequestForm
 class StorageRequestLandingView(LoginRequiredMixin, TemplateView):
     """A view for the landing page for storage requests."""
 
-    template_name = 'cluster_storage/storage_request_landing.html'
+    template_name = 'cluster_storage/request/storage_request_landing.html'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -33,7 +33,7 @@ class StorageRequestView(LoginRequiredMixin, FormView):
     """A view for requesting storage under a particular project."""
 
     form_class = StorageRequestForm
-    template_name = 'cluster_storage/storage_request_form.html'
+    template_name = 'cluster_storage/request/storage_request_form.html'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
