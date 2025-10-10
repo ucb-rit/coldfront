@@ -7,7 +7,7 @@ from django.views.generic.edit import FormView
 
 from coldfront.core.project.models import Project
 
-from .forms import StorageRequestForm
+from coldfront.plugins.cluster_storage.forms import StorageRequestForm
 
 
 class StorageRequestLandingView(LoginRequiredMixin, TemplateView):
@@ -72,3 +72,9 @@ class StorageRequestView(LoginRequiredMixin, FormView):
 
     def get_success_url(self):
         return reverse('project-detail', kwargs={'pk': self._project_obj.pk})
+
+
+__all__ = [
+    'StorageRequestLandingView',
+    'StorageRequestView',
+]
