@@ -254,9 +254,12 @@ with flagged_paths('SERVICE_UNITS_PURCHASABLE'):
                name='service-units-purchase-request-notify-pi'),
     ]
 
+
+flagged_url_patterns = []
+
 # Request a secure directory
 with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
-    flagged_url_patterns = [
+    flagged_url_patterns += [
         # New Directory Request Views
         path('<int:pk>/secure-dir-request-landing',
              secure_dir_new_directory_request_views.SecureDirRequestLandingView.as_view(),
@@ -266,6 +269,22 @@ with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
                  condition_dict=secure_dir_new_directory_request_views.SecureDirRequestWizard.condition_dict(),
              ),
              name='secure-dir-request'),
+    ]
+
+
+# Cluster storage
+from coldfront.plugins.cluster_storage.views import StorageRequestLandingView
+from coldfront.plugins.cluster_storage.views import StorageRequestView
+
+
+with flagged_paths('CLUSTER_STORAGE_ENABLED') as path:
+    flagged_url_patterns += [
+        path('<int:pk>/storage-request-landing',
+             StorageRequestLandingView.as_view(),
+             name='storage-request-landing'),
+        path('<int:pk>/storage-request',
+             StorageRequestView.as_view(),
+             name='storage-request'),
     ]
 
 urlpatterns = urlpatterns + flagged_url_patterns
