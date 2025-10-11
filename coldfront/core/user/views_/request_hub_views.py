@@ -119,6 +119,43 @@ class RequestHubView(LoginRequiredMixin,
 
         return cluster_request_object
 
+    def get_cluster_storage_request(self):
+        """Populates a RequestListItem with data for cluster storage
+        requests"""
+
+        # TODO: Update this when the data model is ready.
+
+        storage_request_obj = RequestListItem()
+
+        user = self.request.user
+
+        # args = []
+        # if not self.show_all_requests:
+        #     args.append(Q(pi=user) | Q(requester=user))
+
+        storage_request_list_pending = []
+        storage_request_list_complete = []
+
+        storage_request_obj.num = self.paginators
+        storage_request_obj.pending_queryset = self.create_paginator(
+            storage_request_list_pending)
+        storage_request_obj.complete_queryset = self.create_paginator(
+            storage_request_list_complete)
+
+        storage_request_obj.num_pending = len(storage_request_list_pending)
+
+        storage_request_obj.title = 'Free Faculty Storage Requests'
+        storage_request_obj.table = \
+            'cluster_storage/approval/storage_request_list_table.html'
+        storage_request_obj.button_path = 'storage-request-list'
+        storage_request_obj.button_text = \
+            'Go To Free Faculty Storage Requests Main Page'
+        storage_request_obj.id = 'storage_request_section'
+        storage_request_obj.help_text = \
+            'Showing your free faculty storage requests.'
+
+        return storage_request_obj
+
     def get_hardware_procurement_request(self):
         """Populates a RequestListItem with data for hardware
         procurement requests"""
@@ -655,6 +692,9 @@ class RequestHubView(LoginRequiredMixin,
             requests += ['secure_dir_request',
                          'secure_dir_join_request',
                          'secure_dir_remove_request']
+
+        if flag_enabled('CLUSTER_STORAGE_ENABLED'):
+            requests.append('cluster_storage_request')
 
         if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
             requests.append('hardware_procurement_request')

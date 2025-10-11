@@ -50,6 +50,13 @@
     {% include 'request_hub/request_section.html' %}
   {% endwith %}
 
+  {% flag_enabled 'CLUSTER_STORAGE_ENABLED' as cluster_storage_enabled %}
+  {% if cluster_storage_enabled %}
+    {% with request_obj=cluster_storage_request_obj %}
+      {% include 'request_hub/request_section.html' %}
+    {% endwith %}
+  {% endif %}
+
   {% flag_enabled 'HARDWARE_PROCUREMENTS_ENABLED' as hardware_procurements_enabled %}
   {% if hardware_procurements_enabled %}
     {% with request_obj=hardware_procurement_request_obj %}
