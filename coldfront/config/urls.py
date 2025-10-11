@@ -63,6 +63,17 @@ if ('allauth.account.auth_backends.AuthenticationBackend' in
 # Note: The feature flag generally abstracts away the check for whether the app
 # is installed. However, the app module is still resolved, which may be
 # problematic if it is not installed, so the check is manually done here.
+if 'coldfront.plugins.cluster_storage' in settings.INSTALLED_APPS:
+    urlpatterns.append(
+        flagged_path(
+            'CLUSTER_STORAGE_ENABLED',
+            'storage-requests/',
+            include('coldfront.plugins.cluster_storage.urls')))
+
+
+# Note: The feature flag generally abstracts away the check for whether the app
+# is installed. However, the app module is still resolved, which may be
+# problematic if it is not installed, so the check is manually done here.
 if 'coldfront.plugins.hardware_procurements' in settings.INSTALLED_APPS:
     urlpatterns.append(
         flagged_path(

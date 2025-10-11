@@ -15,6 +15,8 @@ class StorageRequestLandingView(LoginRequiredMixin, TemplateView):
 
     template_name = 'cluster_storage/request/storage_request_landing.html'
 
+    # TODO: UserPassesTestMixin + test_func
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._project_obj = None
@@ -34,6 +36,8 @@ class StorageRequestView(LoginRequiredMixin, FormView):
 
     form_class = StorageRequestForm
     template_name = 'cluster_storage/request/storage_request_form.html'
+
+    # TODO: UserPassesTestMixin + test_func
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
