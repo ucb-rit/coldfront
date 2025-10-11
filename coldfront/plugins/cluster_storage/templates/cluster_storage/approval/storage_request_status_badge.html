@@ -1,0 +1,39 @@
+{% comment %}
+
+Display a badge, info icon, and popup denoting the status of a storage request,
+based on a string `status`, which is expected to be one of the following values:
+
+"Approved - Complete"
+"Approved - Processing"
+"Denied"
+"Under Review"
+
+If it is not, "Error" will be displayed.
+
+{% endcomment %}
+
+{% if status == "Approved - Complete" %}
+  <span class="badge badge-success">
+    {{ status }}
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Approved - Complete" content="The request has been approved and the storage has been provisioned." %}
+{% elif status == "Approved - Processing" %}
+  <span class="badge badge-warning">
+    {{ status }}
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Approved - Processing" content="The request has been approved and the storage is being provisioned." %}
+{% elif status == "Denied" %}
+  <span class="badge badge-danger">
+    {{ status }}
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Denied" content="The request has been denied." %}
+{% elif status == "Under Review" %}
+  <span class="badge badge-warning">
+    {{ status }}
+  </span>
+  {% include "portal/info_hover_popup.html" with title="Under Review" content="The request is currently under review." %}
+{% else %}
+  <span class="badge badge-danger">
+    Error
+  </span>
+{% endif %}

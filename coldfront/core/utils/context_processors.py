@@ -114,6 +114,10 @@ def request_alert_counts(request):
                     'Under Review', 'Approved - Processing']).count(),
             }
 
+        if flag_enabled('CLUSTER_STORAGE_ENABLED'):
+            # TODO: Replace with real count when backend is ready.
+            context['cluster_storage_req_count'] = 0
+
         if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
             from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
             context['hardware_procurement_req_count'] = len(

@@ -31,35 +31,7 @@ Free Faculty Storage Request Detail
           <tr>
             <th>Status:</th>
             <td>
-              {% with status=storage_request.status.name %}
-                {% if status == 'Under Review' %}
-                  <p>
-                    This request is currently under review. Administrators must
-                    determine if the requested PI is eligible for storage.
-                  </p>
-                {% elif status == 'Approved - Processing' %}
-                  <p>
-                    This request has been approved, and is currently being set
-                    up on the cluster.
-                  </p>
-                {% elif status == 'Approved - Complete' %}
-                  <p>
-                    This request has been fully processed.
-                  </p>
-                {% else %}
-                  <p>
-                    This request has been denied. Below are specific details:
-                  </p>
-                  <p>
-                    <strong>Category:</strong>
-                    {{ denial_reason.category }}
-                  </p>
-                  <p>
-                    <strong>Justification:</strong>
-                    {{ denial_reason.justification }}
-                  </p>
-                {% endif %}
-              {% endwith %}
+              {% include 'cluster_storage/approval/storage_request_status_badge.html' with status=storage_request.status.name %}
             </td>
           </tr>
           <tr>

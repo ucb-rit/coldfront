@@ -1,0 +1,38 @@
+{% load common_tags %}
+
+<table class="table table-sm">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">Project</th>
+      {% if display_user_info %}
+        <th scope="col">PI Name</th>
+        <th scope="col">PI Email</th>
+      {% endif %}
+      <th scope="col">Amount</th>
+      <th scope="col">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for request_obj in queryset %}
+    <tr>
+      <td>
+        <a href="{% url 'storage-request-detail' request_obj.id %}">
+          {{ request_obj.id }}
+        </a>
+      </td>
+      <td>{{ request_obj.project.name }}</td>
+      {% if display_user_info %}
+        <td>{{ request_obj.pi.first_name }} {{ request_obj.pi.last_name }}</td>
+        <td>{{ request_obj.pi.email }}</td>
+      {% endif %}
+      <td>{{ request_obj.amount }}</td>
+      {% with request_status=request_obj.status %}
+      <td>
+        {% include 'cluster_storage/approval/storage_request_status_badge.html' with status=request_status %}
+      </td>
+      {% endwith %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>

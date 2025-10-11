@@ -1,7 +1,11 @@
 from django import forms
+from django.contrib.auth.models import User
+from django.db.models import Q
 
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
+from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 
 
 # TODO: This was intentionally copied instead of imported. Place it in a shared
@@ -30,6 +34,12 @@ class PIProjectUserChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         user = obj.user
         return f'{user.first_name} {user.last_name} ({user.username})'
+
+
+class PIUserChoiceField(forms.ModelChoiceField):
+
+    def label_from_instance(self, obj):
+        return f'{obj.first_name} {obj.last_name} ({obj.username})'
 
 
 class StorageRequestForm(forms.Form):
@@ -87,3 +97,53 @@ class StorageRequestForm(forms.Form):
         displayed, from being selected."""
         # TODO: Check for existing storage or a pending request.
         self.fields['pi'].widget.disabled_choices = {}
+
+
+class StorageRequestSearchForm(forms.Form):
+    """A form for searching for storage requests based on various
+    criteria."""
+
+    # TODO: Read these from the database using ModelChoiceField.
+    STATUS_CHOICES = (
+        ('', '-----'),
+        ('Approved - Complete', 'Approved - Complete'),
+        ('Approved - Processing', 'Approved - Processing'),
+        ('Denied', 'Denied'),
+        ('Under Review', 'Under Review'),
+    )
+
+    project = forms.ModelChoiceField(
+        label='Project',
+        queryset=Project.objects.none(),
+        required=False,
+        widget=forms.Select())
+
+    pi = PIUserChoiceField(
+        label='Principal Investigator',
+        queryset=User.objects.all(),
+        required=False,
+        widget=forms.Select())
+
+    status = forms.ChoiceField(
+        label='Status',
+        choices=STATUS_CHOICES,
+        widget=forms.Select(),
+        required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        computing_allowance_interface = ComputingAllowanceInterface()
+        prefix = computing_allowance_interface.code_from_name(BRCAllowances.FCA)
+
+        self.fields['project'].queryset = Project.objects.filter(
+            name__startswith=prefix)
+
+        self._exclude_pi_choices()
+
+    def _exclude_pi_choices(self):
+        """Exclude certain Users from being displayed as PI options."""
+        # Exclude any user that does not have an email address.
+        exclude_q = (
+            Q(email__isnull=True) | Q(email__exact=''))
+        self.fields['pi'].queryset = User.objects.exclude(exclude_q)
