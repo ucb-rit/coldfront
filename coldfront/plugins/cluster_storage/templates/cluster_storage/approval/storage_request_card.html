@@ -53,6 +53,9 @@
     <p class="card-text text-justify">
       <strong>Storage Amount: </strong>
       {{ storage_request.amount }}
+      {% if allow_editing %}
+      <a href="{% url 'storage-request-edit' storage_request.pk %}"><i class="fas fa-edit"></i></a>
+      {% endif %}
     </p>
     <p class="card-text text-justify">
       <strong>PI: </strong>

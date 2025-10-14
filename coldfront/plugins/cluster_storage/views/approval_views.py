@@ -14,6 +14,7 @@ from django.views.generic.edit import FormView
 from coldfront.core.project.models import Project
 from coldfront.core.utils.common import utc_now_offset_aware
 
+from coldfront.plugins.cluster_storage.forms import StorageRequestEditForm
 from coldfront.plugins.cluster_storage.forms import StorageRequestForm
 from coldfront.plugins.cluster_storage.forms import StorageRequestReviewSetupForm
 from coldfront.plugins.cluster_storage.forms import StorageRequestReviewStatusForm
@@ -96,6 +97,7 @@ class StorageRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
         else:
             context['storage_request'] = storage_request
 
+        context['allow_editing'] = True
         context['is_allowed_to_manage_request'] = True  # TODO
         context['latest_update_timestamp'] = utc_now_offset_aware()
         context['checklist'] = self._get_checklist()
@@ -213,6 +215,50 @@ class StorageRequestListView(LoginRequiredMixin, UserPassesTestMixin,
     def test_func(self):
         # TODO
         return True
+
+
+class StorageRequestEditView(LoginRequiredMixin, UserPassesTestMixin,
+                             FakeStorageRequestDataMixin, FormView):
+    form_class = StorageRequestEditForm
+    template_name = 'cluster_storage/approval/storage_request_review.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        pk = self.kwargs.get('pk')  # Get the PK from the URL
+        storage_request = self.get_fake_storage_request(pk)
+
+        if not storage_request:
+            context['storage_request'] = {'error': 'Storage request not found.'}
+        else:
+            context['storage_request'] = storage_request
+
+        context['is_allowed_to_manage_request'] = True  # TODO
+        context['explanatory_paragraph'] = (
+            'If necessary, update the amount of storage requested by the user.')
+        context['page_title'] = 'Update Storage Amount'
+        return context
+
+    def get_initial(self):
+        initial = super().get_initial()
+        pk = self.kwargs.get('pk')  # Get the PK from the URL
+        storage_request = self.get_fake_storage_request(pk)
+        if storage_request:
+            initial['storage_amount'] = storage_request.amount.split()[0]
+        return initial
+
+    # TODO: form_valid, other functions, etc.
+
+    def get_success_url(self):
+        pk = self.kwargs.get('pk')
+        return reverse('storage-request-detail', kwargs={'pk': pk})
+
+    def test_func(self):
+        # TODO: Allow some other staff in a particular group.
+        if self.request.user.is_superuser:
+            return True
+        message = 'You do not have permission to view the previous page.'
+        messages.error(self.request, message)
+        return False
 
 
 class StorageRequestReviewEligibilityView(LoginRequiredMixin,
@@ -365,6 +411,7 @@ class StorageRequestReviewSetupView(LoginRequiredMixin,
 
 __all__ = [
     'StorageRequestDetailView',
+    'StorageRequestEditView',
     'StorageRequestListView',
     'StorageRequestReviewEligibilityView',
     'StorageRequestReviewIntakeConsistencyView',

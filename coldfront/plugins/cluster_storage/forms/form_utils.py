@@ -70,3 +70,21 @@ class ReviewStatusForm(forms.Form):
                 raise forms.ValidationError(
                     'Please provide a justification for your decision.')
         return cleaned_data
+
+
+class StorageAmountChoiceField(forms.ChoiceField):
+    """Reusable form field for selecting storage amounts."""
+    STORAGE_CHOICES = [
+        ('1', '1 TB'),
+        ('2', '2 TB'),
+        ('3', '3 TB'),
+        ('4', '4 TB'),
+        ('5', '5 TB'),
+    ]
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('choices', self.STORAGE_CHOICES)
+        kwargs.setdefault('label', 'Requested Storage Amount')
+        kwargs.setdefault(
+            'help_text', 'Select the amount of storage you need (1 - 5 TB).')
+        super().__init__(*args, **kwargs)

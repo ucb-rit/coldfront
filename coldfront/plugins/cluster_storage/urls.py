@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import StorageRequestDetailView
+from .views import StorageRequestEditView
 from .views import StorageRequestListView
 from .views import StorageRequestReviewEligibilityView
 from .views import StorageRequestReviewIntakeConsistencyView
@@ -16,6 +17,10 @@ urlpatterns = [
         '<int:pk>/',
         StorageRequestDetailView.as_view(),
         name='storage-request-detail'),
+    path(
+        '<int:pk>/edit/',
+        StorageRequestEditView.as_view(),
+        name='storage-request-edit'),
     path(
         '<int:pk>/eligibility/',
         StorageRequestReviewEligibilityView.as_view(),

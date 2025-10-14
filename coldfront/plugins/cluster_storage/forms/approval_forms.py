@@ -8,6 +8,7 @@ from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAl
 
 from .form_utils import PIUserChoiceField
 from .form_utils import ReviewStatusForm as StorageRequestReviewStatusForm
+from .form_utils import StorageAmountChoiceField
 
 
 class StorageRequestSearchForm(forms.Form):
@@ -60,6 +61,14 @@ class StorageRequestSearchForm(forms.Form):
         self.fields['pi'].queryset = User.objects.exclude(exclude_q)
 
 
+class StorageRequestEditForm(forms.Form):
+
+    storage_amount = StorageAmountChoiceField(
+        required=True,
+        label='Updated Storage Amount',
+        help_text='Select the updated amount of storage.')
+
+
 # TODO
 class StorageRequestReviewSetupForm(forms.Form):
 
@@ -76,6 +85,7 @@ class StorageRequestReviewSetupForm(forms.Form):
 
 
 __all__ = [
+    'StorageRequestEditForm',
     'StorageRequestReviewSetupForm',
     'StorageRequestReviewStatusForm',
     'StorageRequestSearchForm',

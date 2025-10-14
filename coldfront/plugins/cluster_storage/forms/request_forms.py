@@ -5,6 +5,7 @@ from coldfront.core.project.models import ProjectUser
 
 from .form_utils import DisabledChoicesSelectWidget
 from .form_utils import PIProjectUserChoiceField
+from .form_utils import StorageAmountChoiceField
 
 
 class StorageRequestForm(forms.Form):
@@ -18,19 +19,7 @@ class StorageRequestForm(forms.Form):
         required=True,
         widget=DisabledChoicesSelectWidget())
 
-    STORAGE_CHOICES = [
-        ('1', '1 TB'),
-        ('2', '2 TB'),
-        ('3', '3 TB'),
-        ('4', '4 TB'),
-        ('5', '5 TB'),
-    ]
-
-    storage_amount = forms.ChoiceField(
-        choices=STORAGE_CHOICES,
-        required=True,
-        label='Requested Storage Amount',
-        help_text='Select the amount of storage you need (1–5 TB).')
+    storage_amount = StorageAmountChoiceField(required=True)
 
     confirm_external_intake = forms.BooleanField(
         required=True,
