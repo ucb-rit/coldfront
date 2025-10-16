@@ -5,7 +5,7 @@ from model_utils.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
 
-def faculty_scratch_storage_request_state_schema():
+def faculty_storage_allocation_request_state_schema():
     """Return the schema for the FacultyStorageAllocationRequest.state
     field."""
     return {
@@ -65,7 +65,7 @@ class FacultyStorageAllocationRequest(TimeStampedModel):
     completion_time = models.DateTimeField(null=True, blank=True)
 
     state = models.JSONField(
-        default=faculty_scratch_storage_request_state_schema)
+        default=faculty_storage_allocation_request_state_schema)
 
     history = HistoricalRecords()
 
