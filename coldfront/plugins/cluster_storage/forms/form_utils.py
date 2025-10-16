@@ -75,11 +75,11 @@ class ReviewStatusForm(forms.Form):
 class StorageAmountChoiceField(forms.ChoiceField):
     """Reusable form field for selecting storage amounts."""
     STORAGE_CHOICES = [
-        ('1', '1 TB'),
-        ('2', '2 TB'),
-        ('3', '3 TB'),
-        ('4', '4 TB'),
-        ('5', '5 TB'),
+        (1, '1 TB'),
+        (2, '2 TB'),
+        (3, '3 TB'),
+        (4, '4 TB'),
+        (5, '5 TB'),
     ]
 
     def __init__(self, *args, **kwargs):

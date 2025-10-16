@@ -52,7 +52,9 @@ class FakeStorageRequestDataMixin:
                 first_name='First',
                 last_name='Last',
                 email='firstlast@berkeley.edu'),
-            amount='1 TB',
+            # TODO: Separate amount: requested_amount vs. actual_amount (sic).
+            # TODO: Also, amount will be stored in GB, not TB
+            amount=1,
             state={
                 'eligibility': {
                     'status': 'Pending',
@@ -121,7 +123,7 @@ class StorageRequestDetailView(LoginRequiredMixin, UserPassesTestMixin,
 
         eligibility = storage_request.state['eligibility']
         checklist.append([
-            'Confirm that the PI is eligible for free faculty storage.',
+            'Confirm that the PI is eligible for a Faculty Storage Allocation.',
             eligibility['status'],
             eligibility['timestamp'],
             True,
@@ -243,7 +245,7 @@ class StorageRequestEditView(LoginRequiredMixin, UserPassesTestMixin,
         pk = self.kwargs.get('pk')  # Get the PK from the URL
         storage_request = self.get_fake_storage_request(pk)
         if storage_request:
-            initial['storage_amount'] = storage_request.amount.split()[0]
+            initial['storage_amount'] = storage_request.amount
         return initial
 
     # TODO: form_valid, other functions, etc.
@@ -280,9 +282,9 @@ class StorageRequestReviewEligibilityView(LoginRequiredMixin,
 
         context['is_allowed_to_manage_request'] = True  # TODO
         context['explanatory_paragraph'] = (
-            'Please determine whether the request\'s PI is eligible for free '
-            'faculty storage. <b>As part of this, confirm that the PI does not '
-            'already have existing free faculty storage.</b>If the PI is '
+            'Please determine whether the request\'s PI is eligible for a '
+            'Faculty Storage Allocation. <b>As part of this, confirm that the '
+            'PI does not already have an existing allocation.</b>If the PI is '
             'ineligible, the request will be denied immediately, and a '
             'notification email will be sent to the requester and PI.')
         context['page_title'] = 'Review Eligibility'

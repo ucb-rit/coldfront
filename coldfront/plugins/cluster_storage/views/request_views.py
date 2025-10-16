@@ -8,6 +8,8 @@ from django.views.generic.edit import FormView
 from coldfront.core.project.models import Project
 
 from coldfront.plugins.cluster_storage.forms import StorageRequestForm
+from coldfront.plugins.cluster_storage.services import FacultyStorageAllocationRequestService
+from coldfront.plugins.cluster_storage.services import StorageRequestEligibilityService
 
 
 class StorageRequestLandingView(LoginRequiredMixin, TemplateView):
@@ -28,6 +30,15 @@ class StorageRequestLandingView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['project'] = self._project_obj
+
+        # # Check eligibility for the PI
+        # is_eligible, reason = StorageRequestEligibilityService.is_eligible_for_request(
+        #     self._project_obj.pi
+        # )
+        is_eligible, reason = True, ''
+        context['is_eligible'] = is_eligible
+        context['ineligibility_reason'] = reason
+
         return context
 
 
@@ -54,20 +65,41 @@ class StorageRequestView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         pi = form.cleaned_data['pi']
-        storage_amount = form.cleaned_data['storage_amount']
-        confirm_external_intake = form.cleaned_data['confirm_external_intake']
+        storage_amount_tb = form.cleaned_data['storage_amount']
+        storage_amount_gb = 1000 * storage_amount_tb
 
-        # Example: Log or process the data
-        print(f"PI: {pi}, Storage Amount: {storage_amount}, Confirmed Intake: {confirm_external_intake}")
+        # Check eligibility before creating request
+        is_eligible, reason = StorageRequestEligibilityService.is_eligible_for_request(pi)
+        if not is_eligible:
+            messages.error(self.request, f'Request cannot be submitted: {reason}')
+            return self.form_invalid(form)
 
-        # TODO: Consider sending a confirmation email.
+        try:
+            request_data = {
+                'status': 'Under Review',
+                'project': self._project_obj,
+                'requester': self.request.user,
+                'pi': pi,
+                'requested_amount_gb': storage_amount_gb,
+            }
+            FacultyStorageAllocationRequestService.create_request(request_data)
 
-        message = (
-            'Thank you for your submission. It will be reviewed and '
-            'processed by administrators.')
-        messages.success(self.request, message)
+            message = (
+                'Thank you for your submission. It will be reviewed and '
+                'processed by administrators.')
+            messages.success(self.request, message)
 
-        return super().form_valid(form)
+            return super().form_valid(form)
+        except Exception as e:
+            messages.error(
+                self.request,
+                f'An error occurred while submitting your request. Please contact support.'
+            )
+            # Log the actual error for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception(f'Error creating storage request: {e}')
+            return self.form_invalid(form)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

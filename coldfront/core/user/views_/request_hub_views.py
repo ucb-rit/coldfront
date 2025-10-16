@@ -152,7 +152,7 @@ class RequestHubView(LoginRequiredMixin,
             'Go To Faculty Storage Allocation Requests Main Page'
         storage_request_obj.id = 'storage_request_section'
         storage_request_obj.help_text = \
-            'Showing your free faculty storage requests.'
+            'Showing your Faculty Storage Allocation requests.'
 
         return storage_request_obj
 
