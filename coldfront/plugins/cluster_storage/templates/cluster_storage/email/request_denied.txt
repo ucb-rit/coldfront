@@ -11,4 +11,4 @@ Reason:
 If you have any questions or would like to discuss this decision, please contact us.
 
 Thank you,
-Research IT
+{{ signature }}

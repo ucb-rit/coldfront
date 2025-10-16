@@ -10,4 +10,4 @@ You will receive another notification when the storage is ready to use.
 If you have any questions, please contact us.
 
 Thank you,
-Research IT
+{{ signature }}
