@@ -81,7 +81,6 @@ class StorageRequestReviewSetupForm(forms.Form):
         help_text='If you are unsure, leave the status as "Pending".',
         label='Status',
         required=True)
-    directory_name = forms.CharField()
 
 
 __all__ = [

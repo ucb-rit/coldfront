@@ -64,12 +64,13 @@ class StorageRequestView(LoginRequiredMixin, FormView):
         return context
 
     def form_valid(self, form):
-        pi = form.cleaned_data['pi']
-        storage_amount_tb = form.cleaned_data['storage_amount']
+        pi = form.cleaned_data['pi'].user
+        storage_amount_tb = int(form.cleaned_data['storage_amount'])
         storage_amount_gb = 1000 * storage_amount_tb
 
         # Check eligibility before creating request
-        is_eligible, reason = StorageRequestEligibilityService.is_eligible_for_request(pi)
+        is_eligible, reason = \
+            StorageRequestEligibilityService.is_eligible_for_request(pi)
         if not is_eligible:
             messages.error(self.request, f'Request cannot be submitted: {reason}')
             return self.form_invalid(form)
@@ -93,7 +94,8 @@ class StorageRequestView(LoginRequiredMixin, FormView):
         except Exception as e:
             messages.error(
                 self.request,
-                f'An error occurred while submitting your request. Please contact support.'
+                ('An error occurred while submitting your request. Please '
+                 'contact support.')
             )
             # Log the actual error for debugging
             import logging

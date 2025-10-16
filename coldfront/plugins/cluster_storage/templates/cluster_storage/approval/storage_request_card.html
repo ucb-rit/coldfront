@@ -42,7 +42,9 @@
     <p class="card-text text-justify">
       <strong>Project: </strong>
       {% with project=storage_request.project %}
-        {{ project.name }} (ID: {{ project.pk }})
+        <a href="{% url 'project-detail' storage_request.project.pk %}">
+          {{ project.name }}
+        </a>
       {% endwith %}
     <p class="card-text text-justify">
       <strong>Requester: </strong>
@@ -51,10 +53,18 @@
       {% endwith %}
     </p>
     <p class="card-text text-justify">
-      <strong>Storage Amount: </strong>
-      {{ storage_request.amount }} TB
+      <strong>Requested Amount: </strong>
+      {{ requested_amount_tb }} TB
       {% if allow_editing %}
       <a href="{% url 'storage-request-edit' storage_request.pk %}"><i class="fas fa-edit"></i></a>
+      {% endif %}
+    </p>
+    <p class="card-text text-justify">
+      <strong>Approved Amount: </strong>
+      {% if approved_amount_tb %}
+        {{ approved_amount_tb }} TB
+      {% else %}
+        TBD
       {% endif %}
     </p>
     <p class="card-text text-justify">

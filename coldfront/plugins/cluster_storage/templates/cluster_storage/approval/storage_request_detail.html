@@ -74,9 +74,9 @@ Faculty Storage Allocation Request Detail
                 <td>{{ item.0 }}</td>
                 <td>
                   {% with status=item.1 latest_update_timestamp=item.2 %}
-                    {% if status == 'Approved - Processing' or status == 'Pending' or status == 'Under Review' %}
+                    {% if status == 'Pending' %}
                       <span class="badge badge-warning">
-                    {% elif status == 'Approved' or status == 'Approved - Complete' %}
+                    {% elif status == 'Approved' or status == 'Complete' %}
                       <span class="badge badge-success">
                     {% else %}
                       <span class="badge badge-danger">
@@ -109,7 +109,7 @@ Faculty Storage Allocation Request Detail
         <form action="#" method="post">
           {% csrf_token %}
           <button type="submit" class="btn btn-primary">Submit</button>
-          <a href="#" class="btn btn-secondary">Cancel</a>
+          <a href="{% url 'storage-request-list' %}" class="btn btn-secondary">Cancel</a>
           <a href="#" class="btn btn-danger" style="float: right;">
             Deny For Other Reason
           </a>
@@ -124,5 +124,18 @@ Faculty Storage Allocation Request Detail
     </div>
   </div>
 {% endif %}
+
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+
+<script>
+  $("#navbar-main > ul > li.active").removeClass("active");
+  $("#navbar-admin").addClass("active");
+  $(document).ready(function() {
+    $('[data-toggle="popover"]').popover();
+  });
+</script>
 
 {% endblock %}
