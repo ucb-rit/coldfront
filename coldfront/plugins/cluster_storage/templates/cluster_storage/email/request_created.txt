@@ -1,0 +1,8 @@
+A new storage request has been submitted.
+
+Project: {{ project.name }}
+Requester: {{ requester.get_full_name }} ({{ requester.username }})
+PI: {{ request.pi.get_full_name }} ({{ request.pi.username }})
+Requested Amount: {{ amount_gb }} GB
+
+Please review this request in the admin interface.

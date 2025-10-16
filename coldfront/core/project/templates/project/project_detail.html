@@ -50,7 +50,7 @@ Project Detail
               </a>
               {% if request_cluster_storage_visible %}
                 <a class="dropdown-item" href="{% url 'storage-request-landing' project.pk %}">
-                  <i class="fas fa-database" aria-hidden="true"></i> Request Free Faculty Storage
+                  <i class="fas fa-database" aria-hidden="true"></i> Request Faculty Storage Allocation
               {% endif %}
               {% if request_secure_directory_visible %}
                 <a class="dropdown-item" href="{% url 'secure-dir-request-landing' project.pk %}">

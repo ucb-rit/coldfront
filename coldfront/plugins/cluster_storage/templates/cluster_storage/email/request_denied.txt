@@ -1,0 +1,14 @@
+Dear {{ requester.first_name }},
+
+Your storage request has been denied.
+
+Project: {{ project.name }}
+Requested Amount: {{ amount_gb }} GB
+
+Reason:
+{{ justification }}
+
+If you have any questions or would like to discuss this decision, please contact us.
+
+Thank you,
+Research IT

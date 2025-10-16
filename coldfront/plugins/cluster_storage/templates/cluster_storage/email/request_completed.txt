@@ -1,0 +1,13 @@
+Dear {{ requester.first_name }},
+
+Your storage request is complete and ready to use.
+
+Project: {{ project.name }}
+Amount: {{ amount_gb }} GB
+
+You can now access your storage allocation.
+
+If you have any questions or need assistance, please contact us.
+
+Thank you,
+Research IT

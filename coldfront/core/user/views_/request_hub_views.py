@@ -144,12 +144,12 @@ class RequestHubView(LoginRequiredMixin,
 
         storage_request_obj.num_pending = len(storage_request_list_pending)
 
-        storage_request_obj.title = 'Free Faculty Storage Requests'
+        storage_request_obj.title = 'Faculty Storage Allocation Requests'
         storage_request_obj.table = \
             'cluster_storage/approval/storage_request_list_table.html'
         storage_request_obj.button_path = 'storage-request-list'
         storage_request_obj.button_text = \
-            'Go To Free Faculty Storage Requests Main Page'
+            'Go To Faculty Storage Allocation Requests Main Page'
         storage_request_obj.id = 'storage_request_section'
         storage_request_obj.help_text = \
             'Showing your free faculty storage requests.'

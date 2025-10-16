@@ -4,7 +4,7 @@
 
 
 {% block title %}
-Free Faculty Storage
+Faculty Storage Allocation
 {% endblock %}
 
 
@@ -12,7 +12,7 @@ Free Faculty Storage
 <script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
 <link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
 
-<h1>Free Faculty Storage under {{ project.name }}</h1><hr>
+<h1>Faculty Storage Allocation under {{ project.name }}</h1><hr>
 
 <form method="post">
   {% csrf_token %}

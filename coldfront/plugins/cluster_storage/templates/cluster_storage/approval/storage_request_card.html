@@ -52,7 +52,7 @@
     </p>
     <p class="card-text text-justify">
       <strong>Storage Amount: </strong>
-      {{ storage_request.amount }}
+      {{ storage_request.amount }} TB
       {% if allow_editing %}
       <a href="{% url 'storage-request-edit' storage_request.pk %}"><i class="fas fa-edit"></i></a>
       {% endif %}
