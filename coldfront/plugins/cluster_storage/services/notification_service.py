@@ -37,30 +37,6 @@ class StorageRequestNotificationService:
         )
 
     @staticmethod
-    def send_approval_email(request, email_strategy=None):
-        """Notify requester when their request is approved."""
-        logger.info(f'Sending approval notification for request {request.id}')
-
-        email_strategy = validate_email_strategy_or_get_default(email_strategy)
-
-        context = {
-            'request': request,
-            'project': request.project,
-            'requester': request.requester,
-            'amount_gb': request.requested_amount_gb,
-            'signature': settings.EMAIL_SIGNATURE,
-        }
-
-        email_strategy.process_email(
-            send_email_template,
-            subject=f'Storage Request Approved - {request.project.name}',
-            template_name='cluster_storage/email/request_approved.txt',
-            context=context,
-            sender=settings.EMAIL_SENDER,
-            receiver_list=[request.requester.email],
-        )
-
-    @staticmethod
     def send_completion_email(request, email_strategy=None):
         """Notify requester when storage is ready."""
         logger.info(f'Sending completion notification for request {request.id}')

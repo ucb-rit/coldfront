@@ -32,9 +32,6 @@ class FacultyStorageAllocationRequestService:
         request.status = status
         request.save()
 
-        StorageRequestNotificationService.send_approval_email(
-            request, email_strategy=email_strategy)
-
     @staticmethod
     def complete_request(request, directory_name, email_strategy=None):
         # Check if already completed to avoid double-processing
