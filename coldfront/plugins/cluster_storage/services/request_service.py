@@ -37,6 +37,19 @@ class FacultyStorageAllocationRequestService:
 
     @staticmethod
     def complete_request(request, directory_name, email_strategy=None):
+        # Check if already completed to avoid double-processing
+        if request.status.name == 'Approved - Complete':
+            logger.warning(
+                f'Request {request.pk} is already completed, skipping')
+            return
+
+        # If approved amount wasn't explicitly set, set it to requested amount
+        if request.approved_amount_gb is None:
+            request.approved_amount_gb = request.requested_amount_gb
+            logger.info(
+                f'Request {request.pk}: approved_amount_gb not set, '
+                f'defaulting to requested_amount_gb ({request.requested_amount_gb} GB)')
+
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
             name='Approved - Complete')
         request.status = status
@@ -44,19 +57,21 @@ class FacultyStorageAllocationRequestService:
 
         directory_service = DirectoryService(request.project, directory_name)
 
+        # Use the approved amount (now guaranteed to be set)
+        amount_gb = request.approved_amount_gb
+
         if directory_service.directory_exists():
             # Directory already exists, add to existing quota
-            directory_service.add_to_directory_quota(
-                request.requested_amount_gb)
+            directory_service.add_to_directory_quota(amount_gb)
             logger.info(
-                f'Added {request.requested_amount_gb} GB to existing directory '
+                f'Added {amount_gb} GB to existing directory '
                 f'for project {request.project.name}')
         else:
             # New directory, create it and set initial quota
             directory_service.create_directory()
-            directory_service.set_directory_quota(request.requested_amount_gb)
+            directory_service.set_directory_quota(amount_gb)
             logger.info(
-                f'Created new directory with {request.requested_amount_gb} GB '
+                f'Created new directory with {amount_gb} GB '
                 f'for project {request.project.name}')
 
         # Add all active project users to the allocation
