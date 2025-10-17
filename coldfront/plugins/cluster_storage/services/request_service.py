@@ -3,6 +3,11 @@ from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationReq
 from coldfront.plugins.cluster_storage.services import DirectoryService
 from coldfront.plugins.cluster_storage.services import StorageRequestNotificationService
 
+import logging
+
+
+logger = logging.getLogger(__name__)
+
 
 class FacultyStorageAllocationRequestService:
 
@@ -39,15 +44,51 @@ class FacultyStorageAllocationRequestService:
 
         directory_service = DirectoryService(request.project, directory_name)
 
+        if directory_service.directory_exists():
+            # Directory already exists, add to existing quota
+            directory_service.add_to_directory_quota(
+                request.requested_amount_gb)
+            logger.info(
+                f'Added {request.requested_amount_gb} GB to existing directory '
+                f'for project {request.project.name}')
+        else:
+            # New directory, create it and set initial quota
+            directory_service.create_directory()
+            directory_service.set_directory_quota(request.requested_amount_gb)
+            logger.info(
+                f'Created new directory with {request.requested_amount_gb} GB '
+                f'for project {request.project.name}')
 
-        # TODO: Need to add if the directory already exists.
-
-
-        directory_service.create_directory()
-        directory_service.set_directory_quota(request.requested_amount_gb)
+        # Add all active project users to the allocation
+        FacultyStorageAllocationRequestService._add_project_users_to_allocation(
+            request)
 
         StorageRequestNotificationService.send_completion_email(
             request, email_strategy=email_strategy)
+
+    @staticmethod
+    def _add_project_users_to_allocation(request):
+        """Add all active ProjectUsers to the faculty storage allocation.
+
+        This is called when the request is completed to ensure all existing
+        project members have access. Future members will be added automatically
+        via the project_user_added signal handler.
+        """
+        try:
+            # Use the DirectoryService to add all project users
+            directory_name = request.state['setup']['directory_name']
+            directory_service = DirectoryService(
+                request.project, directory_name)
+            allocation_users = \
+                directory_service.add_project_users_to_directory()
+            logger.info(
+                f'Added {len(allocation_users)} users to faculty storage '
+                f'allocation for project {request.project.name}')
+        except Exception as e:
+            logger.exception(
+                f'Error adding users to faculty storage allocation for '
+                f'project {request.project.name}: {e}')
+            raise
 
     @staticmethod
     def deny_request(request, justification, email_strategy=None):
