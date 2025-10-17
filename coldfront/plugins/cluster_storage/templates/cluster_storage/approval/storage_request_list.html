@@ -25,14 +25,6 @@ Faculty Storage Allocation {{ request_filter|title }} Requests
 <hr>
 
 
-<p>
-  <b>
-    Note: Only Pending requests are shown by default. Use the "Status" filter to show other requests.
-  </b>
-</p>
-<hr>
-
-
 {% if storage_requests %}
   <div class="table-responsive">
     {% with queryset=storage_requests display_user_info=display_user_info %}

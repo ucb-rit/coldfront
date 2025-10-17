@@ -223,10 +223,21 @@ class StorageRequestListView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
         if search_form.is_valid():
             context['search_form'] = search_form
             data = search_form.cleaned_data
+
+            # Apply filters based on form data
+            if data.get('project'):
+                storage_requests = storage_requests.filter(
+                    project=data['project'])
+            if data.get('pi'):
+                storage_requests = storage_requests.filter(pi=data['pi'])
+            if data.get('status'):
+                storage_requests = storage_requests.filter(
+                    status__name=data['status'])
+
             filter_parameters = urlencode(
                 {key: value for key, value in data.items() if value})
         else:
-            context['search_form'] = StorageRequestForm()
+            context['search_form'] = StorageRequestSearchForm()
             filter_parameters = ''
 
         # Pagination expects the following context variable.
