@@ -37,6 +37,29 @@
                 <li><a id="navbar-allocation-cluster-account-requests" class="dropdown-item navbar-align-badges" href="{% url 'allocation-cluster-account-request-list' %}?show_all_requests=on">
                     Cluster Access Requests <span class="badge badge-warning">{{ cluster_account_req_count }}</span>
                 </a></li>
+
+                {% flag_enabled 'CLUSTER_STORAGE_ENABLED' as cluster_storage_enabled %}
+                {% if cluster_storage_enabled %}
+                  <li>
+                    <a id="navbar-cluster-storage-requests"
+                       class="dropdown-item navbar-align-badges"
+                       href="{% url 'storage-request-list' %}">
+                      Faculty Storage Allocation Requests <span class="badge badge-warning">{{ cluster_storage_req_count }}</span>
+                    </a>
+                  </li>
+                {% endif %}
+
+                {% flag_enabled 'HARDWARE_PROCUREMENTS_ENABLED' as hardware_procurements_enabled %}
+                {% if hardware_procurements_enabled %}
+                <li>
+                    <a id="navbar-hardware-procurement-requests"
+                       class="dropdown-item navbar-align-badges"
+                       href="{% url 'hardware-procurement-list' %}">
+                        Hardware Procurements <span class="badge badge-warning">{{ hardware_procurement_req_count }}</span>
+                    </a>
+                </li>
+                {% endif %}
+
                 <li><a id="navbar-project-new-project-requests" class="dropdown-item navbar-align-badges" href="{% url 'new-project-pending-request-list' %}">
                     New Project Requests <span class="badge badge-warning">{{ savio_project_req_count }}</span>
                 </a></li>
