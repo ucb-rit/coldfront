@@ -10,6 +10,7 @@ from coldfront.core.allocation.utils import get_or_create_active_allocation_user
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.resource.models import Resource
+from coldfront.core.utils.common import display_time_zone_current_date
 
 
 class DirectoryService:
@@ -136,11 +137,14 @@ class DirectoryService:
         active_status = AllocationStatusChoice.objects.get(name='Active')
         allocation = self._get_allocation()
 
+        current_date = display_time_zone_current_date()
+
         if allocation is None:
             # Doesn't exist, create it
             with transaction.atomic():
                 allocation = Allocation.objects.create(
                     project=self.project,
+                    start_date=current_date,
                     status=active_status)
                 allocation.resources.add(self._faculty_storage_directory)
                 allocation_attribute_type = AllocationAttributeType.objects.get(
@@ -154,6 +158,8 @@ class DirectoryService:
         else:
             # Exists, update status if needed
             allocation.status = active_status
+            if not allocation.start_date:
+                allocation.start_date = current_date
             allocation.save()
             # Refresh cache
             self._allocation = allocation
