@@ -1,3 +1,4 @@
+import iso8601
 import logging
 
 from urllib.parse import urlencode
@@ -141,7 +142,33 @@ class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['allow_editing'] = True
-        context['latest_update_timestamp'] = utc_now_offset_aware()
+
+        try:
+            latest_update_timestamp = \
+                self.storage_request.latest_update_timestamp()
+            if not latest_update_timestamp:
+                latest_update_timestamp = 'No updates yet.'
+            else:
+                # TODO: Upgrade to Python 3.7+ to use this.
+                # latest_update_timestamp = datetime.datetime.fromisoformat(
+                #     latest_update_timestamp)
+                latest_update_timestamp = iso8601.parse_date(
+                    latest_update_timestamp)
+        except Exception as e:
+            self.logger.exception(e)
+            messages.error(
+                self.request,
+                'Unexpected failure. Please contact an administrator.'
+            )
+            latest_update_timestamp = 'Failed to determine timestamp.'
+        context['latest_update_timestamp'] = latest_update_timestamp
+
+
+
+        # TODO: Render the denial reason, if any.
+
+
+
         context['checklist'] = self._get_checklist()
         context['is_checklist_complete'] = self._is_checklist_complete()
         return context
@@ -516,23 +543,10 @@ class StorageRequestReviewSetupView(LoginRequiredMixin,
         return super().form_valid(form)
 
 
-class SavioProjectReviewDenyView(LoginRequiredMixin, StorageRequestViewMixin,
-                                UserPassesTestMixin, View):
+class StorageRequestReviewDenyView(LoginRequiredMixin, StorageRequestViewMixin,
+                                   UserPassesTestMixin, FormView):
     form_class = StorageRequestReviewDenyForm
     template_name = 'cluster_storage/approval/storage_request_review.html'
-
-    def form_valid(self, form):
-        justification = form.cleaned_data['justification']
-        state = self.storage_request
-        state['other'] = {
-            'justification': justification,
-            'timestamp': utc_now_offset_aware().isoformat(),
-        }
-        self.storage_request.state = state
-        self.storage_request.save()
-        FacultyStorageAllocationRequestService.deny_request(
-            self.storage_request
-        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -547,6 +561,28 @@ class SavioProjectReviewDenyView(LoginRequiredMixin, StorageRequestViewMixin,
         other = self.storage_request.state['other']
         initial['justification'] = other.get('justification', '')
         return initial
+
+    def form_valid(self, form):
+        """Deny the request with the provided justification."""
+        justification = form.cleaned_data['justification']
+        state = self.storage_request.state
+        state['other'] = {
+            'justification': justification,
+            'timestamp': utc_now_offset_aware().isoformat(),
+        }
+        self.storage_request.state = state
+        self.storage_request.save()
+
+        FacultyStorageAllocationRequestService.deny_request(
+            self.storage_request
+        )
+
+        messages.success(
+            self.request,
+            'The request has been denied.'
+        )
+
+        return super().form_valid(form)
 
 
 class StorageRequestUndenyView(LoginRequiredMixin, StorageRequestViewMixin,
@@ -602,6 +638,7 @@ __all__ = [
     'StorageRequestDetailView',
     'StorageRequestEditView',
     'StorageRequestListView',
+    'StorageRequestReviewDenyView',
     'StorageRequestReviewEligibilityView',
     'StorageRequestReviewIntakeConsistencyView',
     'StorageRequestReviewSetupView',

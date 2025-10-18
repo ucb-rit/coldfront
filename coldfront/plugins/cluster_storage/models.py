@@ -111,6 +111,19 @@ class FacultyStorageAllocationRequest(TimeStampedModel):
             timestamp=timestamp
         )
 
+    def latest_update_timestamp(self):
+        """Return the latest timestamp stored in the request's 'state'
+        field, or the empty string.
+
+        The expected values are ISO 8601 strings, or the empty string,
+        so taking the maximum should provide the correct output."""
+        state = self.state
+        max_timestamp = ''
+        for field in state:
+            max_timestamp = max(
+                max_timestamp, state[field].get('timestamp', ''))
+        return max_timestamp
+
     def __str__(self):
         return (
             f'{self.project.name} - {self.pi.first_name} {self.pi.last_name} - '

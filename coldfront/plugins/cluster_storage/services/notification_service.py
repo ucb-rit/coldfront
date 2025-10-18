@@ -31,7 +31,7 @@ class StorageRequestNotificationService:
             ),
         }
         sender = django_settings.EMAIL_SENDER
-        receiver_list = settings.CLUSTER_STORAGE_ADMIN_EMAIL_LIST
+        receiver_list = settings.ADMIN_EMAIL_LIST
 
         email_args = (subject, template_name, context, sender, receiver_list)
         email_strategy.process_email(send_email_template, *email_args)
@@ -53,7 +53,7 @@ class StorageRequestNotificationService:
                 django_settings.CENTER_BASE_URL,
                 reverse('project-detail', kwargs={'pk': request.project.pk})
             ),
-            'support_email': django_settings.SUPPORT_EMAIL,
+            'support_email': django_settings.CENTER_HELP_EMAIL,
             'signature': django_settings.EMAIL_SIGNATURE,
         }
         sender = django_settings.EMAIL_SENDER
@@ -79,7 +79,7 @@ class StorageRequestNotificationService:
             'amount_tb': request.requested_amount_gb // 1000,
             'reason_category': reason.category,
             'reason_justification': reason.justification,
-            'support_email': django_settings.SUPPORT_EMAIL,
+            'support_email': django_settings.CENTER_HELP_EMAIL,
             'signature': django_settings.EMAIL_SIGNATURE,
         }
         sender = django_settings.EMAIL_SENDER

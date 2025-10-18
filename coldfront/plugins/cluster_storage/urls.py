@@ -3,6 +3,7 @@ from django.urls import path
 from .views import StorageRequestDetailView
 from .views import StorageRequestEditView
 from .views import StorageRequestListView
+from .views import StorageRequestReviewDenyView
 from .views import StorageRequestReviewEligibilityView
 from .views import StorageRequestReviewIntakeConsistencyView
 from .views import StorageRequestReviewSetupView
@@ -34,6 +35,10 @@ urlpatterns = [
         '<int:pk>/setup/',
         StorageRequestReviewSetupView.as_view(),
         name='storage-request-review-setup'),
+    path(
+        '<int:pk>/deny/',
+        StorageRequestReviewDenyView.as_view(),
+        name='storage-request-deny'),
     path(
         '<int:pk>/undeny/',
         StorageRequestUndenyView.as_view(),
