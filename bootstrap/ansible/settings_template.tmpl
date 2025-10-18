@@ -336,7 +336,9 @@ if (not FLAGS['SSO_ENABLED'][0]['value'] and
 EXTRA_EXTRA_APPS += [
     'coldfront.plugins.cluster_storage'
 ]
-{% endif %}
+
+CLUSTER_STORAGE_ADMIN_EMAIL_LIST = {{ plugin_cluster_storage_admin_email_list }} or ['admin@{{ hostname }}']
+{%- endif -%}
 
 {% if plugin_departments_enabled is defined and plugin_departments_enabled | bool %}
 #------------------------------------------------------------------------------

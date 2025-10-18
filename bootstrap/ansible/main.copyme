@@ -160,6 +160,7 @@ flag_renewal_survey_enabled: True
 
 # TODO: Enable for BRC, disable for LRC.
 plugin_cluster_storage_enabled: true
+plugin_cluster_storage_admin_email_list: ['placeholder@dev.dev']
 
 #------------------------------------------------------------------------------
 # Plugin: departments
