@@ -38,6 +38,18 @@ class PIUserChoiceField(forms.ModelChoiceField):
         return f'{obj.first_name} {obj.last_name} ({obj.username})'
 
 
+class ReviewDenyForm(forms.Form):
+
+    justification = forms.CharField(
+        help_text=(
+            'Provide reasoning for your decision. It will be included in the '
+            'notification email.'),
+        label='Justification',
+        validators=[MinLengthValidator(10)],
+        required=True,
+        widget=forms.Textarea(attrs={'rows': 3}))
+
+
 class ReviewStatusForm(forms.Form):
 
     status = forms.ChoiceField(

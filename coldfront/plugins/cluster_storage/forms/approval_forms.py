@@ -7,6 +7,7 @@ from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowanc
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 
 from .form_utils import PIUserChoiceField
+from .form_utils import ReviewDenyForm as StorageRequestReviewDenyForm
 from .form_utils import ReviewStatusForm as StorageRequestReviewStatusForm
 from .form_utils import StorageAmountChoiceField
 
@@ -85,6 +86,7 @@ class StorageRequestReviewSetupForm(forms.Form):
 
 __all__ = [
     'StorageRequestEditForm',
+    'StorageRequestReviewDenyForm',
     'StorageRequestReviewSetupForm',
     'StorageRequestReviewStatusForm',
     'StorageRequestSearchForm',

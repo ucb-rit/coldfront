@@ -38,6 +38,16 @@ Faculty Storage Allocation Request Detail
             <th>Latest Update Timestamp:</th>
             <td>{{ latest_update_timestamp }}</td>
           </tr>
+          {% if is_allowed_to_manage_request and storage_request.status.name == 'Denied' %}
+            <tr>
+              <th>Un-deny Request:</th>
+              <td>
+                <a href="{% url 'storage-request-undeny' storage_request.pk %}" class="btn btn-primary">
+                  Un-deny
+                </a>
+              </td>
+            </tr>
+          {% endif %}
         </tbody>
       </table>
     </div>

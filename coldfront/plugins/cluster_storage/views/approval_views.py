@@ -1,3 +1,5 @@
+import logging
+
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -6,21 +8,25 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.paginator import EmptyPage
 from django.core.paginator import PageNotAnInteger
 from django.core.paginator import Paginator
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.views import View
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
 
 from coldfront.core.utils.common import utc_now_offset_aware
 
 from coldfront.plugins.cluster_storage.forms import StorageRequestEditForm
-from coldfront.plugins.cluster_storage.forms import StorageRequestForm
+from coldfront.plugins.cluster_storage.forms import StorageRequestReviewDenyForm
 from coldfront.plugins.cluster_storage.forms import StorageRequestReviewSetupForm
 from coldfront.plugins.cluster_storage.forms import StorageRequestReviewStatusForm
 from coldfront.plugins.cluster_storage.forms import StorageRequestSearchForm
 from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequest
+from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequestStatusChoice
 from coldfront.plugins.cluster_storage.services import FacultyStorageAllocationRequestService
 
+logger = logging.getLogger(__name__)
 
 class StorageRequestAmountMixin:
     """Mixin to add requested and approved amount in TB to context."""
@@ -34,7 +40,6 @@ class StorageRequestAmountMixin:
                 if self.storage_request.approved_amount_gb else None
             )
         return context
-
 
 class StorageRequestViewMixin(StorageRequestAmountMixin):
     """Base mixin for storage request views with common functionality."""
@@ -68,6 +73,70 @@ class StorageRequestViewMixin(StorageRequestAmountMixin):
         messages.error(self.request, message)
         return False
 
+    def update_request_status_from_reviews(self):
+        """Update the overall request status based on review step statuses.
+
+        - If either review is denied: Call deny_request to update overall status
+        - If both eligibility and intake consistency are approved:
+          Move to "Approved - Processing" status
+        - If either review is pending and request is in an approved state:
+          Move back to "Under Review" status
+
+        Returns True if status was changed, False otherwise.
+        """
+        state = self.storage_request.state
+        eligibility_status = state['eligibility']['status']
+        intake_status = state['intake_consistency']['status']
+        current_status = self.storage_request.status.name
+
+        try:
+            # If either review is denied, deny the request
+            if eligibility_status == 'Denied' or intake_status == 'Denied':
+                # Get the justification from whichever review is denied
+                justification = (
+                    state['eligibility']['justification']
+                    if eligibility_status == 'Denied'
+                    else state['intake_consistency']['justification']
+                )
+                FacultyStorageAllocationRequestService.deny_request(
+                    self.storage_request,
+                    justification
+                )
+                messages.success(self.request, 'The request has been denied.')
+                return True
+
+            # If both reviews are approved, move to Approved - Processing
+            elif (eligibility_status == 'Approved' and
+                      intake_status == 'Approved'):
+                FacultyStorageAllocationRequestService.approve_request(
+                    self.storage_request
+                )
+                messages.success(self.request, 'The request has been approved.')
+                return True
+
+            # If either review is pending and we're in an approved state, revert
+            elif (eligibility_status == 'Pending' or
+                      intake_status == 'Pending'):
+                if current_status != 'Under Review':
+                    under_review_status = \
+                        FacultyStorageAllocationRequestStatusChoice.objects.get(
+                            name='Under Review')
+                    self.storage_request.status = under_review_status
+                    self.storage_request.save()
+                    messages.info(self.request, 'The request is under review.')
+                    return True
+
+        except Exception as e:
+            messages.error(
+                self.request,
+                f'Error updating request status: {str(e)}'
+            )
+            logger.exception(
+                f'Error updating request status for {self.storage_request.pk}: '
+                f'{e}')
+            return False
+
+        return False
 
 class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
                                UserPassesTestMixin, TemplateView):
@@ -137,8 +206,6 @@ class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
                 request,
                 f'An error occurred while completing the request: {str(e)}'
             )
-            import logging
-            logger = logging.getLogger(__name__)
             logger.exception(
                 f'Error completing storage request {storage_request.pk}: {e}')
             return self.get(request, *args, **kwargs)
@@ -211,7 +278,6 @@ class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
             state['intake_consistency']['status'] == 'Approved' and
             state['setup']['status'] == 'Complete')
 
-
 class StorageRequestListView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     template_name = 'cluster_storage/approval/storage_request_list.html'
 
@@ -276,7 +342,6 @@ class StorageRequestListView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
         # TODO
         return True
 
-
 class StorageRequestEditView(LoginRequiredMixin, StorageRequestViewMixin,
                              UserPassesTestMixin, FormView):
     form_class = StorageRequestEditForm
@@ -317,7 +382,6 @@ class StorageRequestEditView(LoginRequiredMixin, StorageRequestViewMixin,
 
         return super().form_valid(form)
 
-
 class StorageRequestReviewEligibilityView(LoginRequiredMixin,
                                           StorageRequestViewMixin,
                                           UserPassesTestMixin,
@@ -356,34 +420,11 @@ class StorageRequestReviewEligibilityView(LoginRequiredMixin,
         self.storage_request.state = state
         self.storage_request.save()
 
-        # If denied, update request status and send denial email
-        if status == 'Denied':
-            try:
-                FacultyStorageAllocationRequestService.deny_request(
-                    self.storage_request,
-                    justification
-                )
-                messages.success(
-                    self.request,
-                    'Request has been denied and notification email sent.'
-                )
-            except Exception as e:
-                messages.error(
-                    self.request,
-                    f'Error denying request: {str(e)}'
-                )
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.exception(
-                    f'Error denying request {self.storage_request.pk}: {e}')
-        else:
-            messages.success(
-                self.request,
-                f'Eligibility status updated to {status}.'
-            )
+        # Update overall request status based on review statuses
+        # (handles approval, denial, or reversion to Under Review)
+        self.update_request_status_from_reviews()
 
         return super().form_valid(form)
-
 
 class StorageRequestReviewIntakeConsistencyView(LoginRequiredMixin,
                                                 StorageRequestViewMixin,
@@ -422,33 +463,11 @@ class StorageRequestReviewIntakeConsistencyView(LoginRequiredMixin,
         self.storage_request.state = state
         self.storage_request.save()
 
-        # If denied, update request status and send denial email
-        if status == 'Denied':
-            try:
-                FacultyStorageAllocationRequestService.deny_request(
-                    self.storage_request,
-                    justification
-                )
-                messages.success(
-                    self.request,
-                    'Request has been denied and notification email sent.'
-                )
-            except Exception as e:
-                messages.error(
-                    self.request,
-                    f'Error denying request: {str(e)}'
-                )
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.exception(f'Error denying request {self.storage_request.pk}: {e}')
-        else:
-            messages.success(
-                self.request,
-                f'Intake consistency status updated to {status}.'
-            )
+        # Update overall request status based on review statuses
+        # (handles approval, denial, or reversion to Under Review)
+        self.update_request_status_from_reviews()
 
         return super().form_valid(form)
-
 
 class StorageRequestReviewSetupView(LoginRequiredMixin,
                                     StorageRequestViewMixin,
@@ -469,7 +488,9 @@ class StorageRequestReviewSetupView(LoginRequiredMixin,
         setup = self.storage_request.state['setup']
         initial['status'] = setup['status']
         # Pre-populate with project name as default
-        initial['directory_name'] = setup.get('directory_name', '') or self.storage_request.project.name
+        initial['directory_name'] = (
+            setup.get('directory_name', '') or
+            self.storage_request.project.name)
         return initial
 
     def form_valid(self, form):
@@ -493,6 +514,79 @@ class StorageRequestReviewSetupView(LoginRequiredMixin,
 
         return super().form_valid(form)
 
+class SavioProjectReviewDenyView(LoginRequiredMixin, StorageRequestViewMixin,
+                                UserPassesTestMixin, View):
+    form_class = StorageRequestReviewDenyForm
+    template_name = 'cluster_storage/approval/storage_request_review.html'
+
+    def form_valid(self, form):
+        justification = form.cleaned_data['justification']
+        FacultyStorageAllocationRequestService.deny_request(
+            self.storage_request,
+            justification,
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['explanatory_paragraph'] = (
+            'Deny the request for some other reason. A notification email will '
+            'be sent to the requester and PI.')
+        context['page_title'] = 'Deny'
+        return context
+
+    def get_initial(self):
+        initial = super().get_initial()
+        other = self.storage_request.state['other']
+        initial['justification'] = other.get('justification', '')
+        return initial
+
+class StorageRequestUndenyView(LoginRequiredMixin, StorageRequestViewMixin,
+                               UserPassesTestMixin, View):
+
+    def dispatch(self, request, *args, **kwargs):
+        """Check if the request can be undenied."""
+        # Get the pk before calling super().dispatch()
+        pk = self.kwargs.get('pk')
+
+        # StorageRequestViewMixin.dispatch() sets self.storage_request
+        # This calls the mixin's dispatch which retrieves the object
+        # We need to manually get it first to check status before proceeding
+        self.storage_request = get_object_or_404(
+            FacultyStorageAllocationRequest, pk=pk)
+
+        # Only allow undenying if the request is currently denied
+        if self.storage_request.status.name != 'Denied':
+            message = (
+                f'Request {pk} cannot be undenied because it has status '
+                f'{self.storage_request.status.name}.')
+            messages.error(request, message)
+            return HttpResponseRedirect(
+                reverse('storage-request-detail', kwargs={'pk': pk}))
+
+        # Now proceed with the rest of the dispatch chain
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        """Undeny the request by calling the service method."""
+        pk = self.storage_request.pk
+
+        try:
+            FacultyStorageAllocationRequestService.undeny_request(
+                self.storage_request
+            )
+            message = 'The request is under review.'
+            messages.success(request, message)
+            logger.info(
+                f'FacultyStorageAllocationRequest {pk} was undenied by '
+                f'{request.user.username}.')
+        except Exception as e:
+            message = f'Failed to undeny request {pk}.'
+            messages.error(request, message)
+            logger.exception(
+                f'Error undenying FacultyStorageAllocationRequest {pk}: {e}')
+
+        return HttpResponseRedirect(
+            reverse('storage-request-detail', kwargs={'pk': pk}))
 
 __all__ = [
     'StorageRequestDetailView',
@@ -501,4 +595,8 @@ __all__ = [
     'StorageRequestReviewEligibilityView',
     'StorageRequestReviewIntakeConsistencyView',
     'StorageRequestReviewSetupView',
+    'StorageRequestUndenyView',
 ]
+
+# TODO: Should the state only be updated by the request service? We're exposing
+#  the structure of the request.

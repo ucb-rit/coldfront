@@ -6,6 +6,7 @@ from .views import StorageRequestListView
 from .views import StorageRequestReviewEligibilityView
 from .views import StorageRequestReviewIntakeConsistencyView
 from .views import StorageRequestReviewSetupView
+from .views import StorageRequestUndenyView
 
 
 urlpatterns = [
@@ -33,4 +34,8 @@ urlpatterns = [
         '<int:pk>/setup/',
         StorageRequestReviewSetupView.as_view(),
         name='storage-request-review-setup'),
+    path(
+        '<int:pk>/undeny/',
+        StorageRequestUndenyView.as_view(),
+        name='storage-request-undeny'),
 ]

@@ -1,3 +1,5 @@
+from coldfront.core.utils.common import utc_now_offset_aware
+
 from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequest
 from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequestStatusChoice
 from coldfront.plugins.cluster_storage.services import DirectoryService
@@ -5,9 +7,7 @@ from coldfront.plugins.cluster_storage.services import StorageRequestNotificatio
 
 import logging
 
-
 logger = logging.getLogger(__name__)
-
 
 class FacultyStorageAllocationRequestService:
 
@@ -30,6 +30,7 @@ class FacultyStorageAllocationRequestService:
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
             name='Approved - Processing')
         request.status = status
+        request.approval_time = utc_now_offset_aware()
         request.save()
 
     @staticmethod
@@ -50,6 +51,7 @@ class FacultyStorageAllocationRequestService:
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
             name='Approved - Complete')
         request.status = status
+        request.completion_time = utc_now_offset_aware()
         request.save()
 
         directory_service = DirectoryService(request.project, directory_name)
@@ -104,9 +106,14 @@ class FacultyStorageAllocationRequestService:
 
     @staticmethod
     def deny_request(request, justification, email_strategy=None):
+        timestamp = utc_now_offset_aware().isoformat()
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
             name='Denied')
         request.status = status
+        request.state['other'] = {
+            'justification': justification,
+            'timestamp': timestamp,
+        }
         request.save()
 
         StorageRequestNotificationService.send_denial_email(
@@ -114,6 +121,33 @@ class FacultyStorageAllocationRequestService:
 
     @staticmethod
     def undeny_request(request):
+        """Undeny a request by resetting review statuses to Pending.
+
+        If a review step was denied, reset it to Pending. Also clear any
+        'other' denial reason. Then update the overall request status to
+        Under Review.
+        """
+        state = request.state
+
+        # Reset eligibility to Pending if it was denied
+        eligibility = state['eligibility']
+        if eligibility['status'] == 'Denied':
+            eligibility['status'] = 'Pending'
+
+        # Reset intake_consistency to Pending if it was denied
+        intake_consistency = state['intake_consistency']
+        if intake_consistency['status'] == 'Denied':
+            intake_consistency['status'] = 'Pending'
+
+        # Clear any 'other' denial reason if it exists
+        other = state['other']
+        if other['timestamp']:
+            state['other']['justification'] = ''
+            state['other']['timestamp'] = ''
+
+        request.state = state
+
+        # Update overall status to Under Review
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
             name='Under Review')
         request.status = status
