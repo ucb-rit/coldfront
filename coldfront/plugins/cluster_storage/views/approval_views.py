@@ -92,15 +92,8 @@ class StorageRequestViewMixin(StorageRequestAmountMixin):
         try:
             # If either review is denied, deny the request
             if eligibility_status == 'Denied' or intake_status == 'Denied':
-                # Get the justification from whichever review is denied
-                justification = (
-                    state['eligibility']['justification']
-                    if eligibility_status == 'Denied'
-                    else state['intake_consistency']['justification']
-                )
                 FacultyStorageAllocationRequestService.deny_request(
-                    self.storage_request,
-                    justification
+                    self.storage_request
                 )
                 messages.success(self.request, 'The request has been denied.')
                 return True
@@ -521,9 +514,15 @@ class SavioProjectReviewDenyView(LoginRequiredMixin, StorageRequestViewMixin,
 
     def form_valid(self, form):
         justification = form.cleaned_data['justification']
+        state = self.storage_request
+        state['other'] = {
+            'justification': justification,
+            'timestamp': utc_now_offset_aware().isoformat(),
+        }
+        self.storage_request.state = state
+        self.storage_request.save()
         FacultyStorageAllocationRequestService.deny_request(
-            self.storage_request,
-            justification,
+            self.storage_request
         )
 
     def get_context_data(self, **kwargs):
@@ -587,6 +586,7 @@ class StorageRequestUndenyView(LoginRequiredMixin, StorageRequestViewMixin,
 
         return HttpResponseRedirect(
             reverse('storage-request-detail', kwargs={'pk': pk}))
+
 
 __all__ = [
     'StorageRequestDetailView',

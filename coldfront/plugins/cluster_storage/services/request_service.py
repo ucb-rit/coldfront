@@ -105,19 +105,14 @@ class FacultyStorageAllocationRequestService:
             raise
 
     @staticmethod
-    def deny_request(request, justification, email_strategy=None):
-        timestamp = utc_now_offset_aware().isoformat()
+    def deny_request(request, email_strategy=None):
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
             name='Denied')
         request.status = status
-        request.state['other'] = {
-            'justification': justification,
-            'timestamp': timestamp,
-        }
         request.save()
 
         StorageRequestNotificationService.send_denial_email(
-            request, justification, email_strategy=email_strategy)
+            request, email_strategy=email_strategy)
 
     @staticmethod
     def undeny_request(request):

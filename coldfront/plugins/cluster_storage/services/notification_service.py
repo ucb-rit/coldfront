@@ -1,12 +1,12 @@
-import logging
+from urllib.parse import urljoin
 
-from django.conf import settings
+from django.conf import settings as django_settings
+from django.urls import reverse
 
 from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
 from coldfront.core.utils.mail import send_email_template
 
-
-logger = logging.getLogger(__name__)
+from coldfront.plugins.cluster_storage.conf import settings
 
 
 class StorageRequestNotificationService:
@@ -15,72 +15,75 @@ class StorageRequestNotificationService:
     @staticmethod
     def send_request_created_email(request, email_strategy=None):
         """Notify admins when a new request is created."""
-        logger.info(f'Sending creation notification for request {request.id}')
-
         email_strategy = validate_email_strategy_or_get_default(email_strategy)
 
+        subject = (
+            f'New Faculty Storage Allocation Request - {request.project.name}')
+        template_name = 'cluster_storage/email/request_created.txt'
         context = {
-            'request': request,
             'project': request.project,
             'requester': request.requester,
-            'amount_gb': request.requested_amount_gb,
-            'signature': settings.EMAIL_SIGNATURE,
+            'pi': request.pi,
+            'amount_tb': request.requested_amount_gb // 1000,
+            'review_url': urljoin(
+                django_settings.CENTER_BASE_URL,
+                reverse('storage-request-detail', kwargs={'pk': request.pk})
+            ),
         }
+        sender = django_settings.EMAIL_SENDER
+        receiver_list = settings.CLUSTER_STORAGE_ADMIN_EMAIL_LIST
 
-        email_strategy.process_email(
-            send_email_template,
-            subject=f'New Storage Request - {request.project.name}',
-            template_name='cluster_storage/email/request_created.txt',
-            context=context,
-            sender=settings.EMAIL_SENDER,
-            receiver_list=settings.EMAIL_ADMIN_LIST,
-        )
+        email_args = (subject, template_name, context, sender, receiver_list)
+        email_strategy.process_email(send_email_template, *email_args)
 
     @staticmethod
     def send_completion_email(request, email_strategy=None):
-        """Notify requester when storage is ready."""
-        logger.info(f'Sending completion notification for request {request.id}')
-
+        """Notify the PI and requester when the request is completed."""
         email_strategy = validate_email_strategy_or_get_default(email_strategy)
 
+        subject = (
+            f'Faculty Storage Allocation Request Complete - '
+            f'{request.project.name}')
+        template_name = 'cluster_storage/email/request_completed.txt'
         context = {
-            'request': request,
+            'center_name': django_settings.CENTER_NAME,
             'project': request.project,
-            'requester': request.requester,
-            'amount_gb': request.requested_amount_gb,
-            'signature': settings.EMAIL_SIGNATURE,
+            'amount_tb': request.requested_amount_gb // 1000,
+            'project_url': urljoin(
+                django_settings.CENTER_BASE_URL,
+                reverse('project-detail', kwargs={'pk': request.project.pk})
+            ),
+            'support_email': django_settings.SUPPORT_EMAIL,
+            'signature': django_settings.EMAIL_SIGNATURE,
         }
+        sender = django_settings.EMAIL_SENDER
+        receiver_list = list(set([request.requester.email, request.pi.email]))
 
-        email_strategy.process_email(
-            send_email_template,
-            subject=f'Storage Ready - {request.project.name}',
-            template_name='cluster_storage/email/request_completed.txt',
-            context=context,
-            sender=settings.EMAIL_SENDER,
-            receiver_list=[request.requester.email],
-        )
+        email_args = (subject, template_name, context, sender, receiver_list)
+        email_strategy.process_email(send_email_template, *email_args)
 
     @staticmethod
-    def send_denial_email(request, justification, email_strategy=None):
-        """Notify requester when their request is denied."""
-        logger.info(f'Sending denial notification for request {request.id}')
-
+    def send_denial_email(request, email_strategy=None):
+        """Notify the PI and requester when their request is denied."""
         email_strategy = validate_email_strategy_or_get_default(email_strategy)
 
-        context = {
-            'request': request,
-            'project': request.project,
-            'requester': request.requester,
-            'amount_gb': request.requested_amount_gb,
-            'justification': justification,
-            'signature': settings.EMAIL_SIGNATURE,
-        }
+        reason = request.denial_reason()
 
-        email_strategy.process_email(
-            send_email_template,
-            subject=f'Storage Request Denied - {request.project.name}',
-            template_name='cluster_storage/email/request_denied.txt',
-            context=context,
-            sender=settings.EMAIL_SENDER,
-            receiver_list=[request.requester.email],
-        )
+        subject = (
+            f'Faculty Storage Allocation Request Denied - '
+            f'{request.project.name}')
+        template_name = 'cluster_storage/email/request_denied.txt'
+        context = {
+            'center_name': django_settings.CENTER_NAME,
+            'project': request.project,
+            'amount_tb': request.requested_amount_gb // 1000,
+            'reason_category': reason.category,
+            'reason_justification': reason.justification,
+            'support_email': django_settings.SUPPORT_EMAIL,
+            'signature': django_settings.EMAIL_SIGNATURE,
+        }
+        sender = django_settings.EMAIL_SENDER
+        receiver_list = list(set([request.requester.email, request.pi.email]))
+
+        email_args = (subject, template_name, context, sender, receiver_list)
+        email_strategy.process_email(send_email_template, *email_args)

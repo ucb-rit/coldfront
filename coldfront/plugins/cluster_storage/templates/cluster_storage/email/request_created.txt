@@ -1,8 +1,8 @@
-A new storage request has been submitted.
+There is a new Faculty Storage Allocation request.
 
 Project: {{ project.name }}
 Requester: {{ requester.get_full_name }} ({{ requester.username }})
-PI: {{ request.pi.get_full_name }} ({{ request.pi.username }})
-Requested Amount: {{ amount_gb }} GB
+PI: {{ pi.get_full_name }} ({{ pi.username }})
+Requested Amount: {{ amount_tb }} TB
 
-Please review this request in the admin interface.
+Please review the request: {{ review_url }}.

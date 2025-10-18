@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 from django.contrib.auth import get_user_model
 from django.db import models
 
@@ -70,6 +72,44 @@ class FacultyStorageAllocationRequest(TimeStampedModel):
     history = HistoricalRecords()
 
     # TODO: Methods
+
+    def denial_reason(self):
+        """Return the reason why the request was denied, based on its
+        'state' field."""
+        if self.status.name != 'Denied':
+            raise ValueError(
+                f'Provided request has unexpected status '
+                f'{self.status.name}.')
+
+        state = self.state
+        eligibility = state['eligibility']
+        intake_consistency = state['intake_consistency']
+        other = state['other']
+
+        DenialReason = namedtuple(
+            'DenialReason', 'category justification timestamp')
+
+        if other['timestamp']:
+            category = 'Other'
+            justification = other['justification']
+            timestamp = other['timestamp']
+        elif eligibility['status'] == 'Denied':
+            category = 'Eligibility'
+            justification = eligibility['justification']
+            timestamp = eligibility['timestamp']
+        elif intake_consistency['status'] == 'Denied':
+            category = 'Intake Consistency'
+            justification = intake_consistency['justification']
+            timestamp = intake_consistency['timestamp']
+        else:
+            raise ValueError(
+                'Provided request has an unexpected state.')
+
+        return DenialReason(
+            category=category,
+            justification=justification,
+            timestamp=timestamp
+        )
 
     def __str__(self):
         return (
