@@ -28,6 +28,7 @@ from coldfront.plugins.cluster_storage.services import FacultyStorageAllocationR
 
 logger = logging.getLogger(__name__)
 
+
 class StorageRequestAmountMixin:
     """Mixin to add requested and approved amount in TB to context."""
 
@@ -40,6 +41,7 @@ class StorageRequestAmountMixin:
                 if self.storage_request.approved_amount_gb else None
             )
         return context
+
 
 class StorageRequestViewMixin(StorageRequestAmountMixin):
     """Base mixin for storage request views with common functionality."""
@@ -122,7 +124,7 @@ class StorageRequestViewMixin(StorageRequestAmountMixin):
         except Exception as e:
             messages.error(
                 self.request,
-                f'Error updating request status: {str(e)}'
+                'Unexpected failure. Please contact an administrator.'
             )
             logger.exception(
                 f'Error updating request status for {self.storage_request.pk}: '
@@ -130,6 +132,7 @@ class StorageRequestViewMixin(StorageRequestAmountMixin):
             return False
 
         return False
+
 
 class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
                                UserPassesTestMixin, TemplateView):
@@ -197,7 +200,7 @@ class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
         except Exception as e:
             messages.error(
                 request,
-                f'An error occurred while completing the request: {str(e)}'
+                'Unexpected failure. Please contact an administrator.'
             )
             logger.exception(
                 f'Error completing storage request {storage_request.pk}: {e}')
@@ -271,6 +274,7 @@ class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
             state['intake_consistency']['status'] == 'Approved' and
             state['setup']['status'] == 'Complete')
 
+
 class StorageRequestListView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     template_name = 'cluster_storage/approval/storage_request_list.html'
 
@@ -335,6 +339,7 @@ class StorageRequestListView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
         # TODO
         return True
 
+
 class StorageRequestEditView(LoginRequiredMixin, StorageRequestViewMixin,
                              UserPassesTestMixin, FormView):
     form_class = StorageRequestEditForm
@@ -374,6 +379,7 @@ class StorageRequestEditView(LoginRequiredMixin, StorageRequestViewMixin,
         )
 
         return super().form_valid(form)
+
 
 class StorageRequestReviewEligibilityView(LoginRequiredMixin,
                                           StorageRequestViewMixin,
@@ -419,6 +425,7 @@ class StorageRequestReviewEligibilityView(LoginRequiredMixin,
 
         return super().form_valid(form)
 
+
 class StorageRequestReviewIntakeConsistencyView(LoginRequiredMixin,
                                                 StorageRequestViewMixin,
                                                 UserPassesTestMixin,
@@ -461,6 +468,7 @@ class StorageRequestReviewIntakeConsistencyView(LoginRequiredMixin,
         self.update_request_status_from_reviews()
 
         return super().form_valid(form)
+
 
 class StorageRequestReviewSetupView(LoginRequiredMixin,
                                     StorageRequestViewMixin,
@@ -507,6 +515,7 @@ class StorageRequestReviewSetupView(LoginRequiredMixin,
 
         return super().form_valid(form)
 
+
 class SavioProjectReviewDenyView(LoginRequiredMixin, StorageRequestViewMixin,
                                 UserPassesTestMixin, View):
     form_class = StorageRequestReviewDenyForm
@@ -538,6 +547,7 @@ class SavioProjectReviewDenyView(LoginRequiredMixin, StorageRequestViewMixin,
         other = self.storage_request.state['other']
         initial['justification'] = other.get('justification', '')
         return initial
+
 
 class StorageRequestUndenyView(LoginRequiredMixin, StorageRequestViewMixin,
                                UserPassesTestMixin, View):

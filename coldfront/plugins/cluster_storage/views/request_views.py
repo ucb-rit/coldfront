@@ -30,15 +30,6 @@ class StorageRequestLandingView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['project'] = self._project_obj
-
-        # # Check eligibility for the PI
-        # is_eligible, reason = StorageRequestEligibilityService.is_eligible_for_request(
-        #     self._project_obj.pi
-        # )
-        is_eligible, reason = True, ''
-        context['is_eligible'] = is_eligible
-        context['ineligibility_reason'] = reason
-
         return context
 
 
@@ -94,8 +85,7 @@ class StorageRequestView(LoginRequiredMixin, FormView):
         except Exception as e:
             messages.error(
                 self.request,
-                ('An error occurred while submitting your request. Please '
-                 'contact support.')
+                'Unexpected failure. Please contact an administrator.'
             )
             # Log the actual error for debugging
             import logging

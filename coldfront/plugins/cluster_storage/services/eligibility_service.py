@@ -27,24 +27,3 @@ class StorageRequestEligibilityService:
             return False, 'PI already has an existing non-denied storage request.'
 
         return True, ''
-
-    @staticmethod
-    def can_request_amount(amount_gb, min_gb=1000, max_gb=5000):
-        """
-        Check if the requested amount is within allowed limits.
-
-        Args:
-            amount_gb: The amount requested in GB
-            min_gb: Minimum allowed amount (default: 1000 GB = 1 TB)
-            max_gb: Maximum allowed amount (default: 5000 GB = 5 TB)
-
-        Returns:
-            tuple: (is_valid: bool, reason_if_not: str)
-        """
-        if amount_gb < min_gb:
-            return False, f'Requested amount must be at least {min_gb} GB.'
-
-        if amount_gb > max_gb:
-            return False, f'Requested amount cannot exceed {max_gb} GB.'
-
-        return True, ''
