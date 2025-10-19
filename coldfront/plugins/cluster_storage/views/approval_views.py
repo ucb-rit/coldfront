@@ -3,6 +3,7 @@ import logging
 
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import UserPassesTestMixin
@@ -143,6 +144,11 @@ class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
         context = super().get_context_data(**kwargs)
         context['allow_editing'] = True
 
+        if self.storage_request.status.name == 'Denied':
+            context['denial_reason'] = self.storage_request.denial_reason()
+
+        context['support_email'] = settings.CENTER_HELP_EMAIL
+
         try:
             latest_update_timestamp = \
                 self.storage_request.latest_update_timestamp()
@@ -162,12 +168,6 @@ class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
             )
             latest_update_timestamp = 'Failed to determine timestamp.'
         context['latest_update_timestamp'] = latest_update_timestamp
-
-
-
-        # TODO: Render the denial reason, if any.
-
-
 
         context['checklist'] = self._get_checklist()
         context['is_checklist_complete'] = self._is_checklist_complete()

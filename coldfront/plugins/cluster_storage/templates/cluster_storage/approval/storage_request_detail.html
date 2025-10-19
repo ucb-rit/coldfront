@@ -32,22 +32,38 @@ Faculty Storage Allocation Request Detail
             <th>Status:</th>
             <td>
               {% include 'cluster_storage/approval/storage_request_status_badge.html' with status=storage_request.status.name %}
+
+              {% if storage_request.status.name == "Denied" %}
+              <br><br>
+              <p>
+                This request has been denied. Below are specific details:
+              </p>
+              <p>
+                <strong>Category:</strong>
+                {{ denial_reason.category }}
+              </p>
+              <p>
+                <strong>Justification:</strong>
+                {{ denial_reason.justification }}
+              </p>
+              <p>
+                <strong>Timestamp:</strong>
+                {{ denial_reason.timestamp|iso8601_to_datetime }}
+              </p>
+              <p>
+                <strong>Un-deny Request:</strong>
+                <a href="{% url 'storage-request-undeny' storage_request.pk %}" class="btn btn-primary">
+                  Un-deny
+                </a>
+              </p>
+              <p>If you have any questions or concerns, please contact us at {{ support_email }}.
+              {% endif %}
             </td>
           </tr>
           <tr>
             <th>Latest Update Timestamp:</th>
             <td>{{ latest_update_timestamp }}</td>
           </tr>
-          {% if is_allowed_to_manage_request and storage_request.status.name == 'Denied' %}
-            <tr>
-              <th>Un-deny Request:</th>
-              <td>
-                <a href="{% url 'storage-request-undeny' storage_request.pk %}" class="btn btn-primary">
-                  Un-deny
-                </a>
-              </td>
-            </tr>
-          {% endif %}
         </tbody>
       </table>
     </div>
