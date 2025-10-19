@@ -471,9 +471,6 @@ class StorageRequestListView(LoginRequiredMixin, StorageRequestViewAllAccessMixi
                 context[f'{status}_url'] = (
                     f'{list_url}?{urlencode({"status": status[1]})}')
 
-        # Include information about the PI.
-        context['display_user_info'] = True
-
         return context
 
 

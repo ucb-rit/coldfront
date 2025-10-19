@@ -5,10 +5,8 @@
     <tr>
       <th scope="col">#</th>
       <th scope="col">Project</th>
-      {% if display_user_info %}
-        <th scope="col">PI Name</th>
-        <th scope="col">PI Email</th>
-      {% endif %}
+      <th scope="col">PI Name</th>
+      <th scope="col">PI Email</th>
       <th scope="col">Requested Amount (TB)</th>
       <th scope="col">Status</th>
     </tr>
@@ -22,10 +20,8 @@
         </a>
       </td>
       <td>{{ request_obj.project.name }}</td>
-      {% if display_user_info %}
-        <td>{{ request_obj.pi.first_name }} {{ request_obj.pi.last_name }}</td>
-        <td>{{ request_obj.pi.email }}</td>
-      {% endif %}
+      <td>{{ request_obj.pi.first_name }} {{ request_obj.pi.last_name }}</td>
+      <td>{{ request_obj.pi.email }}</td>
       <td>{{ request_obj.requested_amount_tb }} TB</td>
       {% with request_status=request_obj.status.name %}
       <td>

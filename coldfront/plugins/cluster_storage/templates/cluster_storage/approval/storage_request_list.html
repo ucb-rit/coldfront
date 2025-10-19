@@ -27,8 +27,8 @@ Faculty Storage Allocation {{ request_filter|title }} Requests
 
 {% if storage_requests %}
   <div class="table-responsive">
-    {% with queryset=storage_requests display_user_info=display_user_info %}
-      {% include 'cluster_storage/approval/storage_request_list_table.html' with display_user_info=display_user_info %}
+    {% with queryset=storage_requests %}
+      {% include 'cluster_storage/approval/storage_request_list_table.html' %}
     {% endwith %}
   </div>
 

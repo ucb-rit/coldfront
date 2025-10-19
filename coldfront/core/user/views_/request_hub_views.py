@@ -122,19 +122,32 @@ class RequestHubView(LoginRequiredMixin,
     def get_cluster_storage_request(self):
         """Populates a RequestListItem with data for cluster storage
         requests"""
-
-        # TODO: Update this when the data model is ready.
+        from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequest
 
         storage_request_obj = RequestListItem()
-
         user = self.request.user
 
-        # args = []
-        # if not self.show_all_requests:
-        #     args.append(Q(pi=user) | Q(requester=user))
+        args = []
+        if not self.show_all_requests:
+            args.append(Q(pi=user) | Q(requester=user))
 
-        storage_request_list_pending = []
-        storage_request_list_complete = []
+        pending_status_names = ['Under Review', 'Approved - Processing']
+        storage_request_list_pending = \
+            FacultyStorageAllocationRequest.objects.filter(
+                status__name__in=pending_status_names, *args
+            ).order_by('-request_time')
+
+        complete_status_names = ['Approved - Complete', 'Denied']
+        storage_request_list_complete = \
+            FacultyStorageAllocationRequest.objects.filter(
+                status__name__in=complete_status_names, *args
+            ).order_by('-request_time')
+
+        # Add requested_amount_tb to each request for template display
+        for request in storage_request_list_pending:
+            request.requested_amount_tb = request.requested_amount_gb // 1000
+        for request in storage_request_list_complete:
+            request.requested_amount_tb = request.requested_amount_gb // 1000
 
         storage_request_obj.num = self.paginators
         storage_request_obj.pending_queryset = self.create_paginator(
@@ -142,7 +155,7 @@ class RequestHubView(LoginRequiredMixin,
         storage_request_obj.complete_queryset = self.create_paginator(
             storage_request_list_complete)
 
-        storage_request_obj.num_pending = len(storage_request_list_pending)
+        storage_request_obj.num_pending = storage_request_list_pending.count()
 
         storage_request_obj.title = 'Faculty Storage Allocation Requests'
         storage_request_obj.table = \
@@ -152,7 +165,8 @@ class RequestHubView(LoginRequiredMixin,
             'Go To Faculty Storage Allocation Requests Main Page'
         storage_request_obj.id = 'storage_request_section'
         storage_request_obj.help_text = \
-            'Showing your Faculty Storage Allocation requests.'
+            'Showing Faculty Storage Allocation requests that you requested ' \
+            'or requests in which you are the PI for the associated project.'
 
         return storage_request_obj
 
