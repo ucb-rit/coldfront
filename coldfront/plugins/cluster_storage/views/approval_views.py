@@ -31,13 +31,107 @@ from coldfront.plugins.cluster_storage.services import FacultyStorageAllocationR
 logger = logging.getLogger(__name__)
 
 
+class StorageRequestReadOnlyAccessMixin(UserPassesTestMixin):
+    """Mixin for read-only access to storage request views.
+
+    Allows access to:
+    - Superusers
+    - Users with 'can_view_all_storage_requests' or
+      'can_manage_storage_requests' permission
+    - The requester of the storage request
+    - The PI of the storage request
+
+    Requires that the view has a `storage_request` attribute set before
+    test_func is called (typically in dispatch).
+    """
+
+    def test_func(self):
+        """Check if user has permission to view storage requests."""
+        user = self.request.user
+
+        # Superusers have full access
+        if user.is_superuser:
+            return True
+
+        # Users with view or manage permissions can access
+        if (user.has_perm('cluster_storage.can_view_all_storage_requests') or
+            user.has_perm('cluster_storage.can_manage_storage_requests')):
+            return True
+
+        # Allow the requester and PI to view their own request
+        if hasattr(self, 'storage_request'):
+            if (user == self.storage_request.requester or
+                user == self.storage_request.pi):
+                return True
+
+        message = 'You do not have permission to view this storage request.'
+        messages.error(self.request, message)
+        return False
+
+
+class StorageRequestAdminAccessMixin(UserPassesTestMixin):
+    """Mixin for admin-only access to storage request management views.
+
+    Allows access to:
+    - Superusers
+    - Users with 'can_manage_storage_requests' permission
+    """
+
+    def test_func(self):
+        """Check if user has permission to manage storage requests."""
+        user = self.request.user
+
+        # Superusers have full access
+        if user.is_superuser:
+            return True
+
+        # Users with the specific permission can manage
+        if user.has_perm('cluster_storage.can_manage_storage_requests'):
+            return True
+
+        message = 'You do not have permission to manage storage requests.'
+        messages.error(self.request, message)
+        return False
+
+
+class StorageRequestViewAllAccessMixin(UserPassesTestMixin):
+    """Mixin for viewing all storage requests (list view).
+
+    Allows access to:
+    - Superusers
+    - Users with 'can_view_all_storage_requests' or
+      'can_manage_storage_requests' permission
+
+    This is used for the list view where users can see all requests,
+    not just their own.
+    """
+
+    def test_func(self):
+        """Check if user has permission to view all storage requests."""
+        user = self.request.user
+
+        # Superusers have full access
+        if user.is_superuser:
+            return True
+
+        # Users with view or manage permissions can access
+        if (user.has_perm('cluster_storage.can_view_all_storage_requests') or
+            user.has_perm('cluster_storage.can_manage_storage_requests')):
+            return True
+
+        message = 'You do not have permission to view all storage requests.'
+        messages.error(self.request, message)
+        return False
+
+
 class StorageRequestAmountMixin:
     """Mixin to add requested and approved amount in TB to context."""
 
     def add_amount_context(self, context):
         """Add requested_amount_tb and approved_amount_tb to context."""
         if hasattr(self, 'storage_request'):
-            context['requested_amount_tb'] = self.storage_request.requested_amount_gb // 1000
+            context['requested_amount_tb'] = (
+                self.storage_request.requested_amount_gb // 1000)
             context['approved_amount_tb'] = (
                 self.storage_request.approved_amount_gb // 1000
                 if self.storage_request.approved_amount_gb else None
@@ -46,7 +140,12 @@ class StorageRequestAmountMixin:
 
 
 class StorageRequestViewMixin(StorageRequestAmountMixin):
-    """Base mixin for storage request views with common functionality."""
+    """Base mixin for storage request views with common functionality.
+
+    Note: This mixin does NOT include permission checks. Views should
+    inherit from either StorageRequestReadOnlyAccessMixin or
+    StorageRequestAdminAccessMixin as appropriate.
+    """
 
     def dispatch(self, request, *args, **kwargs):
         """Retrieve and cache the storage request object."""
@@ -59,7 +158,12 @@ class StorageRequestViewMixin(StorageRequestAmountMixin):
         """Add common context variables."""
         context = super().get_context_data(**kwargs)
         context['storage_request'] = self.storage_request
-        context['is_allowed_to_manage_request'] = True  # TODO
+        # Determine if user can manage based on permission
+        user = self.request.user
+        context['is_allowed_to_manage_request'] = (
+            user.is_superuser or
+            user.has_perm('cluster_storage.can_manage_storage_requests')
+        )
         context = self.add_amount_context(context)
         return context
 
@@ -67,15 +171,6 @@ class StorageRequestViewMixin(StorageRequestAmountMixin):
         """Return to the storage request detail page."""
         pk = self.kwargs.get('pk')
         return reverse('storage-request-detail', kwargs={'pk': pk})
-
-    def test_func(self):
-        """Check if user has permission to manage storage requests."""
-        # TODO: Allow some other staff in a particular group.
-        if self.request.user.is_superuser:
-            return True
-        message = 'You do not have permission to view the previous page.'
-        messages.error(self.request, message)
-        return False
 
     def update_request_status_from_reviews(self):
         """Update the overall request status based on review step statuses.
@@ -136,13 +231,20 @@ class StorageRequestViewMixin(StorageRequestAmountMixin):
         return False
 
 
-class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
-                               UserPassesTestMixin, TemplateView):
+class StorageRequestDetailView(LoginRequiredMixin,
+                               StorageRequestReadOnlyAccessMixin,
+                               StorageRequestViewMixin,
+                               TemplateView):
     template_name = 'cluster_storage/approval/storage_request_detail.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['allow_editing'] = True
+        # Only allow editing if user is admin
+        user = self.request.user
+        context['allow_editing'] = (
+            user.is_superuser or
+            user.has_perm('cluster_storage.can_manage_storage_requests')
+        )
 
         if self.storage_request.status.name == 'Denied':
             context['denial_reason'] = self.storage_request.denial_reason()
@@ -174,7 +276,22 @@ class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
         return context
 
     def post(self, request, *args, **kwargs):
-        """Complete the storage request if all checklist items are approved."""
+        """Complete the storage request if all checklist items are approved.
+
+        Only superusers and users with 'can_manage_storage_requests'
+        permission can POST.
+        """
+        user = request.user
+
+        # Check admin permissions for POST
+        if not (user.is_superuser or
+                user.has_perm('cluster_storage.can_manage_storage_requests')):
+            messages.error(
+                request,
+                'You do not have permission to complete storage requests.'
+            )
+            return self.get(request, *args, **kwargs)
+
         storage_request = self.storage_request
 
         # Validate that all checklist items are approved
@@ -232,10 +349,6 @@ class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
             logger.exception(
                 f'Error completing storage request {storage_request.pk}: {e}')
             return self.get(request, *args, **kwargs)
-
-    def test_func(self):
-        # Override to customize permission checks for this view
-        return True
 
     def _get_checklist(self):
         """Return a nested list, where each row contains the details of
@@ -302,7 +415,8 @@ class StorageRequestDetailView(LoginRequiredMixin, StorageRequestViewMixin,
             state['setup']['status'] == 'Complete')
 
 
-class StorageRequestListView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+class StorageRequestListView(LoginRequiredMixin, StorageRequestViewAllAccessMixin,
+                             TemplateView):
     template_name = 'cluster_storage/approval/storage_request_list.html'
 
     def get_context_data(self, **kwargs):
@@ -362,13 +476,11 @@ class StorageRequestListView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
 
         return context
 
-    def test_func(self):
-        # TODO
-        return True
 
-
-class StorageRequestEditView(LoginRequiredMixin, StorageRequestViewMixin,
-                             UserPassesTestMixin, FormView):
+class StorageRequestEditView(LoginRequiredMixin,
+                             StorageRequestAdminAccessMixin,
+                             StorageRequestViewMixin,
+                             FormView):
     form_class = StorageRequestEditForm
     template_name = 'cluster_storage/approval/storage_request_review.html'
 
@@ -409,8 +521,8 @@ class StorageRequestEditView(LoginRequiredMixin, StorageRequestViewMixin,
 
 
 class StorageRequestReviewEligibilityView(LoginRequiredMixin,
+                                          StorageRequestAdminAccessMixin,
                                           StorageRequestViewMixin,
-                                          UserPassesTestMixin,
                                           FormView):
     form_class = StorageRequestReviewStatusForm
     template_name = 'cluster_storage/approval/storage_request_review.html'
@@ -454,8 +566,8 @@ class StorageRequestReviewEligibilityView(LoginRequiredMixin,
 
 
 class StorageRequestReviewIntakeConsistencyView(LoginRequiredMixin,
+                                                StorageRequestAdminAccessMixin,
                                                 StorageRequestViewMixin,
-                                                UserPassesTestMixin,
                                                 FormView):
     form_class = StorageRequestReviewStatusForm
     template_name = 'cluster_storage/approval/storage_request_review.html'
@@ -498,8 +610,8 @@ class StorageRequestReviewIntakeConsistencyView(LoginRequiredMixin,
 
 
 class StorageRequestReviewSetupView(LoginRequiredMixin,
+                                    StorageRequestAdminAccessMixin,
                                     StorageRequestViewMixin,
-                                    UserPassesTestMixin,
                                     FormView):
     form_class = StorageRequestReviewSetupForm
     template_name = 'cluster_storage/approval/storage_request_review.html'
@@ -543,8 +655,10 @@ class StorageRequestReviewSetupView(LoginRequiredMixin,
         return super().form_valid(form)
 
 
-class StorageRequestReviewDenyView(LoginRequiredMixin, StorageRequestViewMixin,
-                                   UserPassesTestMixin, FormView):
+class StorageRequestReviewDenyView(LoginRequiredMixin,
+                                   StorageRequestAdminAccessMixin,
+                                   StorageRequestViewMixin,
+                                   FormView):
     form_class = StorageRequestReviewDenyForm
     template_name = 'cluster_storage/approval/storage_request_review.html'
 
@@ -585,8 +699,10 @@ class StorageRequestReviewDenyView(LoginRequiredMixin, StorageRequestViewMixin,
         return super().form_valid(form)
 
 
-class StorageRequestUndenyView(LoginRequiredMixin, StorageRequestViewMixin,
-                               UserPassesTestMixin, View):
+class StorageRequestUndenyView(LoginRequiredMixin,
+                               StorageRequestAdminAccessMixin,
+                               StorageRequestViewMixin,
+                               View):
 
     def dispatch(self, request, *args, **kwargs):
         """Check if the request can be undenied."""
@@ -644,6 +760,7 @@ __all__ = [
     'StorageRequestReviewSetupView',
     'StorageRequestUndenyView',
 ]
+
 
 # TODO: Should the state only be updated by the request service? We're exposing
 #  the structure of the request.

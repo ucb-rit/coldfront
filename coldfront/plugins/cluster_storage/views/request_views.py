@@ -21,17 +21,27 @@ class StorageRequestAccessMixin(UserPassesTestMixin):
 
     Requires that the view has a `_project_obj` attribute set before
     test_func is called (typically in dispatch).
+
+    For GET requests (viewing), allows:
+    - Superusers
+    - Users with view or manage storage permissions
+    - Active managers or PIs of the project
+
+    For POST requests (creating/modifying), only allows:
+    - Superusers
+    - Active managers or PIs of the project
     """
 
     def test_func(self):
-        """Check if the user has permission to access storage
-        requests."""
+        """Check if the user has permission to access storage requests."""
         user = self.request.user
+        is_post = self.request.method == 'POST'
+
+        # Superusers always have access
         if user.is_superuser:
             return True
 
-        # TODO: Allow certain staff in a particular group?
-
+        # Check access agreement first for all non-superusers
         if not access_agreement_signed(user):
             url = reverse('user-access-agreement')
             message = mark_safe(
@@ -40,6 +50,14 @@ class StorageRequestAccessMixin(UserPassesTestMixin):
             messages.error(self.request, message)
             return False
 
+        # For GET requests, allow users with view/manage permissions
+        if not is_post:
+            if (user.has_perm('cluster_storage.can_view_all_storage_requests') or
+                user.has_perm('cluster_storage.can_manage_storage_requests')):
+                return True
+
+        # For all requests, check if user is manager/PI of the project
+        # (POST requires this, GET accepts this as an alternative to permissions)
         if not is_user_manager_or_pi_of_project(user, self._project_obj):
             message = (
                 'You must be an active Manager or Principal Investigator of '
