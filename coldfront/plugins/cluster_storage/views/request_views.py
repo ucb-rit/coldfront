@@ -1,23 +1,60 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 
 from coldfront.core.project.models import Project
+from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
+from coldfront.core.user.utils import access_agreement_signed
 
 from coldfront.plugins.cluster_storage.forms import StorageRequestForm
 from coldfront.plugins.cluster_storage.services import FacultyStorageAllocationRequestService
 from coldfront.plugins.cluster_storage.services import StorageRequestEligibilityService
 
 
-class StorageRequestLandingView(LoginRequiredMixin, TemplateView):
+class StorageRequestAccessMixin(UserPassesTestMixin):
+    """Mixin to check access permissions for storage requests.
+
+    Requires that the view has a `_project_obj` attribute set before
+    test_func is called (typically in dispatch).
+    """
+
+    def test_func(self):
+        """Check if the user has permission to access storage
+        requests."""
+        user = self.request.user
+        if user.is_superuser:
+            return True
+
+        # TODO: Allow certain staff in a particular group?
+
+        if not access_agreement_signed(user):
+            url = reverse('user-access-agreement')
+            message = mark_safe(
+                f'You must sign the <a href="{url}">User Access Agreement</a>.'
+            )
+            messages.error(self.request, message)
+            return False
+
+        if not is_user_manager_or_pi_of_project(user, self._project_obj):
+            message = (
+                'You must be an active Manager or Principal Investigator of '
+                'the project.')
+            messages.error(self.request, message)
+            return False
+
+        return True
+
+
+class StorageRequestLandingView(LoginRequiredMixin, StorageRequestAccessMixin,
+                                TemplateView):
     """A view for the landing page for storage requests."""
 
     template_name = 'cluster_storage/request/storage_request_landing.html'
-
-    # TODO: UserPassesTestMixin + test_func
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -33,13 +70,12 @@ class StorageRequestLandingView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class StorageRequestView(LoginRequiredMixin, FormView):
+class StorageRequestView(LoginRequiredMixin, StorageRequestAccessMixin,
+                         FormView):
     """A view for requesting storage under a particular project."""
 
     form_class = StorageRequestForm
     template_name = 'cluster_storage/request/storage_request_form.html'
-
-    # TODO: UserPassesTestMixin + test_func
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,7 +99,8 @@ class StorageRequestView(LoginRequiredMixin, FormView):
         is_eligible, reason = \
             StorageRequestEligibilityService.is_eligible_for_request(pi)
         if not is_eligible:
-            messages.error(self.request, f'Request cannot be submitted: {reason}')
+            messages.error(
+                self.request, f'Request cannot be submitted: {reason}')
             return self.form_invalid(form)
 
         try:
