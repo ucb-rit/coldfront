@@ -132,3 +132,7 @@ class FacultyStorageAllocationRequest(TimeStampedModel):
     class Meta:
         verbose_name = 'Faculty Storage Allocation Request'
         verbose_name_plural = 'Faculty Storage Allocation Requests'
+        permissions = [
+            ('can_view_all_storage_requests', 'Can view all storage requests'),
+            ('can_manage_storage_requests', 'Can manage storage requests'),
+        ]
