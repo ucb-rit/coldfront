@@ -56,6 +56,7 @@ class Command(BaseCommand):
 
         faculty_storage_allocation_request_status_choice_names = (
             'Under Review',
+            'Approved - Queued',
             'Approved - Processing',
             'Approved - Complete',
             'Denied',

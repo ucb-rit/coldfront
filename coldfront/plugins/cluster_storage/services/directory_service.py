@@ -204,11 +204,26 @@ class DirectoryService:
         Args:
             additional_gb: The amount to add in GB
         """
+        # Get current quota (returns 0 if none exists)
+        current_quota_gb = self.get_current_quota_gb()
+
+        # Calculate new quota
+        new_quota_gb = current_quota_gb + additional_gb
+
+        # Set the new quota (handles both create and update)
+        self.set_directory_quota(new_quota_gb)
+
+    def get_current_quota_gb(self):
+        """
+        Get the current storage quota for the directory.
+
+        Returns:
+            The current quota in GB (int), or 0 if no allocation exists
+            or no quota is set.
+        """
         allocation = self._get_allocation(refresh=True)
         if allocation is None:
-            raise ValueError(
-                'Cannot add to quota: directory allocation does not exist.'
-            )
+            return 0
 
         quota_attribute_type = AllocationAttributeType.objects.get(
             name='Storage Quota (GB)')
@@ -218,17 +233,9 @@ class DirectoryService:
                 allocation_attribute_type=quota_attribute_type,
                 allocation=allocation
             )
-            current_quota = int(quota_attr.value)
-            new_quota = current_quota + additional_gb
-            quota_attr.value = str(new_quota)
-            quota_attr.save()
+            return int(quota_attr.value)
         except AllocationAttribute.DoesNotExist:
-            # No existing quota, just set it
-            AllocationAttribute.objects.create(
-                allocation_attribute_type=quota_attribute_type,
-                allocation=allocation,
-                value=str(additional_gb)
-            )
+            return 0
 
     def add_user_to_directory(self, user):
         """

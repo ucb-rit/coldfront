@@ -9,6 +9,8 @@
             <span class="badge badge-warning" style="float:right; position:relative; top:5px;">{{ status }}</span>
           {% elif status == 'Approved - Processing' %}
             <span class="badge badge-warning" style="float:right; position:relative; top:5px;">{{ status }}</span>
+          {% elif status == 'Approved - Queued' %}
+            <span class="badge badge-warning" style="float:right; position:relative; top:5px;">{{ status }}</span>
           {% elif status == 'Approved - Complete' %}
             <span class="badge badge-success" style="float:right; position:relative; top:5px;">{{ status }}</span>
           {% else %}

@@ -177,7 +177,7 @@ class StorageRequestViewMixin(StorageRequestAmountMixin):
 
         - If either review is denied: Call deny_request to update overall status
         - If both eligibility and intake consistency are approved:
-          Move to "Approved - Processing" status
+          Move to "Approved - Queued" status (waiting for agent to process)
         - If either review is pending and request is in an approved state:
           Move back to "Under Review" status
 

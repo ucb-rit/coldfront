@@ -1,3 +1,5 @@
+from django.db import transaction
+
 from coldfront.core.utils.common import utc_now_offset_aware
 
 from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequest
@@ -28,10 +30,83 @@ class FacultyStorageAllocationRequestService:
     @staticmethod
     def approve_request(request, email_strategy=None):
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
-            name='Approved - Processing')
+            name='Approved - Queued')
         request.status = status
         request.approval_time = utc_now_offset_aware()
         request.save()
+
+    @staticmethod
+    def claim_next_request():
+        """Atomically claim the next queued request for processing.
+
+        This transitions the oldest request from 'Approved - Queued' to
+        'Approved - Processing', claiming it for the agent to work on.
+
+        Also handles automatic recovery of requests that were claimed but never
+        completed (e.g., due to agent crash). Requests stuck in 'Approved - Processing'
+        for more than 30 minutes are automatically reclaimed.
+
+        Uses select_for_update(skip_locked=True) to prevent race conditions
+        when multiple agents are running.
+
+        Returns:
+            FacultyStorageAllocationRequest: The claimed request, or None if
+                no requests are available.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Timeout for stale processing requests (configurable)
+        PROCESSING_TIMEOUT_MINUTES = 30
+
+        with transaction.atomic():
+            queued_status = FacultyStorageAllocationRequestStatusChoice.objects.get(
+                name='Approved - Queued')
+            processing_status = FacultyStorageAllocationRequestStatusChoice.objects.get(
+                name='Approved - Processing')
+
+            # First priority: Find the oldest queued request
+            storage_request = (
+                FacultyStorageAllocationRequest.objects
+                .filter(status=queued_status)
+                .select_for_update(skip_locked=True)
+                .order_by('approval_time', 'request_time')
+                .first()
+            )
+
+            # Second priority: If no queued requests, look for stale processing requests
+            if not storage_request:
+                timeout_threshold = timezone.now() - timedelta(minutes=PROCESSING_TIMEOUT_MINUTES)
+
+                storage_request = (
+                    FacultyStorageAllocationRequest.objects
+                    .filter(
+                        status=processing_status,
+                        modified__lt=timeout_threshold  # Stuck for too long
+                    )
+                    .select_for_update(skip_locked=True)
+                    .order_by('modified')
+                    .first()
+                )
+
+                if storage_request:
+                    logger.warning(
+                        f'Reclaiming stale request {storage_request.id} that has been '
+                        f'in Processing state since {storage_request.modified} '
+                        f'(project: {storage_request.project.name})'
+                    )
+
+            if storage_request:
+                # Claim or reclaim this request by ensuring it's in Processing state
+                storage_request.status = processing_status
+                storage_request.save()
+
+                logger.info(
+                    f'Request {storage_request.id} claimed for processing '
+                    f'(project: {storage_request.project.name})'
+                )
+
+            return storage_request
 
     @staticmethod
     def complete_request(request, directory_name, email_strategy=None):

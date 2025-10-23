@@ -20,6 +20,7 @@ class StorageRequestSearchForm(forms.Form):
     STATUS_CHOICES = (
         ('', '-----'),
         ('Approved - Complete', 'Approved - Complete'),
+        ('Approved - Queued', 'Approved - Queued'),
         ('Approved - Processing', 'Approved - Processing'),
         ('Denied', 'Denied'),
         ('Under Review', 'Under Review'),

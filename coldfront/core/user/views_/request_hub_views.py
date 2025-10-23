@@ -131,7 +131,8 @@ class RequestHubView(LoginRequiredMixin,
         if not self.show_all_requests:
             args.append(Q(pi=user) | Q(requester=user))
 
-        pending_status_names = ['Under Review', 'Approved - Processing']
+        pending_status_names = [
+            'Under Review', 'Approved - Processing', 'Approved - Queued']
         storage_request_list_pending = \
             FacultyStorageAllocationRequest.objects.filter(
                 status__name__in=pending_status_names, *args
@@ -277,7 +278,8 @@ class RequestHubView(LoginRequiredMixin,
         if not self.show_all_requests:
             args.append(Q(pi=user) | Q(requester=user))
 
-        pending_status_names = ['Under Review', 'Approved - Processing']
+        pending_status_names = [
+            'Under Review', 'Approved - Processing']
         project_request_pending = \
             annotate_queryset_with_allocation_period_not_started_bool(
                 SavioProjectAllocationRequest.objects.filter(
