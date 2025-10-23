@@ -109,25 +109,98 @@ class FacultyStorageAllocationRequestService:
             return storage_request
 
     @staticmethod
-    def update_setup_state(request, directory_name):
-        """Update the setup state to Complete with the given directory name.
+    def update_eligibility_state(request, status, justification):
+        """Update the eligibility review state.
+
+        This encapsulates the state structure for eligibility checks.
+
+        Args:
+            request: The FacultyStorageAllocationRequest to update
+            status: The new status ('Pending', 'Approved', or 'Denied')
+            justification: The justification text for the decision
+        """
+        state = request.state
+        state['eligibility']['status'] = status
+        state['eligibility']['justification'] = justification
+        state['eligibility']['timestamp'] = utc_now_offset_aware().isoformat()
+        request.state = state
+        request.save()
+
+        logger.info(
+            f'Request {request.pk}: eligibility state updated to {status}'
+        )
+
+    @staticmethod
+    def update_intake_consistency_state(request, status, justification):
+        """Update the intake consistency review state.
+
+        This encapsulates the state structure for intake consistency checks.
+
+        Args:
+            request: The FacultyStorageAllocationRequest to update
+            status: The new status ('Pending', 'Approved', or 'Denied')
+            justification: The justification text for the decision
+        """
+        state = request.state
+        state['intake_consistency']['status'] = status
+        state['intake_consistency']['justification'] = justification
+        state['intake_consistency']['timestamp'] = utc_now_offset_aware().isoformat()
+        request.state = state
+        request.save()
+
+        logger.info(
+            f'Request {request.pk}: intake_consistency state updated to {status}'
+        )
+
+    @staticmethod
+    def update_setup_state(request, directory_name=None, status='Complete'):
+        """Update the setup state.
 
         This encapsulates the state structure and can be called from both
         the manual UI workflow and the automated API workflow.
 
         Args:
             request: The FacultyStorageAllocationRequest to update
-            directory_name: The name of the directory that was/will be created
+            directory_name: The name of the directory (required if status='Complete')
+            status: The setup status ('Pending' or 'Complete')
         """
         state = request.state
-        state['setup']['status'] = 'Complete'
-        state['setup']['directory_name'] = directory_name
+        state['setup']['status'] = status
+        if directory_name is not None:
+            state['setup']['directory_name'] = directory_name
         state['setup']['timestamp'] = utc_now_offset_aware().isoformat()
         request.state = state
         request.save()
 
+        if directory_name:
+            logger.info(
+                f'Request {request.pk}: setup state updated to {status} '
+                f'with directory_name={directory_name}'
+            )
+        else:
+            logger.info(
+                f'Request {request.pk}: setup state updated to {status}'
+            )
+
+    @staticmethod
+    def update_other_state(request, justification):
+        """Update the 'other' denial reason state.
+
+        This is used when denying a request for a reason not covered by
+        the standard review steps.
+
+        Args:
+            request: The FacultyStorageAllocationRequest to update
+            justification: The justification text for the denial
+        """
+        state = request.state
+        state['other']['justification'] = justification
+        state['other']['timestamp'] = utc_now_offset_aware().isoformat()
+        request.state = state
+        request.save()
+
         logger.info(
-            f'Request {request.pk}: setup state updated with directory_name={directory_name}'
+            f'Request {request.pk}: other denial reason set'
         )
 
     @staticmethod
@@ -228,20 +301,20 @@ class FacultyStorageAllocationRequestService:
         # Reset eligibility to Pending if it was denied
         eligibility = state['eligibility']
         if eligibility['status'] == 'Denied':
-            eligibility['status'] = 'Pending'
+            FacultyStorageAllocationRequestService.update_eligibility_state(
+                request, 'Pending', eligibility.get('justification', ''))
 
         # Reset intake_consistency to Pending if it was denied
         intake_consistency = state['intake_consistency']
         if intake_consistency['status'] == 'Denied':
-            intake_consistency['status'] = 'Pending'
+            FacultyStorageAllocationRequestService.update_intake_consistency_state(
+                request, 'Pending', intake_consistency.get('justification', ''))
 
         # Clear any 'other' denial reason if it exists
         other = state['other']
-        if other['timestamp']:
-            state['other']['justification'] = ''
-            state['other']['timestamp'] = ''
-
-        request.state = state
+        if other.get('timestamp'):
+            FacultyStorageAllocationRequestService.update_other_state(
+                request, '')
 
         # Update overall status to Under Review
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(

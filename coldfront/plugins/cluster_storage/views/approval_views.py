@@ -547,13 +547,9 @@ class StorageRequestReviewEligibilityView(LoginRequiredMixin,
         status = form.cleaned_data['status']
         justification = form.cleaned_data['justification']
 
-        # Update state
-        state = self.storage_request.state
-        state['eligibility']['status'] = status
-        state['eligibility']['justification'] = justification
-        state['eligibility']['timestamp'] = utc_now_offset_aware().isoformat()
-        self.storage_request.state = state
-        self.storage_request.save()
+        # Use service to update state
+        FacultyStorageAllocationRequestService.update_eligibility_state(
+            self.storage_request, status, justification)
 
         # Update overall request status based on review statuses
         # (handles approval, denial, or reversion to Under Review)
@@ -591,13 +587,9 @@ class StorageRequestReviewIntakeConsistencyView(LoginRequiredMixin,
         status = form.cleaned_data['status']
         justification = form.cleaned_data['justification']
 
-        # Update state
-        state = self.storage_request.state
-        state['intake_consistency']['status'] = status
-        state['intake_consistency']['justification'] = justification
-        state['intake_consistency']['timestamp'] = utc_now_offset_aware().isoformat()
-        self.storage_request.state = state
-        self.storage_request.save()
+        # Use service to update state
+        FacultyStorageAllocationRequestService.update_intake_consistency_state(
+            self.storage_request, status, justification)
 
         # Update overall request status based on review statuses
         # (handles approval, denial, or reversion to Under Review)
@@ -639,19 +631,23 @@ class StorageRequestReviewSetupView(LoginRequiredMixin,
         # Use the service to update setup state
         if status == 'Complete':
             FacultyStorageAllocationRequestService.update_setup_state(
-                self.storage_request, directory_name)
+                self.storage_request,
+                directory_name=directory_name,
+                status='Complete'
+            )
+            messages.success(
+                self.request,
+                f'Setup marked as complete with directory: {directory_name}'
+            )
         else:
-            # If marking as Pending, just update the status field
-            state = self.storage_request.state
-            state['setup']['status'] = status
-            state['setup']['timestamp'] = utc_now_offset_aware().isoformat()
-            self.storage_request.state = state
-            self.storage_request.save()
-
-        messages.success(
-            self.request,
-            f'Setup status updated to {status}.'
-        )
+            FacultyStorageAllocationRequestService.update_setup_state(
+                self.storage_request,
+                status=status
+            )
+            messages.success(
+                self.request,
+                f'Setup status updated to {status}.'
+            )
 
         return super().form_valid(form)
 
@@ -680,13 +676,10 @@ class StorageRequestReviewDenyView(LoginRequiredMixin,
     def form_valid(self, form):
         """Deny the request with the provided justification."""
         justification = form.cleaned_data['justification']
-        state = self.storage_request.state
-        state['other'] = {
-            'justification': justification,
-            'timestamp': utc_now_offset_aware().isoformat(),
-        }
-        self.storage_request.state = state
-        self.storage_request.save()
+
+        # Use service to update state
+        FacultyStorageAllocationRequestService.update_other_state(
+            self.storage_request, justification)
 
         FacultyStorageAllocationRequestService.deny_request(
             self.storage_request
@@ -762,6 +755,3 @@ __all__ = [
     'StorageRequestUndenyView',
 ]
 
-
-# TODO: Should the state only be updated by the request service? We're exposing
-#  the structure of the request.
