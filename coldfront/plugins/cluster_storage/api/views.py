@@ -52,15 +52,19 @@ def complete_storage_request(request, pk):
 
     This endpoint:
     1. Validates the request is in 'Approved - Processing' status
-    2. Calls the existing complete_request service method
-    3. Returns success
+    2. Validates the provided directory_name
+    3. Calls the existing complete_request service method
+    4. Returns success
 
     Args:
         pk: The ID of the storage request to complete
 
+    Request Body:
+        directory_name: The directory name used for the storage allocation
+
     Returns:
         200 OK: Request completed successfully
-        400 Bad Request: Request is not in the correct status
+        400 Bad Request: Request is not in the correct status or invalid input
         404 Not Found: Request does not exist
     """
     try:
@@ -83,15 +87,19 @@ def complete_storage_request(request, pk):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Get the directory name from the request state
-    directory_name = storage_request.state.get(
-        'setup', {}).get('directory_name', '')
-    if not directory_name:
-        directory_name = storage_request.project.name
+    # Validate the request body
+    serializer = StorageRequestCompletionSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    directory_name = serializer.validated_data['directory_name']
 
     try:
         # Call the existing service to complete the request
-        # This will update the database quota and send notification emails
+        # This will update setup state, database quota, and send notification emails
         FacultyStorageAllocationRequestService.complete_request(
             storage_request,
             directory_name,
@@ -100,7 +108,7 @@ def complete_storage_request(request, pk):
 
         logger.info(
             f'Storage request {pk} completed successfully for '
-            f'project {storage_request.project.name}'
+            f'project {storage_request.project.name} with directory {directory_name}'
         )
 
         return Response(

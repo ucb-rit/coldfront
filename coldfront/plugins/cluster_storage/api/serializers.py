@@ -73,6 +73,19 @@ class StorageRequestNextSerializer(serializers.ModelSerializer):
 
 
 class StorageRequestCompletionSerializer(serializers.Serializer):
-    """Serializer for marking a storage request as complete."""
-    # No input fields needed - just calling the endpoint marks it complete
-    pass
+    """Serializer for marking a storage request as complete.
+
+    The agent must provide the directory_name it actually used when setting
+    the quota. This ensures the state accurately reflects what was done.
+    """
+    directory_name = serializers.CharField(
+        required=True,
+        max_length=255,
+        help_text="The directory name used for the storage allocation"
+    )
+
+    def validate_directory_name(self, value):
+        """Validate the directory name is not empty."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Directory name cannot be empty.")
+        return value.strip()

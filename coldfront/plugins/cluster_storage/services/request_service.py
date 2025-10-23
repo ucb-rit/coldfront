@@ -109,12 +109,38 @@ class FacultyStorageAllocationRequestService:
             return storage_request
 
     @staticmethod
+    def update_setup_state(request, directory_name):
+        """Update the setup state to Complete with the given directory name.
+
+        This encapsulates the state structure and can be called from both
+        the manual UI workflow and the automated API workflow.
+
+        Args:
+            request: The FacultyStorageAllocationRequest to update
+            directory_name: The name of the directory that was/will be created
+        """
+        state = request.state
+        state['setup']['status'] = 'Complete'
+        state['setup']['directory_name'] = directory_name
+        state['setup']['timestamp'] = utc_now_offset_aware().isoformat()
+        request.state = state
+        request.save()
+
+        logger.info(
+            f'Request {request.pk}: setup state updated with directory_name={directory_name}'
+        )
+
+    @staticmethod
     def complete_request(request, directory_name, email_strategy=None):
         # Check if already completed to avoid double-processing
         if request.status.name == 'Approved - Complete':
             logger.warning(
                 f'Request {request.pk} is already completed, skipping')
             return
+
+        # Update setup state (idempotent - safe to call multiple times)
+        FacultyStorageAllocationRequestService.update_setup_state(
+            request, directory_name)
 
         # If approved amount wasn't explicitly set, set it to requested amount
         if request.approved_amount_gb is None:

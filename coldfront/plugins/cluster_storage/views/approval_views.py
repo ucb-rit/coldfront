@@ -636,13 +636,17 @@ class StorageRequestReviewSetupView(LoginRequiredMixin,
         # Set the directory name to the project name.
         directory_name = self.storage_request.project.name
 
-        # Update state
-        state = self.storage_request.state
-        state['setup']['status'] = status
-        state['setup']['directory_name'] = directory_name
-        state['setup']['timestamp'] = utc_now_offset_aware().isoformat()
-        self.storage_request.state = state
-        self.storage_request.save()
+        # Use the service to update setup state
+        if status == 'Complete':
+            FacultyStorageAllocationRequestService.update_setup_state(
+                self.storage_request, directory_name)
+        else:
+            # If marking as Pending, just update the status field
+            state = self.storage_request.state
+            state['setup']['status'] = status
+            state['setup']['timestamp'] = utc_now_offset_aware().isoformat()
+            self.storage_request.state = state
+            self.storage_request.save()
 
         messages.success(
             self.request,
