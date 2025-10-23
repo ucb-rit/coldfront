@@ -481,6 +481,26 @@ class StorageRequestEditView(LoginRequiredMixin,
     form_class = StorageRequestEditForm
     template_name = 'cluster_storage/approval/storage_request_review.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        """Check if the request can be edited."""
+        # Call parent dispatch first to set self.storage_request
+        response = super().dispatch(request, *args, **kwargs)
+
+        # Only allow editing if request is "Under Review"
+        if self.storage_request.status.name != 'Under Review':
+            messages.error(
+                request,
+                f'Cannot edit storage amount: request is in status '
+                f'"{self.storage_request.status.name}". '
+                f'Amount can only be edited while Under Review.'
+            )
+            return HttpResponseRedirect(
+                reverse('storage-request-detail',
+                       kwargs={'pk': self.storage_request.pk})
+            )
+
+        return response
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['explanatory_paragraph'] = (
