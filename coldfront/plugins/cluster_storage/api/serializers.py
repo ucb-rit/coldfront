@@ -66,8 +66,8 @@ class StorageRequestNextSerializer(serializers.ModelSerializer):
         current_quota_gb = directory_service.get_current_quota_gb()
 
         # Add the approved amount to get the total size to set
-        approved_amount = obj.approved_amount_gb or obj.requested_amount_gb
-        set_size_gb = current_quota_gb + approved_amount
+        # approved_amount_gb is guaranteed to be set by approve_request()
+        set_size_gb = current_quota_gb + obj.approved_amount_gb
 
         return set_size_gb
 

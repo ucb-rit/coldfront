@@ -33,6 +33,16 @@ class FacultyStorageAllocationRequestService:
             name='Approved - Queued')
         request.status = status
         request.approval_time = utc_now_offset_aware()
+
+        # Set approved amount to requested amount if not explicitly set
+        # This ensures all approved requests have an approved amount
+        if request.approved_amount_gb is None:
+            request.approved_amount_gb = request.requested_amount_gb
+            logger.info(
+                f'Request {request.pk}: approved_amount_gb set to '
+                f'requested_amount_gb ({request.requested_amount_gb} GB)'
+            )
+
         request.save()
 
     @staticmethod
@@ -215,13 +225,7 @@ class FacultyStorageAllocationRequestService:
         FacultyStorageAllocationRequestService.update_setup_state(
             request, directory_name)
 
-        # If approved amount wasn't explicitly set, set it to requested amount
-        if request.approved_amount_gb is None:
-            request.approved_amount_gb = request.requested_amount_gb
-            logger.info(
-                f'Request {request.pk}: approved_amount_gb not set, '
-                f'defaulting to requested_amount_gb ({request.requested_amount_gb} GB)')
-
+        # Update status to complete
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
             name='Approved - Complete')
         request.status = status
@@ -230,7 +234,7 @@ class FacultyStorageAllocationRequestService:
 
         directory_service = DirectoryService(request.project, directory_name)
 
-        # Use the approved amount (now guaranteed to be set)
+        # Use the approved amount (guaranteed to be set by approve_request)
         amount_gb = request.approved_amount_gb
 
         if directory_service.directory_exists():
