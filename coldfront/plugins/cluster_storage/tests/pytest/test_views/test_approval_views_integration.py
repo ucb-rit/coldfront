@@ -360,6 +360,45 @@ class TestStorageRequestAdminAccessMixin:
         # Should be denied (review views are admin-only)
         assert response.status_code in [302, 403]
 
+    def test_non_staff_user_with_permission_can_access(
+        self, client, test_project, test_pi, test_user
+    ):
+        """Test non-staff users with can_manage permission can access.
+
+        This verifies that is_staff is not required - only the
+        can_manage_storage_requests permission matters.
+        """
+        from django.contrib.auth.models import Permission
+
+        request = create_storage_request(
+            status='Under Review',
+            project=test_project,
+            requester=test_user,
+            pi=test_pi,
+            requested_amount_gb=1000
+        )
+
+        # Create NON-STAFF user with the permission
+        non_staff_admin = User.objects.create_user(
+            username='non_staff_admin',
+            email='non_staff_admin@test.com',
+            is_staff=False  # Explicitly not staff
+        )
+        permission = Permission.objects.get(
+            codename='can_manage_storage_requests'
+        )
+        non_staff_admin.user_permissions.add(permission)
+
+        client.force_login(non_staff_admin)
+
+        # Try to access review view
+        url = reverse('storage-request-review-eligibility',
+                     kwargs={'pk': request.pk})
+        response = client.get(url)
+
+        # Should allow access
+        assert response.status_code == 200
+
 
 @pytest.mark.component
 class TestStorageRequestReviewEligibilityView:

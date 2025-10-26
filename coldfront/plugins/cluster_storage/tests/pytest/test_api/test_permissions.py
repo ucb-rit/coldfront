@@ -111,3 +111,26 @@ class TestIsSuperuserOrHasManagePermission:
         view = Mock()
 
         assert permission.has_permission(request, view) is True
+
+    def test_allows_non_staff_with_permission(self):
+        """Test non-staff users with manage permission are allowed.
+
+        This verifies that is_staff is not required - only the
+        can_manage_storage_requests permission matters.
+        """
+        permission = IsSuperuserOrHasManagePermission()
+
+        # Mock request with NON-STAFF user who has the permission
+        request = Mock()
+        request.user = Mock()
+        request.user.is_authenticated = True
+        request.user.is_superuser = False
+        request.user.is_staff = False  # Explicitly not staff
+        request.user.has_perm.return_value = True
+
+        view = Mock()
+
+        result = permission.has_permission(request, view)
+
+        # Should still be allowed (permission is what matters, not staff status)
+        assert result is True

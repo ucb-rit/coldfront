@@ -520,3 +520,34 @@ class TestAPIPermissions:
 
         # Should be forbidden
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_non_staff_user_with_permission_can_access(
+        self, api_client, db
+    ):
+        """Test non-staff users with can_manage permission can access.
+
+        This verifies that is_staff is not required - only the
+        can_manage_storage_requests permission matters.
+        """
+        from django.contrib.auth.models import Permission
+
+        # Create NON-STAFF user with the permission
+        non_staff_user = User.objects.create_user(
+            username='non_staff_admin',
+            email='non_staff_admin@test.com',
+            is_staff=False  # Explicitly not staff
+        )
+        permission = Permission.objects.get(
+            codename='can_manage_storage_requests'
+        )
+        non_staff_user.user_permissions.add(permission)
+
+        token = ExpiringToken.objects.create(user=non_staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+
+        # Execute
+        url = reverse('storage-request-claim-next')
+        response = api_client.post(url)
+
+        # Should not be forbidden (may be 204 if no requests)
+        assert response.status_code != status.HTTP_403_FORBIDDEN
