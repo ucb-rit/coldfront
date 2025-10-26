@@ -70,9 +70,8 @@ class TestStorageRequestNextSerializer:
         assert set(serializer.fields.keys()) == expected_fields
 
     @patch('coldfront.plugins.cluster_storage.services.DirectoryService')
-    @patch('coldfront.core.resource.models.Resource')
     def test_serializer_transforms_data_correctly(
-        self, mock_resource_model, mock_directory_service_class
+        self, mock_directory_service_class
     ):
         """Test serializer transforms model instance to dict correctly."""
         # Setup
@@ -83,15 +82,13 @@ class TestStorageRequestNextSerializer:
             directory_name='fc_custom_dir'
         )
 
-        # Mock Resource query for directory path
-        mock_resource = Mock()
-        mock_base_path_attr = Mock()
-        mock_base_path_attr.value = '/global/scratch/projects/fc'
-        mock_resource.resourceattribute_set.get.return_value = \
-            mock_base_path_attr
-        mock_resource_model.objects.get.return_value = mock_resource
+        # Mock DirectoryService static methods
+        mock_directory_service_class.get_directory_path_for_project.return_value = \
+            '/global/scratch/projects/fc/fc_custom_dir'
+        mock_directory_service_class.get_directory_name_for_project.return_value = \
+            'fc_custom_dir'
 
-        # Mock DirectoryService for current quota
+        # Mock DirectoryService instance for current quota
         mock_service = Mock()
         mock_service.get_current_quota_gb.return_value = 1000
         mock_directory_service_class.return_value = mock_service
@@ -118,21 +115,20 @@ class TestStorageRequestNextSerializer:
             assert serializer.fields[field_name].read_only
 
     @patch('coldfront.plugins.cluster_storage.services.DirectoryService')
-    @patch('coldfront.core.resource.models.Resource')
     def test_get_directory_path_uses_state_directory_name(
-        self, mock_resource_model, mock_directory_service_class
+        self, mock_directory_service_class
     ):
         """Test get_directory_path uses directory_name from state."""
         # Setup
         mock_request = create_mock_request(directory_name='fc_my_special_dir')
 
-        mock_resource = Mock()
-        mock_base_path_attr = Mock()
-        mock_base_path_attr.value = '/global/scratch/projects/fc'
-        mock_resource.resourceattribute_set.get.return_value = \
-            mock_base_path_attr
-        mock_resource_model.objects.get.return_value = mock_resource
+        # Mock DirectoryService static methods
+        mock_directory_service_class.get_directory_path_for_project.return_value = \
+            '/global/scratch/projects/fc/fc_my_special_dir'
+        mock_directory_service_class.get_directory_name_for_project.return_value = \
+            'fc_my_special_dir'
 
+        # Mock DirectoryService instance for current quota
         mock_service = Mock()
         mock_service.get_current_quota_gb.return_value = 0
         mock_directory_service_class.return_value = mock_service
@@ -146,9 +142,8 @@ class TestStorageRequestNextSerializer:
             '/global/scratch/projects/fc/fc_my_special_dir'
 
     @patch('coldfront.plugins.cluster_storage.services.DirectoryService')
-    @patch('coldfront.core.resource.models.Resource')
     def test_get_directory_path_falls_back_to_project_name(
-        self, mock_resource_model, mock_directory_service_class
+        self, mock_directory_service_class
     ):
         """Test get_directory_path uses project name when directory_name not
         set."""
@@ -158,13 +153,14 @@ class TestStorageRequestNextSerializer:
             directory_name=''  # Empty directory name
         )
 
-        mock_resource = Mock()
-        mock_base_path_attr = Mock()
-        mock_base_path_attr.value = '/global/scratch/projects/fc'
-        mock_resource.resourceattribute_set.get.return_value = \
-            mock_base_path_attr
-        mock_resource_model.objects.get.return_value = mock_resource
+        # Mock DirectoryService static methods - when directory_name is empty,
+        # it should fall back to project name
+        mock_directory_service_class.get_directory_path_for_project.return_value = \
+            '/global/scratch/projects/fc/fc_fallback_project'
+        mock_directory_service_class.get_directory_name_for_project.return_value = \
+            'fc_fallback_project'
 
+        # Mock DirectoryService instance for current quota
         mock_service = Mock()
         mock_service.get_current_quota_gb.return_value = 0
         mock_directory_service_class.return_value = mock_service
@@ -178,20 +174,18 @@ class TestStorageRequestNextSerializer:
             '/global/scratch/projects/fc/fc_fallback_project'
 
     @patch('coldfront.plugins.cluster_storage.services.DirectoryService')
-    @patch('coldfront.core.resource.models.Resource')
     def test_get_set_size_gb_adds_current_and_approved(
-        self, mock_resource_model, mock_directory_service_class
+        self, mock_directory_service_class
     ):
         """Test get_set_size_gb calculates total quota correctly."""
         # Setup
         mock_request = create_mock_request(approved_amount_gb=500)
 
-        mock_resource = Mock()
-        mock_base_path_attr = Mock()
-        mock_base_path_attr.value = '/global/scratch/projects/fc'
-        mock_resource.resourceattribute_set.get.return_value = \
-            mock_base_path_attr
-        mock_resource_model.objects.get.return_value = mock_resource
+        # Mock DirectoryService static methods
+        mock_directory_service_class.get_directory_path_for_project.return_value = \
+            '/global/scratch/projects/fc/fc_test_dir'
+        mock_directory_service_class.get_directory_name_for_project.return_value = \
+            'fc_test_dir'
 
         # Current quota is 2000 GB
         mock_service = Mock()
@@ -206,20 +200,18 @@ class TestStorageRequestNextSerializer:
         assert data['set_size_gb'] == 2500
 
     @patch('coldfront.plugins.cluster_storage.services.DirectoryService')
-    @patch('coldfront.core.resource.models.Resource')
     def test_get_set_size_gb_when_no_existing_quota(
-        self, mock_resource_model, mock_directory_service_class
+        self, mock_directory_service_class
     ):
         """Test get_set_size_gb when allocation has no current quota."""
         # Setup
         mock_request = create_mock_request(approved_amount_gb=1000)
 
-        mock_resource = Mock()
-        mock_base_path_attr = Mock()
-        mock_base_path_attr.value = '/global/scratch/projects/fc'
-        mock_resource.resourceattribute_set.get.return_value = \
-            mock_base_path_attr
-        mock_resource_model.objects.get.return_value = mock_resource
+        # Mock DirectoryService static methods
+        mock_directory_service_class.get_directory_path_for_project.return_value = \
+            '/global/scratch/projects/fc/fc_test_dir'
+        mock_directory_service_class.get_directory_name_for_project.return_value = \
+            'fc_test_dir'
 
         # No existing quota
         mock_service = Mock()
@@ -234,22 +226,21 @@ class TestStorageRequestNextSerializer:
         assert data['set_size_gb'] == 1000
 
     @patch('coldfront.plugins.cluster_storage.services.DirectoryService')
-    @patch('coldfront.core.resource.models.Resource')
     def test_serializer_handles_status_object(
-        self, mock_resource_model, mock_directory_service_class
+        self, mock_directory_service_class
     ):
         """Test serializer correctly handles status choice object."""
         # Setup
         mock_request = create_mock_request()
         mock_request.status.name = 'Approved - Queued'
 
-        mock_resource = Mock()
-        mock_base_path_attr = Mock()
-        mock_base_path_attr.value = '/global/scratch/projects/fc'
-        mock_resource.resourceattribute_set.get.return_value = \
-            mock_base_path_attr
-        mock_resource_model.objects.get.return_value = mock_resource
+        # Mock DirectoryService static methods
+        mock_directory_service_class.get_directory_path_for_project.return_value = \
+            '/global/scratch/projects/fc/fc_test_dir'
+        mock_directory_service_class.get_directory_name_for_project.return_value = \
+            'fc_test_dir'
 
+        # Mock DirectoryService instance for current quota
         mock_service = Mock()
         mock_service.get_current_quota_gb.return_value = 0
         mock_directory_service_class.return_value = mock_service

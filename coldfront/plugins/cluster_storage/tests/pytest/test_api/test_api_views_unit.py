@@ -27,9 +27,10 @@ class TestClaimNextRequestView:
         # Assert - should require authentication (401 Unauthorized)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
+    @patch('django.db.transaction.atomic')
     @patch('coldfront.plugins.cluster_storage.api.views.'
            'FacultyStorageAllocationRequestService')
-    def test_view_calls_service_claim_method(self, mock_service):
+    def test_view_calls_service_claim_method(self, mock_service, mock_atomic):
         """Test view delegates to RequestService.claim_next_request()."""
         # Setup
         factory = APIRequestFactory()
@@ -37,7 +38,12 @@ class TestClaimNextRequestView:
 
         # Authenticate request
         mock_user = Mock()
+        mock_user.is_superuser = True  # Bypass permission check
         force_authenticate(request, user=mock_user)
+
+        # Mock transaction.atomic() to be a no-op context manager
+        mock_atomic.return_value.__enter__ = Mock()
+        mock_atomic.return_value.__exit__ = Mock(return_value=False)
 
         # Mock service returning a request
         mock_request = Mock()
@@ -58,9 +64,10 @@ class TestClaimNextRequestView:
         mock_service.claim_next_request.assert_called_once()
         assert response.status_code == status.HTTP_200_OK
 
+    @patch('django.db.transaction.atomic')
     @patch('coldfront.plugins.cluster_storage.api.views.'
            'FacultyStorageAllocationRequestService')
-    def test_view_returns_204_if_no_requests(self, mock_service):
+    def test_view_returns_204_if_no_requests(self, mock_service, mock_atomic):
         """Test view returns 204 when no requests available."""
         # Setup
         factory = APIRequestFactory()
@@ -68,7 +75,12 @@ class TestClaimNextRequestView:
 
         # Authenticate request
         mock_user = Mock()
+        mock_user.is_superuser = True  # Bypass permission check
         force_authenticate(request, user=mock_user)
+
+        # Mock transaction.atomic() to be a no-op context manager
+        mock_atomic.return_value.__enter__ = Mock()
+        mock_atomic.return_value.__exit__ = Mock(return_value=False)
 
         # Mock service returning None (no requests)
         mock_service.claim_next_request.return_value = None
@@ -80,12 +92,13 @@ class TestClaimNextRequestView:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert 'No storage requests available' in response.data['detail']
 
+    @patch('django.db.transaction.atomic')
     @patch('coldfront.plugins.cluster_storage.api.views.'
            'FacultyStorageAllocationRequestService')
     @patch('coldfront.plugins.cluster_storage.api.views.'
            'StorageRequestNextSerializer')
     def test_view_serializes_claimed_request(
-        self, mock_serializer_class, mock_service
+        self, mock_serializer_class, mock_service, mock_atomic
     ):
         """Test view serializes the claimed request."""
         # Setup
@@ -94,7 +107,12 @@ class TestClaimNextRequestView:
 
         # Authenticate request
         mock_user = Mock()
+        mock_user.is_superuser = True  # Bypass permission check
         force_authenticate(request, user=mock_user)
+
+        # Mock transaction.atomic() to be a no-op context manager
+        mock_atomic.return_value.__enter__ = Mock()
+        mock_atomic.return_value.__exit__ = Mock(return_value=False)
 
         # Mock claimed request
         mock_request = Mock()
@@ -196,12 +214,13 @@ class TestCompleteRequestView:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert 'directory_name' in response.data
 
+    @patch('django.db.transaction.atomic')
     @patch('coldfront.plugins.cluster_storage.api.views.'
            'FacultyStorageAllocationRequestService')
     @patch('coldfront.plugins.cluster_storage.api.views.'
            'FacultyStorageAllocationRequest')
     def test_view_calls_service_complete_method(
-        self, mock_model, mock_service
+        self, mock_model, mock_service, mock_atomic
     ):
         """Test view delegates to RequestService.complete_request()."""
         # Setup
@@ -214,7 +233,12 @@ class TestCompleteRequestView:
 
         # Authenticate request
         mock_user = Mock()
+        mock_user.is_superuser = True  # Bypass permission check
         force_authenticate(request, user=mock_user)
+
+        # Mock transaction.atomic() to be a no-op context manager
+        mock_atomic.return_value.__enter__ = Mock()
+        mock_atomic.return_value.__exit__ = Mock(return_value=False)
 
         # Mock request object
         mock_storage_request = Mock()
@@ -338,12 +362,13 @@ class TestCompleteRequestView:
         # Service should not be called with invalid data
         mock_service.complete_request.assert_not_called()
 
+    @patch('django.db.transaction.atomic')
     @patch('coldfront.plugins.cluster_storage.api.views.'
            'FacultyStorageAllocationRequestService')
     @patch('coldfront.plugins.cluster_storage.api.views.'
            'FacultyStorageAllocationRequest')
     def test_view_strips_whitespace_from_directory_name(
-        self, mock_model, mock_service
+        self, mock_model, mock_service, mock_atomic
     ):
         """Test view strips whitespace from directory_name."""
         # Setup
@@ -356,7 +381,12 @@ class TestCompleteRequestView:
 
         # Authenticate request
         mock_user = Mock()
+        mock_user.is_superuser = True  # Bypass permission check
         force_authenticate(request, user=mock_user)
+
+        # Mock transaction.atomic() to be a no-op context manager
+        mock_atomic.return_value.__enter__ = Mock()
+        mock_atomic.return_value.__exit__ = Mock(return_value=False)
 
         # Mock request object
         mock_storage_request = Mock()

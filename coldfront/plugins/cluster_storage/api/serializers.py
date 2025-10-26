@@ -34,21 +34,12 @@ class StorageRequestNextSerializer(serializers.ModelSerializer):
 
     def get_directory_path(self, obj):
         """Get the full directory path from the resource attribute."""
-        from coldfront.core.resource.models import Resource
+        from coldfront.plugins.cluster_storage.services import DirectoryService
 
-        directory_name = obj.state.get('setup', {}).get('directory_name', '')
-        if not directory_name:
-            # Fallback to project name if not set
-            directory_name = obj.project.name
-
-        # Get the base path from the resource attribute
-        faculty_storage_resource = Resource.objects.get(
-            name='Scratch Faculty Storage Directory')
-        base_path_attr = faculty_storage_resource.resourceattribute_set.get(
-            resource_attribute_type__name='path')
-
-        # Construct full path using base path + directory name
-        return os.path.join(base_path_attr.value, directory_name)
+        # Use service to get the directory path (handles both pending and existing)
+        return DirectoryService.get_directory_path_for_project(
+            obj.project, storage_request=obj
+        )
 
     def get_set_size_gb(self, obj):
         """Calculate the total size to set (current + approved delta).
@@ -57,9 +48,10 @@ class StorageRequestNextSerializer(serializers.ModelSerializer):
         """
         from coldfront.plugins.cluster_storage.services import DirectoryService
 
-        directory_name = obj.state.get('setup', {}).get('directory_name', '')
-        if not directory_name:
-            directory_name = obj.project.name
+        # Use service to get the directory name (handles both pending and existing)
+        directory_name = DirectoryService.get_directory_name_for_project(
+            obj.project, storage_request=obj
+        )
 
         # Get current quota from the allocation
         directory_service = DirectoryService(obj.project, directory_name)

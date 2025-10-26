@@ -56,20 +56,51 @@ class DirectoryService:
         self._allocation = None
 
     @staticmethod
-    def get_directory_name_for_project(project):
+    def get_faculty_storage_base_path():
         """
-        Look up the directory name for a project's existing faculty
-        storage allocation.
+        Get the base path for faculty storage directories.
+
+        Returns:
+            The base path (string) from the resource attribute
+        """
+        faculty_storage_resource = Resource.objects.get(
+            name='Scratch Faculty Storage Directory')
+        base_path_attr = faculty_storage_resource.resourceattribute_set.get(
+            resource_attribute_type__name='path')
+        return base_path_attr.value
+
+    @staticmethod
+    def get_directory_name_for_project(project, storage_request=None):
+        """
+        Get the directory name for a project's faculty storage.
+
+        This method handles both existing allocations and pending requests:
+        1. If storage_request provided, checks its state for directory_name,
+           then falls back to project name (for pending requests)
+        2. If no storage_request, looks up existing allocation
+        3. Returns None if no allocation exists and no storage_request provided
 
         Args:
             project: The Project object
+            storage_request: Optional FacultyStorageAllocationRequest to check
+                           for proposed directory name
 
         Returns:
             The directory name (string), or None if no allocation exists
+            and no storage_request provided
 
         Raises:
             ValueError: If multiple allocations exist (shouldn't happen)
         """
+        # First check if request has a proposed directory name in state
+        if storage_request:
+            directory_name = storage_request.state.get('setup', {}).get('directory_name', '')
+            if directory_name:
+                return directory_name
+            # For pending requests without setup state, use project name
+            return project.name
+
+        # No storage_request provided, check for existing allocation
         faculty_storage_resource = Resource.objects.get(
             name='Scratch Faculty Storage Directory')
 
@@ -79,6 +110,7 @@ class DirectoryService:
         )
 
         if not allocations.exists():
+            # No existing allocation, return None
             return None
 
         if allocations.count() > 1:
@@ -105,6 +137,27 @@ class DirectoryService:
             directory_name = project.name
 
         return directory_name
+
+    @staticmethod
+    def get_directory_path_for_project(project, storage_request=None):
+        """
+        Get the full directory path for a project's faculty storage.
+
+        Combines the base path with the directory name from
+        get_directory_name_for_project().
+
+        Args:
+            project: The Project object
+            storage_request: Optional FacultyStorageAllocationRequest
+
+        Returns:
+            The full directory path (string)
+        """
+        base_path = DirectoryService.get_faculty_storage_base_path()
+        directory_name = DirectoryService.get_directory_name_for_project(
+            project, storage_request
+        )
+        return os.path.join(base_path, directory_name)
 
     @classmethod
     def for_project(cls, project):

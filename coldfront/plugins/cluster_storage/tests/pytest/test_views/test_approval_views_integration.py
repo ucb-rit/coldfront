@@ -19,7 +19,7 @@ class TestStorageRequestDetailView:
     def test_displays_request_details(
         self, client, test_project, test_user, test_pi
     ):
-        """Test view shows all request information."""
+        """Test view shows all request information including directory path."""
         # Create a request
         request = create_storage_request(
             status='Under Review',
@@ -51,6 +51,12 @@ class TestStorageRequestDetailView:
         assert test_project.name in content
         assert str(request.requested_amount_gb) in content or \
                '2000' in content or '2 TB' in content
+
+        # Check that proposed directory path is displayed
+        assert 'proposed_directory_path' in response.context
+        proposed_path = response.context['proposed_directory_path']
+        assert test_project.name in proposed_path
+        assert proposed_path in content
 
     def test_shows_current_state(
         self, client, test_project, test_user, test_pi

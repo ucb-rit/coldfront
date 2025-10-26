@@ -75,5 +75,11 @@
         {{ pi.first_name }} {{ pi.last_name }} ({{ pi.email }})
       {% endwith %}
     </p>
+    {% if proposed_directory_path %}
+    <p class="card-text text-justify">
+      <strong>Directory: </strong>
+      <code>{{ proposed_directory_path }}</code>
+    </p>
+    {% endif %}
   </div>
 </div>

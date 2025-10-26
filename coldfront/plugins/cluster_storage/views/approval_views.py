@@ -250,6 +250,14 @@ class StorageRequestDetailView(LoginRequiredMixin,
         if self.storage_request.status.name == 'Denied':
             context['denial_reason'] = self.storage_request.denial_reason()
 
+        # Add proposed directory path
+        from coldfront.plugins.cluster_storage.services import DirectoryService
+        context['proposed_directory_path'] = \
+            DirectoryService.get_directory_path_for_project(
+                self.storage_request.project,
+                storage_request=self.storage_request
+            )
+
         context['support_email'] = settings.CENTER_HELP_EMAIL
 
         try:
