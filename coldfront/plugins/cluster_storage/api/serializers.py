@@ -12,7 +12,7 @@ class StorageRequestNextSerializer(serializers.ModelSerializer):
     """Serializer for the next storage request to be processed by the agent.
 
     This includes all information needed for the agent to idempotently set
-    the Lustre quota.
+    the quota.
     """
     directory_path = serializers.SerializerMethodField()
     set_size_gb = serializers.SerializerMethodField()
@@ -53,7 +53,7 @@ class StorageRequestNextSerializer(serializers.ModelSerializer):
     def get_set_size_gb(self, obj):
         """Calculate the total size to set (current + approved delta).
 
-        This is the idempotent quota value the agent should set on Lustre.
+        This is the idempotent quota value the agent should set.
         """
         from coldfront.plugins.cluster_storage.services import DirectoryService
 
