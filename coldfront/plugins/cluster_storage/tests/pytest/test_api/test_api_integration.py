@@ -25,12 +25,22 @@ def api_client():
 
 @pytest.fixture
 def staff_user(db):
-    """Create a staff user for API testing."""
-    return User.objects.create_user(
+    """Create a staff user with manage permission for API testing."""
+    from django.contrib.auth.models import Permission
+
+    user = User.objects.create_user(
         username='api_staff',
         email='api_staff@test.com',
         is_staff=True
     )
+
+    # Add permission to manage storage requests
+    permission = Permission.objects.get(
+        codename='can_manage_storage_requests'
+    )
+    user.user_permissions.add(permission)
+
+    return user
 
 
 @pytest.fixture
@@ -413,3 +423,100 @@ class TestAPIAuthentication:
 
         # Assert - should not be unauthorized (may be 204 if no requests)
         assert response.status_code != status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.component
+class TestAPIPermissions:
+    """Test API permission enforcement."""
+
+    def test_superuser_can_access_claim_endpoint(
+        self, api_client, db
+    ):
+        """Test superusers can access claim endpoint."""
+        # Create superuser
+        superuser = User.objects.create_superuser(
+            username='api_superuser',
+            email='api_superuser@test.com',
+            password='superpass'
+        )
+        token = ExpiringToken.objects.create(user=superuser)
+        api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+
+        # Execute
+        url = reverse('storage-request-claim-next')
+        response = api_client.post(url)
+
+        # Should not be forbidden (may be 204 if no requests)
+        assert response.status_code != status.HTTP_403_FORBIDDEN
+
+    def test_user_with_permission_can_access_claim_endpoint(
+        self, api_client, staff_user, staff_token
+    ):
+        """Test users with can_manage permission can access claim endpoint."""
+        api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_token.key}')
+
+        # Execute
+        url = reverse('storage-request-claim-next')
+        response = api_client.post(url)
+
+        # Should not be forbidden (may be 204 if no requests)
+        assert response.status_code != status.HTTP_403_FORBIDDEN
+
+    def test_regular_user_denied_access_to_claim_endpoint(
+        self, api_client, regular_token
+    ):
+        """Test regular users without permission are denied access."""
+        api_client.credentials(HTTP_AUTHORIZATION=f'Token {regular_token.key}')
+
+        # Execute
+        url = reverse('storage-request-claim-next')
+        response = api_client.post(url)
+
+        # Should be forbidden
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_staff_without_permission_denied_access(
+        self, api_client, db
+    ):
+        """Test staff users without manage permission are denied access."""
+        # Create staff user WITHOUT the permission
+        staff_no_perm = User.objects.create_user(
+            username='staff_no_perm',
+            email='staff_no_perm@test.com',
+            is_staff=True
+        )
+        token = ExpiringToken.objects.create(user=staff_no_perm)
+        api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+
+        # Execute
+        url = reverse('storage-request-claim-next')
+        response = api_client.post(url)
+
+        # Should be forbidden
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_regular_user_denied_access_to_complete_endpoint(
+        self, api_client, regular_token, test_project, test_user, test_pi
+    ):
+        """Test regular users cannot access complete endpoint."""
+        # Create a processing request
+        request_obj = create_storage_request(
+            status='Approved - Processing',
+            project=test_project,
+            requester=test_user,
+            pi=test_pi,
+            approved_amount_gb=1000
+        )
+
+        api_client.credentials(HTTP_AUTHORIZATION=f'Token {regular_token.key}')
+
+        # Execute
+        url = reverse('storage-request-complete', kwargs={'pk': request_obj.id})
+        response = api_client.patch(
+            url,
+            {'directory_name': 'fc_test_dir'},
+            format='json'
+        )
+
+        # Should be forbidden
+        assert response.status_code == status.HTTP_403_FORBIDDEN

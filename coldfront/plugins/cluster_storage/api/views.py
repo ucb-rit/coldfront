@@ -3,20 +3,20 @@ import logging
 
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequest
 from coldfront.plugins.cluster_storage.services import FacultyStorageAllocationRequestService
 from coldfront.plugins.cluster_storage.api.serializers import StorageRequestNextSerializer
 from coldfront.plugins.cluster_storage.api.serializers import StorageRequestCompletionSerializer
+from coldfront.plugins.cluster_storage.api.permissions import IsSuperuserOrHasManagePermission
 
 
 logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsSuperuserOrHasManagePermission])
 def claim_next_storage_request(request):
     """Claim the next storage request to be processed by the agent.
 
@@ -46,7 +46,7 @@ def claim_next_storage_request(request):
 
 
 @api_view(['PATCH'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsSuperuserOrHasManagePermission])
 def complete_storage_request(request, pk):
     """Mark a storage request as complete after processing.
 
