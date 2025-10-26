@@ -65,9 +65,14 @@ class StorageRequestNextSerializer(serializers.ModelSerializer):
         directory_service = DirectoryService(obj.project, directory_name)
         current_quota_gb = directory_service.get_current_quota_gb()
 
+        # If directory doesn't exist yet, current quota is 0
+        if current_quota_gb is None:
+            current_quota_gb = 0
+
         # Add the approved amount to get the total size to set
-        # approved_amount_gb is guaranteed to be set by approve_request()
-        set_size_gb = current_quota_gb + obj.approved_amount_gb
+        # If approved_amount_gb not set, use requested_amount_gb as fallback
+        approved_amount = obj.approved_amount_gb or obj.requested_amount_gb
+        set_size_gb = current_quota_gb + approved_amount
 
         return set_size_gb
 

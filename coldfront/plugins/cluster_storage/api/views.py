@@ -31,18 +31,23 @@ def claim_next_storage_request(request):
         200 OK: Next request details
         204 No Content: No requests available
     """
-    # Use the service to atomically claim the next request
-    storage_request = FacultyStorageAllocationRequestService.claim_next_request()
+    from django.db import transaction
 
-    if not storage_request:
-        return Response(
-            {'detail': 'No storage requests available for processing.'},
-            status=status.HTTP_204_NO_CONTENT
-        )
+    # Wrap entire operation in transaction so serialization errors rollback
+    with transaction.atomic():
+        # Use the service to atomically claim the next request
+        storage_request = FacultyStorageAllocationRequestService.claim_next_request()
 
-    # Serialize and return the claimed request
-    serializer = StorageRequestNextSerializer(storage_request)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+        if not storage_request:
+            return Response(
+                {'detail': 'No storage requests available for processing.'},
+                status=status.HTTP_204_NO_CONTENT
+            )
+
+        # Serialize and return the claimed request
+        # If serialization fails, the transaction will rollback
+        serializer = StorageRequestNextSerializer(storage_request)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['PATCH'])
@@ -67,6 +72,8 @@ def complete_storage_request(request, pk):
         400 Bad Request: Request is not in the correct status or invalid input
         404 Not Found: Request does not exist
     """
+    from django.db import transaction
+
     try:
         storage_request = FacultyStorageAllocationRequest.objects.get(pk=pk)
     except FacultyStorageAllocationRequest.DoesNotExist:
@@ -98,18 +105,20 @@ def complete_storage_request(request, pk):
     directory_name = serializer.validated_data['directory_name']
 
     try:
-        # Call the existing service to complete the request
-        # This will update setup state, database quota, and send notification emails
-        FacultyStorageAllocationRequestService.complete_request(
-            storage_request,
-            directory_name,
-            email_strategy=None
-        )
+        # Wrap in transaction to ensure atomicity
+        with transaction.atomic():
+            # Call the existing service to complete the request
+            # This will update setup state, database quota, and send notification emails
+            FacultyStorageAllocationRequestService.complete_request(
+                storage_request,
+                directory_name,
+                email_strategy=None
+            )
 
-        logger.info(
-            f'Storage request {pk} completed successfully for '
-            f'project {storage_request.project.name} with directory {directory_name}'
-        )
+            logger.info(
+                f'Storage request {pk} completed successfully for '
+                f'project {storage_request.project.name} with directory {directory_name}'
+            )
 
         return Response(
             {'detail': f'Storage request {pk} completed successfully.'},

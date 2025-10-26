@@ -239,11 +239,12 @@ class StorageRequestDetailView(LoginRequiredMixin,
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Only allow editing if user is admin
+        # Only allow editing if user is admin AND status is "Under Review"
         user = self.request.user
         context['allow_editing'] = (
-            user.is_superuser or
-            user.has_perm('cluster_storage.can_manage_storage_requests')
+            (user.is_superuser or
+             user.has_perm('cluster_storage.can_manage_storage_requests')) and
+            self.storage_request.status.name == 'Under Review'
         )
 
         if self.storage_request.status.name == 'Denied':
