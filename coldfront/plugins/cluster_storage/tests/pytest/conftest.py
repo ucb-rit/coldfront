@@ -89,8 +89,10 @@ def test_pi(db):
 
 @pytest.fixture
 def staff_user(db):
-    """Create a staff user for API and admin testing."""
-    return User.objects.create_user(
+    """Create a staff user with manage permissions for API and admin testing."""
+    from django.contrib.auth.models import Permission
+
+    user = User.objects.create_user(
         username='staff',
         email='staff@example.com',
         first_name='Staff',
@@ -98,6 +100,14 @@ def staff_user(db):
         password='staffpass123',
         is_staff=True
     )
+
+    # Add permission to manage storage requests
+    permission = Permission.objects.get(
+        codename='can_manage_storage_requests'
+    )
+    user.user_permissions.add(permission)
+
+    return user
 
 
 @pytest.fixture
