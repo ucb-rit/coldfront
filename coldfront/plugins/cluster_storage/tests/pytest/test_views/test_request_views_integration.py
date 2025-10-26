@@ -345,24 +345,12 @@ class TestStorageRequestDetailView:
         # Should deny access
         assert response.status_code in [302, 403, 404]
 
-    @pytest.mark.xfail(
-        reason="Bug: StorageRequestDetailView mixin order prevents PI/requester "
-               "from viewing own request. test_func() is called before "
-               "self.storage_request is set, so hasattr check fails. "
-               "Fix: reorder mixins to put StorageRequestViewMixin before "
-               "StorageRequestReadOnlyAccessMixin."
-    )
     def test_pi_can_view_own_request(
         self, client, test_project, test_pi,
         project_user_role_pi, project_user_status_active,
         sign_user_access_agreement
     ):
         """Test PI can view their own storage request with access agreement.
-
-        NOTE: This test currently fails due to a bug in the production code.
-        The StorageRequestDetailView's mixin order causes test_func() to be
-        called before self.storage_request is set, so the PI/requester check
-        always fails for non-admin users.
         """
         # Make PI a project member
         ProjectUser.objects.create(

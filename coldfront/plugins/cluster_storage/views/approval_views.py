@@ -232,8 +232,8 @@ class StorageRequestViewMixin(StorageRequestAmountMixin):
 
 
 class StorageRequestDetailView(LoginRequiredMixin,
-                               StorageRequestReadOnlyAccessMixin,
                                StorageRequestViewMixin,
+                               StorageRequestReadOnlyAccessMixin,
                                TemplateView):
     template_name = 'cluster_storage/approval/storage_request_detail.html'
 
