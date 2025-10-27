@@ -164,7 +164,7 @@ class RequestHubView(LoginRequiredMixin,
         storage_request_obj.button_path = 'storage-request-list'
         storage_request_obj.button_text = \
             'Go To Faculty Storage Allocation Requests Main Page'
-        storage_request_obj.id = 'storage_request_section'
+        storage_request_obj.id = 'cluster_storage_request_section'
         storage_request_obj.help_text = \
             'Showing Faculty Storage Allocation requests that you requested ' \
             'or requests in which you are the PI for the associated project.'
