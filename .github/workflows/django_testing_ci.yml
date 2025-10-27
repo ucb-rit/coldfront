@@ -59,6 +59,7 @@ jobs:
       run: |
         python3.10 -m venv ~/venv
         source ~/venv/bin/activate
+        pip install "setuptools<58"
         pip install -r requirements.txt
 
     - name: Create settings files from samples and create log files needed for testing
