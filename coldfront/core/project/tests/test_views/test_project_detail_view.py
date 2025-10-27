@@ -139,7 +139,7 @@ class TestProjectDetailView(TestBase):
             computing_allowance.name)
 
         project = self.create_active_project_with_pi(
-            f'{project_name_prefix}_project', self.user)
+            f'{project_name_prefix}project', self.user)
         create_project_allocation(project, Decimal('0.00'))
 
         project_detail_url = self.project_detail_url(project.pk)
@@ -265,7 +265,7 @@ class TestProjectDetailView(TestBase):
             for allowance in all_allowances:
                 project_name_prefix = project_name_prefixes_by_allowance_name[
                     allowance.name]
-                project.name = f'{project_name_prefix}_project'
+                project.name = f'{project_name_prefix}project'
                 project.save()
                 response = self.client.get(url)
                 if (role.name in eligible_role_names and
@@ -285,7 +285,7 @@ class TestProjectDetailView(TestBase):
         for allowance in all_allowances:
             project_name_prefix = project_name_prefixes_by_allowance_name[
                 allowance.name]
-            project.name = f'{project_name_prefix}_project'
+            project.name = f'{project_name_prefix}project'
             project.save()
             response = self.client.get(url)
             if allowance.name in eligible_allowance_names:
@@ -301,11 +301,97 @@ class TestProjectDetailView(TestBase):
         for allowance in all_allowances:
             project_name_prefix = project_name_prefixes_by_allowance_name[
                 allowance.name]
-            project.name = f'{project_name_prefix}_project'
+            project.name = f'{project_name_prefix}project'
             project.save()
             response = self.client.get(url)
             self.assertNotContains(response, button_text)
         self.user.is_staff = False
         self.user.save()
+
+    @override_settings(FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': True}]})
+    def test_request_storage_link_invisible_for_ineligible_projects(self):
+        """Test that the 'Request Faculty Storage Allocation' link only
+        appears for Projects that are eligible to do so (FCA projects)."""
+        computing_allowance_interface = ComputingAllowanceInterface()
+        expected_num_eligible, actual_num_eligible = 1, 0
+        ineligible_found = False
+
+        for allowance in computing_allowance_interface.allowances():
+            project_name_prefix = computing_allowance_interface.code_from_name(
+                allowance.name)
+            wrapper = ComputingAllowance(allowance)
+            project = self.create_active_project_with_pi(
+                f'{project_name_prefix}project', self.user)
+            create_project_allocation(project, Decimal('0.00'))
+
+            url = self.project_detail_url(project.pk)
+            response = self.client.get(url)
+
+            link_text = 'Request Faculty Storage Allocation'
+
+            # Only FCA projects should see the link
+            if allowance.name == 'Faculty Computing Allowance':
+                self.assertContains(response, link_text)
+                actual_num_eligible += 1
+            else:
+                self.assertNotContains(response, link_text)
+                ineligible_found = True
+
+        self.assertEqual(expected_num_eligible, actual_num_eligible)
+        self.assertTrue(ineligible_found)
+
+    @override_settings(FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': True}]})
+    def test_request_storage_link_invisible_for_user_roles(self):
+        """Test that the 'Request Faculty Storage Allocation' link only
+        appears for superusers, PIs, and Managers."""
+        project = self.create_active_project_with_pi('fc_project', self.user)
+        create_project_allocation(project, Decimal('0.00'))
+
+        url = self.project_detail_url(project.pk)
+        link_text = 'Request Faculty Storage Allocation'
+
+        project_user = ProjectUser.objects.get(project=project, user=self.user)
+        self.assertEqual(project_user.role.name, 'Principal Investigator')
+        response = self.client.get(url)
+        self.assertContains(response, link_text)
+
+        project_user.role = ProjectUserRoleChoice.objects.get(name='Manager')
+        project_user.save()
+        response = self.client.get(url)
+        self.assertContains(response, link_text)
+
+        project_user.role = ProjectUserRoleChoice.objects.get(name='User')
+        project_user.save()
+        response = self.client.get(url)
+        self.assertNotContains(response, link_text)
+
+        # Superuser can see it even with 'User' role
+        self.user.is_superuser = True
+        self.user.save()
+        response = self.client.get(url)
+        self.assertContains(response, link_text)
+
+    @override_settings(FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': False}]})
+    def test_request_storage_link_invisible_when_flag_disabled(self):
+        """Test that the 'Request Faculty Storage Allocation' link is
+        not visible when the CLUSTER_STORAGE_ENABLED flag is disabled."""
+        # Create an FCA project (eligible)
+        project = self.create_active_project_with_pi('fc_project', self.user)
+        create_project_allocation(project, Decimal('0.00'))
+
+        url = self.project_detail_url(project.pk)
+        link_text = 'Request Faculty Storage Allocation'
+
+        # PI should not see the link when flag is disabled
+        project_user = ProjectUser.objects.get(project=project, user=self.user)
+        self.assertEqual(project_user.role.name, 'Principal Investigator')
+        response = self.client.get(url)
+        self.assertNotContains(response, link_text)
+
+        # Even superuser should not see it when flag is disabled
+        self.user.is_superuser = True
+        self.user.save()
+        response = self.client.get(url)
+        self.assertNotContains(response, link_text)
 
     # TODO
