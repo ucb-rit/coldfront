@@ -50,12 +50,14 @@ Faculty Storage Allocation Request Detail
                 <strong>Timestamp:</strong>
                 {{ denial_reason.timestamp|iso8601_to_datetime }}
               </p>
+              {% if is_allowed_to_manage_request %}
               <p>
                 <strong>Un-deny Request:</strong>
                 <a href="{% url 'storage-request-undeny' storage_request.pk %}" class="btn btn-primary">
                   Un-deny
                 </a>
               </p>
+              {% endif %}
               <p>If you have any questions or concerns, please contact us at {{ support_email }}.
               {% endif %}
             </td>
