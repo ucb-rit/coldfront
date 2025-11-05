@@ -1,6 +1,8 @@
 from django.contrib.auth.models import Group, Permission
 from django.core.management.base import BaseCommand
 
+from flags.state import flag_enabled
+
 
 class Command(BaseCommand):
     help = 'Create group for staff with all necessary permissions.'
@@ -26,8 +28,12 @@ class Command(BaseCommand):
             'view_securediradduserrequest',
             'view_securedirremoveuserrequest',
             'view_securedirrequest',
-            'can_view_all_fsa_requests',
         ]
+
+        if flag_enabled('FACULTY_STORAGE_ALLOCATIONS_ENABLED'):
+            perm_codename_lst.extend([
+                'can_view_all_fsa_requests',
+            ])
 
         for perm_codename in perm_codename_lst:
             try:
