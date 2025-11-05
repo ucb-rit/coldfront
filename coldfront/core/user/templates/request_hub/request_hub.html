@@ -52,7 +52,7 @@
 
   {% flag_enabled 'FACULTY_STORAGE_ALLOCATIONS_ENABLED' as faculty_storage_allocations_enabled %}
   {% if faculty_storage_allocations_enabled %}
-    {% with request_obj=faculty_storage_allocations_request_obj %}
+    {% with request_obj=faculty_storage_allocation_request_obj %}
       {% include 'request_hub/request_section.html' %}
     {% endwith %}
   {% endif %}
