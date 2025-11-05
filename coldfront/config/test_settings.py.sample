@@ -176,6 +176,9 @@ EXTRA_EXTRA_APPS += [
 ]
 
 FACULTY_STORAGE_ALLOCATIONS_ADMIN_EMAIL_LIST = ['admin@localhost']
+# If enabled, a list of email addresses of PIs that are eligible to request storage.
+FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED = False
+FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST = []
 
 #------------------------------------------------------------------------------
 # Plugin: departments
