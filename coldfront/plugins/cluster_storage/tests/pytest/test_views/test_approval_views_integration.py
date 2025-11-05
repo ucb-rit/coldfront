@@ -187,6 +187,64 @@ class TestStorageRequestDetailView:
         # Requester should be able to view their own request
         assert response.status_code == 200
 
+    def test_undeny_button_only_visible_for_denied_requests(
+        self, client, test_project, test_pi, test_user
+    ):
+        """Test 'Un-deny Request' button only appears when request is denied."""
+        from coldfront.plugins.cluster_storage.models import (
+            FacultyStorageAllocationRequestStatusChoice,
+        )
+
+        # Create an Under Review request
+        request = create_storage_request(
+            status='Under Review',
+            project=test_project,
+            requester=test_user,
+            pi=test_pi,
+            requested_amount_gb=1000
+        )
+
+        # Log in as superuser who can manage requests
+        superuser = User.objects.create_superuser(
+            username='admin',
+            email='admin@test.com',
+            password='adminpass'
+        )
+        client.force_login(superuser)
+
+        # Define URLs
+        url = reverse('storage-request-detail', kwargs={'pk': request.pk})
+        undeny_url = reverse('storage-request-undeny', kwargs={'pk': request.pk})
+
+        # Access detail view for Under Review request
+        response = client.get(url)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+
+        # Un-deny button should NOT be visible for Under Review requests
+        assert 'Un-deny Request:' not in content
+        assert undeny_url not in content
+
+        # Now change the request to Denied status
+        denied_status = FacultyStorageAllocationRequestStatusChoice.objects.get(
+            name='Denied'
+        )
+        request.status = denied_status
+        request.state['eligibility']['status'] = 'Denied'
+        request.state['eligibility']['justification'] = 'Test denial'
+        request.save()
+
+        # Access detail view again
+        response = client.get(url)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+
+        # Un-deny button SHOULD be visible for Denied requests
+        assert 'Un-deny Request:' in content
+        assert undeny_url in content
+
 
 @pytest.mark.component
 class TestStorageRequestAdminAccessMixin:
