@@ -50,9 +50,9 @@
     {% include 'request_hub/request_section.html' %}
   {% endwith %}
 
-  {% flag_enabled 'CLUSTER_STORAGE_ENABLED' as cluster_storage_enabled %}
-  {% if cluster_storage_enabled %}
-    {% with request_obj=cluster_storage_request_obj %}
+  {% flag_enabled 'FACULTY_STORAGE_ALLOCATIONS_ENABLED' as faculty_storage_allocations_enabled %}
+  {% if faculty_storage_allocations_enabled %}
+    {% with request_obj=faculty_storage_allocations_request_obj %}
       {% include 'request_hub/request_section.html' %}
     {% endwith %}
   {% endif %}

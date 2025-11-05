@@ -48,8 +48,8 @@ Project Detail
               <a class="dropdown-item" href="{% url 'project-update' project.pk %}">
                 <i class="far fa-edit" aria-hidden="true"></i> Update Project Information
               </a>
-              {% if request_cluster_storage_visible %}
-                <a class="dropdown-item" href="{% url 'storage-request-landing' project.pk %}">
+              {% if request_faculty_storage_allocations_visible %}
+                <a class="dropdown-item" href="{% url 'faculty-storage-allocation-request-landing' project.pk %}">
                   <i class="fas fa-database" aria-hidden="true"></i> Request Faculty Storage Allocation
               {% endif %}
               {% if request_secure_directory_visible %}

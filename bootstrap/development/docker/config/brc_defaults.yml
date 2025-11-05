@@ -16,11 +16,11 @@ flag_lrc_enabled: False
 flag_next_period_renewal_requestable_month: 5
 flag_multiple_email_addresses_allowed: False
 
-plugin_cluster_storage_enabled: true
-
 plugin_departments_enabled: true
 plugin_departments_department_display_name: "Department"
 plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.calnet_ldap.CalNetLdapDataSourceBackend"
+
+plugin_faculty_storage_allocations_enabled: true
 
 plugin_hardware_procurements_enabled: true
 plugin_hardware_procurements:

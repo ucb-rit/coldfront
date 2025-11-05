@@ -26,7 +26,7 @@ class Command(BaseCommand):
             'view_securediradduserrequest',
             'view_securedirremoveuserrequest',
             'view_securedirrequest',
-            'can_view_all_storage_requests',
+            'can_view_all_fsa_requests',
         ]
 
         for perm_codename in perm_codename_lst:

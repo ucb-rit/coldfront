@@ -114,9 +114,9 @@ def request_alert_counts(request):
                     'Under Review', 'Approved - Processing']).count(),
             }
 
-        if flag_enabled('CLUSTER_STORAGE_ENABLED'):
-            from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequest
-            context['cluster_storage_req_count'] = \
+        if flag_enabled('FACULTY_STORAGE_ALLOCATIONS_ENABLED'):
+            from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequest
+            context['faculty_storage_allocations_req_count'] = \
                 FacultyStorageAllocationRequest.objects.filter(
                     status__name__in=[
                         'Under Review', 'Approved - Processing']).count()

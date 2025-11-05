@@ -308,7 +308,7 @@ class TestProjectDetailView(TestBase):
         self.user.is_staff = False
         self.user.save()
 
-    @override_settings(FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': True}]})
+    @override_settings(FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]})
     def test_request_storage_link_invisible_for_ineligible_projects(self):
         """Test that the 'Request Faculty Storage Allocation' link only
         appears for Projects that are eligible to do so (FCA projects)."""
@@ -318,9 +318,9 @@ class TestProjectDetailView(TestBase):
         expected_num_eligible, actual_num_eligible = 1, 0
         ineligible_found = False
 
-        # Mock has_eligible_pi_for_storage_request to always return True
+        # Mock has_eligible_pi_for_fsa_request to always return True
         with patch(
-                'coldfront.core.project.views.has_eligible_pi_for_storage_request',
+                'coldfront.core.project.views.has_eligible_pi_for_fsa_request',
                 return_value=True):
 
             for allowance in computing_allowance_interface.allowances():
@@ -347,7 +347,7 @@ class TestProjectDetailView(TestBase):
             self.assertEqual(expected_num_eligible, actual_num_eligible)
             self.assertTrue(ineligible_found)
 
-    @override_settings(FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': True}]})
+    @override_settings(FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]})
     def test_request_storage_link_invisible_for_user_roles(self):
         """Test that the 'Request Faculty Storage Allocation' link only
         appears for superusers, PIs, and Managers."""
@@ -359,9 +359,9 @@ class TestProjectDetailView(TestBase):
         url = self.project_detail_url(project.pk)
         link_text = 'Request Faculty Storage Allocation'
 
-        # Mock has_eligible_pi_for_storage_request to always return True
+        # Mock has_eligible_pi_for_fsa_request to always return True
         with patch(
-                'coldfront.core.project.views.has_eligible_pi_for_storage_request',
+                'coldfront.core.project.views.has_eligible_pi_for_fsa_request',
                 return_value=True):
 
             project_user = ProjectUser.objects.get(
@@ -386,10 +386,10 @@ class TestProjectDetailView(TestBase):
             response = self.client.get(url)
             self.assertContains(response, link_text)
 
-    @override_settings(FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': False}]})
+    @override_settings(FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': False}]})
     def test_request_storage_link_invisible_when_flag_disabled(self):
         """Test that the 'Request Faculty Storage Allocation' link is
-        not visible when the CLUSTER_STORAGE_ENABLED flag is disabled."""
+        not visible when the FACULTY_STORAGE_ALLOCATIONS_ENABLED flag is disabled."""
         # Create an FCA project (eligible)
         project = self.create_active_project_with_pi('fc_project', self.user)
         create_project_allocation(project, Decimal('0.00'))
@@ -410,8 +410,8 @@ class TestProjectDetailView(TestBase):
         self.assertNotContains(response, link_text)
 
     @override_settings(
-        FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': True}]},
-        CLUSTER_STORAGE_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
+        FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
     )
     def test_request_storage_link_visible_when_pi_eligible_whitelist_disabled(self):
         """Test that the 'Request Faculty Storage Allocation' link is
@@ -426,16 +426,16 @@ class TestProjectDetailView(TestBase):
         link_text = 'Request Faculty Storage Allocation'
 
         # Mock the settings module that the eligibility service imports
-        with patch('coldfront.plugins.cluster_storage.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False):
+        with patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False):
 
             # PI should see the link (whitelist disabled, no existing requests)
             response = self.client.get(url)
             self.assertContains(response, link_text)
 
     @override_settings(
-        FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': True}]},
-        CLUSTER_STORAGE_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=True,
-        CLUSTER_STORAGE_ELIGIBLE_PI_EMAIL_WHITELIST=[]
+        FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=True,
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST=[]
     )
     def test_request_storage_link_invisible_when_pi_not_on_whitelist(self):
         """Test that the 'Request Faculty Storage Allocation' link is
@@ -459,17 +459,17 @@ class TestProjectDetailView(TestBase):
         link_text = 'Request Faculty Storage Allocation'
 
         # Mock the settings module that the eligibility service imports
-        with patch('coldfront.plugins.cluster_storage.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', True), \
-             patch('coldfront.plugins.cluster_storage.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST', ['other@berkeley.edu']):
+        with patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', True), \
+             patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST', ['other@berkeley.edu']):
 
             # PI should NOT see the link (not on whitelist)
             response = self.client.get(url)
             self.assertNotContains(response, link_text)
 
     @override_settings(
-        FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': True}]},
-        CLUSTER_STORAGE_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=True,
-        CLUSTER_STORAGE_ELIGIBLE_PI_EMAIL_WHITELIST=['pi@example.com']
+        FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=True,
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST=['pi@example.com']
     )
     def test_request_storage_link_visible_when_pi_on_whitelist(self):
         """Test that the 'Request Faculty Storage Allocation' link is
@@ -493,22 +493,22 @@ class TestProjectDetailView(TestBase):
         link_text = 'Request Faculty Storage Allocation'
 
         # Mock the settings module that the eligibility service imports
-        with patch('coldfront.plugins.cluster_storage.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', True), \
-             patch('coldfront.plugins.cluster_storage.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST', ['pi@example.com']):
+        with patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', True), \
+             patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST', ['pi@example.com']):
 
             # PI should see the link (on whitelist, no existing requests)
             response = self.client.get(url)
             self.assertContains(response, link_text)
 
     @override_settings(
-        FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': True}]},
-        CLUSTER_STORAGE_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
+        FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
     )
     def test_request_storage_link_invisible_when_pi_has_existing_request(self):
         """Test that the 'Request Faculty Storage Allocation' link is
-        not visible when PI has an existing non-denied storage request."""
+        not visible when PI has an existing non-denied FSA request."""
         from unittest.mock import patch
-        from coldfront.plugins.cluster_storage.models import (
+        from coldfront.plugins.faculty_storage_allocations.models import (
             FacultyStorageAllocationRequest,
             FacultyStorageAllocationRequestStatusChoice,
             faculty_storage_allocation_request_state_schema,
@@ -518,7 +518,7 @@ class TestProjectDetailView(TestBase):
         project = self.create_active_project_with_pi('fc_project', self.user)
         create_project_allocation(project, Decimal('0.00'))
 
-        # Create an existing storage request for this PI
+        # Create an existing FSA request for this PI
         status, _ = FacultyStorageAllocationRequestStatusChoice.objects.get_or_create(
             name='Under Review'
         )
@@ -535,21 +535,21 @@ class TestProjectDetailView(TestBase):
         link_text = 'Request Faculty Storage Allocation'
 
         # Mock the settings module that the eligibility service imports
-        with patch('coldfront.plugins.cluster_storage.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False):
+        with patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False):
 
             # PI should NOT see the link (has existing request)
             response = self.client.get(url)
             self.assertNotContains(response, link_text)
 
     @override_settings(
-        FLAGS={'CLUSTER_STORAGE_ENABLED': [{'condition': 'boolean', 'value': True}]},
-        CLUSTER_STORAGE_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
+        FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
     )
     def test_request_storage_link_visible_when_different_pi_is_eligible(self):
         """Test that the 'Request Faculty Storage Allocation' link is
         visible when at least one PI on the project is eligible."""
         from unittest.mock import patch
-        from coldfront.plugins.cluster_storage.models import (
+        from coldfront.plugins.faculty_storage_allocations.models import (
             FacultyStorageAllocationRequest,
             FacultyStorageAllocationRequestStatusChoice,
             faculty_storage_allocation_request_state_schema,
@@ -573,7 +573,7 @@ class TestProjectDetailView(TestBase):
             user=pi_2
         )
 
-        # Create existing storage request for pi_2 (making them ineligible)
+        # Create existing FSA request for pi_2 (making them ineligible)
         status, _ = FacultyStorageAllocationRequestStatusChoice.objects.get_or_create(
             name='Under Review'
         )
@@ -590,7 +590,7 @@ class TestProjectDetailView(TestBase):
         link_text = 'Request Faculty Storage Allocation'
 
         # Mock the settings module that the eligibility service imports
-        with patch('coldfront.plugins.cluster_storage.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False):
+        with patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False):
 
             # Link should STILL be visible because self.user (first PI) is eligible
             response = self.client.get(url)

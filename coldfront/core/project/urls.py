@@ -275,22 +275,22 @@ with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
     ]
 
 
-# Cluster storage
+# Faculty Storage Allocations
 # Note: The feature flag generally abstracts away the check for whether the app
 # is installed. However, the app module is still resolved, which may be
 # problematic if it is not installed, so the check is manually done here.
-if 'coldfront.plugins.cluster_storage' in settings.INSTALLED_APPS:
-     from coldfront.plugins.cluster_storage.views import StorageRequestLandingView
-     from coldfront.plugins.cluster_storage.views import StorageRequestView
+if 'coldfront.plugins.faculty_storage_allocations' in settings.INSTALLED_APPS:
+     from coldfront.plugins.faculty_storage_allocations.views import StorageRequestLandingView
+     from coldfront.plugins.faculty_storage_allocations.views import StorageRequestView
 
-     with flagged_paths('CLUSTER_STORAGE_ENABLED') as path:
+     with flagged_paths('FACULTY_STORAGE_ALLOCATIONS_ENABLED') as path:
           flagged_url_patterns += [
-               path('<int:pk>/storage-request-landing',
+               path('<int:pk>/faculty-storage-allocation-request-landing',
                     StorageRequestLandingView.as_view(),
-                    name='storage-request-landing'),
-               path('<int:pk>/storage-request',
+                    name='faculty-storage-allocation-request-landing'),
+               path('<int:pk>/faculty-storage-allocation-request',
                     StorageRequestView.as_view(),
-                    name='storage-request'),
+                    name='faculty-storage-allocation-request'),
           ]
 
 urlpatterns = urlpatterns + flagged_url_patterns

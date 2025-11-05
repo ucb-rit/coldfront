@@ -119,12 +119,12 @@ class RequestHubView(LoginRequiredMixin,
 
         return cluster_request_object
 
-    def get_cluster_storage_request(self):
-        """Populates a RequestListItem with data for cluster storage
-        requests"""
-        from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequest
+    def get_faculty_storage_allocation_request(self):
+        """Populates a RequestListItem with data for
+        FacultyStorageAllocation requests"""
+        from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequest
 
-        storage_request_obj = RequestListItem()
+        fsa_request_obj = RequestListItem()
         user = self.request.user
 
         args = []
@@ -133,43 +133,43 @@ class RequestHubView(LoginRequiredMixin,
 
         pending_status_names = [
             'Under Review', 'Approved - Processing', 'Approved - Queued']
-        storage_request_list_pending = \
+        fsa_request_list_pending = \
             FacultyStorageAllocationRequest.objects.filter(
                 status__name__in=pending_status_names, *args
             ).order_by('-request_time')
 
         complete_status_names = ['Approved - Complete', 'Denied']
-        storage_request_list_complete = \
+        fsa_request_list_complete = \
             FacultyStorageAllocationRequest.objects.filter(
                 status__name__in=complete_status_names, *args
             ).order_by('-request_time')
 
         # Add requested_amount_tb to each request for template display
-        for request in storage_request_list_pending:
+        for request in fsa_request_list_pending:
             request.requested_amount_tb = request.requested_amount_gb // 1000
-        for request in storage_request_list_complete:
+        for request in fsa_request_list_complete:
             request.requested_amount_tb = request.requested_amount_gb // 1000
 
-        storage_request_obj.num = self.paginators
-        storage_request_obj.pending_queryset = self.create_paginator(
-            storage_request_list_pending)
-        storage_request_obj.complete_queryset = self.create_paginator(
-            storage_request_list_complete)
+        fsa_request_obj.num = self.paginators
+        fsa_request_obj.pending_queryset = self.create_paginator(
+            fsa_request_list_pending)
+        fsa_request_obj.complete_queryset = self.create_paginator(
+            fsa_request_list_complete)
 
-        storage_request_obj.num_pending = storage_request_list_pending.count()
+        fsa_request_obj.num_pending = fsa_request_list_pending.count()
 
-        storage_request_obj.title = 'Faculty Storage Allocation Requests'
-        storage_request_obj.table = \
-            'cluster_storage/approval/storage_request_list_table.html'
-        storage_request_obj.button_path = 'storage-request-list'
-        storage_request_obj.button_text = \
+        fsa_request_obj.title = 'Faculty Storage Allocation Requests'
+        fsa_request_obj.table = \
+            'faculty_storage_allocations/approval/fsa_request_list_table.html'
+        fsa_request_obj.button_path = 'faculty-storage-allocation-request-list'
+        fsa_request_obj.button_text = \
             'Go To Faculty Storage Allocation Requests Main Page'
-        storage_request_obj.id = 'cluster_storage_request_section'
-        storage_request_obj.help_text = \
+        fsa_request_obj.id = 'faculty_storage_allocation_request_section'
+        fsa_request_obj.help_text = \
             'Showing Faculty Storage Allocation requests that you requested ' \
             'or requests in which you are the PI for the associated project.'
 
-        return storage_request_obj
+        return fsa_request_obj
 
     def get_hardware_procurement_request(self):
         """Populates a RequestListItem with data for hardware
@@ -709,8 +709,8 @@ class RequestHubView(LoginRequiredMixin,
                          'secure_dir_join_request',
                          'secure_dir_remove_request']
 
-        if flag_enabled('CLUSTER_STORAGE_ENABLED'):
-            requests.append('cluster_storage_request')
+        if flag_enabled('FACULTY_STORAGE_ALLOCATIONS_ENABLED'):
+            requests.append('faculty_storage_allocation_request')
 
         if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
             requests.append('hardware_procurement_request')

@@ -57,8 +57,8 @@ from coldfront.core.utils.common import (get_domain_url, import_from_settings)
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
 from coldfront.core.utils.mail import send_email, send_email_template
 
-from coldfront.plugins.cluster_storage.utils import has_eligible_pi_for_storage_request
-from coldfront.plugins.cluster_storage.utils import is_project_eligible_for_cluster_storage
+from coldfront.plugins.faculty_storage_allocations.utils import has_eligible_pi_for_fsa_request
+from coldfront.plugins.faculty_storage_allocations.utils import is_project_eligible_for_faculty_storage_allocations
 
 from flags.state import flag_enabled
 
@@ -267,13 +267,13 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         context['cluster_name'] = get_project_compute_resource_name(
             self.object).replace(' Compute', '')
 
-        # Display the "Request Cluster Storage" action when the functionality is
-        # enabled, the project is eligible, the project has an eligible PI, and
-        # the user is allowed to update the project.
-        context['request_cluster_storage_visible'] = (
-            flag_enabled('CLUSTER_STORAGE_ENABLED') and
-            is_project_eligible_for_cluster_storage(self.object) and
-            has_eligible_pi_for_storage_request(self.object) and
+        # Display the "Request Faculty Storage Allocations" action when the
+        # functionality is enabled, the project is eligible, the project has an
+        # eligible PI, and the user is allowed to update the project.
+        context['request_faculty_storage_allocations_visible'] = (
+            flag_enabled('FACULTY_STORAGE_ALLOCATIONS_ENABLED') and
+            is_project_eligible_for_faculty_storage_allocations(self.object) and
+            has_eligible_pi_for_fsa_request(self.object) and
             (self.request.user.is_superuser or
              context.get('is_allowed_to_update_project', False)))
 
