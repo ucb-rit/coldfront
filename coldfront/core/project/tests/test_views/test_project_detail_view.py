@@ -320,7 +320,7 @@ class TestProjectDetailView(TestBase):
 
         # Mock has_eligible_pi_for_fsa_request to always return True
         with patch(
-                'coldfront.core.project.views.has_eligible_pi_for_fsa_request',
+                'coldfront.plugins.faculty_storage_allocations.utils.has_eligible_pi_for_fsa_request',
                 return_value=True):
 
             for allowance in computing_allowance_interface.allowances():
@@ -361,7 +361,7 @@ class TestProjectDetailView(TestBase):
 
         # Mock has_eligible_pi_for_fsa_request to always return True
         with patch(
-                'coldfront.core.project.views.has_eligible_pi_for_fsa_request',
+                'coldfront.plugins.faculty_storage_allocations.utils.has_eligible_pi_for_fsa_request',
                 return_value=True):
 
             project_user = ProjectUser.objects.get(
