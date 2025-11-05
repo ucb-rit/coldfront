@@ -1,7 +1,7 @@
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.resource.models import Resource
+from allauth.account.models import EmailAddress
+
+from coldfront.plugins.cluster_storage.conf import settings
 from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequest
-from coldfront.plugins.cluster_storage.models import FacultyStorageAllocationRequestStatusChoice
 
 
 class StorageRequestEligibilityService:
@@ -18,7 +18,18 @@ class StorageRequestEligibilityService:
         Returns:
             tuple: (is_eligible: bool, reason_if_not: str)
         """
-        # Check if the PI has any existing non-denied requests
+        # If the whitelist is enabled, check that the PI is on it.
+        if settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED:
+            user_emails = EmailAddress.objects.filter(
+                user=pi_user
+            ).values_list('email', flat=True)
+            email_whitelist = set(
+                [e.lower() for e in settings.ELIGIBLE_PI_EMAIL_WHITELIST])
+
+            if not any(email in email_whitelist for email in user_emails):
+                return False, 'PI is not on the whitelist of eligible PIs.'
+
+        # Check if the PI has any existing non-denied requests.
         has_non_denied_request = FacultyStorageAllocationRequest.objects.filter(
             pi=pi_user
         ).exclude(status__name='Denied').exists()
