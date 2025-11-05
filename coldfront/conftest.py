@@ -28,6 +28,26 @@ def pytest_configure(config):
     ]
 
 
+def pytest_ignore_collect(collection_path, path, config):
+    """Skip collection of plugin tests if the plugin is not installed.
+
+    This prevents pytest from trying to import plugin modules (and their
+    models) when the plugin isn't in INSTALLED_APPS, which would cause
+    RuntimeError during test collection.
+    """
+    from django.conf import settings
+
+    # Convert to string for path matching
+    path_str = str(collection_path)
+
+    # Skip faculty_storage_allocations plugin tests if not installed
+    if 'faculty_storage_allocations' in path_str:
+        if 'coldfront.plugins.faculty_storage_allocations' not in settings.INSTALLED_APPS:
+            return True
+
+    return False
+
+
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):
     """Set up the test database with required objects.
