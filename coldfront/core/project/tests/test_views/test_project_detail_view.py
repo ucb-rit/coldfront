@@ -16,9 +16,14 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import override_settings
 from django.urls import reverse
+import unittest
 
 from flags.state import enable_flag
 from http import HTTPStatus
+
+
+# Helper to check if faculty storage allocations plugin is installed
+FSA_PLUGIN_INSTALLED = 'coldfront.plugins.faculty_storage_allocations' in settings.INSTALLED_APPS
 
 
 class TestProjectDetailView(TestBase):
@@ -308,6 +313,7 @@ class TestProjectDetailView(TestBase):
         self.user.is_staff = False
         self.user.save()
 
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
     @override_settings(FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]})
     def test_request_storage_link_invisible_for_ineligible_projects(self):
         """Test that the 'Request Faculty Storage Allocation' link only
@@ -347,6 +353,7 @@ class TestProjectDetailView(TestBase):
             self.assertEqual(expected_num_eligible, actual_num_eligible)
             self.assertTrue(ineligible_found)
 
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
     @override_settings(FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]})
     def test_request_storage_link_invisible_for_user_roles(self):
         """Test that the 'Request Faculty Storage Allocation' link only
@@ -386,6 +393,7 @@ class TestProjectDetailView(TestBase):
             response = self.client.get(url)
             self.assertContains(response, link_text)
 
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
     @override_settings(FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': False}]})
     def test_request_storage_link_invisible_when_flag_disabled(self):
         """Test that the 'Request Faculty Storage Allocation' link is
@@ -409,6 +417,7 @@ class TestProjectDetailView(TestBase):
         response = self.client.get(url)
         self.assertNotContains(response, link_text)
 
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
     @override_settings(
         FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
         FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
@@ -432,6 +441,7 @@ class TestProjectDetailView(TestBase):
             response = self.client.get(url)
             self.assertContains(response, link_text)
 
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
     @override_settings(
         FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
         FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=True,
@@ -466,6 +476,7 @@ class TestProjectDetailView(TestBase):
             response = self.client.get(url)
             self.assertNotContains(response, link_text)
 
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
     @override_settings(
         FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
         FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=True,
@@ -500,6 +511,7 @@ class TestProjectDetailView(TestBase):
             response = self.client.get(url)
             self.assertContains(response, link_text)
 
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
     @override_settings(
         FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
         FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
@@ -541,6 +553,7 @@ class TestProjectDetailView(TestBase):
             response = self.client.get(url)
             self.assertNotContains(response, link_text)
 
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
     @override_settings(
         FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
         FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
