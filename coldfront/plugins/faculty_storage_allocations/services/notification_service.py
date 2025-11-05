@@ -9,7 +9,7 @@ from coldfront.core.utils.mail import send_email_template
 from coldfront.plugins.faculty_storage_allocations.conf import settings
 
 
-class StorageRequestNotificationService:
+class FSARequestNotificationService:
     """Handle all email notifications for FSA requests."""
 
     @staticmethod

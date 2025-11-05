@@ -280,16 +280,16 @@ with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
 # is installed. However, the app module is still resolved, which may be
 # problematic if it is not installed, so the check is manually done here.
 if 'coldfront.plugins.faculty_storage_allocations' in settings.INSTALLED_APPS:
-     from coldfront.plugins.faculty_storage_allocations.views import StorageRequestLandingView
-     from coldfront.plugins.faculty_storage_allocations.views import StorageRequestView
+     from coldfront.plugins.faculty_storage_allocations.views import FSARequestLandingView
+     from coldfront.plugins.faculty_storage_allocations.views import FSARequestView
 
      with flagged_paths('FACULTY_STORAGE_ALLOCATIONS_ENABLED') as path:
           flagged_url_patterns += [
                path('<int:pk>/faculty-storage-allocation-request-landing',
-                    StorageRequestLandingView.as_view(),
+                    FSARequestLandingView.as_view(),
                     name='faculty-storage-allocation-request-landing'),
                path('<int:pk>/faculty-storage-allocation-request',
-                    StorageRequestView.as_view(),
+                    FSARequestView.as_view(),
                     name='faculty-storage-allocation-request'),
           ]
 

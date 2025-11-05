@@ -1,4 +1,4 @@
-"""Unit tests for StorageRequestNotificationService."""
+"""Unit tests for FSARequestNotificationService."""
 
 import pytest
 from collections import namedtuple
@@ -6,11 +6,11 @@ from unittest.mock import Mock, patch
 
 from coldfront.core.utils.email.email_strategy import SendEmailStrategy
 
-from coldfront.plugins.faculty_storage_allocations.services import StorageRequestNotificationService
+from coldfront.plugins.faculty_storage_allocations.services import FSARequestNotificationService
 
 
 @pytest.mark.unit
-class TestStorageRequestNotificationService:
+class TestFSARequestNotificationService:
     """Unit tests for FSA request notification service."""
 
     def setup_method(self):
@@ -44,7 +44,7 @@ class TestStorageRequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        StorageRequestNotificationService.send_request_created_email(
+        FSARequestNotificationService.send_request_created_email(
             self.mock_request,
             email_strategy=email_strategy
         )
@@ -95,7 +95,7 @@ class TestStorageRequestNotificationService:
         mock_validate_strategy.return_value = SendEmailStrategy()
 
         # Execute - no email_strategy provided
-        StorageRequestNotificationService.send_request_created_email(
+        FSARequestNotificationService.send_request_created_email(
             self.mock_request
         )
 
@@ -121,7 +121,7 @@ class TestStorageRequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        StorageRequestNotificationService.send_completion_email(
+        FSARequestNotificationService.send_completion_email(
             self.mock_request,
             email_strategy=email_strategy
         )
@@ -175,7 +175,7 @@ class TestStorageRequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        StorageRequestNotificationService.send_completion_email(
+        FSARequestNotificationService.send_completion_email(
             self.mock_request,
             email_strategy=email_strategy
         )
@@ -210,7 +210,7 @@ class TestStorageRequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        StorageRequestNotificationService.send_denial_email(
+        FSARequestNotificationService.send_denial_email(
             self.mock_request,
             email_strategy=email_strategy
         )
@@ -272,7 +272,7 @@ class TestStorageRequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        StorageRequestNotificationService.send_denial_email(
+        FSARequestNotificationService.send_denial_email(
             self.mock_request,
             email_strategy=email_strategy
         )
@@ -311,7 +311,7 @@ class TestStorageRequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        StorageRequestNotificationService.send_completion_email(
+        FSARequestNotificationService.send_completion_email(
             self.mock_request,
             email_strategy=email_strategy
         )

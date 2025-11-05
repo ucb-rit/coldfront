@@ -26,7 +26,7 @@ class TestRequestLifecycleEndToEnd:
     """End-to-end tests for complete request workflows."""
 
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService.'
+           'request_service.FSARequestNotificationService.'
            'send_completion_email')
     def test_user_submits_request_admin_approves_agent_completes(
         self, mock_send_completion_email,
@@ -281,7 +281,7 @@ class TestAPIWorkflow:
     """End-to-end API workflow tests."""
 
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService.'
+           'request_service.FSARequestNotificationService.'
            'send_completion_email')
     def test_api_agent_full_workflow(
         self, mock_send_completion_email,
@@ -380,7 +380,7 @@ class TestAPIWorkflow:
         assert 'No FSA requests available' in response.data['detail']
 
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService.'
+           'request_service.FSARequestNotificationService.'
            'send_completion_email')
     def test_api_multiple_request_workflow(
         self, mock_send_completion_email,
@@ -492,7 +492,7 @@ class TestWebUIWorkflow:
 
         # State 4: Complete → Approved - Complete
         with patch('coldfront.plugins.faculty_storage_allocations.services.'
-                   'request_service.StorageRequestNotificationService.'
+                   'request_service.FSARequestNotificationService.'
                    'send_completion_email'):
             FacultyStorageAllocationRequestService.complete_request(
                 request,
@@ -568,7 +568,7 @@ class TestWebUIWorkflow:
 
         # Complete (only mock notifications)
         with patch('coldfront.plugins.faculty_storage_allocations.services.'
-                   'request_service.StorageRequestNotificationService.'
+                   'request_service.FSARequestNotificationService.'
                    'send_completion_email'):
             FacultyStorageAllocationRequestService.complete_request(
                 claimed,

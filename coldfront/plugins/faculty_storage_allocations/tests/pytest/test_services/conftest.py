@@ -49,7 +49,7 @@ def mock_request_service():
 
 @pytest.fixture
 def mock_eligibility_service():
-    """Return a mock StorageRequestEligibilityService."""
+    """Return a mock FSARequestEligibilityService."""
     service = Mock()
     service.check_pi_eligibility = Mock(return_value={
         'is_eligible': True,

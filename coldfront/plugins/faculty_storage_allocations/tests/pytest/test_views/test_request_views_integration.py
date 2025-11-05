@@ -1,6 +1,7 @@
 """Component tests for request views."""
 
 import pytest
+from unittest.mock import patch
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 
@@ -16,13 +17,14 @@ User = get_user_model()
 
 
 @pytest.mark.component
-class TestStorageRequestView:
+class TestFSARequestView:
     """Integration tests for FSA request creation view.
 
-    Note: This tests the StorageRequestView which is accessed via
+    Note: This tests the FSARequestView which is accessed via
     project-specific URLs, not the generic faculty-storage-allocation-request URLs.
     """
 
+    @patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False)
     def test_get_request_form_displays_correctly(
         self, client, test_project, test_pi,
         project_user_role_pi, project_user_status_active,
@@ -53,6 +55,7 @@ class TestStorageRequestView:
         assert 'storage_amount' in response.context['form'].fields
         assert 'pi' in response.context['form'].fields
 
+    @patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False)
     def test_post_creates_request_in_database(
         self, client, test_project, test_pi, test_user,
         project_user_role_pi, project_user_status_active,
@@ -84,6 +87,7 @@ class TestStorageRequestView:
 
         url = reverse('faculty-storage-allocation-request', kwargs={'pk': test_project.pk})
         response = client.post(url, data=data)
+        print(response.content)
 
         # Verify request was created
         assert FacultyStorageAllocationRequest.objects.count() == \
@@ -97,6 +101,7 @@ class TestStorageRequestView:
         assert request.requested_amount_gb == 3000  # 3 TB = 3000 GB
         assert request.status.name == 'Under Review'
 
+    @patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False)
     def test_post_redirects_on_success(
         self, client, test_project, test_pi,
         project_user_role_pi, project_user_status_active,
@@ -131,6 +136,7 @@ class TestStorageRequestView:
         assert response.status_code == 302
         assert f'/project/{test_project.pk}/' in response.url
 
+    @patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False)
     def test_post_shows_errors_on_invalid_data(
         self, client, test_project, test_pi,
         project_user_role_pi, project_user_status_active,
@@ -167,6 +173,7 @@ class TestStorageRequestView:
         assert response.context['form'].errors
         assert 'pi' in response.context['form'].errors
 
+    @patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False)
     def test_view_requires_authentication(self, client, test_project):
         """Test view requires user to be logged in."""
         # Try to access without logging in
@@ -177,6 +184,7 @@ class TestStorageRequestView:
         assert response.status_code == 302
         assert '/login' in response.url.lower()
 
+    @patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False)
     def test_view_requires_project_membership(
         self, client, test_project, test_user
     ):
@@ -190,6 +198,7 @@ class TestStorageRequestView:
         # Should deny access (403) or redirect
         assert response.status_code in [302, 403]
 
+    @patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False)
     def test_post_prevents_duplicate_requests(
         self, client, test_project, test_pi,
         project_user_role_pi, project_user_status_active,

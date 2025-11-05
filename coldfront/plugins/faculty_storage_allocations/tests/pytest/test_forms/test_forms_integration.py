@@ -8,11 +8,11 @@ from coldfront.plugins.faculty_storage_allocations.forms.form_utils import (
     ReviewDenyForm,
 )
 from coldfront.plugins.faculty_storage_allocations.forms.approval_forms import (
-    StorageRequestSearchForm,
-    StorageRequestEditForm,
+    FSARequestSearchForm,
+    FSARequestEditForm,
 )
 from coldfront.plugins.faculty_storage_allocations.forms.request_forms import (
-    StorageRequestForm,
+    FSARequestForm,
 )
 from coldfront.plugins.faculty_storage_allocations.models import (
     FacultyStorageAllocationRequest,
@@ -127,12 +127,12 @@ class TestReviewStatusFormIntegration:
 
 
 @pytest.mark.component
-class TestStorageRequestSearchFormIntegration:
+class TestFSARequestSearchFormIntegration:
     """Integration tests for search form with database."""
 
     def test_form_initializes_with_database_projects(self, test_project, db):
         """Test form queryset loads projects from database."""
-        form = StorageRequestSearchForm()
+        form = FSARequestSearchForm()
 
         # Check that project queryset is populated
         assert form.fields['project'].queryset is not None
@@ -144,7 +144,7 @@ class TestStorageRequestSearchFormIntegration:
 
     def test_form_initializes_with_database_users(self, test_pi, db):
         """Test form queryset loads users from database."""
-        form = StorageRequestSearchForm()
+        form = FSARequestSearchForm()
 
         # Check that PI queryset is populated and excludes users without email
         pi_queryset = form.fields['pi'].queryset
@@ -166,7 +166,7 @@ class TestStorageRequestSearchFormIntegration:
             last_name='Email'
         )
 
-        form = StorageRequestSearchForm()
+        form = FSARequestSearchForm()
         pi_queryset = form.fields['pi'].queryset
 
         # User without email should be excluded
@@ -195,7 +195,7 @@ class TestStorageRequestSearchFormIntegration:
 
         # Use form to filter by status
         data = {'status': 'Under Review'}
-        form = StorageRequestSearchForm(data=data)
+        form = FSARequestSearchForm(data=data)
 
         assert form.is_valid()
 
@@ -209,7 +209,7 @@ class TestStorageRequestSearchFormIntegration:
 
 
 @pytest.mark.component
-class TestStorageRequestEditFormIntegration:
+class TestFSARequestEditFormIntegration:
     """Integration tests for edit form with database."""
 
     def test_form_updates_request_amount_in_database(
@@ -226,7 +226,7 @@ class TestStorageRequestEditFormIntegration:
 
         # Change the amount to 4 TB
         data = {'storage_amount': 4}
-        form = StorageRequestEditForm(data=data)
+        form = FSARequestEditForm(data=data)
 
         assert form.is_valid()
 
@@ -245,17 +245,17 @@ class TestStorageRequestEditFormIntegration:
 
         for amount in valid_amounts:
             data = {'storage_amount': amount}
-            form = StorageRequestEditForm(data=data)
+            form = FSARequestEditForm(data=data)
             assert form.is_valid(), f"{amount} TB should be valid"
 
         # Invalid amount
         data = {'storage_amount': 10}
-        form = StorageRequestEditForm(data=data)
+        form = FSARequestEditForm(data=data)
         assert not form.is_valid()
 
 
 @pytest.mark.component
-class TestStorageRequestFormIntegration:
+class TestFSARequestFormIntegration:
     """Integration tests for request creation form."""
 
     def test_form_initializes_with_project_data(
@@ -274,7 +274,7 @@ class TestStorageRequestFormIntegration:
         )
 
         # Initialize form with project
-        form = StorageRequestForm(project_pk=test_project.pk)
+        form = FSARequestForm(project_pk=test_project.pk)
 
         # Check that PI queryset includes our project user
         assert pi_project_user in form.fields['pi'].queryset
@@ -304,7 +304,7 @@ class TestStorageRequestFormIntegration:
         )
 
         # Initialize form - should disable this PI
-        form = StorageRequestForm(project_pk=test_project.pk)
+        form = FSARequestForm(project_pk=test_project.pk)
 
         # Check that this PI is in disabled choices
         assert pi_project_user.pk in \
@@ -329,7 +329,7 @@ class TestStorageRequestFormIntegration:
             'storage_amount': 3,
             'confirm_external_intake': True
         }
-        form = StorageRequestForm(data=data, project_pk=test_project.pk)
+        form = FSARequestForm(data=data, project_pk=test_project.pk)
 
         assert form.is_valid()
         assert form.cleaned_data['pi'] == pi_project_user
@@ -355,7 +355,7 @@ class TestStorageRequestFormIntegration:
             'storage_amount': 2,
             'confirm_external_intake': False
         }
-        form = StorageRequestForm(data=data, project_pk=test_project.pk)
+        form = FSARequestForm(data=data, project_pk=test_project.pk)
 
         assert not form.is_valid()
         assert 'confirm_external_intake' in form.errors
@@ -395,7 +395,7 @@ class TestStorageRequestFormIntegration:
         )
 
         # Initialize form
-        form = StorageRequestForm(project_pk=test_project.pk)
+        form = FSARequestForm(project_pk=test_project.pk)
 
         # Active PI should be in queryset
         assert active_pi in form.fields['pi'].queryset

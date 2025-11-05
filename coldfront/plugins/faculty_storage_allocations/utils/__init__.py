@@ -2,13 +2,13 @@ from coldfront.core.resource.utils_.allowance_utils.computing_allowance import C
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 
-from coldfront.plugins.faculty_storage_allocations.services.eligibility_service import StorageRequestEligibilityService
+from coldfront.plugins.faculty_storage_allocations.services.eligibility_service import FSARequestEligibilityService
 
 
 def has_eligible_pi_for_fsa_request(project):
     """Return whether the given Project has at least one PI that is
     eligible to submit a FSA request."""
-    eligibility_service = StorageRequestEligibilityService()
+    eligibility_service = FSARequestEligibilityService()
     pis = project.pis(active_only=True)
     for pi in pis:
         is_eligible, _ = eligibility_service.is_eligible_for_request(pi)

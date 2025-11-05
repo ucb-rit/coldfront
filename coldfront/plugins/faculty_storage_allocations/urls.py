@@ -1,46 +1,46 @@
 from django.urls import path
 
-from .views import StorageRequestDetailView
-from .views import StorageRequestEditView
-from .views import StorageRequestListView
-from .views import StorageRequestReviewDenyView
-from .views import StorageRequestReviewEligibilityView
-from .views import StorageRequestReviewIntakeConsistencyView
-from .views import StorageRequestReviewSetupView
-from .views import StorageRequestUndenyView
+from .views import FSARequestDetailView
+from .views import FSARequestEditView
+from .views import FSARequestListView
+from .views import FSARequestReviewDenyView
+from .views import FSARequestReviewEligibilityView
+from .views import FSARequestReviewIntakeConsistencyView
+from .views import FSARequestReviewSetupView
+from .views import FSARequestUndenyView
 
 
 urlpatterns = [
     path(
         '',
-        StorageRequestListView.as_view(),
+        FSARequestListView.as_view(),
         name='faculty-storage-allocation-request-list'),
     path(
         '<int:pk>/',
-        StorageRequestDetailView.as_view(),
+        FSARequestDetailView.as_view(),
         name='faculty-storage-allocation-request-detail'),
     path(
         '<int:pk>/edit/',
-        StorageRequestEditView.as_view(),
+        FSARequestEditView.as_view(),
         name='faculty-storage-allocation-request-edit'),
     path(
         '<int:pk>/eligibility/',
-        StorageRequestReviewEligibilityView.as_view(),
+        FSARequestReviewEligibilityView.as_view(),
         name='faculty-storage-allocation-request-review-eligibility'),
     path(
         '<int:pk>/intake-consistency/',
-        StorageRequestReviewIntakeConsistencyView.as_view(),
+        FSARequestReviewIntakeConsistencyView.as_view(),
         name='faculty-storage-allocation-request-review-intake-consistency'),
     path(
         '<int:pk>/setup/',
-        StorageRequestReviewSetupView.as_view(),
+        FSARequestReviewSetupView.as_view(),
         name='faculty-storage-allocation-request-review-setup'),
     path(
         '<int:pk>/deny/',
-        StorageRequestReviewDenyView.as_view(),
+        FSARequestReviewDenyView.as_view(),
         name='faculty-storage-allocation-request-deny'),
     path(
         '<int:pk>/undeny/',
-        StorageRequestUndenyView.as_view(),
+        FSARequestUndenyView.as_view(),
         name='faculty-storage-allocation-request-undeny'),
 ]

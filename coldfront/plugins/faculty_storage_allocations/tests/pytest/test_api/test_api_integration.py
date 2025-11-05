@@ -90,7 +90,7 @@ class TestClaimNextRequestAPIIntegration:
         self, authenticated_client, test_project, test_user, test_pi,
         resource_faculty_storage_directory
     ):
-        """Test POST /api/storage/requests/next/claim/ returns oldest
+        """Test POST /api/faculty_storage_allocations/requests/next/claim/ returns oldest
         request."""
         # Setup - create 3 queued requests with different approval times
         request1 = create_fsa_request(
@@ -205,12 +205,12 @@ class TestCompleteRequestAPIIntegration:
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.DirectoryService')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService')
+           'request_service.FSARequestNotificationService')
     def test_complete_request_updates_database(
         self, mock_notification, mock_directory_service,
         authenticated_client, test_project, test_user, test_pi
     ):
-        """Test PATCH /api/storage/requests/{id}/complete/ updates DB."""
+        """Test PATCH /api/faculty_storage_allocations/requests/{id}/complete/ updates DB."""
         # Setup mocks
         mock_service_instance = mock_directory_service.return_value
         mock_service_instance.directory_exists.return_value = False
@@ -244,7 +244,7 @@ class TestCompleteRequestAPIIntegration:
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.DirectoryService')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService')
+           'request_service.FSARequestNotificationService')
     def test_complete_request_sets_directory_name(
         self, mock_notification, mock_directory_service,
         authenticated_client, test_project, test_user, test_pi

@@ -57,7 +57,7 @@ class TestClaimNextRequestView:
 
         # Execute
         with patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-                   'StorageRequestNextSerializer'):
+                   'FSARequestNextSerializer'):
             response = claim_next_fsa_request(request)
 
         # Assert - service method was called
@@ -96,7 +96,7 @@ class TestClaimNextRequestView:
     @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
            'FacultyStorageAllocationRequestService')
     @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'StorageRequestNextSerializer')
+           'FSARequestNextSerializer')
     def test_view_serializes_claimed_request(
         self, mock_serializer_class, mock_service, mock_atomic
     ):

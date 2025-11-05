@@ -7,8 +7,8 @@ from rest_framework.response import Response
 
 from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequest
 from coldfront.plugins.faculty_storage_allocations.services import FacultyStorageAllocationRequestService
-from coldfront.plugins.faculty_storage_allocations.api.serializers import StorageRequestNextSerializer
-from coldfront.plugins.faculty_storage_allocations.api.serializers import StorageRequestCompletionSerializer
+from coldfront.plugins.faculty_storage_allocations.api.serializers import FSARequestNextSerializer
+from coldfront.plugins.faculty_storage_allocations.api.serializers import FSARequestCompletionSerializer
 from coldfront.plugins.faculty_storage_allocations.api.permissions import IsSuperuserOrHasManagePermission
 
 
@@ -46,7 +46,7 @@ def claim_next_fsa_request(request):
 
         # Serialize and return the claimed request
         # If serialization fails, the transaction will rollback
-        serializer = StorageRequestNextSerializer(fsa_request)
+        serializer = FSARequestNextSerializer(fsa_request)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -95,7 +95,7 @@ def complete_fsa_request(request, pk):
         )
 
     # Validate the request body
-    serializer = StorageRequestCompletionSerializer(data=request.data)
+    serializer = FSARequestCompletionSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(
             serializer.errors,

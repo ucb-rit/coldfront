@@ -53,7 +53,7 @@ class TestRequestServiceCreate:
         assert db_request.status.name == 'Under Review'
 
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService')
+           'request_service.FSARequestNotificationService')
     def test_create_request_sends_notification(
         self, mock_notification, test_project, test_user, test_pi
     ):
@@ -229,7 +229,7 @@ class TestRequestServiceCompletion:
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.DirectoryService')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService')
+           'request_service.FSARequestNotificationService')
     def test_complete_request_updates_status_and_timestamp(
         self, mock_notification, mock_directory_service,
         approved_fsa_request
@@ -260,7 +260,7 @@ class TestRequestServiceCompletion:
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.DirectoryService')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService')
+           'request_service.FSARequestNotificationService')
     def test_complete_request_is_idempotent(
         self, mock_notification, mock_directory_service,
         approved_fsa_request
@@ -298,7 +298,7 @@ class TestRequestServiceDenial:
     """Test request denial with database."""
 
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService')
+           'request_service.FSARequestNotificationService')
     def test_deny_request_updates_database(
         self, mock_notification, test_fsa_request
     ):
@@ -438,7 +438,7 @@ class TestRequestServiceWorkflows:
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.DirectoryService')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService')
+           'request_service.FSARequestNotificationService')
     def test_full_approval_workflow(
         self, mock_notification, mock_directory_service,
         test_project, test_user, test_pi

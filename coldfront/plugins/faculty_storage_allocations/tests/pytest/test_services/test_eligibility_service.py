@@ -1,4 +1,4 @@
-"""Tests for StorageRequestEligibilityService.
+"""Tests for FSARequestEligibilityService.
 
 This module contains both unit tests (mocked) and component tests (with DB)
 for the eligibility service.
@@ -11,7 +11,7 @@ import pytest
 from unittest.mock import Mock, patch, PropertyMock
 
 from coldfront.plugins.faculty_storage_allocations.services import (
-    StorageRequestEligibilityService
+    FSARequestEligibilityService
 )
 
 
@@ -42,7 +42,7 @@ class TestEligibilityServiceUnit:
             .exists.return_value = False
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(mock_user)
 
         # Assert
@@ -84,7 +84,7 @@ class TestEligibilityServiceUnit:
             .exists.return_value = False
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(mock_user)
 
         # Assert
@@ -116,7 +116,7 @@ class TestEligibilityServiceUnit:
         mock_email_address.objects.filter.return_value = mock_queryset
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(mock_user)
 
         # Assert
@@ -155,7 +155,7 @@ class TestEligibilityServiceUnit:
             .exists.return_value = False
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(mock_user)
 
         # Assert
@@ -181,7 +181,7 @@ class TestEligibilityServiceUnit:
             .exists.return_value = True
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(mock_user)
 
         # Assert
@@ -207,7 +207,7 @@ class TestEligibilityServiceUnit:
         mock_queryset.exclude.return_value.exists.return_value = False
 
         # Execute
-        StorageRequestEligibilityService.is_eligible_for_request(mock_user)
+        FSARequestEligibilityService.is_eligible_for_request(mock_user)
 
         # Verify that exclude was called with correct status
         mock_queryset.exclude.assert_called_once_with(status__name='Denied')
@@ -232,7 +232,7 @@ class TestEligibilityServiceUnit:
         mock_email_address.objects.filter.return_value = mock_queryset
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(mock_user)
 
         # Assert - should fail on whitelist, not check requests
@@ -259,7 +259,7 @@ class TestEligibilityServiceComponent:
         mock_settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED = False
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(test_pi)
 
         # Assert
@@ -292,7 +292,7 @@ class TestEligibilityServiceComponent:
         )
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(test_pi)
 
         # Assert
@@ -314,7 +314,7 @@ class TestEligibilityServiceComponent:
         assert approved_fsa_request.status.name == 'Approved - Queued'
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(test_pi)
 
         # Assert
@@ -351,7 +351,7 @@ class TestEligibilityServiceComponent:
         )
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(test_pi)
 
         # Assert
@@ -388,7 +388,7 @@ class TestEligibilityServiceComponent:
             )
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(test_pi)
 
         # Assert
@@ -430,7 +430,7 @@ class TestEligibilityServiceComponent:
         )
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(test_pi)
 
         # Assert
@@ -458,7 +458,7 @@ class TestEligibilityServiceComponent:
         )
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(test_pi)
 
         # Assert
@@ -487,7 +487,7 @@ class TestEligibilityServiceComponent:
         )
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(test_pi)
 
         # Assert
@@ -528,7 +528,7 @@ class TestEligibilityServiceComponent:
         )
 
         # Execute
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(test_pi)
 
         # Assert
@@ -557,7 +557,7 @@ class TestEligibilityServiceComponent:
         )
 
         # Execute - PI has no existing requests but should still fail
-        is_eligible, reason = StorageRequestEligibilityService\
+        is_eligible, reason = FSARequestEligibilityService\
             .is_eligible_for_request(test_pi)
 
         # Assert

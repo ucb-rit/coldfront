@@ -19,11 +19,11 @@ from django.views.generic.edit import FormView
 
 from coldfront.core.utils.common import utc_now_offset_aware
 
-from coldfront.plugins.faculty_storage_allocations.forms import StorageRequestEditForm
-from coldfront.plugins.faculty_storage_allocations.forms import StorageRequestReviewDenyForm
-from coldfront.plugins.faculty_storage_allocations.forms import StorageRequestReviewSetupForm
-from coldfront.plugins.faculty_storage_allocations.forms import StorageRequestReviewStatusForm
-from coldfront.plugins.faculty_storage_allocations.forms import StorageRequestSearchForm
+from coldfront.plugins.faculty_storage_allocations.forms import FSARequestEditForm
+from coldfront.plugins.faculty_storage_allocations.forms import FSARequestReviewDenyForm
+from coldfront.plugins.faculty_storage_allocations.forms import FSARequestReviewSetupForm
+from coldfront.plugins.faculty_storage_allocations.forms import FSARequestReviewStatusForm
+from coldfront.plugins.faculty_storage_allocations.forms import FSARequestSearchForm
 from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequest
 from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequestStatusChoice
 from coldfront.plugins.faculty_storage_allocations.services import FacultyStorageAllocationRequestService
@@ -31,7 +31,7 @@ from coldfront.plugins.faculty_storage_allocations.services import FacultyStorag
 logger = logging.getLogger(__name__)
 
 
-class StorageRequestReadOnlyAccessMixin(UserPassesTestMixin):
+class FSARequestReadOnlyAccessMixin(UserPassesTestMixin):
     """Mixin for read-only access to FSA request views.
 
     Allows access to:
@@ -69,7 +69,7 @@ class StorageRequestReadOnlyAccessMixin(UserPassesTestMixin):
         return False
 
 
-class StorageRequestAdminAccessMixin(UserPassesTestMixin):
+class FSARequestAdminAccessMixin(UserPassesTestMixin):
     """Mixin for admin-only access to FSA request management views.
 
     Allows access to:
@@ -94,7 +94,7 @@ class StorageRequestAdminAccessMixin(UserPassesTestMixin):
         return False
 
 
-class StorageRequestViewAllAccessMixin(UserPassesTestMixin):
+class FSARequestViewAllAccessMixin(UserPassesTestMixin):
     """Mixin for viewing all FSA requests (list view).
 
     Allows access to:
@@ -124,7 +124,7 @@ class StorageRequestViewAllAccessMixin(UserPassesTestMixin):
         return False
 
 
-class StorageRequestAmountMixin:
+class FSARequestAmountMixin:
     """Mixin to add requested and approved amount in TB to context."""
 
     def add_amount_context(self, context):
@@ -139,12 +139,12 @@ class StorageRequestAmountMixin:
         return context
 
 
-class StorageRequestViewMixin(StorageRequestAmountMixin):
+class FSARequestViewMixin(FSARequestAmountMixin):
     """Base mixin for FSA request views with common functionality.
 
     Note: This mixin does NOT include permission checks. Views should
-    inherit from either StorageRequestReadOnlyAccessMixin or
-    StorageRequestAdminAccessMixin as appropriate.
+    inherit from either FSARequestReadOnlyAccessMixin or
+    FSARequestAdminAccessMixin as appropriate.
     """
 
     def dispatch(self, request, *args, **kwargs):
@@ -231,9 +231,9 @@ class StorageRequestViewMixin(StorageRequestAmountMixin):
         return False
 
 
-class StorageRequestDetailView(LoginRequiredMixin,
-                               StorageRequestViewMixin,
-                               StorageRequestReadOnlyAccessMixin,
+class FSARequestDetailView(LoginRequiredMixin,
+                               FSARequestViewMixin,
+                               FSARequestReadOnlyAccessMixin,
                                TemplateView):
     template_name = 'faculty_storage_allocations/approval/fsa_request_detail.html'
 
@@ -424,7 +424,7 @@ class StorageRequestDetailView(LoginRequiredMixin,
             state['setup']['status'] == 'Complete')
 
 
-class StorageRequestListView(LoginRequiredMixin, StorageRequestViewAllAccessMixin,
+class FSARequestListView(LoginRequiredMixin, FSARequestViewAllAccessMixin,
                              TemplateView):
     template_name = 'faculty_storage_allocations/approval/fsa_request_list.html'
 
@@ -432,7 +432,7 @@ class StorageRequestListView(LoginRequiredMixin, StorageRequestViewAllAccessMixi
         context = super().get_context_data(**kwargs)
         fsa_requests = FacultyStorageAllocationRequest.objects.all().order_by('-request_time')
 
-        search_form = StorageRequestSearchForm(self.request.GET)
+        search_form = FSARequestSearchForm(self.request.GET)
         if search_form.is_valid():
             context['search_form'] = search_form
             data = search_form.cleaned_data
@@ -450,7 +450,7 @@ class StorageRequestListView(LoginRequiredMixin, StorageRequestViewAllAccessMixi
             filter_parameters = urlencode(
                 {key: value for key, value in data.items() if value})
         else:
-            context['search_form'] = StorageRequestSearchForm()
+            context['search_form'] = FSARequestSearchForm()
             filter_parameters = ''
 
         # Pagination expects the following context variable.
@@ -475,7 +475,7 @@ class StorageRequestListView(LoginRequiredMixin, StorageRequestViewAllAccessMixi
 
         list_url = reverse('faculty-storage-allocation-request-list')
 
-        for status in StorageRequestSearchForm.STATUS_CHOICES:
+        for status in FSARequestSearchForm.STATUS_CHOICES:
             if status[0]:  # Ignore the blank choice.
                 context[f'{status}_url'] = (
                     f'{list_url}?{urlencode({"status": status[1]})}')
@@ -483,11 +483,11 @@ class StorageRequestListView(LoginRequiredMixin, StorageRequestViewAllAccessMixi
         return context
 
 
-class StorageRequestEditView(LoginRequiredMixin,
-                             StorageRequestAdminAccessMixin,
-                             StorageRequestViewMixin,
+class FSARequestEditView(LoginRequiredMixin,
+                             FSARequestAdminAccessMixin,
+                             FSARequestViewMixin,
                              FormView):
-    form_class = StorageRequestEditForm
+    form_class = FSARequestEditForm
     template_name = 'faculty_storage_allocations/approval/fsa_request_review.html'
 
     def dispatch(self, request, *args, **kwargs):
@@ -546,11 +546,11 @@ class StorageRequestEditView(LoginRequiredMixin,
         return super().form_valid(form)
 
 
-class StorageRequestReviewEligibilityView(LoginRequiredMixin,
-                                          StorageRequestAdminAccessMixin,
-                                          StorageRequestViewMixin,
+class FSARequestReviewEligibilityView(LoginRequiredMixin,
+                                          FSARequestAdminAccessMixin,
+                                          FSARequestViewMixin,
                                           FormView):
-    form_class = StorageRequestReviewStatusForm
+    form_class = FSARequestReviewStatusForm
     template_name = 'faculty_storage_allocations/approval/fsa_request_review.html'
 
     def get_context_data(self, **kwargs):
@@ -587,11 +587,11 @@ class StorageRequestReviewEligibilityView(LoginRequiredMixin,
         return super().form_valid(form)
 
 
-class StorageRequestReviewIntakeConsistencyView(LoginRequiredMixin,
-                                                StorageRequestAdminAccessMixin,
-                                                StorageRequestViewMixin,
+class FSARequestReviewIntakeConsistencyView(LoginRequiredMixin,
+                                                FSARequestAdminAccessMixin,
+                                                FSARequestViewMixin,
                                                 FormView):
-    form_class = StorageRequestReviewStatusForm
+    form_class = FSARequestReviewStatusForm
     template_name = 'faculty_storage_allocations/approval/fsa_request_review.html'
 
     def get_context_data(self, **kwargs):
@@ -627,11 +627,11 @@ class StorageRequestReviewIntakeConsistencyView(LoginRequiredMixin,
         return super().form_valid(form)
 
 
-class StorageRequestReviewSetupView(LoginRequiredMixin,
-                                    StorageRequestAdminAccessMixin,
-                                    StorageRequestViewMixin,
+class FSARequestReviewSetupView(LoginRequiredMixin,
+                                    FSARequestAdminAccessMixin,
+                                    FSARequestViewMixin,
                                     FormView):
-    form_class = StorageRequestReviewSetupForm
+    form_class = FSARequestReviewSetupForm
     template_name = 'faculty_storage_allocations/approval/fsa_request_review.html'
 
     def get_context_data(self, **kwargs):
@@ -681,11 +681,11 @@ class StorageRequestReviewSetupView(LoginRequiredMixin,
         return super().form_valid(form)
 
 
-class StorageRequestReviewDenyView(LoginRequiredMixin,
-                                   StorageRequestAdminAccessMixin,
-                                   StorageRequestViewMixin,
+class FSARequestReviewDenyView(LoginRequiredMixin,
+                                   FSARequestAdminAccessMixin,
+                                   FSARequestViewMixin,
                                    FormView):
-    form_class = StorageRequestReviewDenyForm
+    form_class = FSARequestReviewDenyForm
     template_name = 'faculty_storage_allocations/approval/fsa_request_review.html'
 
     def get_context_data(self, **kwargs):
@@ -722,9 +722,9 @@ class StorageRequestReviewDenyView(LoginRequiredMixin,
         return super().form_valid(form)
 
 
-class StorageRequestUndenyView(LoginRequiredMixin,
-                               StorageRequestAdminAccessMixin,
-                               StorageRequestViewMixin,
+class FSARequestUndenyView(LoginRequiredMixin,
+                               FSARequestAdminAccessMixin,
+                               FSARequestViewMixin,
                                View):
 
     def dispatch(self, request, *args, **kwargs):
@@ -732,7 +732,7 @@ class StorageRequestUndenyView(LoginRequiredMixin,
         # Get the pk before calling super().dispatch()
         pk = self.kwargs.get('pk')
 
-        # StorageRequestViewMixin.dispatch() sets self.fsa_request
+        # FSARequestViewMixin.dispatch() sets self.fsa_request
         # This calls the mixin's dispatch which retrieves the object
         # We need to manually get it first to check status before proceeding
         self.fsa_request = get_object_or_404(
@@ -774,13 +774,13 @@ class StorageRequestUndenyView(LoginRequiredMixin,
 
 
 __all__ = [
-    'StorageRequestDetailView',
-    'StorageRequestEditView',
-    'StorageRequestListView',
-    'StorageRequestReviewDenyView',
-    'StorageRequestReviewEligibilityView',
-    'StorageRequestReviewIntakeConsistencyView',
-    'StorageRequestReviewSetupView',
-    'StorageRequestUndenyView',
+    'FSARequestDetailView',
+    'FSARequestEditView',
+    'FSARequestListView',
+    'FSARequestReviewDenyView',
+    'FSARequestReviewEligibilityView',
+    'FSARequestReviewIntakeConsistencyView',
+    'FSARequestReviewSetupView',
+    'FSARequestUndenyView',
 ]
 

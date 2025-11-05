@@ -7,12 +7,12 @@ from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowanc
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 
 from .form_utils import PIUserChoiceField
-from .form_utils import ReviewDenyForm as StorageRequestReviewDenyForm
-from .form_utils import ReviewStatusForm as StorageRequestReviewStatusForm
+from .form_utils import ReviewDenyForm as FSARequestReviewDenyForm
+from .form_utils import ReviewStatusForm as FSARequestReviewStatusForm
 from .form_utils import StorageAmountChoiceField
 
 
-class StorageRequestSearchForm(forms.Form):
+class FSARequestSearchForm(forms.Form):
     """A form for searching for FSA requests based on various
     criteria."""
 
@@ -63,7 +63,7 @@ class StorageRequestSearchForm(forms.Form):
         self.fields['pi'].queryset = User.objects.exclude(exclude_q)
 
 
-class StorageRequestEditForm(forms.Form):
+class FSARequestEditForm(forms.Form):
 
     storage_amount = StorageAmountChoiceField(
         required=True,
@@ -72,7 +72,7 @@ class StorageRequestEditForm(forms.Form):
 
 
 # TODO
-class StorageRequestReviewSetupForm(forms.Form):
+class FSARequestReviewSetupForm(forms.Form):
 
     status = forms.ChoiceField(
         choices=(
@@ -86,9 +86,9 @@ class StorageRequestReviewSetupForm(forms.Form):
 
 
 __all__ = [
-    'StorageRequestEditForm',
-    'StorageRequestReviewDenyForm',
-    'StorageRequestReviewSetupForm',
-    'StorageRequestReviewStatusForm',
-    'StorageRequestSearchForm',
+    'FSARequestEditForm',
+    'FSARequestReviewDenyForm',
+    'FSARequestReviewSetupForm',
+    'FSARequestReviewStatusForm',
+    'FSARequestSearchForm',
 ]

@@ -4,7 +4,7 @@ from coldfront.plugins.faculty_storage_allocations.conf import settings
 from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequest
 
 
-class StorageRequestEligibilityService:
+class FSARequestEligibilityService:
     """Handle eligibility checks for FSA requests."""
 
     @staticmethod

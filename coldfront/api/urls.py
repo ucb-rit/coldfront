@@ -21,5 +21,5 @@ urlpatterns = [
 if 'coldfront.plugins.faculty_storage_allocations' in settings.INSTALLED_APPS:
     with flagged_paths('FACULTY_STORAGE_ALLOCATIONS_ENABLED') as path:
         urlpatterns += [
-            path('storage/', include('coldfront.plugins.faculty_storage_allocations.api.urls')),
+            path('faculty_storage_allocations/', include('coldfront.plugins.faculty_storage_allocations.api.urls')),
         ]

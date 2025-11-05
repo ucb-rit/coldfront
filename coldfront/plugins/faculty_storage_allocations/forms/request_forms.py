@@ -3,13 +3,13 @@ from django import forms
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 
-from coldfront.plugins.faculty_storage_allocations.services.eligibility_service import StorageRequestEligibilityService
+from coldfront.plugins.faculty_storage_allocations.services.eligibility_service import FSARequestEligibilityService
 
 from .form_utils import DisabledChoicesSelectWidget
 from .form_utils import PIProjectUserChoiceField
 from .form_utils import StorageAmountChoiceField
 
-class StorageRequestForm(forms.Form):
+class FSARequestForm(forms.Form):
 
     pi = PIProjectUserChoiceField(
         help_text=(
@@ -53,7 +53,7 @@ class StorageRequestForm(forms.Form):
         disabled_choices = set()
         for pi_project_user in pi_project_users:
             is_eligible, _ = \
-                StorageRequestEligibilityService.is_eligible_for_request(
+                FSARequestEligibilityService.is_eligible_for_request(
                     pi_project_user.user)
             if not is_eligible:
                 disabled_choices.add(pi_project_user.pk)
@@ -61,5 +61,5 @@ class StorageRequestForm(forms.Form):
 
 
 __all__ = [
-    'StorageRequestForm',
+    'FSARequestForm',
 ]

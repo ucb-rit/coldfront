@@ -13,7 +13,7 @@ User = get_user_model()
 
 
 @pytest.mark.component
-class TestStorageRequestDetailView:
+class TestFSARequestDetailView:
     """Integration tests for request detail view."""
 
     def test_displays_request_details(
@@ -247,7 +247,7 @@ class TestStorageRequestDetailView:
 
 
 @pytest.mark.component
-class TestStorageRequestAdminAccessMixin:
+class TestFSARequestAdminAccessMixin:
     """Test admin access control shared across all review views."""
 
     def test_superuser_can_access_review_views(
@@ -465,7 +465,7 @@ class TestStorageRequestAdminAccessMixin:
 
 
 @pytest.mark.component
-class TestStorageRequestReviewEligibilityView:
+class TestFSARequestReviewEligibilityView:
     """Test eligibility review view unique behavior."""
 
     def test_get_displays_eligibility_review_form(
@@ -584,7 +584,7 @@ class TestStorageRequestReviewEligibilityView:
 
 
 @pytest.mark.component
-class TestStorageRequestReviewIntakeConsistencyView:
+class TestFSARequestReviewIntakeConsistencyView:
     """Test intake consistency review view unique behavior."""
 
     def test_get_displays_intake_consistency_review_form(
@@ -670,7 +670,7 @@ class TestStorageRequestReviewIntakeConsistencyView:
 
 
 @pytest.mark.component
-class TestStorageRequestReviewSetupView:
+class TestFSARequestReviewSetupView:
     """Test setup review view unique behavior."""
 
     def test_get_displays_setup_form(
@@ -758,7 +758,7 @@ class TestStorageRequestReviewSetupView:
 
 
 @pytest.mark.component
-class TestStorageRequestEditView:
+class TestFSARequestEditView:
     """Test storage amount edit view unique behavior."""
 
     def test_get_displays_edit_form(
@@ -824,7 +824,7 @@ class TestStorageRequestEditView:
 
 
 @pytest.mark.component
-class TestStorageRequestReviewDenyView:
+class TestFSARequestReviewDenyView:
     """Test deny view for 'other' reasons."""
 
     def test_get_displays_deny_form(
@@ -874,7 +874,7 @@ class TestStorageRequestReviewDenyView:
 
 
 @pytest.mark.component
-class TestStorageRequestUndenyView:
+class TestFSARequestUndenyView:
     """Test undeny view."""
 
     def test_undeny_denied_request_returns_to_under_review(
@@ -933,7 +933,7 @@ class TestStorageRequestUndenyView:
 
 
 @pytest.mark.component
-class TestStorageRequestListView:
+class TestFSARequestListView:
     """Test FSA request list view."""
 
     def test_superuser_can_access_list(

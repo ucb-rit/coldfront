@@ -8,7 +8,7 @@ from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageA
 """Serializers for Faculty Storage Allocations API."""
 
 
-class StorageRequestNextSerializer(serializers.ModelSerializer):
+class FSARequestNextSerializer(serializers.ModelSerializer):
     """Serializer for the next FSA request to be processed by the agent.
 
     This includes all information needed for the agent to idempotently set
@@ -69,7 +69,7 @@ class StorageRequestNextSerializer(serializers.ModelSerializer):
         return set_size_gb
 
 
-class StorageRequestCompletionSerializer(serializers.Serializer):
+class FSARequestCompletionSerializer(serializers.Serializer):
     """Serializer for marking a FSA request as complete.
 
     The agent must provide the directory_name it actually used when setting

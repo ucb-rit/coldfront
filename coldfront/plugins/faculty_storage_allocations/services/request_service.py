@@ -5,7 +5,7 @@ from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequest
 from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequestStatusChoice
 from coldfront.plugins.faculty_storage_allocations.services import DirectoryService
-from coldfront.plugins.faculty_storage_allocations.services import StorageRequestNotificationService
+from coldfront.plugins.faculty_storage_allocations.services import FSARequestNotificationService
 
 import logging
 
@@ -22,7 +22,7 @@ class FacultyStorageAllocationRequestService:
         faculty_scratch_fsa_request = \
             FacultyStorageAllocationRequest.objects.create(**data)
 
-        StorageRequestNotificationService.send_request_created_email(
+        FSARequestNotificationService.send_request_created_email(
             faculty_scratch_fsa_request, email_strategy=email_strategy)
 
         return faculty_scratch_fsa_request
@@ -255,7 +255,7 @@ class FacultyStorageAllocationRequestService:
         FacultyStorageAllocationRequestService._add_project_users_to_allocation(
             request)
 
-        StorageRequestNotificationService.send_completion_email(
+        FSARequestNotificationService.send_completion_email(
             request, email_strategy=email_strategy)
 
     @staticmethod
@@ -289,7 +289,7 @@ class FacultyStorageAllocationRequestService:
         request.status = status
         request.save()
 
-        StorageRequestNotificationService.send_denial_email(
+        FSARequestNotificationService.send_denial_email(
             request, email_strategy=email_strategy)
 
     @staticmethod

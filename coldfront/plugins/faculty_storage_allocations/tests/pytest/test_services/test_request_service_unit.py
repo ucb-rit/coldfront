@@ -23,7 +23,7 @@ class TestRequestServiceCreate:
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.FacultyStorageAllocationRequestStatusChoice')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService')
+           'request_service.FSARequestNotificationService')
     def test_create_request_creates_request_object(
         self, mock_notification, mock_status_choice, mock_request_model
     ):
@@ -60,7 +60,7 @@ class TestRequestServiceCreate:
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.FacultyStorageAllocationRequestStatusChoice')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService')
+           'request_service.FSARequestNotificationService')
     def test_create_request_sends_notification_email(
         self, mock_notification, mock_status_choice, mock_request_model
     ):
@@ -88,7 +88,7 @@ class TestRequestServiceCreate:
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.FacultyStorageAllocationRequestStatusChoice')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.StorageRequestNotificationService')
+           'request_service.FSARequestNotificationService')
     def test_create_request_with_custom_email_strategy(
         self, mock_notification, mock_status_choice, mock_request_model
     ):

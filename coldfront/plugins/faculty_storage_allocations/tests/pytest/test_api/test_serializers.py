@@ -5,8 +5,8 @@ from unittest.mock import Mock, patch
 from django.utils import timezone
 
 from coldfront.plugins.faculty_storage_allocations.api.serializers import (
-    StorageRequestNextSerializer,
-    StorageRequestCompletionSerializer,
+    FSARequestNextSerializer,
+    FSARequestCompletionSerializer,
 )
 
 
@@ -46,8 +46,8 @@ def create_mock_request(
 
 
 @pytest.mark.unit
-class TestStorageRequestNextSerializer:
-    """Unit tests for StorageRequestNextSerializer."""
+class TestFSARequestNextSerializer:
+    """Unit tests for FSARequestNextSerializer."""
 
     def test_serializer_includes_all_required_fields(self):
         """Test serializer includes all expected fields."""
@@ -55,7 +55,7 @@ class TestStorageRequestNextSerializer:
         mock_request = create_mock_request()
 
         # Execute
-        serializer = StorageRequestNextSerializer(mock_request)
+        serializer = FSARequestNextSerializer(mock_request)
 
         # Assert - check all fields are present
         expected_fields = {
@@ -94,7 +94,7 @@ class TestStorageRequestNextSerializer:
         mock_directory_service_class.return_value = mock_service
 
         # Execute
-        serializer = StorageRequestNextSerializer(mock_request)
+        serializer = FSARequestNextSerializer(mock_request)
         data = serializer.data
 
         # Assert
@@ -108,7 +108,7 @@ class TestStorageRequestNextSerializer:
     def test_serializer_is_read_only(self):
         """Test serializer fields are all read-only."""
         # Execute
-        serializer = StorageRequestNextSerializer()
+        serializer = FSARequestNextSerializer()
 
         # Assert - all fields should be read-only
         for field_name in serializer.fields:
@@ -134,7 +134,7 @@ class TestStorageRequestNextSerializer:
         mock_directory_service_class.return_value = mock_service
 
         # Execute
-        serializer = StorageRequestNextSerializer(mock_request)
+        serializer = FSARequestNextSerializer(mock_request)
         data = serializer.data
 
         # Assert
@@ -166,7 +166,7 @@ class TestStorageRequestNextSerializer:
         mock_directory_service_class.return_value = mock_service
 
         # Execute
-        serializer = StorageRequestNextSerializer(mock_request)
+        serializer = FSARequestNextSerializer(mock_request)
         data = serializer.data
 
         # Assert - should use project name as fallback
@@ -193,7 +193,7 @@ class TestStorageRequestNextSerializer:
         mock_directory_service_class.return_value = mock_service
 
         # Execute
-        serializer = StorageRequestNextSerializer(mock_request)
+        serializer = FSARequestNextSerializer(mock_request)
         data = serializer.data
 
         # Assert - should be 2000 + 500 = 2500
@@ -219,7 +219,7 @@ class TestStorageRequestNextSerializer:
         mock_directory_service_class.return_value = mock_service
 
         # Execute
-        serializer = StorageRequestNextSerializer(mock_request)
+        serializer = FSARequestNextSerializer(mock_request)
         data = serializer.data
 
         # Assert - should be 0 + 1000 = 1000
@@ -246,7 +246,7 @@ class TestStorageRequestNextSerializer:
         mock_directory_service_class.return_value = mock_service
 
         # Execute
-        serializer = StorageRequestNextSerializer(mock_request)
+        serializer = FSARequestNextSerializer(mock_request)
         data = serializer.data
 
         # Assert - status should be serialized (as string or object)
@@ -254,8 +254,8 @@ class TestStorageRequestNextSerializer:
 
 
 @pytest.mark.unit
-class TestStorageRequestCompletionSerializer:
-    """Unit tests for StorageRequestCompletionSerializer."""
+class TestFSARequestCompletionSerializer:
+    """Unit tests for FSARequestCompletionSerializer."""
 
     def test_completion_serializer_requires_directory_name(self):
         """Test completion serializer validates directory_name is present."""
@@ -263,7 +263,7 @@ class TestStorageRequestCompletionSerializer:
         data = {}
 
         # Execute
-        serializer = StorageRequestCompletionSerializer(data=data)
+        serializer = FSARequestCompletionSerializer(data=data)
 
         # Assert - should not be valid
         assert not serializer.is_valid()
@@ -275,7 +275,7 @@ class TestStorageRequestCompletionSerializer:
         data = {'directory_name': 'fc_test_dir'}
 
         # Execute
-        serializer = StorageRequestCompletionSerializer(data=data)
+        serializer = FSARequestCompletionSerializer(data=data)
 
         # Assert - should be valid
         assert serializer.is_valid()
@@ -287,7 +287,7 @@ class TestStorageRequestCompletionSerializer:
         data = {'directory_name': ''}
 
         # Execute
-        serializer = StorageRequestCompletionSerializer(data=data)
+        serializer = FSARequestCompletionSerializer(data=data)
 
         # Assert - should not be valid
         assert not serializer.is_valid()
@@ -301,7 +301,7 @@ class TestStorageRequestCompletionSerializer:
         data = {'directory_name': '   '}
 
         # Execute
-        serializer = StorageRequestCompletionSerializer(data=data)
+        serializer = FSARequestCompletionSerializer(data=data)
 
         # Assert - should not be valid
         assert not serializer.is_valid()
@@ -313,7 +313,7 @@ class TestStorageRequestCompletionSerializer:
         data = {'directory_name': '  fc_test_dir  '}
 
         # Execute
-        serializer = StorageRequestCompletionSerializer(data=data)
+        serializer = FSARequestCompletionSerializer(data=data)
 
         # Assert - should strip whitespace
         assert serializer.is_valid()
@@ -325,7 +325,7 @@ class TestStorageRequestCompletionSerializer:
         data = {'directory_name': 'a' * 256}
 
         # Execute
-        serializer = StorageRequestCompletionSerializer(data=data)
+        serializer = FSARequestCompletionSerializer(data=data)
 
         # Assert - should not be valid
         assert not serializer.is_valid()
@@ -345,7 +345,7 @@ class TestStorageRequestCompletionSerializer:
         for directory_name in valid_names:
             # Execute
             data = {'directory_name': directory_name}
-            serializer = StorageRequestCompletionSerializer(data=data)
+            serializer = FSARequestCompletionSerializer(data=data)
 
             # Assert
             assert serializer.is_valid(), \

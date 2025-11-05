@@ -7,7 +7,7 @@ from coldfront.plugins.faculty_storage_allocations.forms.form_utils import (
     ReviewDenyForm,
 )
 from coldfront.plugins.faculty_storage_allocations.forms.approval_forms import (
-    StorageRequestEditForm,
+    FSARequestEditForm,
 )
 
 
@@ -176,12 +176,12 @@ class TestReviewDenyFormValidation:
 
 
 @pytest.mark.unit
-class TestStorageRequestEditFormValidation:
-    """Unit tests for StorageRequestEditForm validation logic."""
+class TestFSARequestEditFormValidation:
+    """Unit tests for FSARequestEditForm validation logic."""
 
     def test_form_requires_storage_amount(self):
         """Test form requires storage_amount field."""
-        form = StorageRequestEditForm(data={})
+        form = FSARequestEditForm(data={})
 
         assert not form.is_valid()
         assert 'storage_amount' in form.errors
@@ -190,7 +190,7 @@ class TestStorageRequestEditFormValidation:
         """Test form accepts valid storage amount choices (1-5 TB)."""
         for amount in [1, 2, 3, 4, 5]:
             data = {'storage_amount': amount}
-            form = StorageRequestEditForm(data=data)
+            form = FSARequestEditForm(data=data)
 
             assert form.is_valid(), \
                 f"Form should accept {amount} TB"
@@ -199,7 +199,7 @@ class TestStorageRequestEditFormValidation:
     def test_form_rejects_zero_storage_amount(self):
         """Test form rejects 0 TB storage amount."""
         data = {'storage_amount': 0}
-        form = StorageRequestEditForm(data=data)
+        form = FSARequestEditForm(data=data)
 
         assert not form.is_valid()
         assert 'storage_amount' in form.errors
@@ -207,7 +207,7 @@ class TestStorageRequestEditFormValidation:
     def test_form_rejects_negative_storage_amount(self):
         """Test form rejects negative storage amount."""
         data = {'storage_amount': -1}
-        form = StorageRequestEditForm(data=data)
+        form = FSARequestEditForm(data=data)
 
         assert not form.is_valid()
         assert 'storage_amount' in form.errors
@@ -215,21 +215,21 @@ class TestStorageRequestEditFormValidation:
     def test_form_rejects_invalid_storage_amount(self):
         """Test form rejects storage amounts not in choices (e.g., 10 TB)."""
         data = {'storage_amount': 10}
-        form = StorageRequestEditForm(data=data)
+        form = FSARequestEditForm(data=data)
 
         assert not form.is_valid()
         assert 'storage_amount' in form.errors
 
     def test_form_has_correct_field_labels(self):
         """Test form has expected field labels."""
-        form = StorageRequestEditForm()
+        form = FSARequestEditForm()
 
         assert 'Updated Storage Amount' in \
             form.fields['storage_amount'].label
 
     def test_form_has_help_text(self):
         """Test form includes helpful guidance text."""
-        form = StorageRequestEditForm()
+        form = FSARequestEditForm()
 
         assert form.fields['storage_amount'].help_text
         assert 'storage' in form.fields['storage_amount'].help_text.lower()

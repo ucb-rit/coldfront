@@ -11,12 +11,12 @@ from coldfront.core.project.models import Project
 from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
 from coldfront.core.user.utils import access_agreement_signed
 
-from coldfront.plugins.faculty_storage_allocations.forms import StorageRequestForm
+from coldfront.plugins.faculty_storage_allocations.forms import FSARequestForm
 from coldfront.plugins.faculty_storage_allocations.services import FacultyStorageAllocationRequestService
-from coldfront.plugins.faculty_storage_allocations.services import StorageRequestEligibilityService
+from coldfront.plugins.faculty_storage_allocations.services import FSARequestEligibilityService
 
 
-class StorageRequestAccessMixin(UserPassesTestMixin):
+class FSARequestAccessMixin(UserPassesTestMixin):
     """Mixin to check access permissions for FSA requests.
 
     Requires that the view has a `_project_obj` attribute set before
@@ -68,7 +68,7 @@ class StorageRequestAccessMixin(UserPassesTestMixin):
         return True
 
 
-class StorageRequestLandingView(LoginRequiredMixin, StorageRequestAccessMixin,
+class FSARequestLandingView(LoginRequiredMixin, FSARequestAccessMixin,
                                 TemplateView):
     """A view for the landing page for FSA requests."""
 
@@ -88,11 +88,11 @@ class StorageRequestLandingView(LoginRequiredMixin, StorageRequestAccessMixin,
         return context
 
 
-class StorageRequestView(LoginRequiredMixin, StorageRequestAccessMixin,
+class FSARequestView(LoginRequiredMixin, FSARequestAccessMixin,
                          FormView):
     """A view for requesting storage under a particular project."""
 
-    form_class = StorageRequestForm
+    form_class = FSARequestForm
     template_name = 'faculty_storage_allocations/request/fsa_request_form.html'
 
     def __init__(self, *args, **kwargs):
@@ -115,7 +115,7 @@ class StorageRequestView(LoginRequiredMixin, StorageRequestAccessMixin,
 
         # Check eligibility before creating request
         is_eligible, reason = \
-            StorageRequestEligibilityService.is_eligible_for_request(pi)
+            FSARequestEligibilityService.is_eligible_for_request(pi)
         if not is_eligible:
             messages.error(
                 self.request, f'Request cannot be submitted: {reason}')
@@ -158,6 +158,6 @@ class StorageRequestView(LoginRequiredMixin, StorageRequestAccessMixin,
 
 
 __all__ = [
-    'StorageRequestLandingView',
-    'StorageRequestView',
+    'FSARequestLandingView',
+    'FSARequestView',
 ]
