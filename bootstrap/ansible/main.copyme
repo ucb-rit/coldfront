@@ -161,6 +161,9 @@ flag_renewal_survey_enabled: True
 # TODO: Enable for BRC, disable for LRC.
 plugin_cluster_storage_enabled: true
 plugin_cluster_storage_admin_email_list: ['placeholder@dev.dev']
+# If enabled, a list of email addresses of PIs that are eligible to request storage.
+plugin_cluster_storage_eligible_pi_email_whitelist_enabled: false
+plugin_cluster_storage_eligible_pi_email_whitelist: []
 
 #------------------------------------------------------------------------------
 # Plugin: departments
