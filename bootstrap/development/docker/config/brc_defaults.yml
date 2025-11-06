@@ -20,6 +20,8 @@ plugin_departments_enabled: true
 plugin_departments_department_display_name: "Department"
 plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.calnet_ldap.CalNetLdapDataSourceBackend"
 
+plugin_faculty_storage_allocations_enabled: true
+
 plugin_hardware_procurements_enabled: true
 plugin_hardware_procurements:
   data_source: 'dummy'

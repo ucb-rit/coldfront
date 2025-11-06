@@ -39,19 +39,32 @@ Project Detail
     <div class="card-header">
       <h2 class="d-inline"><i class="fas fa-cubes"></i></a> <a name="manage-project">Manage Project</a></h2>
       <div class="float-right">
-          {% if project.status.name in 'Active, New' and is_allowed_to_update_project %}
-            <a class="btn btn-primary" href="{% url 'project-update' project.pk %}" role="button"><i class="far fa-edit" aria-hidden="true"></i> Update Project Information</a>
-
-            {% if is_allowed_to_archive_project %}
-                <a class="btn btn-primary" href="{% url 'project-archive' project.pk %}" role="button"><i class="fas fa-file-archive" aria-hidden="true"></i> Archive Project</a>
-            {% endif %}
-          {% endif %}
-          {% if request_secure_directory_visible %}
-            <a class="btn btn-primary" href="{% url 'secure-dir-request-landing' project.pk %}" role="button">
-              <i class="fas fa-lock" aria-hidden="true"></i>
-              Request a Secure Directory
-            </a>
-          {% endif %}
+        {% if project.status.name in 'Active, New' %}
+          <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" id="actionsDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Actions
+            </button>
+            <div class="dropdown-menu" aria-labelledby="actionsDropdown">
+              <a class="dropdown-item" href="{% url 'project-update' project.pk %}">
+                <i class="far fa-edit" aria-hidden="true"></i> Update Project Information
+              </a>
+              {% if request_faculty_storage_allocations_visible %}
+                <a class="dropdown-item" href="{% url 'faculty-storage-allocation-request-landing' project.pk %}">
+                  <i class="fas fa-database" aria-hidden="true"></i> Request Faculty Storage Allocation
+              {% endif %}
+              {% if request_secure_directory_visible %}
+                <a class="dropdown-item" href="{% url 'secure-dir-request-landing' project.pk %}">
+                  <i class="fas fa-lock" aria-hidden="true"></i> Request a Secure Directory
+                </a>
+              {% endif %}
+              {% if is_allowed_to_archive_project %}
+                <a class="dropdown-item" href="{% url 'project-archive' project.pk %}">
+                  <i class="fas fa-file-archive" aria-hidden="true"></i> Archive Project
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
       </div>
     </div>
     <div class="card-body">

@@ -1,0 +1,13 @@
+Dear {{ center_name }} user,
+
+Your Faculty Storage Allocation request is complete, and your storage has been provisioned.
+
+Project: {{ project.name }}
+Amount: {{ amount_tb }} TB
+
+You may view your storage on the project page: {{ project_url }}.
+
+If you have any questions, contact us at {{ support_email }}.
+
+Thank you,
+{{ signature }}

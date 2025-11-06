@@ -33,6 +33,17 @@
                   Cluster Access Requests <span class="badge badge-warning">{{ cluster_account_req_count }}</span>
                 </a></li>
 
+                {% flag_enabled 'FACULTY_STORAGE_ALLOCATIONS_ENABLED' as faculty_storage_allocations_enabled %}
+                {% if faculty_storage_allocations_enabled %}
+                  <li>
+                    <a id="navbar-cluster-faculty-storage-allocation-requests"
+                       class="dropdown-item navbar-align-badges"
+                       href="{% url 'faculty-storage-allocation-request-list' %}">
+                      Faculty Storage Allocation Requests <span class="badge badge-warning">{{ faculty_storage_allocations_req_count }}</span>
+                    </a>
+                  </li>
+                {% endif %}
+
                 {% flag_enabled 'HARDWARE_PROCUREMENTS_ENABLED' as hardware_procurements_enabled %}
                 {% if hardware_procurements_enabled %}
                 <li>
