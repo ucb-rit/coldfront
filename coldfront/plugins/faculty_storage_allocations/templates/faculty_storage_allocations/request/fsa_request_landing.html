@@ -1,0 +1,20 @@
+{% extends "common/base.html" %}
+
+
+{% block title %}
+  Faculty Storage Allocation
+{% endblock %}
+
+
+{% block content %}
+  <h1>Faculty Storage Allocation under {{ project.name }}</h1><hr>
+
+  <p>As part of the campus' Data Storage Allocation for Faculty pilot, UC Berkeley faculty and eligible researchers can request up to 5 TB of free storage across various campus services, including Savio. The Savio storage will be connected to your Faculty Compute Allowance.</p>
+  <p>After you have completed the initial intake form, please select Continue below.</p>
+  {% comment %} TODO: Include a link to the initial intake form. {% endcomment %}
+
+  <a class="btn btn-primary" href="{% url 'faculty-storage-allocation-request' project.pk %}">
+    Continue
+  </a>
+
+{% endblock %}

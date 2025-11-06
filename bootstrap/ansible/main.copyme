@@ -164,6 +164,17 @@ plugin_departments_department_display_name: "Department"
 plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.calnet_ldap.CalNetLdapDataSourceBackend"
 
 #------------------------------------------------------------------------------
+# Plugin: faculty_storage_allocations
+#------------------------------------------------------------------------------
+
+# TODO: Enable for BRC, disable for LRC.
+plugin_faculty_storage_allocations_enabled: true
+plugin_faculty_storage_allocations_admin_email_list: ['placeholder@dev.dev']
+# If enabled, a list of email addresses of PIs that are eligible to request storage.
+plugin_faculty_storage_allocations_eligible_pi_email_whitelist_enabled: false
+plugin_faculty_storage_allocations_eligible_pi_email_whitelist: []
+
+#------------------------------------------------------------------------------
 # Plugin: hardware_procurements
 #------------------------------------------------------------------------------
 

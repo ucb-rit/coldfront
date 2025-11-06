@@ -1,0 +1,8 @@
+There is a new Faculty Storage Allocation request.
+
+Project: {{ project.name }}
+Requester: {{ requester.get_full_name }} ({{ requester.username }})
+PI: {{ pi.get_full_name }} ({{ pi.username }})
+Requested Amount: {{ amount_tb }} TB
+
+Please review the request: {{ review_url }}.

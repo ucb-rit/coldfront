@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import path
 from django.views.generic import TemplateView
 
@@ -15,6 +16,8 @@ import coldfront.core.project.views_.removal_views as removal_views
 import coldfront.core.project.views_.renewal_views.approval_views as renewal_approval_views
 import coldfront.core.project.views_.renewal_views.request_views as renewal_request_views
 import coldfront.core.utils.views.mou_views as mou_views
+
+
 
 
 urlpatterns = [
@@ -254,9 +257,12 @@ with flagged_paths('SERVICE_UNITS_PURCHASABLE'):
                name='service-units-purchase-request-notify-pi'),
     ]
 
+
+flagged_url_patterns = []
+
 # Request a secure directory
 with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
-    flagged_url_patterns = [
+    flagged_url_patterns += [
         # New Directory Request Views
         path('<int:pk>/secure-dir-request-landing',
              secure_dir_new_directory_request_views.SecureDirRequestLandingView.as_view(),
@@ -267,5 +273,24 @@ with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
              ),
              name='secure-dir-request'),
     ]
+
+
+# Faculty Storage Allocations
+# Note: The feature flag generally abstracts away the check for whether the app
+# is installed. However, the app module is still resolved, which may be
+# problematic if it is not installed, so the check is manually done here.
+if 'coldfront.plugins.faculty_storage_allocations' in settings.INSTALLED_APPS:
+     from coldfront.plugins.faculty_storage_allocations.views import FSARequestLandingView
+     from coldfront.plugins.faculty_storage_allocations.views import FSARequestView
+
+     with flagged_paths('FACULTY_STORAGE_ALLOCATIONS_ENABLED') as path:
+          flagged_url_patterns += [
+               path('<int:pk>/faculty-storage-allocation-request-landing',
+                    FSARequestLandingView.as_view(),
+                    name='faculty-storage-allocation-request-landing'),
+               path('<int:pk>/faculty-storage-allocation-request',
+                    FSARequestView.as_view(),
+                    name='faculty-storage-allocation-request'),
+          ]
 
 urlpatterns = urlpatterns + flagged_url_patterns
