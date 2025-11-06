@@ -75,8 +75,8 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
                         existing_pi=None, pi_departments=None):
         """Send a POST request to the view with the given parameters.
 
-        TODO: Some POST data should be made configurable (e.g., new PI
-         details, pooling, etc.).
+        TODO: Some POST data should be made configurable (e.g.,
+        pooling, etc.).
         """
         # TODO: This sequence of reloads and cache-clearing somehow gets the
         # enabling of the departments flag to be detected when the flag is
@@ -109,8 +109,22 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
                 current_step_key: '2',
             }
             form_data.append(existing_pi_form_data)
+        else:
+            existing_pi_form_data = {
+                '2-PI': '',
+                current_step_key: '2',
+            }
+            form_data.append(existing_pi_form_data)
 
-        # TODO: Account for new_pi_details.
+        if new_pi_details is not None:
+            new_pi_details_form_data = {
+                '3-first_name': new_pi_details['first_name'],
+                '3-middle_name': new_pi_details.get('middle_name', ''),
+                '3-last_name': new_pi_details['last_name'],
+                '3-email': new_pi_details['email'],
+                current_step_key: '3',
+            }
+            form_data.append(new_pi_details_form_data)
 
         if pi_departments is not None:
             pi_department_form_data = {
@@ -147,6 +161,52 @@ class TestSavioProjectRequestWizard(TransactionTestBase):
                 self.assertRedirects(response, reverse('home'))
             else:
                 self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    @enable_deployment('BRC')
+    @override_settings(FLAGS=FLAGS_COPY, INSTALLED_APPS=INSTALLED_APPS_COPY)
+    def test_post_creates_pi_user_if_nonexistent(self):
+        """Test that a POST creates a new, active User with the
+        requester-provided details if the specified PI does not already
+        exist."""
+        computing_allowance = self.get_predominant_computing_allowance()
+        allocation_period = get_current_allowance_year_period()
+        details_data = {
+            'name': 'name',
+            'title': 'title',
+            'description': 'a' * 20,
+        }
+        survey_data = {
+            'scope_and_intent': 'b' * 20,
+            'computational_aspects': 'c' * 20,
+        }
+        new_pi_details_data = {
+            'first_name': 'Test',
+            'middle_name': 'New',
+            'last_name': 'PI',
+            'email': 'test_pi@email.com',
+        }
+
+        self._send_post_data(
+            computing_allowance, allocation_period, details_data, survey_data,
+            new_pi_details=new_pi_details_data,
+            pi_departments=[self._department_1])
+
+        requests = SavioProjectAllocationRequest.objects.all()
+        self.assertEqual(requests.count(), 1)
+        projects = Project.objects.all()
+        self.assertEqual(projects.count(), 1)
+        request = requests.first()
+
+        new_pi_user = request.pi
+        self.assertEqual(
+            new_pi_user.first_name, new_pi_details_data['first_name'])
+        self.assertEqual(
+            new_pi_user.userprofile.middle_name,
+            new_pi_details_data['middle_name'])
+        self.assertEqual(
+            new_pi_user.last_name, new_pi_details_data['last_name'])
+        self.assertEqual(new_pi_user.email, new_pi_details_data['email'])
+        self.assertTrue(new_pi_user.is_active)
 
     @enable_deployment('BRC')
     @override_settings(FLAGS=FLAGS_COPY, INSTALLED_APPS=INSTALLED_APPS_COPY)

@@ -1,0 +1,65 @@
+{% extends "common/base.html" %}
+{% load common_tags %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+
+{% block title %}
+Faculty Storage Allocation {{ request_filter|title }} Requests
+{% endblock %}
+
+
+{% block content %}
+<script type='text/javascript' src="{% static 'selectize/selectize.min.js' %}"></script>
+<link rel='stylesheet' type='text/css' href="{% static 'selectize/selectize.bootstrap3.css' %}"/>
+
+
+<h1>{{ request_filter|title }} Faculty Storage Allocation Requests</h1>
+<hr>
+
+
+<form id="search_form" method="GET" action="{% url 'faculty-storage-allocation-request-list' %}" autocomplete="off">
+  {{ search_form|crispy }}
+  <input type="submit" class="btn btn-primary" value="Search">
+</form>
+<hr>
+
+
+{% if fsa_requests %}
+  <div class="table-responsive">
+    {% with queryset=fsa_requests %}
+      {% include 'faculty_storage_allocations/approval/fsa_request_list_table.html' %}
+    {% endwith %}
+  </div>
+
+  {% with page_obj=fsa_requests %}
+    {% include 'common/pagination.html' %}
+  {% endwith %}
+{% else %}
+  <div class="alert alert-info">
+    No Faculty Storage Allocation requests.
+  </div>
+{% endif %}
+
+{% endblock %}
+
+
+{% block javascript %}
+{{ block.super }}
+
+<script>
+  $("#navbar-main > ul > li.active").removeClass("active");
+  $("#navbar-admin").addClass("active");
+  $(document).ready(function() {
+    $('[data-toggle="popover"]').popover();
+  });
+</script>
+
+<script>
+  $('select').selectize({
+    create: false,
+    sortField: 'text'
+  })
+</script>
+
+{% endblock %}

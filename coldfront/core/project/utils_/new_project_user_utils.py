@@ -6,6 +6,7 @@ import logging
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
+from django.dispatch import Signal
 
 from flags.state import flag_enabled
 
@@ -31,6 +32,10 @@ from coldfront.core.utils.email.email_strategy import validate_email_strategy_or
 
 
 logger = logging.getLogger(__name__)
+
+
+# A signal to send when a user is made active on a project.
+project_user_activated = Signal()
 
 
 def add_vector_user_to_designated_savio_project(user_obj, email_strategy=None):
@@ -137,12 +142,14 @@ class NewProjectUserRunner(ABC):
 
     def run(self):
         """Request cluster access, run extra processing steps as needed,
-        and send notification emails."""
+        send a signal about the activation, and send notification
+        emails."""
         with transaction.atomic():
             self._create_or_update_active_compute_allocation_user()
             if self._should_request_cluster_access:
                 self._request_cluster_access()
             self._run_extra_steps()
+        self._send_project_user_activated_signal_safe()
         self._send_emails_safe()
 
     def _create_or_update_active_compute_allocation_user(self):
@@ -198,6 +205,27 @@ class NewProjectUserRunner(ABC):
             message = (
                 f'Encountered unexpected exception when sending notification '
                 f'emails. Details:\n{e}')
+            logger.exception(message)
+
+    def _send_project_user_activated_signal_safe(self):
+        """Send a signal to notify other applications (e.g., plugins)
+        that the ProjectUser was activated.
+
+        Catch all exceptions to prevent rolling back any enclosing
+        transaction. Signal handler failures should not stop this
+        runner's core flow.
+
+        A signal is sent to achieve loose coupling. This runner is not
+        aware of extraneous processing required by other applications.
+        """
+        try:
+            project_user_activated.send(
+                sender=self.__class__,
+                project_user=self._project_user_obj)
+        except Exception as e:
+            message = (
+                f'Encountered unexpected exception when sending '
+                f'project_user_activated signal. Details:\n{e}')
             logger.exception(message)
 
     def _update_processing_options_from_source(self):

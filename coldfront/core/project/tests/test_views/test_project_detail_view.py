@@ -16,9 +16,14 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import override_settings
 from django.urls import reverse
+import unittest
 
 from flags.state import enable_flag
 from http import HTTPStatus
+
+
+# Helper to check if faculty storage allocations plugin is installed
+FSA_PLUGIN_INSTALLED = 'coldfront.plugins.faculty_storage_allocations' in settings.INSTALLED_APPS
 
 
 class TestProjectDetailView(TestBase):
@@ -139,7 +144,7 @@ class TestProjectDetailView(TestBase):
             computing_allowance.name)
 
         project = self.create_active_project_with_pi(
-            f'{project_name_prefix}_project', self.user)
+            f'{project_name_prefix}project', self.user)
         create_project_allocation(project, Decimal('0.00'))
 
         project_detail_url = self.project_detail_url(project.pk)
@@ -265,7 +270,7 @@ class TestProjectDetailView(TestBase):
             for allowance in all_allowances:
                 project_name_prefix = project_name_prefixes_by_allowance_name[
                     allowance.name]
-                project.name = f'{project_name_prefix}_project'
+                project.name = f'{project_name_prefix}project'
                 project.save()
                 response = self.client.get(url)
                 if (role.name in eligible_role_names and
@@ -285,7 +290,7 @@ class TestProjectDetailView(TestBase):
         for allowance in all_allowances:
             project_name_prefix = project_name_prefixes_by_allowance_name[
                 allowance.name]
-            project.name = f'{project_name_prefix}_project'
+            project.name = f'{project_name_prefix}project'
             project.save()
             response = self.client.get(url)
             if allowance.name in eligible_allowance_names:
@@ -301,11 +306,307 @@ class TestProjectDetailView(TestBase):
         for allowance in all_allowances:
             project_name_prefix = project_name_prefixes_by_allowance_name[
                 allowance.name]
-            project.name = f'{project_name_prefix}_project'
+            project.name = f'{project_name_prefix}project'
             project.save()
             response = self.client.get(url)
             self.assertNotContains(response, button_text)
         self.user.is_staff = False
         self.user.save()
+
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
+    @override_settings(FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]})
+    def test_request_storage_link_invisible_for_ineligible_projects(self):
+        """Test that the 'Request Faculty Storage Allocation' link only
+        appears for Projects that are eligible to do so (FCA projects)."""
+        from unittest.mock import patch
+
+        computing_allowance_interface = ComputingAllowanceInterface()
+        expected_num_eligible, actual_num_eligible = 1, 0
+        ineligible_found = False
+
+        # Mock has_eligible_pi_for_fsa_request to always return True
+        with patch(
+                'coldfront.plugins.faculty_storage_allocations.utils.has_eligible_pi_for_fsa_request',
+                return_value=True):
+
+            for allowance in computing_allowance_interface.allowances():
+                project_name_prefix = \
+                    computing_allowance_interface.code_from_name(allowance.name)
+                wrapper = ComputingAllowance(allowance)
+                project = self.create_active_project_with_pi(
+                    f'{project_name_prefix}project', self.user)
+                create_project_allocation(project, Decimal('0.00'))
+
+                url = self.project_detail_url(project.pk)
+                response = self.client.get(url)
+
+                link_text = 'Request Faculty Storage Allocation'
+
+                # Only FCA projects should see the link
+                if allowance.name == 'Faculty Computing Allowance':
+                    self.assertContains(response, link_text)
+                    actual_num_eligible += 1
+                else:
+                    self.assertNotContains(response, link_text)
+                    ineligible_found = True
+
+            self.assertEqual(expected_num_eligible, actual_num_eligible)
+            self.assertTrue(ineligible_found)
+
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
+    @override_settings(FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]})
+    def test_request_storage_link_invisible_for_user_roles(self):
+        """Test that the 'Request Faculty Storage Allocation' link only
+        appears for superusers, PIs, and Managers."""
+        from unittest.mock import patch
+
+        project = self.create_active_project_with_pi('fc_project', self.user)
+        create_project_allocation(project, Decimal('0.00'))
+
+        url = self.project_detail_url(project.pk)
+        link_text = 'Request Faculty Storage Allocation'
+
+        # Mock has_eligible_pi_for_fsa_request to always return True
+        with patch(
+                'coldfront.plugins.faculty_storage_allocations.utils.has_eligible_pi_for_fsa_request',
+                return_value=True):
+
+            project_user = ProjectUser.objects.get(
+                project=project, user=self.user)
+            self.assertEqual(project_user.role.name, 'Principal Investigator')
+            response = self.client.get(url)
+            self.assertContains(response, link_text)
+
+            project_user.role = ProjectUserRoleChoice.objects.get(name='Manager')
+            project_user.save()
+            response = self.client.get(url)
+            self.assertContains(response, link_text)
+
+            project_user.role = ProjectUserRoleChoice.objects.get(name='User')
+            project_user.save()
+            response = self.client.get(url)
+            self.assertNotContains(response, link_text)
+
+            # Superuser can see it even with 'User' role
+            self.user.is_superuser = True
+            self.user.save()
+            response = self.client.get(url)
+            self.assertContains(response, link_text)
+
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
+    @override_settings(FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': False}]})
+    def test_request_storage_link_invisible_when_flag_disabled(self):
+        """Test that the 'Request Faculty Storage Allocation' link is
+        not visible when the FACULTY_STORAGE_ALLOCATIONS_ENABLED flag is disabled."""
+        # Create an FCA project (eligible)
+        project = self.create_active_project_with_pi('fc_project', self.user)
+        create_project_allocation(project, Decimal('0.00'))
+
+        url = self.project_detail_url(project.pk)
+        link_text = 'Request Faculty Storage Allocation'
+
+        # PI should not see the link when flag is disabled
+        project_user = ProjectUser.objects.get(project=project, user=self.user)
+        self.assertEqual(project_user.role.name, 'Principal Investigator')
+        response = self.client.get(url)
+        self.assertNotContains(response, link_text)
+
+        # Even superuser should not see it when flag is disabled
+        self.user.is_superuser = True
+        self.user.save()
+        response = self.client.get(url)
+        self.assertNotContains(response, link_text)
+
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
+    @override_settings(
+        FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
+    )
+    def test_request_storage_link_visible_when_pi_eligible_whitelist_disabled(self):
+        """Test that the 'Request Faculty Storage Allocation' link is
+        visible when PI is eligible and whitelist is disabled."""
+        from unittest.mock import patch
+
+        # Create an FCA project (eligible)
+        project = self.create_active_project_with_pi('fc_project', self.user)
+        create_project_allocation(project, Decimal('0.00'))
+
+        url = self.project_detail_url(project.pk)
+        link_text = 'Request Faculty Storage Allocation'
+
+        # Mock the settings module that the eligibility service imports
+        with patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False):
+
+            # PI should see the link (whitelist disabled, no existing requests)
+            response = self.client.get(url)
+            self.assertContains(response, link_text)
+
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
+    @override_settings(
+        FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=True,
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST=[]
+    )
+    def test_request_storage_link_invisible_when_pi_not_on_whitelist(self):
+        """Test that the 'Request Faculty Storage Allocation' link is
+        not visible when PI is not on the whitelist."""
+        from unittest.mock import patch, PropertyMock
+        from allauth.account.models import EmailAddress
+
+        # Create an FCA project (eligible)
+        project = self.create_active_project_with_pi('fc_project', self.user)
+        create_project_allocation(project, Decimal('0.00'))
+
+        # Create email for the PI
+        EmailAddress.objects.create(
+            user=self.user,
+            email='pi@example.com',
+            verified=True,
+            primary=True
+        )
+
+        url = self.project_detail_url(project.pk)
+        link_text = 'Request Faculty Storage Allocation'
+
+        # Mock the settings module that the eligibility service imports
+        with patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', True), \
+             patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST', ['other@berkeley.edu']):
+
+            # PI should NOT see the link (not on whitelist)
+            response = self.client.get(url)
+            self.assertNotContains(response, link_text)
+
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
+    @override_settings(
+        FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=True,
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST=['pi@example.com']
+    )
+    def test_request_storage_link_visible_when_pi_on_whitelist(self):
+        """Test that the 'Request Faculty Storage Allocation' link is
+        visible when PI is on the whitelist."""
+        from unittest.mock import patch
+        from allauth.account.models import EmailAddress
+
+        # Create an FCA project (eligible)
+        project = self.create_active_project_with_pi('fc_project', self.user)
+        create_project_allocation(project, Decimal('0.00'))
+
+        # Create email for the PI that's on the whitelist
+        EmailAddress.objects.create(
+            user=self.user,
+            email='pi@example.com',
+            verified=True,
+            primary=True
+        )
+
+        url = self.project_detail_url(project.pk)
+        link_text = 'Request Faculty Storage Allocation'
+
+        # Mock the settings module that the eligibility service imports
+        with patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', True), \
+             patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST', ['pi@example.com']):
+
+            # PI should see the link (on whitelist, no existing requests)
+            response = self.client.get(url)
+            self.assertContains(response, link_text)
+
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
+    @override_settings(
+        FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
+    )
+    def test_request_storage_link_invisible_when_pi_has_existing_request(self):
+        """Test that the 'Request Faculty Storage Allocation' link is
+        not visible when PI has an existing non-denied FSA request."""
+        from unittest.mock import patch
+        from coldfront.plugins.faculty_storage_allocations.models import (
+            FacultyStorageAllocationRequest,
+            FacultyStorageAllocationRequestStatusChoice,
+            faculty_storage_allocation_request_state_schema,
+        )
+
+        # Create an FCA project (eligible)
+        project = self.create_active_project_with_pi('fc_project', self.user)
+        create_project_allocation(project, Decimal('0.00'))
+
+        # Create an existing FSA request for this PI
+        status, _ = FacultyStorageAllocationRequestStatusChoice.objects.get_or_create(
+            name='Under Review'
+        )
+        FacultyStorageAllocationRequest.objects.create(
+            status=status,
+            project=project,
+            requester=self.user,
+            pi=self.user,
+            requested_amount_gb=1000,
+            state=faculty_storage_allocation_request_state_schema(),
+        )
+
+        url = self.project_detail_url(project.pk)
+        link_text = 'Request Faculty Storage Allocation'
+
+        # Mock the settings module that the eligibility service imports
+        with patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False):
+
+            # PI should NOT see the link (has existing request)
+            response = self.client.get(url)
+            self.assertNotContains(response, link_text)
+
+    @unittest.skipIf(not FSA_PLUGIN_INSTALLED, 'Faculty Storage Allocations plugin not installed')
+    @override_settings(
+        FLAGS={'FACULTY_STORAGE_ALLOCATIONS_ENABLED': [{'condition': 'boolean', 'value': True}]},
+        FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED=False
+    )
+    def test_request_storage_link_visible_when_different_pi_is_eligible(self):
+        """Test that the 'Request Faculty Storage Allocation' link is
+        visible when at least one PI on the project is eligible."""
+        from unittest.mock import patch
+        from coldfront.plugins.faculty_storage_allocations.models import (
+            FacultyStorageAllocationRequest,
+            FacultyStorageAllocationRequestStatusChoice,
+            faculty_storage_allocation_request_state_schema,
+        )
+
+        # Create an FCA project with the main PI
+        project = self.create_active_project_with_pi('fc_project', self.user)
+        create_project_allocation(project, Decimal('0.00'))
+
+        # Create a second PI who has an existing request (not eligible)
+        pi_2 = User.objects.create(
+            email='pi_2@example.com',
+            first_name='PI',
+            last_name='Two',
+            username='pi_2'
+        )
+        ProjectUser.objects.create(
+            project=project,
+            role=ProjectUserRoleChoice.objects.get(name='Principal Investigator'),
+            status=ProjectUserStatusChoice.objects.get(name='Active'),
+            user=pi_2
+        )
+
+        # Create existing FSA request for pi_2 (making them ineligible)
+        status, _ = FacultyStorageAllocationRequestStatusChoice.objects.get_or_create(
+            name='Under Review'
+        )
+        FacultyStorageAllocationRequest.objects.create(
+            status=status,
+            project=project,
+            requester=pi_2,
+            pi=pi_2,
+            requested_amount_gb=1000,
+            state=faculty_storage_allocation_request_state_schema(),
+        )
+
+        url = self.project_detail_url(project.pk)
+        link_text = 'Request Faculty Storage Allocation'
+
+        # Mock the settings module that the eligibility service imports
+        with patch('coldfront.plugins.faculty_storage_allocations.conf.settings.ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED', False):
+
+            # Link should STILL be visible because self.user (first PI) is eligible
+            response = self.client.get(url)
+            self.assertContains(response, link_text)
 
     # TODO

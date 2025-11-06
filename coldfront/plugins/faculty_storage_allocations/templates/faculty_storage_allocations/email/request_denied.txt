@@ -1,0 +1,11 @@
+Dear {{ center_name }} user,
+
+Your Faculty Storage Allocation request for {{ amount_tb }} TB under project {{ project.name }} has been denied for the following reason:
+
+Category: {{ reason_category }}
+Justification: {{ reason_justification }}
+
+If you have any questions, please contact us at {{ support_email }}.
+
+Thank you,
+{{ signature }}

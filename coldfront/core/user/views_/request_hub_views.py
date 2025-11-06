@@ -119,6 +119,58 @@ class RequestHubView(LoginRequiredMixin,
 
         return cluster_request_object
 
+    def get_faculty_storage_allocation_request(self):
+        """Populates a RequestListItem with data for
+        FacultyStorageAllocation requests"""
+        from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequest
+
+        fsa_request_obj = RequestListItem()
+        user = self.request.user
+
+        args = []
+        if not self.show_all_requests:
+            args.append(Q(pi=user) | Q(requester=user))
+
+        pending_status_names = [
+            'Under Review', 'Approved - Processing', 'Approved - Queued']
+        fsa_request_list_pending = \
+            FacultyStorageAllocationRequest.objects.filter(
+                status__name__in=pending_status_names, *args
+            ).order_by('-request_time')
+
+        complete_status_names = ['Approved - Complete', 'Denied']
+        fsa_request_list_complete = \
+            FacultyStorageAllocationRequest.objects.filter(
+                status__name__in=complete_status_names, *args
+            ).order_by('-request_time')
+
+        # Add requested_amount_tb to each request for template display
+        for request in fsa_request_list_pending:
+            request.requested_amount_tb = request.requested_amount_gb // 1000
+        for request in fsa_request_list_complete:
+            request.requested_amount_tb = request.requested_amount_gb // 1000
+
+        fsa_request_obj.num = self.paginators
+        fsa_request_obj.pending_queryset = self.create_paginator(
+            fsa_request_list_pending)
+        fsa_request_obj.complete_queryset = self.create_paginator(
+            fsa_request_list_complete)
+
+        fsa_request_obj.num_pending = fsa_request_list_pending.count()
+
+        fsa_request_obj.title = 'Faculty Storage Allocation Requests'
+        fsa_request_obj.table = \
+            'faculty_storage_allocations/approval/fsa_request_list_table.html'
+        fsa_request_obj.button_path = 'faculty-storage-allocation-request-list'
+        fsa_request_obj.button_text = \
+            'Go To Faculty Storage Allocation Requests Main Page'
+        fsa_request_obj.id = 'faculty_storage_allocation_request_section'
+        fsa_request_obj.help_text = \
+            'Showing Faculty Storage Allocation requests that you requested ' \
+            'or requests in which you are the PI for the associated project.'
+
+        return fsa_request_obj
+
     def get_hardware_procurement_request(self):
         """Populates a RequestListItem with data for hardware
         procurement requests"""
@@ -226,7 +278,8 @@ class RequestHubView(LoginRequiredMixin,
         if not self.show_all_requests:
             args.append(Q(pi=user) | Q(requester=user))
 
-        pending_status_names = ['Under Review', 'Approved - Processing']
+        pending_status_names = [
+            'Under Review', 'Approved - Processing']
         project_request_pending = \
             annotate_queryset_with_allocation_period_not_started_bool(
                 SavioProjectAllocationRequest.objects.filter(
@@ -655,6 +708,9 @@ class RequestHubView(LoginRequiredMixin,
             requests += ['secure_dir_request',
                          'secure_dir_join_request',
                          'secure_dir_remove_request']
+
+        if flag_enabled('FACULTY_STORAGE_ALLOCATIONS_ENABLED'):
+            requests.append('faculty_storage_allocation_request')
 
         if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
             requests.append('hardware_procurement_request')
