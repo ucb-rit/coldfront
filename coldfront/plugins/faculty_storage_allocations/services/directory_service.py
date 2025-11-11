@@ -6,6 +6,8 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.models import AllocationAttribute
 from coldfront.core.allocation.models import AllocationAttributeType
 from coldfront.core.allocation.models import AllocationStatusChoice
+from coldfront.core.allocation.models import AllocationUser
+from coldfront.core.allocation.models import AllocationUserStatusChoice
 from coldfront.core.allocation.utils import get_or_create_active_allocation_user
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
@@ -348,6 +350,38 @@ class DirectoryService:
 
         return allocation_users
 
+    def remove_user_from_directory(self, user):
+        """
+        Remove a user from this directory's allocation, if the user is
+        associated with it.
+
+        Args:
+            user: The User object to remove
+
+        Returns:
+            The removed AllocationUser object, if any, else None
+
+        Raises:
+            ValueError: If the directory allocation does not exist
+        """
+        allocation = self._get_allocation()
+        if allocation is None:
+            raise ValueError(
+                f'Cannot remove user from directory: allocation does not '
+                f'exist for project {self.project.name} with directory name '
+                f'{self.directory_name}.'
+            )
+
+        try:
+            allocation_user = allocation.allocationuser_set.get(user=user)
+        except AllocationUser.DoesNotExist:
+            return None
+
+        removed_status = AllocationUserStatusChoice.objects.get(name='Removed')
+        allocation_user.status = removed_status
+        allocation_user.save()
+        return allocation_user
+
     def _get_allocation(self, refresh=False):
         """
         Get the allocation for this directory, with optional caching.
@@ -371,6 +405,3 @@ class DirectoryService:
                 raise e
 
         return self._allocation
-
-
-# TODO: Verify implementation.
