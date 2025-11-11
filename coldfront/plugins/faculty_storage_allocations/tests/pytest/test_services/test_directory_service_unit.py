@@ -758,3 +758,119 @@ class TestDirectoryServiceUserManagement:
         service = DirectoryService(mock_project, 'test_dir')
         with pytest.raises(ValueError, match='Cannot add users'):
             service.add_project_users_to_directory()
+
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'directory_service.Resource')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'directory_service.Allocation')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'directory_service.AllocationUserStatusChoice')
+    def test_remove_user_from_directory_sets_status_to_removed(
+        self, mock_status, mock_allocation_model, mock_resource
+    ):
+        """Test remove_user_from_directory() sets user status to Removed."""
+        # Setup
+        mock_project = create_mock_project()
+        mock_user = Mock()
+
+        # Mock resource
+        mock_faculty_storage = Mock()
+        mock_resource.objects.get.return_value = mock_faculty_storage
+        mock_path_attr = Mock()
+        mock_path_attr.value = '/global/scratch/fsa'
+        mock_faculty_storage.resourceattribute_set.get.return_value = \
+            mock_path_attr
+
+        # Mock allocation exists
+        mock_allocation = Mock()
+        mock_allocation_model.objects.get.return_value = mock_allocation
+
+        # Mock allocation user exists
+        mock_allocation_user = Mock()
+        mock_queryset = Mock()
+        mock_queryset.get.return_value = mock_allocation_user
+        mock_allocation.allocationuser_set = mock_queryset
+
+        # Mock removed status
+        mock_removed_status = Mock()
+        mock_status.objects.get.return_value = mock_removed_status
+
+        # Execute
+        service = DirectoryService(mock_project, 'test_dir')
+        result = service.remove_user_from_directory(mock_user)
+
+        # Assert
+        assert result == mock_allocation_user
+        assert mock_allocation_user.status == mock_removed_status
+        mock_allocation_user.save.assert_called_once()
+
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'directory_service.Resource')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'directory_service.Allocation')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'directory_service.AllocationUser')
+    def test_remove_user_from_directory_returns_none_when_user_not_found(
+        self, mock_allocation_user_model, mock_allocation_model, mock_resource
+    ):
+        """Test remove_user_from_directory() returns None when user not in
+        allocation."""
+        # Setup
+        mock_project = create_mock_project()
+        mock_user = Mock()
+
+        # Mock resource
+        mock_faculty_storage = Mock()
+        mock_resource.objects.get.return_value = mock_faculty_storage
+        mock_path_attr = Mock()
+        mock_path_attr.value = '/global/scratch/fsa'
+        mock_faculty_storage.resourceattribute_set.get.return_value = \
+            mock_path_attr
+
+        # Mock allocation exists
+        mock_allocation = Mock()
+        mock_allocation_model.objects.get.return_value = mock_allocation
+
+        # Mock allocation user doesn't exist - need real exception class
+        mock_allocation_user_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
+        mock_queryset = Mock()
+        mock_queryset.get.side_effect = mock_allocation_user_model.DoesNotExist
+        mock_allocation.allocationuser_set = mock_queryset
+
+        # Execute
+        service = DirectoryService(mock_project, 'test_dir')
+        result = service.remove_user_from_directory(mock_user)
+
+        # Assert
+        assert result is None
+
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'directory_service.Resource')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'directory_service.Allocation')
+    def test_remove_user_from_directory_raises_when_no_allocation(
+        self, mock_allocation_model, mock_resource
+    ):
+        """Test remove_user_from_directory() raises ValueError when no
+        allocation."""
+        # Setup
+        mock_project = create_mock_project()
+        mock_user = Mock()
+
+        # Mock resource
+        mock_faculty_storage = Mock()
+        mock_resource.objects.get.return_value = mock_faculty_storage
+        mock_path_attr = Mock()
+        mock_path_attr.value = '/global/scratch/fsa'
+        mock_faculty_storage.resourceattribute_set.get.return_value = \
+            mock_path_attr
+
+        # Mock allocation doesn't exist - need real exception class
+        mock_allocation_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
+        mock_allocation_model.objects.get.side_effect = \
+            mock_allocation_model.DoesNotExist
+
+        # Execute & Assert
+        service = DirectoryService(mock_project, 'test_dir')
+        with pytest.raises(ValueError, match='Cannot remove user'):
+            service.remove_user_from_directory(mock_user)
