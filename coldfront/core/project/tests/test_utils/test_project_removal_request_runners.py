@@ -798,3 +798,47 @@ class TestProjectRemovalRequestProcessingRunner(TestRemovalRequestRunnerBase):
         self._assert_emails_sent()
 
         self.assertFalse(runner.get_warning_messages())
+
+    def test_project_user_removed_signal_sent(self):
+        """Test that the project_user_removed signal is sent when the
+        runner runs successfully."""
+        from coldfront.core.project.utils_.removal_utils import (
+            project_user_removed
+        )
+
+        signal_received = []
+
+        def signal_handler(sender, **kwargs):
+            """Capture signal data."""
+            signal_received.append({
+                'sender': sender,
+                'project_user': kwargs.get('project_user')
+            })
+
+        # Connect the signal handler
+        project_user_removed.connect(signal_handler)
+
+        try:
+            self.assertEqual(len(mail.outbox), 0)
+
+            self._assert_pre_state()
+
+            runner = ProjectRemovalRequestProcessingRunner(self.request_obj)
+            with self.assertLogs(self._module, 'INFO') as cm:
+                runner.run()
+
+            # Assert signal was sent
+            self.assertEqual(len(signal_received), 1)
+            signal_data = signal_received[0]
+            self.assertEqual(signal_data['sender'], runner.__class__)
+            self.assertEqual(signal_data['project_user'], self.project_user_obj)
+
+            self._assert_post_state()
+
+            self.assertGreater(len(cm.output), 0)
+            self._assert_emails_sent()
+
+            self.assertFalse(runner.get_warning_messages())
+        finally:
+            # Disconnect the signal handler to avoid affecting other tests
+            project_user_removed.disconnect(signal_handler)

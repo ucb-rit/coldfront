@@ -11,10 +11,12 @@ import logging
 from coldfront.core.project.utils_.new_project_user_utils import (
     project_user_activated
 )
+from coldfront.core.project.utils_.removal_utils import project_user_removed
 from coldfront.core.allocation.models import AllocationUser
 from coldfront.plugins.faculty_storage_allocations.services import DirectoryService
 from coldfront.plugins.faculty_storage_allocations.signals import (
-    add_project_user_to_faculty_storage_allocation
+    add_project_user_to_faculty_storage_allocation,
+    remove_project_user_from_faculty_storage_allocation
 )
 
 
@@ -346,3 +348,428 @@ class TestSignalIntegration:
         assert user1.id in user_ids
         assert user2.id in user_ids
         assert user3.id in user_ids
+
+
+@pytest.mark.component
+class TestProjectUserRemovedSignal:
+    """Test project_user_removed signal handler."""
+
+    def test_signal_removes_user_from_faculty_storage_allocation(
+        self, test_project, test_user, resource_faculty_storage_directory
+    ):
+        """Test removing project user removes them from faculty storage
+        allocation."""
+        # Setup - create faculty storage allocation and add user
+        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        allocation = directory_service.create_directory()
+        allocation_user = directory_service.add_user_to_directory(test_user)
+
+        # Verify user is active initially
+        assert allocation_user.status.name == 'Active'
+
+        # Create mock project_user
+        mock_project_user = Mock()
+        mock_project_user.project = test_project
+        mock_project_user.user = test_user
+
+        # Execute - send removal signal
+        project_user_removed.send(
+            sender=None,
+            project_user=mock_project_user
+        )
+
+        # Assert - user was removed from allocation
+        allocation_user.refresh_from_db()
+        assert allocation_user.status.name == 'Removed'
+
+    def test_signal_is_idempotent(
+        self, test_project, test_user, resource_faculty_storage_directory
+    ):
+        """Test signal can be called multiple times for same user without
+        error."""
+        # Setup
+        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        allocation = directory_service.create_directory()
+        allocation_user = directory_service.add_user_to_directory(test_user)
+
+        mock_project_user = Mock()
+        mock_project_user.project = test_project
+        mock_project_user.user = test_user
+
+        # Execute - send signal twice
+        project_user_removed.send(
+            sender=None,
+            project_user=mock_project_user
+        )
+        project_user_removed.send(
+            sender=None,
+            project_user=mock_project_user
+        )
+
+        # Assert - user still removed
+        allocation_user.refresh_from_db()
+        assert allocation_user.status.name == 'Removed'
+
+    def test_signal_skips_if_no_storage_allocation_exists(
+        self, test_project, test_user
+    ):
+        """Test signal handles case where project has no storage allocation."""
+        # Setup - no faculty storage allocation for project
+        mock_project_user = Mock()
+        mock_project_user.project = test_project
+        mock_project_user.user = test_user
+
+        # Execute - send signal (should not raise error)
+        project_user_removed.send(
+            sender=None,
+            project_user=mock_project_user
+        )
+
+        # Assert - no errors, nothing to verify since there's no allocation
+
+    def test_signal_handles_user_not_in_allocation(
+        self, test_project, test_user, resource_faculty_storage_directory
+    ):
+        """Test signal handles case where user is not in the allocation."""
+        # Setup - create allocation but don't add user
+        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service.create_directory()
+
+        mock_project_user = Mock()
+        mock_project_user.project = test_project
+        mock_project_user.user = test_user
+
+        # Execute - send signal (should not raise error)
+        project_user_removed.send(
+            sender=None,
+            project_user=mock_project_user
+        )
+
+        # Assert - no errors, user wasn't in allocation anyway
+
+    @patch('coldfront.plugins.faculty_storage_allocations.signals.DirectoryService')
+    def test_signal_calls_directory_service(
+        self, mock_directory_service_class, test_project, test_user
+    ):
+        """Test signal delegates to DirectoryService.remove_user_from_directory()."""
+        # Setup
+        mock_service = Mock()
+        mock_directory_service_class.for_project.return_value = mock_service
+
+        mock_project_user = Mock()
+        mock_project_user.project = test_project
+        mock_project_user.user = test_user
+
+        # Execute
+        project_user_removed.send(
+            sender=None,
+            project_user=mock_project_user
+        )
+
+        # Assert
+        mock_directory_service_class.for_project.assert_called_once_with(
+            test_project
+        )
+        mock_service.remove_user_from_directory.assert_called_once_with(test_user)
+
+    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
+    @patch('coldfront.plugins.faculty_storage_allocations.signals.DirectoryService')
+    def test_signal_handles_errors_gracefully(
+        self, mock_directory_service_class, mock_logger,
+        test_project, test_user
+    ):
+        """Test signal catches and logs errors without breaking removal."""
+        # Setup - make DirectoryService raise an error
+        mock_service = Mock()
+        mock_service.remove_user_from_directory.side_effect = Exception(
+            'Test error'
+        )
+        mock_directory_service_class.for_project.return_value = mock_service
+
+        mock_project_user = Mock()
+        mock_project_user.project = test_project
+        mock_project_user.user = test_user
+
+        # Execute - should not raise
+        project_user_removed.send(
+            sender=None,
+            project_user=mock_project_user
+        )
+
+        # Assert - error was logged
+        mock_logger.exception.assert_called_once()
+        assert 'Error removing User' in str(mock_logger.exception.call_args)
+
+    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
+    def test_signal_warns_if_missing_project(
+        self, mock_logger
+    ):
+        """Test signal warns if project_user has no project."""
+        # Setup - project_user with no project
+        mock_project_user = Mock()
+        mock_project_user.project = None
+        mock_project_user.user = Mock()
+
+        # Execute
+        remove_project_user_from_faculty_storage_allocation(
+            sender=None,
+            project_user=mock_project_user
+        )
+
+        # Assert - warning logged
+        mock_logger.warning.assert_called_once()
+        assert 'without project or user' in str(
+            mock_logger.warning.call_args
+        )
+
+    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
+    def test_signal_warns_if_missing_user(
+        self, mock_logger
+    ):
+        """Test signal warns if project_user has no user."""
+        # Setup - project_user with no user
+        mock_project_user = Mock()
+        mock_project_user.project = Mock()
+        mock_project_user.user = None
+
+        # Execute
+        remove_project_user_from_faculty_storage_allocation(
+            sender=None,
+            project_user=mock_project_user
+        )
+
+        # Assert - warning logged
+        mock_logger.warning.assert_called_once()
+        assert 'without project or user' in str(
+            mock_logger.warning.call_args
+        )
+
+    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
+    def test_signal_logs_success(
+        self, mock_logger, test_project, test_user,
+        resource_faculty_storage_directory
+    ):
+        """Test signal logs successful user removal."""
+        # Setup
+        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service.create_directory()
+        directory_service.add_user_to_directory(test_user)
+
+        mock_project_user = Mock()
+        mock_project_user.project = test_project
+        mock_project_user.user = test_user
+
+        # Execute
+        project_user_removed.send(
+            sender=None,
+            project_user=mock_project_user
+        )
+
+        # Assert - success logged
+        mock_logger.info.assert_called_once()
+        assert 'Removed User' in str(mock_logger.info.call_args)
+        assert test_user.username in str(mock_logger.info.call_args)
+        assert test_project.name in str(mock_logger.info.call_args)
+
+    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
+    def test_signal_logs_debug_when_no_allocation(
+        self, mock_logger, test_project, test_user
+    ):
+        """Test signal logs debug message when project has no allocation."""
+        # Setup - no allocation for project
+        mock_project_user = Mock()
+        mock_project_user.project = test_project
+        mock_project_user.user = test_user
+
+        # Execute
+        project_user_removed.send(
+            sender=None,
+            project_user=mock_project_user
+        )
+
+        # Assert - debug logged
+        mock_logger.debug.assert_called_once()
+        assert 'does not have a faculty storage allocation' in str(
+            mock_logger.debug.call_args
+        )
+
+
+@pytest.mark.component
+class TestSignalIntegrationWithRemoval:
+    """Test signal integration for removal workflow."""
+
+    def test_removing_project_user_triggers_signal_and_removes_from_allocation(
+        self, test_project, test_user, test_pi, test_project_user_pi,
+        project_user_status_active, project_user_status_removed,
+        project_user_role_user, resource_faculty_storage_directory
+    ):
+        """Test complete workflow: create storage → add project user →
+        remove project user → automatic allocation user removal."""
+        # Setup - create faculty storage allocation and add user
+        from coldfront.core.project.models import ProjectUser
+
+        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        allocation = directory_service.create_directory()
+
+        project_user = ProjectUser.objects.create(
+            project=test_project,
+            user=test_user,
+            role=project_user_role_user,
+            status=project_user_status_active
+        )
+
+        # Manually trigger activation signal
+        project_user_activated.send(
+            sender=ProjectUser,
+            project_user=project_user
+        )
+
+        # Verify user was added
+        allocation_users = AllocationUser.objects.filter(
+            allocation=allocation,
+            user=test_user
+        )
+        assert allocation_users.exists()
+        assert allocation_users.first().status.name == 'Active'
+
+        # Execute - remove project user (trigger removal signal)
+        project_user.status = project_user_status_removed
+        project_user.save()
+
+        project_user_removed.send(
+            sender=ProjectUser,
+            project_user=project_user
+        )
+
+        # Assert - user was automatically removed from allocation
+        allocation_user = AllocationUser.objects.get(
+            allocation=allocation,
+            user=test_user
+        )
+        assert allocation_user.status.name == 'Removed'
+
+    def test_signal_works_with_multiple_users_removal(
+        self, test_project, test_pi, project_user_status_active,
+        project_user_status_removed, project_user_role_user,
+        resource_faculty_storage_directory
+    ):
+        """Test signal correctly handles multiple users being removed from
+        same project."""
+        # Setup
+        from coldfront.core.project.models import ProjectUser
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+
+        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        allocation = directory_service.create_directory()
+
+        # Create 3 users and add them
+        users = []
+        project_users = []
+        for i in range(1, 4):
+            user = User.objects.create_user(
+                username=f'remove_user{i}',
+                email=f'remove_user{i}@test.com'
+            )
+            users.append(user)
+
+            project_user = ProjectUser.objects.create(
+                project=test_project,
+                user=user,
+                role=project_user_role_user,
+                status=project_user_status_active
+            )
+            project_users.append(project_user)
+
+            project_user_activated.send(
+                sender=ProjectUser,
+                project_user=project_user
+            )
+
+        # Verify all 3 users are active in allocation
+        active_allocation_users = AllocationUser.objects.filter(
+            allocation=allocation,
+            status__name='Active'
+        )
+        assert active_allocation_users.count() == 3
+
+        # Execute - remove all 3 users and trigger signals
+        for project_user in project_users:
+            project_user.status = project_user_status_removed
+            project_user.save()
+
+            project_user_removed.send(
+                sender=ProjectUser,
+                project_user=project_user
+            )
+
+        # Assert - all 3 users removed from allocation
+        removed_allocation_users = AllocationUser.objects.filter(
+            allocation=allocation,
+            status__name='Removed'
+        )
+        assert removed_allocation_users.count() == 3
+
+        removed_user_ids = {au.user.id for au in removed_allocation_users}
+        for user in users:
+            assert user.id in removed_user_ids
+
+    def test_activation_and_removal_cycle(
+        self, test_project, test_user, project_user_status_active,
+        project_user_status_removed, project_user_role_user,
+        resource_faculty_storage_directory
+    ):
+        """Test user can be added and removed multiple times."""
+        from coldfront.core.project.models import ProjectUser
+
+        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        allocation = directory_service.create_directory()
+
+        project_user = ProjectUser.objects.create(
+            project=test_project,
+            user=test_user,
+            role=project_user_role_user,
+            status=project_user_status_active
+        )
+
+        # Cycle 1: Add
+        project_user_activated.send(
+            sender=ProjectUser,
+            project_user=project_user
+        )
+        allocation_user = AllocationUser.objects.get(
+            allocation=allocation,
+            user=test_user
+        )
+        assert allocation_user.status.name == 'Active'
+
+        # Cycle 1: Remove
+        project_user.status = project_user_status_removed
+        project_user.save()
+        project_user_removed.send(
+            sender=ProjectUser,
+            project_user=project_user
+        )
+        allocation_user.refresh_from_db()
+        assert allocation_user.status.name == 'Removed'
+
+        # Cycle 2: Re-activate
+        project_user.status = project_user_status_active
+        project_user.save()
+        project_user_activated.send(
+            sender=ProjectUser,
+            project_user=project_user
+        )
+        allocation_user.refresh_from_db()
+        assert allocation_user.status.name == 'Active'
+
+        # Cycle 2: Remove again
+        project_user.status = project_user_status_removed
+        project_user.save()
+        project_user_removed.send(
+            sender=ProjectUser,
+            project_user=project_user
+        )
+        allocation_user.refresh_from_db()
+        assert allocation_user.status.name == 'Removed'
