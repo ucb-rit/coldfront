@@ -413,6 +413,80 @@ class TestDirectoryServiceUserManagement:
         with pytest.raises(ValueError, match='Cannot add users'):
             service.add_project_users_to_directory()
 
+    def test_remove_user_from_directory_sets_status_to_removed(
+        self, test_project, test_user, resource_faculty_storage_directory
+    ):
+        """Test remove_user_from_directory() sets AllocationUser status to
+        Removed."""
+        # Setup
+        service = DirectoryService(test_project, 'fc_test_dir')
+        allocation = service.create_directory()
+        allocation_user = service.add_user_to_directory(test_user)
+
+        # Verify user is active initially
+        assert allocation_user.status.name == 'Active'
+
+        # Execute
+        removed_allocation_user = service.remove_user_from_directory(test_user)
+
+        # Assert
+        assert removed_allocation_user is not None
+        assert removed_allocation_user.id == allocation_user.id
+        assert removed_allocation_user.status.name == 'Removed'
+
+        # Verify in database
+        db_allocation_user = AllocationUser.objects.get(
+            id=allocation_user.id
+        )
+        assert db_allocation_user.status.name == 'Removed'
+
+    def test_remove_user_from_directory_returns_none_when_user_not_found(
+        self, test_project, test_user, resource_faculty_storage_directory
+    ):
+        """Test remove_user_from_directory() returns None when user not in
+        allocation."""
+        # Setup
+        service = DirectoryService(test_project, 'fc_test_dir')
+        service.create_directory()
+        # Don't add user to allocation
+
+        # Execute
+        result = service.remove_user_from_directory(test_user)
+
+        # Assert
+        assert result is None
+
+    def test_remove_user_from_directory_is_idempotent(
+        self, test_project, test_user, resource_faculty_storage_directory
+    ):
+        """Test remove_user_from_directory() can be called multiple times."""
+        # Setup
+        service = DirectoryService(test_project, 'fc_test_dir')
+        service.create_directory()
+        allocation_user = service.add_user_to_directory(test_user)
+
+        # Execute - remove twice
+        result1 = service.remove_user_from_directory(test_user)
+        result2 = service.remove_user_from_directory(test_user)
+
+        # Assert - both return the same allocation user
+        assert result1 is not None
+        assert result2 is not None
+        assert result1.id == result2.id
+        assert result1.status.name == 'Removed'
+        assert result2.status.name == 'Removed'
+
+    def test_remove_user_raises_when_no_allocation(self, test_project, test_user):
+        """Test remove_user_from_directory() raises ValueError when allocation
+        doesn't exist."""
+        # Setup
+        service = DirectoryService(test_project, 'fc_test_dir')
+        # Don't create directory
+
+        # Execute & Assert
+        with pytest.raises(ValueError, match='Cannot remove user'):
+            service.remove_user_from_directory(test_user)
+
 
 @pytest.mark.component
 class TestDirectoryServiceEdgeCases:

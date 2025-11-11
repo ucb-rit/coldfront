@@ -187,6 +187,13 @@ def project_user_status_active(db):
 
 
 @pytest.fixture
+def project_user_status_removed(db):
+    """Return or create Removed project user status."""
+    status, _ = ProjectUserStatusChoice.objects.get_or_create(name='Removed')
+    return status
+
+
+@pytest.fixture
 def test_project_user_pi(
     db, test_project, test_pi, project_user_role_pi,
     project_user_status_active
