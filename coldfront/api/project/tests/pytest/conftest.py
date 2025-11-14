@@ -69,13 +69,23 @@ def api_test_data(django_db_setup, db):
         name='Principal Investigator')
 
     # Create projects with different allowance type prefixes
-    project_configs = [
-        ('fc_project0', project_status),
-        ('fc_project1', project_status),
-        ('ac_project0', project_status),
-        ('ic_project0', project_status),
-        ('pc_project0', project_status),
-    ]
+    # Use prefixes that exist in the current deployment's ComputingAllowanceInterface
+    from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+    interface = ComputingAllowanceInterface()
+    allowances = interface.allowances()
+    available_codes = []
+    for allowance in allowances:
+        try:
+            code = interface._object_to_code.get(allowance)
+            if code:
+                available_codes.append(code)
+        except (KeyError, AttributeError):
+            pass
+
+    # Create up to 5 projects using available codes from the deployment
+    project_configs = []
+    for i, code in enumerate(available_codes[:5]):
+        project_configs.append((f'{code}project{i}', project_status))
 
     projects = {}
     for i, (project_name, status) in enumerate(project_configs):
@@ -84,16 +94,14 @@ def api_test_data(django_db_setup, db):
             name=project_name,
             defaults={'status': status}
         )
-        # Store by index for backward compatibility
-        if 'fc_project' in project_name:
-            idx = int(project_name.split('project')[1])
-            projects[f'project{idx}'] = project
+        # Store by index for easy access
+        projects[f'project{i}'] = project
         # Also store by full name for easier access in tests
         projects[project_name] = project
 
-        # Only create project users and allocations for the first two fc projects
-        # (to maintain backward compatibility with existing tests)
-        if created and 'fc_project' in project_name:
+        # Create project users and allocations for the first two projects only
+        # (to avoid creating too much test data)
+        if created and i < 2:
             for user in users:
                 ProjectUser.objects.create(
                     user=user, project=project,

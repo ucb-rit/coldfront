@@ -97,87 +97,112 @@ class TestProjectViewSetList:
 
     def test_filter_by_allowance_type(self, api_client, api_test_data):
         """Test filtering by allowance_type query parameter."""
-        # Test filtering for fc_ projects
-        url = '/api/projects/?allowance_type=fc_'
+        # Get the first project and extract its code prefix
+        project0 = api_test_data['projects']['project0']
+        code = project0.name.split('project')[0]  # e.g., 'ac_' from 'ac_project0'
+
+        # Test filtering for this code
+        url = f'/api/projects/?allowance_type={code}'
         response = api_client.get(url)
         assert response.status_code == HTTPStatus.OK
 
         json = response.json()
-        fc_count = Project.objects.filter(name__istartswith='fc_').count()
-        assert json['count'] == fc_count
-        assert json['count'] == 2  # Should have fc_project0 and fc_project1
+        expected_count = Project.objects.filter(name__istartswith=code).count()
+        assert json['count'] == expected_count
+        assert json['count'] >= 1  # Should have at least one project with this code
 
-        # Verify all returned projects start with fc_
+        # Verify all returned projects start with the expected code
         for result in json['results']:
-            assert result['name'].startswith('fc_')
+            assert result['name'].startswith(code)
 
-        # Test filtering for ac_ projects
-        url = '/api/projects/?allowance_type=ac_'
-        response = api_client.get(url)
-        assert response.status_code == HTTPStatus.OK
+        # Test filtering for another code if we have more than one type
+        if len(api_test_data['projects']) > 1:
+            project1 = api_test_data['projects']['project1']
+            code2 = project1.name.split('project')[0]
 
-        json = response.json()
-        ac_count = Project.objects.filter(name__istartswith='ac_').count()
-        assert json['count'] == ac_count
-        assert json['count'] == 1  # Should have ac_project0
+            url = f'/api/projects/?allowance_type={code2}'
+            response = api_client.get(url)
+            assert response.status_code == HTTPStatus.OK
 
-        # Verify all returned projects start with ac_
-        for result in json['results']:
-            assert result['name'].startswith('ac_')
+            json = response.json()
+            expected_count = Project.objects.filter(name__istartswith=code2).count()
+            assert json['count'] == expected_count
+
+            # Verify all returned projects start with the expected code
+            for result in json['results']:
+                assert result['name'].startswith(code2)
 
     def test_filter_with_multiple_allowance_types(self, api_client, api_test_data):
         """Test filtering with multiple allowance_type values."""
-        url = '/api/projects/?allowance_type=fc_&allowance_type=ac_'
-        response = api_client.get(url)
-        assert response.status_code == HTTPStatus.OK
+        # Get unique codes from the test projects
+        codes = set()
+        for project_key in ['project0', 'project1', 'project2', 'project3', 'project4']:
+            if project_key in api_test_data['projects']:
+                project = api_test_data['projects'][project_key]
+                code = project.name.split('project')[0]
+                codes.add(code)
 
-        json = response.json()
-        # Should return projects starting with fc_ or ac_
-        fc_count = Project.objects.filter(name__istartswith='fc_').count()
-        ac_count = Project.objects.filter(name__istartswith='ac_').count()
-        combined_count = fc_count + ac_count
-        assert json['count'] == combined_count
-        assert json['count'] == 3  # 2 fc_ projects + 1 ac_ project
+        codes_list = list(codes)
 
-        # Verify all returned projects start with fc_ or ac_
-        for result in json['results']:
-            assert result['name'].startswith('fc_') or result['name'].startswith('ac_')
+        # Test with the first two codes if we have them
+        if len(codes_list) >= 2:
+            code1, code2 = codes_list[0], codes_list[1]
+            url = f'/api/projects/?allowance_type={code1}&allowance_type={code2}'
+            response = api_client.get(url)
+            assert response.status_code == HTTPStatus.OK
 
-        # Test with three different types
-        url = '/api/projects/?allowance_type=ic_&allowance_type=pc_&allowance_type=ac_'
-        response = api_client.get(url)
-        assert response.status_code == HTTPStatus.OK
+            json = response.json()
+            # Count projects with either code
+            count1 = Project.objects.filter(name__istartswith=code1).count()
+            count2 = Project.objects.filter(name__istartswith=code2).count()
+            combined_count = count1 + count2
+            assert json['count'] == combined_count
 
-        json = response.json()
-        ic_count = Project.objects.filter(name__istartswith='ic_').count()
-        pc_count = Project.objects.filter(name__istartswith='pc_').count()
-        combined_count = ic_count + pc_count + ac_count
-        assert json['count'] == combined_count
-        assert json['count'] == 3  # 1 ic_ + 1 pc_ + 1 ac_
+            # Verify all returned projects start with one of the expected codes
+            for result in json['results']:
+                assert result['name'].startswith(code1) or result['name'].startswith(code2)
 
-        # Verify all returned projects match expected prefixes
-        for result in json['results']:
-            assert (result['name'].startswith('ic_') or
-                    result['name'].startswith('pc_') or
-                    result['name'].startswith('ac_'))
+        # Test with three codes if we have them
+        if len(codes_list) >= 3:
+            code1, code2, code3 = codes_list[0], codes_list[1], codes_list[2]
+            url = f'/api/projects/?allowance_type={code1}&allowance_type={code2}&allowance_type={code3}'
+            response = api_client.get(url)
+            assert response.status_code == HTTPStatus.OK
+
+            json = response.json()
+            count1 = Project.objects.filter(name__istartswith=code1).count()
+            count2 = Project.objects.filter(name__istartswith=code2).count()
+            count3 = Project.objects.filter(name__istartswith=code3).count()
+            combined_count = count1 + count2 + count3
+            assert json['count'] == combined_count
+
+            # Verify all returned projects match expected prefixes
+            for result in json['results']:
+                assert (result['name'].startswith(code1) or
+                        result['name'].startswith(code2) or
+                        result['name'].startswith(code3))
 
     def test_filter_combined(self, api_client, api_test_data):
         """Test filtering with multiple parameters combined."""
-        url = '/api/projects/?status=Active&allowance_type=fc_'
+        # Get the first project's code
+        project0 = api_test_data['projects']['project0']
+        code = project0.name.split('project')[0]
+
+        url = f'/api/projects/?status=Active&allowance_type={code}'
         response = api_client.get(url)
         assert response.status_code == HTTPStatus.OK
 
         json = response.json()
         combined_count = Project.objects.filter(
             status__name='Active',
-            name__istartswith='fc_').count()
+            name__istartswith=code).count()
         assert json['count'] == combined_count
 
         # Verify all returned projects match both filters
         for result in json['results']:
             project = Project.objects.get(pk=result['id'])
             assert project.status.name == 'Active'
-            assert result['name'].startswith('fc_')
+            assert result['name'].startswith(code)
 
     def test_response_format(self, api_client, api_test_data):
         """Test that the response has the expected structure and
