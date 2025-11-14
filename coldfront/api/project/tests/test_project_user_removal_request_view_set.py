@@ -186,7 +186,17 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
         project = self.request_obj.project_user.project
 
         expected_from = settings.EMAIL_SENDER
-        expected_to = {user.email for user in [user, requester]}
+
+        # Emails are sent to the removed user and all managers/PIs
+        expected_to = {user.email}
+        for project_user in project.managers_and_pis_to_email():
+            expected_to.add(project_user.user.email)
+
+        # Also sent to admin list
+        admin_list = settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST
+        if admin_list:
+            expected_to.update(admin_list)
+
         user_name = f'{user.first_name} {user.last_name}'
         requester_name = f'{requester.first_name} {requester.last_name}'
         project_name = project.name
@@ -195,15 +205,20 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
             f'initiated by {requester_name} has been completed. {user_name} '
             f'is no longer a user of Project {project_name}.')
 
+        # Should have one email per unique recipient
+        self.assertEqual(len(mail.outbox), len(expected_to))
+
+        actual_to_checked = set()
         for email in mail.outbox:
             self.assertEqual(email.from_email, expected_from)
             self.assertEqual(len(email.to), 1)
             to = email.to[0]
             self.assertIn(to, expected_to)
-            expected_to.remove(to)
+            actual_to_checked.add(to)
             self.assertIn(expected_body, email.body)
 
-        self.assertFalse(expected_to)
+        # Verify all expected recipients received an email
+        self.assertEqual(actual_to_checked, expected_to)
 
     def _assert_post_state(self, completion_time):
         """Assert that the relevant objects have the expected state,
