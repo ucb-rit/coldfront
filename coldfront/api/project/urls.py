@@ -1,7 +1,7 @@
 from coldfront.api.project.views import ProjectViewSet, \
     ProjectUserRemovalRequestViewSet, ProjectUserViewSet
-from django.conf.urls import url
 from django.urls import include
+from django.urls import re_path
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested.routers import NestedSimpleRouter
 
@@ -19,5 +19,5 @@ router.register(r'project_user_removal_requests',
 urlpatterns = router.urls
 
 urlpatterns.extend([
-    url('^', include(projects_router.urls)),
+    re_path('^', include(projects_router.urls)),
 ])
