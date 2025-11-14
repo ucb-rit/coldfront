@@ -68,17 +68,32 @@ def api_test_data(django_db_setup, db):
     pi_role = ProjectUserRoleChoice.objects.get(
         name='Principal Investigator')
 
-    projects = []
-    for i in range(2):
+    # Create projects with different allowance type prefixes
+    project_configs = [
+        ('fc_project0', project_status),
+        ('fc_project1', project_status),
+        ('ac_project0', project_status),
+        ('ic_project0', project_status),
+        ('pc_project0', project_status),
+    ]
+
+    projects = {}
+    for i, (project_name, status) in enumerate(project_configs):
         # Create a Project (or get if it exists)
         project, created = Project.objects.get_or_create(
-            name=f'fc_project{i}',
-            defaults={'status': project_status}
+            name=project_name,
+            defaults={'status': status}
         )
-        projects.append(project)
+        # Store by index for backward compatibility
+        if 'fc_project' in project_name:
+            idx = int(project_name.split('project')[1])
+            projects[f'project{idx}'] = project
+        # Also store by full name for easier access in tests
+        projects[project_name] = project
 
-        # Only create project users if the project was just created
-        if created:
+        # Only create project users and allocations for the first two fc projects
+        # (to maintain backward compatibility with existing tests)
+        if created and 'fc_project' in project_name:
             for user in users:
                 ProjectUser.objects.create(
                     user=user, project=project,
@@ -118,6 +133,6 @@ def api_test_data(django_db_setup, db):
         'staff_user': staff_user,
         'pi': pi,
         'users': {f'user{i}': users[i] for i in range(3)},
-        'projects': {f'project{i}': projects[i] for i in range(2)},
+        'projects': projects,
         'tokens': tokens,
     }

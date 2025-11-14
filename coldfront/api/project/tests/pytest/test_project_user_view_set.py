@@ -75,8 +75,11 @@ class TestProjectUserViewSetList:
             project=project0).count()
         assert json['count'] == project0_user_count
 
-        # Verify all returned users belong to project0
-        for result in json['results']:
+        # Verify all returned users belong to project0 and are ordered by id
+        project_users = ProjectUser.objects.filter(
+            project=project0).order_by('id')
+        for i, result in enumerate(json['results']):
+            assert result['id'] == project_users[i].pk
             project_user = ProjectUser.objects.get(pk=result['id'])
             assert project_user.project == project0
 
