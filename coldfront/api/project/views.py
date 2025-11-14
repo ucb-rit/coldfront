@@ -8,7 +8,7 @@ from rest_framework import mixins, viewsets
 
 from coldfront.api.permissions import IsAdminUserOrReadOnly, IsSuperuserOrStaff
 from coldfront.api.project.filters import ProjectUserRemovalRequestFilter, \
-    ProjectUserFilter
+    ProjectUserFilter, ProjectFilter
 from coldfront.api.project.serializers import ProjectSerializer
 from coldfront.api.project.serializers import ProjectUserRemovalRequestSerializer
 from coldfront.api.project.serializers import ProjectUserSerializer
@@ -35,12 +35,12 @@ class ProjectViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
                      viewsets.GenericViewSet):
     """A ViewSet for the Project model."""
 
-    filterset_fields = ('name',)
+    filterset_class = ProjectFilter
     permission_classes = [IsAdminUserOrReadOnly]
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
-        return Project.objects.all()
+        return Project.objects.order_by('id')
 
 
 class ProjectUserRemovalRequestViewSet(mixins.ListModelMixin,
@@ -91,4 +91,4 @@ class ProjectUserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         project_pk = self.kwargs.get('project_pk')
         if project_pk:
             return ProjectUser.objects.filter(project_id=project_pk)
-        return ProjectUser.objects.all()
+        return ProjectUser.objects.order_by('id')
