@@ -20,9 +20,6 @@ def pytest_configure(config):
         settings.FLAGS = {}
 
     # Enable feature flags needed for URL registration
-    settings.FLAGS['FACULTY_STORAGE_ALLOCATIONS_ENABLED'] = [
-        {'condition': 'boolean', 'value': True}
-    ]
     settings.FLAGS['SERVICE_UNITS_PURCHASABLE'] = [
         {'condition': 'boolean', 'value': True}
     ]
@@ -62,7 +59,6 @@ def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         # FLAGS in settings were enabled in pytest_configure hook above
         # Now enable flags for runtime checks (requires database access)
-        enable_flag('FACULTY_STORAGE_ALLOCATIONS_ENABLED', create_boolean_condition=True)
         enable_flag('SERVICE_UNITS_PURCHASABLE', create_boolean_condition=True)
 
         # Suppress command output
@@ -86,8 +82,10 @@ def django_db_setup(django_db_setup, django_db_blocker):
         for command in commands:
             call_command(command, stdout=out, stderr=err)
 
-        # Add faculty_storage_allocations plugin defaults (flag already enabled above)
-        call_command('add_faculty_directory_defaults', stdout=out, stderr=err)
+        # Add faculty_storage_allocations plugin defaults if the plugin is installed
+        from django.conf import settings
+        if 'coldfront.plugins.faculty_storage_allocations' in settings.INSTALLED_APPS:
+            call_command('add_faculty_directory_defaults', stdout=out, stderr=err)
 
         # Restore stdout
         sys.stdout = sys.__stdout__

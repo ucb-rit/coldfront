@@ -45,6 +45,40 @@ from coldfront.plugins.faculty_storage_allocations.models import (
 User = get_user_model()
 
 
+def pytest_configure(config):
+    """Enable the FACULTY_STORAGE_ALLOCATIONS_ENABLED flag for plugin tests.
+
+    This runs before Django setup and enables the flag in settings so that
+    URL patterns are registered correctly. It also ensures the plugin is
+    in INSTALLED_APPS so its models and permissions are available.
+    """
+    from django.conf import settings
+
+    # Ensure the plugin is in INSTALLED_APPS
+    plugin_app = 'coldfront.plugins.faculty_storage_allocations'
+    settings.INSTALLED_APPS = list(settings.INSTALLED_APPS) + [plugin_app]
+
+    if not hasattr(settings, 'FLAGS'):
+        settings.FLAGS = {}
+
+    settings.FLAGS['FACULTY_STORAGE_ALLOCATIONS_ENABLED'] = [
+        {'condition': 'boolean', 'value': True}
+    ]
+
+
+@pytest.fixture(scope='session', autouse=True)
+def enable_fsa_flag(django_db_setup, django_db_blocker):
+    """Enable FACULTY_STORAGE_ALLOCATIONS_ENABLED flag for runtime checks.
+
+    This runs after django_db_setup and enables the flag in the database
+    for runtime flag checks.
+    """
+    from flags.state import enable_flag
+
+    with django_db_blocker.unblock():
+        enable_flag('FACULTY_STORAGE_ALLOCATIONS_ENABLED', create_boolean_condition=True)
+
+
 # ============================================================================
 # User Fixtures
 # ============================================================================

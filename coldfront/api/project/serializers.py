@@ -25,6 +25,22 @@ class ProjectUserSerializer(serializers.ModelSerializer):
     role = serializers.SlugRelatedField(
         slug_field='name',
         queryset=ProjectUserRoleChoice.objects.all())
+
+    class Meta:
+        model = ProjectUser
+        fields = ('id', 'user', 'project', 'role', 'status')
+
+
+class ProjectUserSerializerForRemoval(serializers.ModelSerializer):
+    """A serializer for the ProjectUser model, used for removal
+    requests."""
+
+    status = serializers.SlugRelatedField(
+        slug_field='name',
+        queryset=ProjectUserStatusChoice.objects.all())
+    role = serializers.SlugRelatedField(
+        slug_field='name',
+        queryset=ProjectUserRoleChoice.objects.all())
     user = serializers.SlugRelatedField(
         slug_field='username',
         queryset=User.objects.all())
@@ -43,9 +59,8 @@ class ProjectUserRemovalRequestSerializer(serializers.ModelSerializer):
         slug_field='name',
         queryset=ProjectUserRemovalRequestStatusChoice.objects.all())
 
-    project_user = ProjectUserSerializer(read_only=True,
-                                         allow_null=True,
-                                         required=False)
+    project_user = ProjectUserSerializerForRemoval(
+        read_only=True, allow_null=True, required=False)
 
     class Meta:
         model = ProjectUserRemovalRequest
