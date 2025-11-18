@@ -263,7 +263,21 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         context['cluster_name'] = get_project_compute_resource_name(
             self.object).replace(' Compute', '')
 
-        # Display the "Request a Secure Directory" button when the functionality
+        # Display the "Request Faculty Storage Allocations" action when the
+        # functionality is enabled, the project is eligible, the project has an
+        # eligible PI, and the user is allowed to update the project.
+        if flag_enabled('FACULTY_STORAGE_ALLOCATIONS_ENABLED'):
+            from coldfront.plugins.faculty_storage_allocations.utils import has_eligible_pi_for_fsa_request
+            from coldfront.plugins.faculty_storage_allocations.utils import is_project_eligible_for_faculty_storage_allocations
+            context['request_faculty_storage_allocations_visible'] = (
+                is_project_eligible_for_faculty_storage_allocations(self.object) and
+                has_eligible_pi_for_fsa_request(self.object) and
+                (self.request.user.is_superuser or
+                context.get('is_allowed_to_update_project', False)))
+        else:
+            context['request_faculty_storage_allocations_visible'] = False
+
+        # Display the "Request a Secure Directory" action when the functionality
         # is enabled, the project is eligible, and the user is allowed to update
         # the project.
         context['request_secure_directory_visible'] = (
@@ -851,7 +865,7 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
         if project_obj.status.name != 'Active':
             messages.error(
                 request, ('You cannot add users to a project with '
-                          f'status {project_obj.status.name}')) 
+                          f'status {project_obj.status.name}'))
             return _redirect
         elif is_project_billing_id_required_and_missing(project_obj):
             message = (

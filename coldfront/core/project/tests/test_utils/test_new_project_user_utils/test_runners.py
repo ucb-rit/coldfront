@@ -338,6 +338,44 @@ class TestCommonRunnerMixin(object):
 
         self._assert_post_state()
 
+    def test_project_user_activated_signal_sent(self):
+        """Test that the project_user_activated signal is sent when the
+        runner runs successfully."""
+        from coldfront.core.project.utils_.new_project_user_utils import (
+            project_user_activated
+        )
+
+        signal_received = []
+
+        def signal_handler(sender, **kwargs):
+            """Capture signal data."""
+            signal_received.append({
+                'sender': sender,
+                'project_user': kwargs.get('project_user')
+            })
+
+        # Connect the signal handler
+        project_user_activated.connect(signal_handler)
+
+        try:
+            self._assert_pre_state()
+
+            with enable_deployment(self._deployment_name):
+                runner = self._runner_factory.get_runner(
+                    self.project_user, NewProjectUserSource.ADDED)
+            runner.run()
+
+            # Assert signal was sent
+            self.assertEqual(len(signal_received), 1)
+            signal_data = signal_received[0]
+            self.assertEqual(signal_data['sender'], runner.__class__)
+            self.assertEqual(signal_data['project_user'], self.project_user)
+
+            self._assert_post_state()
+        finally:
+            # Disconnect the signal handler to avoid affecting other tests
+            project_user_activated.disconnect(signal_handler)
+
     def test_updates_allocation_user_if_existent(self):
         """Test that the runner updates an AllocationUser object if it
         already exists."""

@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.db import transaction
+from django.dispatch import Signal
 
 from coldfront.core.allocation.models import Allocation, \
     AllocationUserStatusChoice, AllocationAttributeType
@@ -17,6 +18,10 @@ from coldfront.core.utils.common import import_from_settings
 
 
 logger = logging.getLogger(__name__)
+
+
+# A signal to send when a user is removed from a project.
+project_user_removed = Signal()
 
 
 class ProjectRemovalRequestRunner(object):
@@ -169,12 +174,13 @@ class ProjectRemovalRequestProcessingRunner(object):
         return self._warning_messages.copy()
 
     def run(self):
-        """Apply database changes in a transaction. Log success messages
-        and send emails separately to prevent failures from rolling it
-        back."""
+        """Apply database changes in a transaction. Send a signal about
+        the removal, log success messages, and send emails separately to
+        prevent failures from rolling it back."""
         with transaction.atomic():
             self._remove_user_from_project()
             self._remove_user_from_project_compute_allocation()
+        self._send_project_user_removed_signal_safe()
         self._log_success_messages()
         self._send_emails_safe()
 
@@ -339,3 +345,24 @@ class ProjectRemovalRequestProcessingRunner(object):
             if num_failures > 0:
                 message = f'Failed to send {num_failures} notification emails.'
                 self._warning_messages.append(message)
+
+    def _send_project_user_removed_signal_safe(self):
+        """Send a signal to notify other applications (e.g., plugins)
+        that the ProjectUser was removed.
+
+        Catch all exceptions to prevent rolling back any enclosing
+        transaction. Signal handler failures should not stop this
+        runner's core flow.
+
+        A signal is sent to achieve loose coupling. This runner is not
+        aware of extraneous processing required by other applications.
+        """
+        try:
+            project_user_removed.send(
+                sender=self.__class__,
+                project_user=self._request_obj.project_user)
+        except Exception as e:
+            message = (
+                f'Encountered unexpected exception when sending '
+                f'project_user_removed signal. Details: \n{e}')
+            logger.exception(message)
