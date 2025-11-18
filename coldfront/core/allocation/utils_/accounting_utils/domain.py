@@ -9,8 +9,10 @@ from decimal import Decimal
 
 class AllowanceUsage:
     """Domain model representing computing allowance usage."""
-    allowance: Decimal
-    usage: Decimal
+
+    def __init__(self, allowance: Decimal, usage: Decimal):
+        self.allowance = allowance
+        self.usage = usage
 
     def calculate_percentage(self) -> Decimal:
         """Calculate usage percentage."""
