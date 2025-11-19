@@ -104,6 +104,22 @@ class ComputingAllowance(object):
             allowance_names.append(LRCAllowances.RECHARGE)
         return self._name in allowance_names
 
+    def is_recharge_postpaid(self):
+        """Return whether the recharge allowance is paid for after
+        usage."""
+        allowance_names = []
+        if flag_enabled('LRC_ONLY'):
+            allowance_names.append(LRCAllowances.RECHARGE)
+        return self._name in allowance_names
+
+    def is_recharge_prepaid(self):
+        """Return whether the recharge allowance is paid for in
+        advance."""
+        allowance_names = []
+        if flag_enabled('BRC_ONLY'):
+            allowance_names.append(BRCAllowances.RECHARGE)
+        return self._name in allowance_names
+
     def is_renewable(self):
         """Return whether the allowance may theoretically be renewed."""
         return self.is_periodic()
