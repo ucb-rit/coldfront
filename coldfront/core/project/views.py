@@ -270,6 +270,7 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
             from coldfront.plugins.faculty_storage_allocations.utils import has_eligible_pi_for_fsa_request
             from coldfront.plugins.faculty_storage_allocations.utils import is_project_eligible_for_faculty_storage_allocations
             context['request_faculty_storage_allocations_visible'] = (
+                is_primary_cluster_project(self.object) and
                 is_project_eligible_for_faculty_storage_allocations(self.object) and
                 has_eligible_pi_for_fsa_request(self.object) and
                 (self.request.user.is_superuser or
