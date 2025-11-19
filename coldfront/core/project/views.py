@@ -42,7 +42,6 @@ from coldfront.core.project.models import (Project, ProjectReview,
                                            SavioProjectAllocationRequest)
 from coldfront.core.project.utils import annotate_queryset_with_cluster_name
 from coldfront.core.project.utils import is_primary_cluster_project
-from coldfront.core.project.utils import render_project_compute_usage
 from coldfront.core.project.utils_.addition_utils import can_project_purchase_service_units
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunnerFactory
 from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
@@ -271,6 +270,7 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
             from coldfront.plugins.faculty_storage_allocations.utils import has_eligible_pi_for_fsa_request
             from coldfront.plugins.faculty_storage_allocations.utils import is_project_eligible_for_faculty_storage_allocations
             context['request_faculty_storage_allocations_visible'] = (
+                is_primary_cluster_project(self.object) and
                 is_project_eligible_for_faculty_storage_allocations(self.object) and
                 has_eligible_pi_for_fsa_request(self.object) and
                 (self.request.user.is_superuser or
@@ -460,9 +460,11 @@ class ProjectListView(LoginRequiredMixin, ListView):
         context['user_agreement_signed'] = \
             access_agreement_signed(self.request.user)
 
+        from coldfront.core.allocation.utils_.accounting_utils.services import ServiceUnitsUsageService
+        service = ServiceUnitsUsageService()
         for project in project_list:
             try:
-                rendered_compute_usage = render_project_compute_usage(project)
+                rendered_compute_usage = service.get_usage_display(project)
             except Exception:
                 rendered_compute_usage = 'Unexpected error'
             project.rendered_compute_usage = rendered_compute_usage

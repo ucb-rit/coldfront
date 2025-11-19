@@ -23,7 +23,6 @@ from coldfront.core.portal.utils import (generate_allocations_chart_data,
 from coldfront.core.project.models import Project, ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserJoinRequest
 from coldfront.core.project.models import ProjectUserRemovalRequest
-from coldfront.core.project.utils import render_project_compute_usage
 
 from django.contrib.auth.decorators import login_required
 
@@ -67,12 +66,14 @@ def home(request):
         access_states = _compute_project_user_cluster_access_statuses(
             request.user)
 
+        from coldfront.core.allocation.utils_.accounting_utils.services import ServiceUnitsUsageService
+        service = ServiceUnitsUsageService()
         for project in project_list:
             project.display_status = access_states.get(project, 'None')
             resource_name = get_project_compute_resource_name(project)
             project.cluster_name = resource_name.replace(' Compute', '')
             try:
-                rendered_compute_usage = render_project_compute_usage(project)
+                rendered_compute_usage = service.get_usage_display(project)
             except Exception:
                 rendered_compute_usage = 'Unexpected error'
             project.rendered_compute_usage = rendered_compute_usage
