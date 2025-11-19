@@ -120,6 +120,14 @@ class Allocation(TimeStampedModel):
                 html_string += '%s: %s <br>' % (
                     attribute.allocation_attribute_type.name, attribute.value)
 
+            if attribute.allocation_attribute_type.name == 'Service Units':
+                from coldfront.core.allocation.utils_.accounting_utils.services import ServiceUnitsUsageService
+                service = ServiceUnitsUsageService()
+                displayed_su_usage = service.get_usage_display(
+                    self.project, attribute)
+                html_string += f'Service Units: {displayed_su_usage} <br>'
+                continue
+
             if hasattr(attribute, 'allocationattributeusage'):
                 try:
                     percent = round(float(attribute.allocationattributeusage.value) /

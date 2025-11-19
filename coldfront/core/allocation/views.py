@@ -139,6 +139,16 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         guage_data = []
         invalid_attributes = []
         for attribute in attributes_with_usage:
+
+            if attribute.allocation_attribute_type.name == 'Service Units':
+                from coldfront.core.allocation.utils_.accounting_utils.services import ServiceUnitsUsageService
+                service = ServiceUnitsUsageService()
+                should_display_gauge = service.should_display_usage(
+                    allocation_obj.project, attribute)
+                if not should_display_gauge:
+                    invalid_attributes.append(attribute)
+                    continue
+
             try:
                 guage_data.append(generate_guauge_data_from_usage(attribute.allocation_attribute_type.name,
                                                                   float(attribute.value), float(attribute.allocationattributeusage.value)))
@@ -336,9 +346,8 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         # Annotate each attribute with a display value.
         filtered_attributes = []
         for attribute in attributes:
-            is_billing_activity = (
-                attribute.allocation_attribute_type.name == 'Billing Activity')
-            if is_billing_activity:
+            attribute_type_name = attribute.allocation_attribute_type.name
+            if attribute_type_name == 'Billing Activity':
                 attribute.display_name = 'Billing ID'
                 try:
                     attribute.display_value = BillingActivity.objects.get(
@@ -347,6 +356,13 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
                     attribute.display_value = attribute.value
                 if flag_enabled('LRC_ONLY'):
                     filtered_attributes.append(attribute)
+            elif attribute_type_name == 'Service Units':
+                from coldfront.core.allocation.utils_.accounting_utils.services import ServiceUnitsUsageService
+                attribute.display_name = str(attribute)
+                service = ServiceUnitsUsageService()
+                attribute.display_value = service.get_usage_display(
+                    allocation_obj.project, attribute)
+                filtered_attributes.append(attribute)
             else:
                 attribute.display_name = str(attribute)
                 attribute.display_value = attribute.value
