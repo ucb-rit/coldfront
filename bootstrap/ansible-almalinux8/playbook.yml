@@ -468,8 +468,94 @@
         ## BRC-only
         - name: BRC-only Production Tasks
           block:
-            # Don't do anything as there aren't any provisioning-specific tasks yet.
-            - meta: noop
+            # Configure OpenDKIM for email signing.
+
+            - name: Configure OpenDKIM
+              block:
+                - name: Install OpenDKIM
+                  yum:
+                    name: opendkim
+                    state: present
+
+                - name: Create OpenDKIM keys directory
+                  file:
+                    path: "{{ opendkim_key_dir }}"
+                    state: directory
+                    mode: 0755
+                    owner: opendkim
+                    group: opendkim
+
+                - name: Create private key file if it doesn't exist (contents must be populated manually)
+                  copy:
+                    content: ""
+                    dest: "{{ opendkim_key_dir }}/{{ opendkim_selector }}.private"
+                    force: false
+                    mode: 0600
+                    owner: opendkim
+                    group: opendkim
+
+                - name: Create public key file if it doesn't exist (contents must be populated manually)
+                  copy:
+                    content: ""
+                    dest: "{{ opendkim_key_dir }}/{{ opendkim_selector }}.txt"
+                    force: false
+                    mode: 0600
+                    owner: opendkim
+                    group: opendkim
+
+                - name: Configure OpenDKIM Socket
+                  lineinfile:
+                    path: /etc/opendkim.conf
+                    regexp: '^#?\s*Socket\s+'
+                    line: 'Socket  inet:{{ opendkim_port }}@localhost'
+
+                - name: Configure OpenDKIM Mode
+                  lineinfile:
+                    path: /etc/opendkim.conf
+                    regexp: '^Mode\s+'
+                    line: 'Mode    sv'
+
+                - name: Configure OpenDKIM Domain
+                  lineinfile:
+                    path: /etc/opendkim.conf
+                    regexp: '^#?\s*Domain\s+'
+                    line: 'Domain  {{ opendkim_domain }}'
+
+                - name: Configure OpenDKIM KeyFile
+                  lineinfile:
+                    path: /etc/opendkim.conf
+                    regexp: '^#?\s*KeyFile\s+'
+                    line: 'KeyFile {{ opendkim_key_dir }}/{{ opendkim_selector }}.private'
+
+                - name: Configure OpenDKIM Selector
+                  lineinfile:
+                    path: /etc/opendkim.conf
+                    regexp: '^#?\s*Selector\s+'
+                    line: 'Selector    {{ opendkim_selector }}'
+
+                - name: Configure Postfix to use OpenDKIM
+                  blockinfile:
+                    path: /etc/postfix/main.cf
+                    marker: "# {mark} ANSIBLE MANAGED BLOCK - OpenDKIM"
+                    block: |
+                      # Integrate OpenDKIM.
+                      milter_default_action = accept
+                      smtpd_milters = inet:localhost:{{ opendkim_port }}
+                      non_smtpd_milters = inet:localhost:{{ opendkim_port }}
+
+                - name: Start and enable OpenDKIM service
+                  service:
+                    name: opendkim
+                    state: started
+                    enabled: true
+
+                - name: Restart Postfix service
+                  service:
+                    name: postfix
+                    state: restarted
+
+              when: opendkim_enabled
+
           when: flag_brc_enabled
 
         ## LRC-only

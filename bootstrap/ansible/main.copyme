@@ -81,6 +81,24 @@ wsgi_conf_file_name: cf_mybrc_wsgi.conf
 wsgi_conf_log_prefix: cf_brc
 
 #------------------------------------------------------------------------------
+# BRC OpenDKIM settings
+#------------------------------------------------------------------------------
+
+# Whether to configure OpenDKIM for email signing.
+# TODO: For BRC production deployments, enable OpenDKIM.
+# Note: This flag is somewhat redundant, because, in the playbook, configuration
+# already only occurs for BRC production deployments.
+opendkim_enabled: false
+
+# OpenDKIM configuration for signing outgoing emails.
+# TODO: For BRC production deployments, configure these settings.
+# Reference: https://security.berkeley.edu/education-awareness/mass-email-communication-guideline
+opendkim_domain: berkeley.edu
+opendkim_selector: researchit-brc-hpc-mybrc
+opendkim_key_dir: /etc/opendkim/keys
+opendkim_port: 8891
+
+#------------------------------------------------------------------------------
 # LRC Cloudflare settings
 #------------------------------------------------------------------------------
 
