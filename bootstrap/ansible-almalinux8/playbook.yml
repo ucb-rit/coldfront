@@ -503,6 +503,12 @@
                     owner: opendkim
                     group: opendkim
 
+                - name: Configure OpenDKIM Socket
+                  lineinfile:
+                    path: /etc/opendkim.conf
+                    regexp: '^#?\s*Socket\s+'
+                    line: 'Socket  inet:{{ opendkim_port }}@localhost'
+
                 - name: Configure OpenDKIM Mode
                   lineinfile:
                     path: /etc/opendkim.conf
