@@ -7,10 +7,15 @@ from rest_framework.exceptions import APIException
 from rest_framework import mixins, viewsets
 
 from coldfront.api.permissions import IsAdminUserOrReadOnly, IsSuperuserOrStaff
-from coldfront.api.project.filters import ProjectUserRemovalRequestFilter
-from coldfront.api.project.serializers import ProjectSerializer, \
-    ProjectUserRemovalRequestSerializer
-from coldfront.core.project.models import Project, ProjectUserRemovalRequest
+from coldfront.api.project.filters import ProjectUserRemovalRequestFilter, \
+    ProjectUserFilter, ProjectFilter
+from coldfront.api.project.serializers import ProjectSerializer
+from coldfront.api.project.serializers import ProjectUserRemovalRequestSerializer
+from coldfront.api.project.serializers import ProjectUserSerializer
+
+from coldfront.core.project.models import Project
+from coldfront.core.project.models import ProjectUser
+from coldfront.core.project.models import ProjectUserRemovalRequest
 
 from coldfront.core.project.utils_.removal_utils import ProjectRemovalRequestProcessingRunner
 
@@ -30,12 +35,12 @@ class ProjectViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
                      viewsets.GenericViewSet):
     """A ViewSet for the Project model."""
 
-    filterset_fields = ('name',)
+    filterset_class = ProjectFilter
     permission_classes = [IsAdminUserOrReadOnly]
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
-        return Project.objects.all()
+        return Project.objects.order_by('id')
 
 
 class ProjectUserRemovalRequestViewSet(mixins.ListModelMixin,
@@ -72,3 +77,18 @@ class ProjectUserRemovalRequestViewSet(mixins.ListModelMixin,
     def partial_update(self, request, *args, **kwargs):
         """The method for PATCH (partial update) requests."""
         return super().partial_update(request, *args, **kwargs)
+
+
+class ProjectUserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
+                         viewsets.GenericViewSet):
+    """A ViewSet for the ProjectUser model."""
+
+    filterset_class = ProjectUserFilter
+    permission_classes = [IsSuperuserOrStaff]
+    serializer_class = ProjectUserSerializer
+
+    def get_queryset(self):
+        project_pk = self.kwargs.get('project_pk')
+        if project_pk:
+            return ProjectUser.objects.filter(project_id=project_pk)
+        return ProjectUser.objects.order_by('id')
