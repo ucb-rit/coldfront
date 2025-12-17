@@ -230,17 +230,30 @@ ALLOW_ALL_JOBS = False
 # ------------------------------------------------------------------------------
 # Local settings overrides (see local_settings.py.sample)
 # ------------------------------------------------------------------------------
-try:
-    from coldfront.config.local_strings import *
-except ImportError:
-    print("local_strings.py file is required. Copy coldfront/config/local_strings.py.sample to local_strings.py")
-    sys.exit()
 
-try:
-    from coldfront.config.local_settings import *
-except ImportError:
-    print("local_settings.py file is required. Copy coldfront/config/local_settings.py.sample to local_settings.py")
-    sys.exit()
+# Check if running with environment variables
+USE_ENV_SETTINGS = os.environ.get('DJANGO__USE_ENV_SETTINGS', '').lower() in ('true', '1', 'yes')
+
+if USE_ENV_SETTINGS:
+    # Load environment-based settings
+    try:
+        from coldfront.config.env_settings import *
+    except ImportError as e:
+        print(f"env_settings.py is required when DJANGO__USE_ENV_SETTINGS is set: {e}")
+        sys.exit()
+else:
+    # Load traditional file-based settings
+    try:
+        from coldfront.config.local_strings import *
+    except ImportError:
+        print("local_strings.py file is required. Copy coldfront/config/local_strings.py.sample to local_strings.py")
+        sys.exit()
+
+    try:
+        from coldfront.config.local_settings import *
+    except ImportError:
+        print("local_settings.py file is required. Copy coldfront/config/local_settings.py.sample to local_settings.py")
+        sys.exit()
 
 try:
     INSTALLED_APPS = INSTALLED_APPS + EXTRA_APPS
