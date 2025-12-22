@@ -1076,3 +1076,52 @@ class TestFSARequestListView:
         fsa_requests = list(response.context['fsa_requests'])
         assert request1 in fsa_requests
         assert request2 not in fsa_requests
+
+    def test_list_includes_both_requested_and_approved_amounts_in_context(
+        self, client, test_project, test_pi, test_user
+    ):
+        """Test list view includes both requested_amount_tb and approved_amount_tb in context."""
+        # Create request with only requested amount (no approved amount)
+        request1 = create_fsa_request(
+            status='Under Review',
+            project=test_project,
+            requester=test_user,
+            pi=test_pi,
+            requested_amount_gb=2000
+        )
+
+        # Create request with approved amount different from requested
+        request2 = create_fsa_request(
+            status='Approved - Complete',
+            project=test_project,
+            requester=test_user,
+            pi=test_pi,
+            requested_amount_gb=5000
+        )
+        request2.approved_amount_gb = 3000
+        request2.save()
+
+        superuser = User.objects.create_superuser(
+            username='admin',
+            email='admin@test.com',
+            password='adminpass'
+        )
+        client.force_login(superuser)
+
+        url = reverse('faculty-storage-allocation-request-list')
+        response = client.get(url)
+
+        # Get the requests from the paginated context
+        fsa_requests = list(response.context['fsa_requests'])
+
+        # Find our requests in the list
+        req1_in_list = next(r for r in fsa_requests if r.pk == request1.pk)
+        req2_in_list = next(r for r in fsa_requests if r.pk == request2.pk)
+
+        # Request 1: no approved amount, should show requested amount
+        assert req1_in_list.requested_amount_tb == 2
+        assert req1_in_list.approved_amount_tb is None
+
+        # Request 2: has approved amount, should show approved amount
+        assert req2_in_list.requested_amount_tb == 5
+        assert req2_in_list.approved_amount_tb == 3
