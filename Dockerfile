@@ -73,7 +73,34 @@ RUN /app/venv/bin/pip install --upgrade pip setuptools wheel && \
 ENV PATH="/app/venv/bin:$PATH"
 
 ############################
-# Stage 4: db-postgres-shell
+# Stage 4: app-production
+############################
+
+FROM coldfront-app-base AS coldfront-app-production
+
+# Install system dependencies for health checks
+RUN dnf install -y curl && dnf clean all
+
+# Copy application code
+COPY . /var/www/coldfront_app/coldfront
+
+# Set proper permissions and switch to non-root user
+RUN chown -R nobody:nobody /var/www/coldfront_app
+USER nobody
+
+WORKDIR /var/www/coldfront_app/coldfront
+
+# Add health check (checks every 30s, timeout 10s, 3 retries, 40s start period)
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
+    CMD curl -f http://localhost:8000/health/ || exit 1
+
+# Expose port
+EXPOSE 8000
+
+# No default CMD - commands are specified in docker-compose.yml
+
+############################
+# Stage 5: db-postgres-shell
 ############################
 
 FROM coldfront-app-base AS coldfront-db-postgres-shell

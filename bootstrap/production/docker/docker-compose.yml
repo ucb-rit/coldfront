@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # Web Service (Django + Gunicorn + Uvicorn ASGI)
+  # ============================================================================
+  web:
+    image: coldfront-app-production:${IMAGE_TAG:-latest}
+    container_name: coldfront-web
+    # TODO: These gunicorn settings could be moved to gunicorn.conf.py if configuration becomes complex
+    command:
+      - gunicorn
+      - --worker-class=uvicorn.workers.UvicornWorker
+      - --bind=0.0.0.0:8000
+      - --workers=4
+      - --timeout=120
+      - --max-requests=1000
+      - --max-requests-jitter=50
+      - --access-logfile=-
+      - --error-logfile=-
+      - --log-level=info
+      - config.asgi:application
+
+    # Environment variables from .env file (includes all secrets)
+    env_file:
+      - .env
+
+    # Port mapping (internal:external)
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+
+    # Connect to host services (PostgreSQL, Redis, Postfix on systemd)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================================================
+  # Background Worker (Django-Q Cluster)
+  # ============================================================================
+  qcluster:
+    image: coldfront-app-production:${IMAGE_TAG:-latest}
+    container_name: coldfront-qcluster
+    command: ["python", "manage.py", "qcluster"]
+
+    # Environment variables from .env file (includes all secrets)
+    env_file:
+      - .env
+
+    # Connect to host services
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Depends on web service being healthy
+    depends_on:
+      web:
+        condition: service_healthy
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+# Using default bridge network
+# Containers can reach each other by service name
+# Containers can reach host services via host.docker.internal
+networks:
+  default:
+    name: coldfront-network
