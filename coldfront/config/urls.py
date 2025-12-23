@@ -9,6 +9,7 @@ from django.views.generic import TemplateView
 from flags.urls import flagged_path
 
 import coldfront.core.portal.views as portal_views
+from coldfront.core.utils.views import common_views as utils_common_views
 
 admin.site.site_header = 'ColdFront Administration'
 admin.site.site_title = 'ColdFront Administration'
@@ -16,6 +17,7 @@ admin.site.site_title = 'ColdFront Administration'
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain'), name="robots"),
+    path('health/', utils_common_views.health_check, name='health_check'),
     path('', portal_views.home, name='home'),
     path('center-summary', portal_views.center_summary, name='center-summary'),
     path('allocation-summary', portal_views.allocation_summary, name='allocation-summary'),
