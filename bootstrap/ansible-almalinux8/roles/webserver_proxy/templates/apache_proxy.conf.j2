@@ -1,0 +1,20 @@
+<VirtualHost *:80>
+    ServerName {{ hostname }}
+
+    # Serve static files directly from Apache (copied from container)
+    Alias /static/ {{ static_files_host_path | default('/opt/coldfront/static') }}/
+    <Directory {{ static_files_host_path | default('/opt/coldfront/static') }}/>
+        Require all granted
+    </Directory>
+
+    # Proxy all other requests to the Django container
+    ProxyPreserveHost On
+    ProxyPass /static/ !
+    ProxyPass / http://localhost:8000/
+    ProxyPassReverse / http://localhost:8000/
+
+    # Logging
+    ErrorLog /var/log/httpd/{{ hostname }}_error.log
+    CustomLog /var/log/httpd/{{ hostname }}_access.log combined
+
+</VirtualHost>

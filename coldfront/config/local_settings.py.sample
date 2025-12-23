@@ -454,29 +454,45 @@ EXTRA_MIDDLEWARE += [
 # Deployment-specific settings
 #------------------------------------------------------------------------------
 
-# If we are running on Production, we hope to see prod_settings.py we will
-# first try to apply it and exit. If prod_settings is not present, then we
-# assume we are running on Staging. If staging_settings is not present, then we
-# assume we are running on Dev., we hope to find
-# dev_settings.py and we will try to apply it.
+# Check if running with environment variables (containerized deployment)
+USE_ENV_SETTINGS = os.environ.get('DJANGO__USE_ENV_SETTINGS', '').lower() in ('true', '1', 'yes')
 
-# Use this if needed to place prod_settings in a different folder
-# sys.path.insert(0,'/var/www/django-settings')
-# Also remove the '.' in front of the prod_settings and dev_settings below.
-
-try:
-    from .prod_settings import *
-except ImportError:
+if USE_ENV_SETTINGS:
+    # Load environment-based settings for containerized deployments
     try:
-        from .staging_settings import *
+        from .env_settings import *
+    except ImportError as e:
+        print(f"env_settings.py is required when DJANGO__USE_ENV_SETTINGS is set: {e}")
+        sys.exit()
+else:
+    # Traditional file-based deployment settings
+    # If we are running on Production, we hope to see prod_settings.py we will
+    # first try to apply it and exit. If prod_settings is not present, then we
+    # assume we are running on Staging. If staging_settings is not present, then we
+    # assume we are running on Dev., we hope to find
+    # dev_settings.py and we will try to apply it.
+
+    # Use this if needed to place prod_settings in a different folder
+    # sys.path.insert(0,'/var/www/django-settings')
+    # Also remove the '.' in front of the prod_settings and dev_settings below.
+
+    try:
+        from .prod_settings import *
     except ImportError:
         try:
-            from .dev_settings import *
+            from .staging_settings import *
         except ImportError:
             try:
-                from .test_settings import *
+                from .dev_settings import *
             except ImportError:
-                pass
+                try:
+                    from .test_settings import *
+                except ImportError:
+                    # Fallback to build_settings for Docker image builds
+                    try:
+                        from .build_settings import *
+                    except ImportError:
+                        pass
 
 # Update extra apps based on potentially-updated variables.
 EXTRA_APPS += EXTRA_EXTRA_APPS

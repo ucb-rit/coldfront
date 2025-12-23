@@ -8,9 +8,9 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: "/vagrant/coldfront_app/coldfront/bootstrap/development/vm/configure_firewalld.sh", privileged: true
   config.vm.provision "shell", inline: "dnf install -y epel-release", privileged: true
 
-  # Run Ansible from the Vagrant VM
+  # Run Ansible from the Vagrant VM - Containerized Deployment
   config.vm.provision "ansible_local" do |ansible|
-    ansible.playbook = "/vagrant/coldfront_app/coldfront/bootstrap/ansible-almalinux8/source_deployment.yml"
+    ansible.playbook = "/vagrant/coldfront_app/coldfront/bootstrap/ansible-almalinux8/containerized_deployment.yml"
     ansible.galaxy_role_file = "/vagrant/coldfront_app/coldfront/bootstrap/ansible-almalinux8/requirements.yml"
     ansible.galaxy_roles_path = "/home/vagrant/.ansible/roles"
     # https://github.com/hashicorp/vagrant/issues/10958#issuecomment-724431455

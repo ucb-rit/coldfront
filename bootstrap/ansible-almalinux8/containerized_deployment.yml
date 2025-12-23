@@ -1,0 +1,140 @@
+---
+# Playbook: Containerized Deployment
+# Purpose: Deploy ColdFront via Docker Compose with Apache reverse proxy
+# This uses Docker containers for the Django app while keeping infrastructure on systemd
+
+- name: MyBRC/LRC User Portal VM Playbook - Containerized Deployment - EL8
+  gather_facts: true
+  hosts: all
+  become: true
+  become_user: root
+  become_method: sudo
+
+  vars:
+    cwd: "{{ lookup('env', 'PWD') }} "
+    provisioning_tasks: true
+    common_tasks: true
+    postgres_version: 15
+    postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
+
+  vars_files:
+    - "../../main.yml"
+
+  tasks:
+    # Provisioning tasks that can generally be skipped after the first time.
+    - name: Run Provisioning Tasks
+      block:
+        # Import core infrastructure roles (reused from source deployment)
+        - name: Apply system_base role
+          import_role:
+            name: system_base
+          tags: [provisioning, system]
+
+        - name: Apply postgresql role
+          import_role:
+            name: postgresql
+          tags: [provisioning, database]
+
+        - name: Apply redis role
+          import_role:
+            name: redis
+          tags: [provisioning, redis]
+
+        - name: Apply postfix_email role
+          import_role:
+            name: postfix_email
+          tags: [provisioning, email]
+
+        - name: Apply firewall role (LRC only)
+          import_role:
+            name: firewall
+          when: flag_lrc_enabled
+          tags: [provisioning, firewall]
+
+        # Container-specific roles
+        - name: Apply docker role
+          import_role:
+            name: docker
+          tags: [provisioning, docker]
+
+        - name: Apply django_containerized_app role
+          import_role:
+            name: django_containerized_app
+          tags: [provisioning, django]
+
+        - name: Apply webserver_proxy role
+          import_role:
+            name: webserver_proxy
+          tags: [provisioning, webserver]
+
+      when: provisioning_tasks == true
+      tags: provisioning
+
+    # Production only provisioning tasks.
+    - name: Run Production provisioning Tasks
+      block:
+        # Production-specific tasks are already handled in roles
+        # (e.g., firewall role is conditional on flag_lrc_enabled,
+        #  postfix_email role has BRC-specific OpenDKIM configuration)
+        - meta: noop
+
+      when: provisioning_tasks == true and deployment == "prod"
+      tags: provisioning
+
+    # Staging only provisioning tasks.
+    - name: Run Staging Provisioning Tasks
+      block:
+        # Don't do anything as there aren't any provisioning-specific tasks yet.
+        - meta: noop
+      # Uncomment when tasks are added.
+      # when: provisioning_tasks == true and deployment == "staging"
+      tags: provisioning
+
+    # Development only provisioning tasks.
+    - name: Run Development Provisioning Tasks
+      block:
+
+        - name: Install vim
+          yum:
+            name: vim
+            state: present
+
+        - name: Register user home directory
+          user:
+            name: "{{ djangooperator }}"
+          register: user
+
+        - name: Add dev QOL lines to .bashrc
+          blockinfile:
+            path: "{{ user.home }}/.bashrc"
+            block: |
+              # Upon login, navigate to the ColdFront directory
+              cd {{ git_prefix }}/{{ reponame }}
+              # Docker compose alias
+              alias dc="docker compose -f bootstrap/production/docker/docker-compose.yml"
+          become_user: "{{ djangooperator }}"
+
+      when: provisioning_tasks == true and deployment == "dev"
+      tags: provisioning
+
+    # Common tasks that run on every playbook execution.
+    - name: Run Common Tasks
+      block:
+
+        # Apply django_management_containerized role to run management commands
+        - name: Apply django_management_containerized role
+          import_role:
+            name: django_management_containerized
+          tags: [common, django]
+
+        # Start httpd after all setup is complete
+        - name: Start httpd service
+          service:
+            name: httpd
+            state: started
+            enabled: true
+
+      when: provisioning_tasks == true or common_tasks == true
+      tags:
+        - provisioning
+        - common

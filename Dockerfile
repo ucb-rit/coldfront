@@ -84,9 +84,30 @@ RUN dnf install -y curl && dnf clean all
 # Copy application code
 COPY . /var/www/coldfront_app/coldfront
 
-# Set proper permissions and switch to non-root user
+# Copy config files from samples if they don't exist
+RUN cd /var/www/coldfront_app/coldfront/coldfront/config && \
+    cp -n local_settings.py.sample local_settings.py && \
+    cp -n local_strings.py.sample local_strings.py
+
+# Collect static files at build time
+# Use build_settings.py (via local_settings.py fallback chain)
+ENV DJANGO_SETTINGS_MODULE=coldfront.config.settings \
+    DJANGO__USE_ENV_SETTINGS=false
+
+RUN python manage.py collectstatic --noinput --clear
+
+# Copy entrypoint script and set permissions (must be executable by nobody user)
+COPY bootstrap/production/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod 755 /usr/local/bin/docker-entrypoint.sh
+
+# Set proper permissions for application directory
 RUN chown -R nobody:nobody /var/www/coldfront_app
+
+# Switch to non-root user
 USER nobody
+
+# Use entrypoint to copy static files to shared volume at startup
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 WORKDIR /var/www/coldfront_app/coldfront
 

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ============================================================================
   # Web Service (Django + Gunicorn + Uvicorn ASGI)
@@ -19,15 +17,23 @@ services:
       - --access-logfile=-
       - --error-logfile=-
       - --log-level=info
-      - config.asgi:application
+      - coldfront.config.asgi:application
 
     # Environment variables from .env file (includes all secrets)
     env_file:
       - .env
 
+    environment:
+      # Path where static files will be copied (inside container)
+      - STATIC_VOLUME_PATH=/var/www/coldfront_static
+
     # Port mapping (internal:external)
     ports:
       - "${WEB_PORT:-8000}:8000"
+
+    # Mount static files volume so Apache can serve them
+    volumes:
+      - ${STATIC_FILES_HOST_PATH:-/opt/coldfront/static}:/var/www/coldfront_static
 
     # Connect to host services (PostgreSQL, Redis, Postfix on systemd)
     extra_hosts:
@@ -68,6 +74,10 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+    # Disable healthcheck for worker (Dockerfile healthcheck is for web server)
+    healthcheck:
+      disable: true
 
     # Depends on web service being healthy
     depends_on:

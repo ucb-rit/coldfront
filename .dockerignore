@@ -1,0 +1,74 @@
+# Docker artifacts
+*.tar
+*.tar.gz
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Git
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+dist
+build
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vagrant
+.vagrant/
+
+# Documentation
+docs/
+*.md
+README*
+LICENSE
+AUTHORS*
+CHANGELOG*
+
+# CI/CD
+.gitlab-ci.yml
+.readthedocs.yaml
+
+# Ansible
+bootstrap/ansible*
+bootstrap/production/
+# But keep the docker entrypoint script
+!bootstrap/production/docker/docker-entrypoint.sh
+
+# Local settings (will be generated in container)
+coldfront/config/local_settings.py
+coldfront/config/local_strings.py
+coldfront/config/prod_settings.py
+coldfront/config/dev_settings.py
+coldfront/config/staging_settings.py
+
+# Media and logs
+media/
+*.log
+
+# AI reference
+ai_reference/
+.claude/
