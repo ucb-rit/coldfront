@@ -1,0 +1,158 @@
+---
+# Playbook: Source Deployment
+# Purpose: Deploy ColdFront from source with Apache + mod_wsgi
+# This is the refactored version of the monolithic playbook.yml
+
+- name: MyBRC/LRC User Portal VM Playbook - Source Deployment - EL8
+  gather_facts: true
+  hosts: all
+  become: true
+  become_user: root
+  become_method: sudo
+
+  vars:
+    cwd: "{{ lookup('env', 'PWD') }} "
+    provisioning_tasks: true
+    common_tasks: true
+    python_version_long: 3.13.5
+    python_version_short: 3.13
+    postgres_version: 15
+    postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
+
+  vars_files:
+    - "../../main.yml"
+
+  environment:
+    PATH: "/opt/python{{ python_version_short }}/bin:{{ ansible_env.PATH }}"
+
+  tasks:
+    # Provisioning tasks that can generally be skipped after the first time.
+    - name: Run Provisioning Tasks
+      block:
+        # Import core infrastructure roles
+        - name: Apply system_base role
+          import_role:
+            name: system_base
+          tags: [provisioning, system]
+
+        - name: Apply python role
+          import_role:
+            name: python
+          tags: [provisioning, python]
+
+        - name: Apply postgresql role
+          import_role:
+            name: postgresql
+          tags: [provisioning, database]
+
+        - name: Apply redis role
+          import_role:
+            name: redis
+          tags: [provisioning, redis]
+
+        - name: Apply postfix_email role
+          import_role:
+            name: postfix_email
+          tags: [provisioning, email]
+
+        - name: Apply firewall role (LRC only)
+          import_role:
+            name: firewall
+          when: flag_lrc_enabled
+          tags: [provisioning, firewall]
+
+        - name: Apply django_source_app role
+          import_role:
+            name: django_source_app
+          vars:
+            ansible_python_interpreter: /opt/python{{ python_version_short }}/bin/python{{ python_version_short }}
+          tags: [provisioning, django]
+
+        - name: Apply webserver_apache role
+          import_role:
+            name: webserver_apache
+          vars:
+            ansible_python_interpreter: /opt/python{{ python_version_short }}/bin/python{{ python_version_short }}
+          tags: [provisioning, webserver]
+
+        - name: Apply supervisord role
+          import_role:
+            name: supervisord
+          vars:
+            ansible_python_interpreter: /opt/python{{ python_version_short }}/bin/python{{ python_version_short }}
+          tags: [provisioning, supervisord]
+
+      when: provisioning_tasks == true
+      tags: provisioning
+
+    # Production only provisioning tasks.
+    - name: Run Production provisioning Tasks
+      block:
+        # Production-specific tasks are already handled in roles
+        # (e.g., firewall role is conditional on flag_lrc_enabled,
+        #  postfix_email role has BRC-specific OpenDKIM configuration)
+        - meta: noop
+
+      when: provisioning_tasks == true and deployment == "prod"
+      tags: provisioning
+
+    # Staging only provisioning tasks.
+    - name: Run Staging Provisioning Tasks
+      block:
+        # Don't do anything as there aren't any provisioning-specific tasks yet.
+        - meta: noop
+      # Uncomment when tasks are added.
+      # when: provisioning_tasks == true and deployment == "staging"
+      tags: provisioning
+
+    # Development only provisioning tasks.
+    - name: Run Development Provisioning Tasks
+      block:
+
+        - name: Install vim
+          yum:
+            name: vim
+            state: present
+
+        - name: Register user home directory
+          user:
+            name: "{{ djangooperator }}"
+          register: user
+
+        - name: Add dev QOL lines to .bashrc
+          blockinfile:
+            path: "{{ user.home }}/.bashrc"
+            block: |
+              # Upon login, navigate to the ColdFront directory and source the virtual environment.
+              cd {{ git_prefix }}/{{ reponame }}
+              source ../venv/bin/activate
+              # Restart Apache with a keyword.
+              alias reload="sudo service httpd reload"
+          become_user: "{{ djangooperator }}"
+
+      when: provisioning_tasks == true and deployment == "dev"
+      tags: provisioning
+
+    # Common tasks that run on every playbook execution.
+    - name: Run Common Tasks
+      block:
+
+        # Apply django_management role to run management commands
+        - name: Apply django_management role
+          import_role:
+            name: django_management
+          vars:
+            ansible_python_interpreter: /opt/python{{ python_version_short }}/bin/python{{ python_version_short }}
+          tags: [common, django]
+
+        # Start httpd after all setup is complete
+        - name: Start httpd service
+          service:
+            name: httpd
+            state: started
+            enabled: true
+
+      when: provisioning_tasks == true or common_tasks == true
+      tags:
+        - provisioning
+        - common

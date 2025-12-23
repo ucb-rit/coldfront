@@ -10,7 +10,7 @@ Vagrant.configure("2") do |config|
 
   # Run Ansible from the Vagrant VM
   config.vm.provision "ansible_local" do |ansible|
-    ansible.playbook = "/vagrant/coldfront_app/coldfront/bootstrap/ansible-almalinux8/playbook.yml"
+    ansible.playbook = "/vagrant/coldfront_app/coldfront/bootstrap/ansible-almalinux8/source_deployment.yml"
     ansible.galaxy_role_file = "/vagrant/coldfront_app/coldfront/bootstrap/ansible-almalinux8/requirements.yml"
     ansible.galaxy_roles_path = "/home/vagrant/.ansible/roles"
     # https://github.com/hashicorp/vagrant/issues/10958#issuecomment-724431455
