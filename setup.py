@@ -42,7 +42,7 @@ setup(
         'pyparsing==2.3.1',
         'python-dateutil==2.8.0',
         'python-memcached==1.59',
-        'pytz==2018.9',
+        'pytz==2025.2',
         'redis==3.2.1',
         'requests==2.22.0',
         'six==1.12.0',
