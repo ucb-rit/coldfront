@@ -44,7 +44,7 @@ setup(
         'python-memcached==1.59',
         'pytz==2018.9',
         'redis==3.2.1',
-        'requests==2.22.0',
+        'requests==2.32.4',
         'six==1.12.0',
         'urllib3==1.24.2',
         'wcwidth==0.1.7',
