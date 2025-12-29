@@ -10,7 +10,7 @@ django-constance==2.9.0
 django-crispy-forms==1.11.1
 django-debug-toolbar==3.2.4
 django-durationwidget==1.0.5
-django-filter==2.3.0
+django-filter==25.1
 django-flags==5.0.10
 django-formtools==2.2
 django-googledrive-storage==1.6.0
