@@ -26,11 +26,11 @@ Note that these steps must be run from the root directory of the repo.
    Notes:
      - This step should only be performed once. Running it again will overwrite existing passwords that may already have been used to configure services.
 
-4. Generate Django settings files using values defined in the Docker configuration directory. You must provide a deployment name ("BRC" or "LRC").
+4. Generate a `.env` file using values defined in the Docker configuration directory. You must provide a deployment name ("BRC" or "LRC").
 
    ```bash
    export DEPLOYMENT=BRC
-   sh bootstrap/development/docker/scripts/docker_generate_settings.sh $DEPLOYMENT
+   sh bootstrap/development/docker/scripts/docker_generate_django_env.sh $DEPLOYMENT
    ```
 
    Notes:
@@ -41,16 +41,18 @@ Note that these steps must be run from the root directory of the repo.
              - Allowance renewal surveys
              - MOU generation and storage on BRC deployments
              - Vector-related requests on BRC deployments
+     - The generated `.env` file will be created in `coldfront/config/` and is used by the Django application directly.
 
 5. Generate a `.env` file with environment variables that will be passed to `docker-compose.yml`. You must provide a deployment name ("BRC" or "LRC"), as well as a port where the web service will be available ("8880", "8881", "8882", or "8883").
 
    ```bash
    export WEB_PORT=8880
-   sh bootstrap/development/docker/scripts/create_env_file.sh $DEPLOYMENT $WEB_PORT
+   sh bootstrap/development/docker/scripts/create_docker_compose_env_file.sh $DEPLOYMENT $WEB_PORT
    ```
 
    Notes:
      - `docker-compose.yml` looks for a `.env` file in the same directory it resides in. This script creates `.env` there.
+     - There is an optional third argument that configures whether the application expects `env_settings.py` or a legacy pre-generated Python settings file. By default, `env_settings.py` is used, but this can be overridden by providing `false` as a third argument. (Eventually, this will be removed.)
      - The port must be one of the above because the CILogon application client is only configured for one of those four ports.
      - The port may be customized so that multiple instances may run at the same time, without port clashes.
 
