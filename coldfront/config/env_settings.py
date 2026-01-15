@@ -388,22 +388,8 @@ if env.bool('HPCS__PLUGIN_DEPARTMENTS_ENABLED', default=False):
 
     DEPARTMENTS_DEPARTMENT_DISPLAY_NAME = env(
         'HPCS__PLUGIN_DEPARTMENTS_DEPARTMENT_DISPLAY_NAME')
-
-    def get_departments_data_source(short_name):
-        """Return the dotted path to the class to use as the data source
-        backend for departments, based on the given short name. Raise an
-        ImproperlyConfigured exception if the short name is
-        unexpected."""
-        prefix = 'coldfront.plugins.departments.utils.data_sources.backends'
-        if short_name == 'calnet_ldap':
-            return f'{prefix}.calnet_ldap.CalNetLdapDataSourceBackend'
-        elif short_name == 'dummy':
-            return f'{prefix}.dummy.DummyDataSourceBackend'
-        else:
-            raise ImproperlyConfigured('Unknown departments data source.')
-
-    DEPARTMENTS_DEPARTMENT_DATA_SOURCE = get_departments_data_source(
-        env('HPCS__PLUGIN_DEPARTMENTS_DEPARTMENT_DATA_SOURCE'))
+    DEPARTMENTS_DEPARTMENT_DATA_SOURCE = env(
+        'HPCS__PLUGIN_DEPARTMENTS_DEPARTMENT_DATA_SOURCE')
 
 #------------------------------------------------------------------------------
 # Plugin: faculty_storage_allocations
