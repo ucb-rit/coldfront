@@ -378,8 +378,8 @@ sentry_dsn: ""
 # # API is accessible. If none are given, API access is not restricted.
 # ip_range_with_api_access:
 
-# # IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-# debug_toolbar_ips: []
+# # IP addresses that can view the django debug toolbar.
+# debug_toolbar_ips: ['127.0.0.1']
 
 # # Email settings.
 # email_host: localhost
@@ -443,8 +443,8 @@ sentry_dsn: ""
 # # API is accessible. If none are given, API access is not restricted.
 # ip_range_with_api_access: 10.0.0.0/8
 
-# # IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-# debug_toolbar_ips: []
+# # IP addresses that can view the django debug toolbar.
+# debug_toolbar_ips: ['127.0.0.1']
 
 # # Email settings.
 # email_host: localhost
@@ -508,8 +508,8 @@ sentry_dsn: ""
 # # API is accessible. If none are given, API access is not restricted.
 # ip_range_with_api_access:
 
-# # IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-# debug_toolbar_ips: ['10.0.2.2']  # 10.0.2.2 is the vagrant host.
+# # IP addresses that can view the django debug toolbar.
+# debug_toolbar_ips: ['127.0.0.1', '10.0.2.2']  # 10.0.2.2 is the vagrant host.
 
 # # Email settings.
 # email_host: localhost
