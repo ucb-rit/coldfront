@@ -749,10 +749,21 @@
             src: "{{ git_prefix }}/{{ reponame }}/coldfront/config/local_strings.py.sample"
             dest: "{{ git_prefix }}/{{ reponame }}/coldfront/config/local_strings.py"
 
-        - name: Create the deployment-specific _settings.py file from a template
+        - name: Create /etc/coldfront directory
+          file:
+            path: /etc/coldfront
+            state: directory
+            owner: "{{ djangooperator }}"
+            group: apache
+            mode: 0750
+
+        - name: Create /etc/coldfront/.env from a template
           template:
-            src: "{{ git_prefix }}/{{ reponame }}/bootstrap/ansible/settings_template.tmpl"
-            dest: "{{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}/config/{{ deployment }}_settings.py"
+            src: "{{ git_prefix }}/{{ reponame }}/bootstrap/ansible/.env.tmpl"
+            dest: "/etc/coldfront/.env"
+            owner: "{{ djangooperator }}"
+            group: apache
+            mode: 0640
 
         - name: Create the deployment-specific password reset email subject text file from a template
           template:
