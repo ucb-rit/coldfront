@@ -28,5 +28,6 @@ cp bootstrap/ansible/main.copyme bootstrap/development/docker/config/main.yml
     -v $wd/bootstrap/ansible/settings_template.tmpl:/tmp/settings_template.tmpl \
     -v $wd/bootstrap/development/docker/config:/app/config \
     -v $wd/bootstrap/development/docker/scripts:/app/scripts \
+    -w /app/scripts \
     coldfront-app-config:latest \
-    python3 scripts/generate_django_settings_file.py $DEPLOYMENT) 2>/dev/null > coldfront/config/dev_settings.py
+    python3 generate_django_settings_file.py $DEPLOYMENT) 2>/dev/null > coldfront/config/dev_settings.py
