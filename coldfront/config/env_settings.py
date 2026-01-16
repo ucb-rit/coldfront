@@ -221,12 +221,14 @@ CONSTANCE_CONFIG = {
     'ANNOUNCEMENTS_ALERT_HTML': (
         '', 'The HTML contents of an announcements alert on the home page.'),
 }
-CONSTANCE_REDIS_CONNECTION = {
-    'host': env('HPCS__REDIS_HOST'),
-    'port': env.int('HPCS__REDIS_PORT'),
-    'db': env.int('HPCS__REDIS_DB'),
-    'password': env('HPCS__REDIS_PASSWORD', default=''),
-}
+
+if env.bool('HPCS__DJANGO_CONSTANCE_ENABLED', default=False):
+    CONSTANCE_REDIS_CONNECTION = {
+        'host': env('HPCS__REDIS_HOST'),
+        'port': env.int('HPCS__REDIS_PORT'),
+        'db': env.int('HPCS__REDIS_DB'),
+        'password': env('HPCS__REDIS_PASSWORD', default=''),
+    }
 
 #------------------------------------------------------------------------------
 # django-debug-toolbar settings
