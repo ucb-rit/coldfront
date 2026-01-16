@@ -86,15 +86,8 @@ jobs:
         # Create/override YML configuration files needed to generate .env.
         cp bootstrap/ansible/main.copyme bootstrap/development/docker/config/main.yml
         cp bootstrap/ci/config/ci_overrides.yml bootstrap/development/docker/config/overrides.yml
-        cat > bootstrap/development/docker/config/cilogon.yml << 'EOF'
-        cilogon_app_client_id: ""
-        cilogon_app_secret: ""
-        EOF
-        cat > bootstrap/development/docker/config/secrets.yml << 'EOF'
-        django_secret_key: "ci-dummy-secret-key-not-for-production"
-        db_admin_passwd: "ci-dummy-password"
-        redis_passwd: "ci-dummy-password"
-        EOF
+        echo "{}" > bootstrap/development/docker/config/cilogon.yml
+        echo "{}" > bootstrap/development/docker/config/secrets.yml
 
         # Generate .env.
         pip install Jinja2 PyYAML
