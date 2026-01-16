@@ -83,14 +83,24 @@ jobs:
         cp coldfront/config/local_strings.py.sample coldfront/config/local_strings.py
         cp coldfront/config/local_settings.py.sample coldfront/config/local_settings.py
 
-        # Generate .env file for testing from template with CI overrides
-        # Install dependencies needed for .env generation
+        # Create/override YML configuration files needed to generate .env.
+        cp bootstrap/ansible/main.copyme bootstrap/development/docker/config/main.yml
+        cp bootstrap/ci/config/ci_overrides.yml bootstrap/development/docker/config/overrides.yml
+        cat > bootstrap/development/docker/config/cilogon.yml << 'EOF'
+        cilogon_app_client_id: ""
+        cilogon_app_secret: ""
+        EOF
+        cat > bootstrap/development/docker/config/secrets.yml << 'EOF'
+        django_secret_key: "ci-dummy-secret-key-not-for-production"
+        db_admin_passwd: "ci-dummy-password"
+        redis_passwd: "ci-dummy-password"
+        EOF
+
+        # Generate .env.
         pip install Jinja2 PyYAML
-        cp bootstrap/ansible/main.copyme bootstrap/ansible/main.yml
-        cp bootstrap/ci/config/ci_overrides.yml bootstrap/ansible/overrides.yml
         python bootstrap/development/docker/scripts/generate_django_env_file.py BRC \
           --template-dir bootstrap/ansible \
-          --config-dir bootstrap/ansible > coldfront/config/.env
+          --config-dir bootstrap/development/docker/config > coldfront/config/.env
 
         # Create MOU directories
         sudo mkdir -p "/media/New Project Request MOUs/"
