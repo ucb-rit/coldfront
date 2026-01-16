@@ -97,20 +97,29 @@ EXTRA_EXTRA_MIDDLEWARE = []
 # Django Cache settings
 #------------------------------------------------------------------------------
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': (
-            f'redis://{env("HPCS__REDIS_HOST")}:{env.int("HPCS__REDIS_PORT")}/'
-            f'{env.int("HPCS__REDIS_DB")}'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'DB': env.int('HPCS__REDIS_DB'),
-            'PASSWORD': env('HPCS__REDIS_PASSWORD', default=''),
-        },
-        'TIMEOUT': env.int('DJANGO__CACHES_DEFAULT_TIMEOUT')
+_cache_backend_short = env('DJANGO__CACHES_DEFAULT_BACKEND_SHORT', default='dummy')
+
+if _cache_backend_short == 'redis':
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': (
+                f'redis://{env("HPCS__REDIS_HOST")}:{env.int("HPCS__REDIS_PORT")}/'
+                f'{env.int("HPCS__REDIS_DB")}'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'DB': env.int('HPCS__REDIS_DB'),
+                'PASSWORD': env('HPCS__REDIS_PASSWORD', default=''),
+            },
+            'TIMEOUT': env.int('DJANGO__CACHES_DEFAULT_TIMEOUT')
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        }
+    }
 
 #------------------------------------------------------------------------------
 # BRC Vector Settings
@@ -449,23 +458,31 @@ if FILE_STORAGE['backend'] == 'google_drive':
 # django-q settings
 #------------------------------------------------------------------------------
 
-Q_CLUSTER = {
-    'redis': {
-        'host': env('HPCS__REDIS_HOST'),
-        'port': env.int('HPCS__REDIS_PORT'),
-        'db': env.int('HPCS__REDIS_DB'),
-        'password': env('HPCS__REDIS_PASSWORD', default=''),
-    },
-    # No task may run longer than 'timeout' seconds.
-    # Tasks that time out are retried after 'retry' seconds since the task
-    # originally began.
-    # 'retry' must be greater than 'timeout'.
-    # This configuration assumes that no task runs longer than 24 hours. If it
-    # times out, it will be retried a day after the timeout.
-    # Docs: https://django-q2.readthedocs.io/en/master/configure.html#retry
-    'retry': 2 * 24 * 60 * 60,
-    'timeout': 24 * 60 * 60,
-}
+_django_q_job_queue_mode = env('HPCS__DJANGO_Q_JOB_QUEUE_MODE', default='sync')
+
+if _django_q_job_queue_mode == 'async':
+    Q_CLUSTER = {
+        'redis': {
+            'host': env('HPCS__REDIS_HOST'),
+            'port': env.int('HPCS__REDIS_PORT'),
+            'db': env.int('HPCS__REDIS_DB'),
+            'password': env('HPCS__REDIS_PASSWORD', default=''),
+        },
+        # No task may run longer than 'timeout' seconds.
+        # Tasks that time out are retried after 'retry' seconds since the task
+        # originally began.
+        # 'retry' must be greater than 'timeout'.
+        # This configuration assumes that no task runs longer than 24 hours. If
+        # it times out, it will be retried a day after the timeout.
+        # Docs: https://django-q2.readthedocs.io/en/master/configure.html#retry
+        'retry': 2 * 24 * 60 * 60,
+        'timeout': 24 * 60 * 60,
+    }
+else:
+    Q_CLUSTER = {
+        'sync': True,
+        'timeout': 24 * 60 * 60,
+    }
 
 #------------------------------------------------------------------------------
 # django-maintenance-mode settings
