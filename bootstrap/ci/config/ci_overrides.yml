@@ -22,3 +22,6 @@ django_constance_enabled: false
 
 # Use synchronous job queue mode for testing (no Redis required)
 django_q_job_queue_mode: sync
+
+# Use the dummy backend for the departments plugin
+plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.dummy.DummyDataSourceBackend"
