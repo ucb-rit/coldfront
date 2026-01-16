@@ -2,6 +2,14 @@
 # CI Testing Configuration Overrides
 # =============================================================================
 
+# Database and service hosts for CI environment (running on localhost)
+db_host: localhost
+email_host: localhost
+redis_host: localhost
+
+# Don't stream logs to stdout
+stream_logs_to_stdout: false
+
 # Use dummy cache backend for testing (no Redis required)
 django_cache_backend_short: dummy
 
