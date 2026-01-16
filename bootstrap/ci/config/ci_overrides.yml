@@ -1,0 +1,9 @@
+# =============================================================================
+# CI Testing Configuration Overrides
+# =============================================================================
+
+# Use dummy cache backend for testing (no Redis required)
+django_cache_backend_short: dummy
+
+# Use synchronous job queue mode for testing (no Redis required)
+django_q_job_queue_mode: sync

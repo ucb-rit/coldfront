@@ -31,8 +31,8 @@ def build_context(yaml_file_paths):
     return context
 
 
-def generate_env(context):
-    loader = FileSystemLoader(ENV_JINJA_TEMPLATE_DIRECTORY_PATH)
+def generate_env(context, template_dir):
+    loader = FileSystemLoader(template_dir)
     environment = Environment(loader=loader)
     environment.filters['bool'] = (
         lambda x: str(x).lower() in ['true', 'yes', 'on', '1'])
@@ -51,25 +51,39 @@ def parse_args():
         'deployment',
         choices=['BRC', 'LRC'],
         help='Specify the deployment to generate configuration for.')
+    parser.add_argument(
+        '--template-dir',
+        default=None,
+        help='Override the template directory path')
+    parser.add_argument(
+        '--config-dir',
+        default=None,
+        help='Override the YAML config directory path')
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
 
+    template_dir = (
+        args.template_dir if args.template_dir
+        else ENV_JINJA_TEMPLATE_DIRECTORY_PATH)
+    config_dir = args.config_dir if args.config_dir else YAML_DIRECTORY_PATH
+
     yaml_file_names = list(YAML_FILE_NAMES)
 
     deployment_yaml_file_name = f'{args.deployment.lower()}_defaults.yml'
     yaml_file_names.append(deployment_yaml_file_name)
-    if os.path.exists(os.path.join(YAML_DIRECTORY_PATH, YAML_OVERRIDES_FILE_NAME)):
+    overrides_path = os.path.join(config_dir, YAML_OVERRIDES_FILE_NAME)
+    if os.path.exists(overrides_path):
         yaml_file_names.append(YAML_OVERRIDES_FILE_NAME)
     yaml_file_paths = [
-        os.path.join(YAML_DIRECTORY_PATH, file_name)
+        os.path.join(config_dir, file_name)
         for file_name in yaml_file_names]
 
     context = build_context(yaml_file_paths)
 
-    print(generate_env(context))
+    print(generate_env(context, template_dir))
 
 
 if __name__ == '__main__':
