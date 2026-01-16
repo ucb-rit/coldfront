@@ -7,6 +7,9 @@ db_host: localhost
 email_host: localhost
 redis_host: localhost
 
+# Database credentials for CI (matches postgres service in workflow)
+db_admin_passwd: test
+
 # Don't stream logs to stdout
 stream_logs_to_stdout: false
 
