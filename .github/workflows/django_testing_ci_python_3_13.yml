@@ -95,12 +95,6 @@ jobs:
           --template-dir bootstrap/ansible \
           --config-dir bootstrap/development/docker/config > coldfront/config/.env
 
-        # Debug: Display Django settings
-        source ~/venv/bin/activate
-        export django_secret_key=`openssl rand -base64 64`
-        export HPCS__USE_ENV_SETTINGS=true
-        python manage.py diffsettings
-
         # Create MOU directories
         sudo mkdir -p "/media/New Project Request MOUs/"
         sudo mkdir "/media/Service Units Purchase Request MOUs/"
