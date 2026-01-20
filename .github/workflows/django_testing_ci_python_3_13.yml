@@ -105,27 +105,23 @@ jobs:
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        export HPCS__USE_ENV_SETTINGS=true
         pytest coldfront/ -m unit
 
     - name: Run pytest component tests
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        export HPCS__USE_ENV_SETTINGS=true
         pytest coldfront/ -m component
 
     # - name: Run pytest acceptance tests
     #   run: |
     #     source ~/venv/bin/activate
     #     export django_secret_key=`openssl rand -base64 64`
-    #     export HPCS__USE_ENV_SETTINGS=true
     #     pytest -m acceptance
 
     - name: Run Tests
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        export HPCS__USE_ENV_SETTINGS=true
         python manage.py migrate
         python manage.py test
