@@ -52,6 +52,10 @@ def parse_args():
         choices=['BRC', 'LRC'],
         help='Specify the deployment to generate configuration for.')
     parser.add_argument(
+        'web_port',
+        type=int,
+        help='Specify the web server port.')
+    parser.add_argument(
         '--template-dir',
         default=None,
         help='Override the template directory path')
@@ -82,6 +86,8 @@ def main():
         for file_name in yaml_file_names]
 
     context = build_context(yaml_file_paths)
+
+    context['full_host_path'] = f'http://localhost:{args.web_port}'
 
     print(generate_env(context, template_dir))
 

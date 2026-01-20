@@ -91,7 +91,7 @@ jobs:
 
         # Generate .env.
         pip install Jinja2 PyYAML
-        python bootstrap/development/docker/scripts/generate_django_env_file.py BRC \
+        python bootstrap/development/docker/scripts/generate_django_env_file.py BRC 8000 \
           --template-dir bootstrap/ansible \
           --config-dir bootstrap/development/docker/config > coldfront/config/.env
 
