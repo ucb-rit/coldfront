@@ -230,8 +230,6 @@ ALLOW_ALL_JOBS = False
 # ------------------------------------------------------------------------------
 # Local settings overrides (see local_settings.py.sample)
 # ------------------------------------------------------------------------------
-
-# Load traditional file-based settings
 try:
     from coldfront.config.local_strings import *
 except ImportError:
