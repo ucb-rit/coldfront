@@ -144,11 +144,19 @@ class RequestHubView(LoginRequiredMixin,
                 status__name__in=complete_status_names, *args
             ).order_by('-request_time')
 
-        # Add requested_amount_tb to each request for template display
+        # Add amounts to each request for template display
         for request in fsa_request_list_pending:
             request.requested_amount_tb = request.requested_amount_gb // 1000
+            request.approved_amount_tb = (
+                request.approved_amount_gb // 1000
+                if request.approved_amount_gb else None
+            )
         for request in fsa_request_list_complete:
             request.requested_amount_tb = request.requested_amount_gb // 1000
+            request.approved_amount_tb = (
+                request.approved_amount_gb // 1000
+                if request.approved_amount_gb else None
+            )
 
         fsa_request_obj.num = self.paginators
         fsa_request_obj.pending_queryset = self.create_paginator(
