@@ -82,7 +82,18 @@ jobs:
         # Get setting configuration from samples
         cp coldfront/config/local_strings.py.sample coldfront/config/local_strings.py
         cp coldfront/config/local_settings.py.sample coldfront/config/local_settings.py
-        cp coldfront/config/test_settings.py.sample coldfront/config/test_settings.py
+
+        # Create/override YML configuration files needed to generate .env.
+        cp bootstrap/ansible/main.copyme bootstrap/development/docker/config/main.yml
+        cp bootstrap/ci/config/ci_overrides.yml bootstrap/development/docker/config/overrides.yml
+        echo "{}" > bootstrap/development/docker/config/cilogon.yml
+        echo "{}" > bootstrap/development/docker/config/secrets.yml
+
+        # Generate .env.
+        pip install Jinja2 PyYAML
+        python bootstrap/development/docker/scripts/generate_django_env_file.py BRC 8000 \
+          --template-dir bootstrap/ansible \
+          --config-dir bootstrap/development/docker/config > coldfront/config/.env
 
         # Create MOU directories
         sudo mkdir -p "/media/New Project Request MOUs/"
@@ -94,23 +105,27 @@ jobs:
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
+        export HPCS__USE_ENV_SETTINGS=true
         pytest coldfront/ -m unit
 
     - name: Run pytest component tests
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
+        export HPCS__USE_ENV_SETTINGS=true
         pytest coldfront/ -m component
 
     # - name: Run pytest acceptance tests
     #   run: |
     #     source ~/venv/bin/activate
     #     export django_secret_key=`openssl rand -base64 64`
+    #     export HPCS__USE_ENV_SETTINGS=true
     #     pytest -m acceptance
 
     - name: Run Tests
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
+        export HPCS__USE_ENV_SETTINGS=true
         python manage.py migrate
         python manage.py test

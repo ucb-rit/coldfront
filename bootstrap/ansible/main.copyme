@@ -81,6 +81,14 @@ wsgi_conf_file_name: cf_mybrc_wsgi.conf
 wsgi_conf_log_prefix: cf_brc
 
 #------------------------------------------------------------------------------
+# Django Caching settings
+#------------------------------------------------------------------------------
+
+# A short name representing a cache backend for Django.
+# Supported options: "redis", "dummy"
+django_cache_backend_short: redis
+
+#------------------------------------------------------------------------------
 # BRC OpenDKIM settings
 #------------------------------------------------------------------------------
 
@@ -171,6 +179,20 @@ flag_mou_generation_enabled: False
 
 # Whether to include a survey as part of the allowance renewal request process.
 flag_renewal_survey_enabled: True
+
+#------------------------------------------------------------------------------
+# django-constance settings
+#------------------------------------------------------------------------------
+
+# Whether to enable django-constance
+django_constance_enabled: true
+
+#------------------------------------------------------------------------------
+# Django-Q settings
+#------------------------------------------------------------------------------
+
+# How to run jobs enqueued to Django-Q: "sync" or "async".
+django_q_job_queue_mode: async
 
 #------------------------------------------------------------------------------
 # Plugin: departments
@@ -378,8 +400,8 @@ sentry_dsn: ""
 # # API is accessible. If none are given, API access is not restricted.
 # ip_range_with_api_access:
 
-# # IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-# debug_toolbar_ips: []
+# # IP addresses that can view the django debug toolbar.
+# debug_toolbar_ips: ['127.0.0.1']
 
 # # Email settings.
 # email_host: localhost
@@ -443,8 +465,8 @@ sentry_dsn: ""
 # # API is accessible. If none are given, API access is not restricted.
 # ip_range_with_api_access: 10.0.0.0/8
 
-# # IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-# debug_toolbar_ips: []
+# # IP addresses that can view the django debug toolbar.
+# debug_toolbar_ips: ['127.0.0.1']
 
 # # Email settings.
 # email_host: localhost
@@ -508,8 +530,8 @@ sentry_dsn: ""
 # # API is accessible. If none are given, API access is not restricted.
 # ip_range_with_api_access:
 
-# # IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-# debug_toolbar_ips: ['10.0.2.2']  # 10.0.2.2 is the vagrant host.
+# # IP addresses that can view the django debug toolbar.
+# debug_toolbar_ips: ['127.0.0.1', '10.0.2.2']  # 10.0.2.2 is the vagrant host.
 
 # # Email settings.
 # email_host: localhost

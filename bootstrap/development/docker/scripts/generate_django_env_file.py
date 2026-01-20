@@ -1,0 +1,96 @@
+import argparse
+import os
+import json
+import yaml
+
+from jinja2 import Environment
+from jinja2 import FileSystemLoader
+
+
+SCRIPT_PATH = os.path.abspath(__file__)
+
+ENV_JINJA_TEMPLATE_DIRECTORY_PATH = '/tmp/'
+ENV_JINJA_TEMPLATE_FILE_NAME = '.env.tmpl'
+
+YAML_DIRECTORY_PATH = '/app/config/'
+YAML_FILE_NAMES = [
+    'main.yml',
+    'docker_defaults.yml',
+    'secrets.yml',
+    'cilogon.yml',
+]
+
+YAML_OVERRIDES_FILE_NAME = 'overrides.yml'
+
+def build_context(yaml_file_paths):
+    context = {}
+    for yaml_file_path in yaml_file_paths:
+        with open(yaml_file_path, 'r') as f:
+            yaml_dict = yaml.safe_load(f)
+            context.update(yaml_dict)
+    return context
+
+
+def generate_env(context, template_dir):
+    loader = FileSystemLoader(template_dir)
+    environment = Environment(loader=loader)
+    environment.filters['bool'] = (
+        lambda x: str(x).lower() in ['true', 'yes', 'on', '1'])
+    # Emulate Ansible's to_json filter.
+    environment.filters['to_json'] = \
+        lambda _yaml_dict: json.dumps(_yaml_dict) if _yaml_dict else "{}"
+    template = environment.get_template(
+        ENV_JINJA_TEMPLATE_FILE_NAME)
+    return template.render(context)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='Generate a default .env file for the application.')
+    parser.add_argument(
+        'deployment',
+        choices=['BRC', 'LRC'],
+        help='Specify the deployment to generate configuration for.')
+    parser.add_argument(
+        'web_port',
+        type=int,
+        help='Specify the web server port.')
+    parser.add_argument(
+        '--template-dir',
+        default=None,
+        help='Override the template directory path')
+    parser.add_argument(
+        '--config-dir',
+        default=None,
+        help='Override the YAML config directory path')
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    template_dir = (
+        args.template_dir if args.template_dir
+        else ENV_JINJA_TEMPLATE_DIRECTORY_PATH)
+    config_dir = args.config_dir if args.config_dir else YAML_DIRECTORY_PATH
+
+    yaml_file_names = list(YAML_FILE_NAMES)
+
+    deployment_yaml_file_name = f'{args.deployment.lower()}_defaults.yml'
+    yaml_file_names.append(deployment_yaml_file_name)
+    overrides_path = os.path.join(config_dir, YAML_OVERRIDES_FILE_NAME)
+    if os.path.exists(overrides_path):
+        yaml_file_names.append(YAML_OVERRIDES_FILE_NAME)
+    yaml_file_paths = [
+        os.path.join(config_dir, file_name)
+        for file_name in yaml_file_names]
+
+    context = build_context(yaml_file_paths)
+
+    context['full_host_path'] = f'http://localhost:{args.web_port}'
+
+    print(generate_env(context, template_dir))
+
+
+if __name__ == '__main__':
+    main()
