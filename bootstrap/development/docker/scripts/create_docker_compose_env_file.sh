@@ -22,14 +22,5 @@ else
     DB_NAME="cf_lrc_db"
 fi
 
-USE_ENV_SETTINGS_INPUT=${3:-true}
-USE_ENV_SETTINGS_INPUT=$(printf '%s' "$USE_ENV_SETTINGS_INPUT" | tr '[:upper:]' '[:lower:]')
-if [[ "$USE_ENV_SETTINGS_INPUT" == "true" || "$USE_ENV_SETTINGS_INPUT" == "1" || "$USE_ENV_SETTINGS_INPUT" == "yes" ]]; then
-    USE_ENV_SETTINGS=true
-else
-    USE_ENV_SETTINGS=false
-fi
-
 echo "DB_NAME=$DB_NAME" > $ENV_FILE_PATH
 echo "WEB_PORT=$PORT" >> $ENV_FILE_PATH
-echo "USE_ENV_SETTINGS=$USE_ENV_SETTINGS" >> $ENV_FILE_PATH
