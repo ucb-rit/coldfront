@@ -56,10 +56,11 @@ Note that these steps must be run from the root directory of the repo.
      - `docker-compose.yml` looks for a `.env` file in the same directory it resides in. This script creates `.env` there.
      - There is an optional third argument that configures whether the application expects `env_settings.py` or a legacy pre-generated Python settings file. By default, `env_settings.py` is used, but this can be overridden by providing `false` as a third argument. (Eventually, this will be removed.)
 
-6. Start the application stack. Specify a unique Docker [project name](https://docs.docker.com/compose/project-name/) so that resources are placed within a Docker namespace. Examples: "brc-dev", "lrc-dev".
+6. Start the application stack. Specify a unique Docker [project name](https://docs.docker.com/compose/project-name/) so that resources are placed within a Docker namespace. Examples: "brc-dev", "lrc-dev". Also specify that the application should use environment variable-based settings.
 
    ```bash
    export DOCKER_PROJECT_NAME=brc-dev
+   export USE_ENV_SETTINGS=true
    docker compose \
        -f bootstrap/development/docker/docker-compose.yml \
        -p $DOCKER_PROJECT_NAME \
