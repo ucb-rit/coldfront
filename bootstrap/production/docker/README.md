@@ -108,9 +108,6 @@ docker pull coldfront-app-production:${IMAGE_TAG}
 
 # Restart services with new image
 docker compose -f bootstrap/production/docker/docker-compose.yml up -d --force-recreate
-
-# Or use Ansible playbook (recommended)
-ansible-playbook bootstrap/ansible-containerized/playbook.yml
 ```
 
 ## Configuration
