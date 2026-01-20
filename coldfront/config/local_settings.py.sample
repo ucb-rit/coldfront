@@ -454,29 +454,12 @@ EXTRA_MIDDLEWARE += [
 # Deployment-specific settings
 #------------------------------------------------------------------------------
 
-USE_ENV_SETTINGS = (
-    os.environ.get('HPCS__USE_ENV_SETTINGS', '').lower()
-    in ('true', '1', 'yes'))
-
-if USE_ENV_SETTINGS:
-    try:
-        from .env_settings import *
-    except ImportError:
-        pass
-else:
-    try:
-        from .prod_settings import *
-    except ImportError:
-        try:
-            from .staging_settings import *
-        except ImportError:
-            try:
-                from .dev_settings import *
-            except ImportError:
-                try:
-                    from .test_settings import *
-                except ImportError:
-                    pass
+try:
+    from .env_settings import *
+except ImportError:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        'Environment-based settings module should be present.')
 
 # Update extra apps based on potentially-updated variables.
 EXTRA_APPS += EXTRA_EXTRA_APPS
