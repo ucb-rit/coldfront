@@ -45,7 +45,12 @@ EMAIL_PORT = env.int('DJANGO__EMAIL_PORT')
 EMAIL_SUBJECT_PREFIX = env('DJANGO__EMAIL_SUBJECT_PREFIX')
 # A list of admin email addresses to be notified about new requests and other
 # events.
+# TODO: Transition this to EMAIL_ADMIN_NOTIFICATION_RECIPIENTS and retire it.
 EMAIL_ADMIN_LIST = env.list('COLDFRONT__EMAIL_ADMIN_LIST')
+# A dict mapping email notification types to lists of recipient admin email
+# addresses.
+EMAIL_ADMIN_NOTIFICATION_RECIPIENTS = env.json(
+    'HPCS__EMAIL_ADMIN_NOTIFICATION_RECIPIENTS', default={})
 EMAIL_SENDER = env('COLDFRONT__EMAIL_SENDER')
 EMAIL_TICKET_SYSTEM_ADDRESS = env('COLDFRONT__EMAIL_TICKET_SYSTEM_ADDRESS')
 EMAIL_DIRECTOR_EMAIL_ADDRESS = env('COLDFRONT__EMAIL_DIRECTOR_EMAIL_ADDRESS')
@@ -81,6 +86,7 @@ STREAM_LOGS_TO_STDOUT = env.bool('HPCS__STREAM_LOGS_TO_STDOUT', default=True)
 REQUEST_APPROVAL_CC_LIST = env.list('HPCS__REQUEST_APPROVAL_CC_LIST')
 # A list of admin email addresses to notify when a project-user removal request
 # is processed.
+# TODO: Transition this to EMAIL_ADMIN_NOTIFICATION_RECIPIENTS and retire it.
 PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST = env.list(
     'HPCS__PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST')
 
