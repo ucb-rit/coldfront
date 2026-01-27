@@ -271,7 +271,8 @@ center_help_email: "brc-hpc-help@berkeley.edu"
 # Email admin notification settings
 #------------------------------------------------------------------------------
 
-# A list of admin email addresses to receive notifications when events occur.
+# Lists of admin email addresses to notify for domain-specific events.
+# Structure: domain -> event -> list of email addresses
 email_admin_notification_recipients:
   new_project_requests:
     agreement_uploaded: []

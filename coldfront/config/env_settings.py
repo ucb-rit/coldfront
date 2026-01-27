@@ -47,8 +47,13 @@ EMAIL_SUBJECT_PREFIX = env('DJANGO__EMAIL_SUBJECT_PREFIX')
 # events.
 # TODO: Transition this to EMAIL_ADMIN_NOTIFICATION_RECIPIENTS and retire it.
 EMAIL_ADMIN_LIST = env.list('COLDFRONT__EMAIL_ADMIN_LIST')
-# A dict mapping email notification types to lists of recipient admin email
-# addresses.
+# A nested dict mapping domain -> event -> list of recipient admin email
+# addresses. Example:
+# {
+#   "new_project_requests": {
+#     "agreement_uploaded": ["admin@example.com"]
+#   }
+# }
 EMAIL_ADMIN_NOTIFICATION_RECIPIENTS = env.json(
     'HPCS__EMAIL_ADMIN_NOTIFICATION_RECIPIENTS', default={})
 EMAIL_SENDER = env('COLDFRONT__EMAIL_SENDER')
