@@ -3,9 +3,9 @@ Dear {{ user_name }},
 This is a reminder that you have {{ num_requests }} project join request(s) in the {{ PORTAL_NAME }} User Portal.
 
 Project | Request Time
-{{ request_list }}
-
-You may review these requests at {{ review_url }}. You will periodically receive reminder emails until the managers/PIs of each project approve/deny your request(s).
+{% for entry in request_entries %}{{ entry.project }} | {{ entry.created }}
+{% endfor %}
+You may review these requests here: {{ review_url }}. You will periodically receive reminder emails until the managers/PIs of each project approve/deny your request(s).
 
 Thank you,
 {{ signature }}

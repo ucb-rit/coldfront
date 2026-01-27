@@ -33,7 +33,7 @@ class Command(BaseCommand):
         emails_sent = 0
         for pk in projects_with_pending_join_requests:
             project = Project.objects.get(pk=pk)
-            proj_join_requests_qeuryset = \
+            proj_join_requests_queryset = \
                 ProjectUserJoinRequest.objects.filter(
                     project_user__project=project,
                     project_user__status__name='Pending - Add').\
@@ -41,21 +41,29 @@ class Command(BaseCommand):
                     distinct('project_user')
 
             if settings.EMAIL_ENABLED:
-                request_string_list = [f'{request.project_user.user.first_name} ' \
-                                       f'{request.project_user.user.last_name} | ' \
-                                       f'{request.project_user.user.email} | ' \
-                                       f'{request.created.strftime("%m/%d/%Y, %H:%M")}'
-                                       for request in proj_join_requests_qeuryset]
+
+                request_entries = []
+                for request in proj_join_requests_queryset:
+                    first_name = request.project_user.user.first_name
+                    last_name = request.project_user.user.last_name
+                    email = request.project_user.user.email
+                    created = request.created.strftime("%m/%d/%Y, %H:%M")
+                    request_entries.append({
+                        'name': f'{first_name} {last_name}',
+                        'email': email,
+                        'created': created,
+                    })
 
                 context = {
                     'PORTAL_NAME': settings.PORTAL_NAME,
                     'project_name': project.name,
-                    'request_list': '\n'.join(request_string_list),
-                    'num_requests': proj_join_requests_qeuryset.count(),
-                    'verb': 'are' if proj_join_requests_qeuryset.count() > 1 else 'is',
+                    'request_entries': request_entries,
+                    'num_requests': proj_join_requests_queryset.count(),
+                    'verb': 'are' if proj_join_requests_queryset.count() > 1 else 'is',
                     'pk': project.pk,
                     'review_url': review_project_join_requests_url(project),
                     'signature': settings.EMAIL_SIGNATURE,
+                    'signature_html': settings.EMAIL_SIGNATURE.replace('\n', '<br>'),
                 }
 
                 recipients = project.managers_and_pis_emails()
@@ -82,7 +90,7 @@ class Command(BaseCommand):
 
         for pk in users_with_pending_join_requests:
             user = User.objects.get(pk=pk)
-            proj_join_requests_qeuryset = \
+            proj_join_requests_queryset = \
                 ProjectUserJoinRequest.objects.filter(
                     project_user__user=user,
                     project_user__status__name='Pending - Add'). \
@@ -90,17 +98,23 @@ class Command(BaseCommand):
                     distinct('project_user')
 
             if settings.EMAIL_ENABLED:
-                request_string_list = [f'{request.project_user.project.name} | ' \
-                                       f'{request.created.strftime("%m/%d/%Y, %H:%M")}'
-                                       for request in proj_join_requests_qeuryset]
+                request_entries = []
+                for request in proj_join_requests_queryset:
+                    project_name = request.project_user.project.name
+                    created = request.created.strftime("%m/%d/%Y, %H:%M")
+                    request_entries.append({
+                        'project': project_name,
+                        'created': created,
+                    })
 
                 context = {
                     'PORTAL_NAME': settings.PORTAL_NAME,
                     'user_name': f'{user.first_name} {user.last_name}',
-                    'request_list': '\n'.join(request_string_list),
-                    'num_requests': proj_join_requests_qeuryset.count(),
+                    'request_entries': request_entries,
+                    'num_requests': proj_join_requests_queryset.count(),
                     'review_url': project_join_list_url(),
                     'signature': settings.EMAIL_SIGNATURE,
+                    'signature_html': settings.EMAIL_SIGNATURE.replace('\n', '<br>'),
                 }
 
                 try:
@@ -109,7 +123,8 @@ class Command(BaseCommand):
                         'email/project_join_request/pending_project_join_request_user.txt',
                         context,
                         settings.EMAIL_SENDER,
-                        [user.email])
+                        [user.email],
+                        html_template='email/project_join_request/pending_project_join_request_user.html')
                     emails_sent += 1
                 except Exception as e:
                     message = 'Failed to send reminder email. Details:'

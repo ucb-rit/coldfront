@@ -1,8 +1,8 @@
-Dear managers of {{ project_name }},
+<p>Dear managers of {{ project_name }},</p>
 
-User {{ user_string }} has requested to join your project, {{ project_name }} via the {{ PORTAL_NAME }} User Portal.
+<p>User {{ user_string }} has requested to join your project, {{ project_name }} via the {{ PORTAL_NAME }} User Portal.</p>
 
-Please approve/deny this request <a href="{{ review_url }}">here</a>.
+<p>Please approve/deny this request <a href="{{ review_url }}">here</a>.</p>
 
-Thank you,
-{{ signature }}
+<p>Thank you,<br>
+{{ signature_html|safe }}</p>

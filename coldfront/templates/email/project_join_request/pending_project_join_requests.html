@@ -1,11 +1,27 @@
-Dear managers of {{ project_name }},
+<p>Dear managers of {{ project_name }},</p>
 
-This is a reminder that there {{ verb }} {{ num_requests }} request(s) to join your project, {{ project_name }}, via the {{ PORTAL_NAME }} User Portal.
+<p>This is a reminder that there {{ verb }} {{ num_requests }} request(s) to join your project, {{ project_name }}, via the {{ PORTAL_NAME }} User Portal.</p>
 
-Name | Email | Request Time
-{{ request_list }}
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+  <thead>
+    <tr style="background-color: #f0f0f0;">
+      <th style="text-align: left; padding: 8px;">Name</th>
+      <th style="text-align: left; padding: 8px;">Email</th>
+      <th style="text-align: left; padding: 8px;">Request Time</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for entry in request_entries %}
+    <tr>
+      <td style="padding: 8px;">{{ entry.name }}</td>
+      <td style="padding: 8px;">{{ entry.email }}</td>
+      <td style="padding: 8px;">{{ entry.created }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 
-Please approve/deny these request(s) <a href="{{ review_url }}">here</a>. You will periodically receive reminder emails until you approve/deny these request(s).
+<p>Please approve/deny these request(s) <a href="{{ review_url }}">here</a>. You will periodically receive reminder emails until you approve/deny these request(s).</p>
 
-Thank you,
-{{ signature }}
+<p>Thank you,<br>
+{{ signature_html|safe }}</p>
