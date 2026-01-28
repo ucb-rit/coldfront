@@ -1,5 +1,4 @@
 import logging
-import os
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -11,7 +10,6 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic.edit import UpdateView
 from django.conf import settings
-from coldfront.core.utils.common import utc_now_offset_aware
 
 from flags.state import flag_enabled
 
@@ -20,6 +18,10 @@ from coldfront.core.allocation.models import SecureDirRequest
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
+
+from coldfront.core.utils.common import build_absolute_url
+from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
 from coldfront.core.utils.forms.file_upload_forms import model_pdf_upload_form_factory
 from coldfront.core.utils.mou import get_mou_filename
 from coldfront.core.utils.mail import send_email_template
@@ -95,6 +97,11 @@ class MOUUploadView(BaseMOUView, UpdateView):
     template_name = 'upload_mou.html'
     context_object_name = 'object'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._email_strategy = validate_email_strategy_or_get_default(
+            email_strategy=None)
+
     def form_valid(self, form):
         form.save()
 
@@ -107,6 +114,8 @@ class MOUUploadView(BaseMOUView, UpdateView):
             f'User {self.request.user} uploaded signed MOU file {file_name} '
             f'for {self.request_class.__name__} {self.kwargs["pk"]}.')
         logger.info(log_message)
+
+        self._send_emails_safe()
 
         return super().form_valid(form)
 
@@ -127,9 +136,75 @@ class MOUUploadView(BaseMOUView, UpdateView):
     def get_queryset(self):
         return self.request_class.objects.all()
 
+    def _get_email_admin_recipients(self):
+        """Return a list of email addresses of administrators to send a
+        notification email to."""
+        if self.request_type == 'new-project':
+            domain = 'new_project_requests'
+        elif self.request_type == 'secure-dir':
+            domain = 'secure_directory_requests'
+        elif self.request_type == 'service-units-purchase':
+            domain = 'service_units_purchase_requests'
+        else:
+            raise ValueError('Invalid request type')
+
+        event = 'agreement_uploaded'
+        return settings.EMAIL_ADMIN_NOTIFICATION_RECIPIENTS.get(
+            domain, {}).get(event, [])
+
+    def _send_admin_notification_email(self):
+        """Send a notification email to administrators that a signed
+        agreement has been uploaded."""
+        if self.mou_type == 'Memorandum of Understanding':
+            mou_type_acronym = 'MOU'
+        else:
+            mou_type_acronym = 'RUA'
+
+        request_pk = self.kwargs['pk']
+
+        subject = (
+            f'Signed {mou_type_acronym} for {self.request_type_long} '
+            f'#{request_pk} Uploaded')
+        template_name = 'mou_uploaded_email.html'
+
+        request_url = build_absolute_url(self.get_success_url())
+
+        uploader_str = (
+            f'{self.request.user.first_name} {self.request.user.last_name} '
+            f'({self.request.user.username})')
+
+        context = {
+            'mou_type': self.mou_type,
+            'mou_type_acronym': mou_type_acronym,
+            'request_url': request_url,
+            'request_type_long': self.request_type_long,
+            'request_pk': request_pk,
+            'uploader_str': uploader_str,
+        }
+
+        sender = settings.EMAIL_SENDER
+        receiver_list = self._get_email_admin_recipients()
+
+        send_email_template(
+            subject, template_name, context, sender,
+            receiver_list=receiver_list, html_template=template_name)
+
+    def _send_emails(self):
+        email_method = self._send_admin_notification_email
+        email_args = ()
+        self._email_strategy.process_email(email_method, *email_args)
+
+    def _send_emails_safe(self):
+        """Send emails. Catch and log exceptions."""
+        try:
+            self._send_emails()
+        except Exception as e:
+            logger.exception(
+                f'Failed to send notification emails. Details:\n{e}')
+
 
 class MOUDownloadView(BaseMOUView, View):
-    
+
     def get(self, request, *args, **kwargs):
         filename = get_mou_filename(self.request_obj)
         response = FileResponse(self.request_obj.mou_file)
@@ -174,7 +249,7 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
         else:
             first_name = self.request_obj.requester.first_name
             last_name = self.request_obj.requester.last_name
-        
+
         if flag_enabled('MOU_GENERATION_ENABLED'):
             from mou_generator import generate_pdf
             project_name = self.request_obj.project.name
@@ -188,12 +263,13 @@ class UnsignedMOUDownloadView(BaseMOUView, View):
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
 
+
 class MOURequestNotifyPIViewMixIn:
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
         context['notify_pi'] = True
         return context
-    
+
     def _email_pi(self, subject, to_name, request_url, mou_type, mou_for, email):
         """Send an email to the PI."""
         try:
