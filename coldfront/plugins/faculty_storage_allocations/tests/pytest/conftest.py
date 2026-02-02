@@ -552,5 +552,7 @@ def mock_email_settings():
         'EMAIL_SENDER': 'noreply@example.com',
         'CENTER_HELP_EMAIL': 'help@example.com',
         'EMAIL_SIGNATURE': 'Test Research Team',
-        'ADMIN_EMAIL_LIST': ['admin1@example.com', 'admin2@example.com'],
+        'EMAIL_ADMIN_NOTIFICATION_RECIPIENTS': {
+            'request_created': ['admin1@example.com', 'admin2@example.com'],
+        },
     }

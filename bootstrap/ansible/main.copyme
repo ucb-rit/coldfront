@@ -209,7 +209,10 @@ plugin_departments_department_data_source: "coldfront.plugins.departments.utils.
 
 # TODO: Enable for BRC, disable for LRC.
 plugin_faculty_storage_allocations_enabled: true
-plugin_faculty_storage_allocations_admin_email_list: ['placeholder@dev.dev']
+# Lists of admin email addresses to notify for events.
+# Structure: event -> list of email addresses
+plugin_faculty_storage_allocations_email_admin_notification_recipients:
+  request_created: []
 # If enabled, a list of email addresses of PIs that are eligible to request storage.
 plugin_faculty_storage_allocations_eligible_pi_email_whitelist_enabled: false
 plugin_faculty_storage_allocations_eligible_pi_email_whitelist: []

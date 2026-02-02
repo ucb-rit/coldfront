@@ -39,7 +39,9 @@ class TestFSARequestNotificationService:
         # Setup
         mock_django_settings.CENTER_BASE_URL = 'https://portal.example.com'
         mock_django_settings.EMAIL_SENDER = 'noreply@example.com'
-        mock_settings.ADMIN_EMAIL_LIST = ['admin1@example.com', 'admin2@example.com']
+        mock_settings.EMAIL_ADMIN_NOTIFICATION_RECIPIENTS = {
+            'request_created': ['admin1@example.com', 'admin2@example.com'],
+        }
 
         email_strategy = self._get_email_strategy()
 
@@ -89,7 +91,9 @@ class TestFSARequestNotificationService:
         # Setup
         mock_django_settings.CENTER_BASE_URL = 'https://portal.example.com'
         mock_django_settings.EMAIL_SENDER = 'noreply@example.com'
-        mock_settings.ADMIN_EMAIL_LIST = ['admin@example.com']
+        mock_settings.EMAIL_ADMIN_NOTIFICATION_RECIPIENTS = {
+            'request_created': ['admin@example.com'],
+        }
 
         # Return a real SendEmailStrategy as the default
         mock_validate_strategy.return_value = SendEmailStrategy()

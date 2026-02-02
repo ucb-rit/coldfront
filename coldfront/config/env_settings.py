@@ -416,8 +416,13 @@ if env.bool('HPCS__PLUGIN_FACULTY_STORAGE_ALLOCATIONS_ENABLED', default=False):
         'coldfront.plugins.faculty_storage_allocations'
     ]
 
-    FACULTY_STORAGE_ALLOCATIONS_ADMIN_EMAIL_LIST = env.list(
-        'HPCS__PLUGIN_FACULTY_STORAGE_ALLOCATIONS_ADMIN_EMAIL_LIST')
+    # A dict mapping event -> list of recipient admin email addresses. Example:
+    # {
+    #   "request_created": ["admin@example.com"]
+    # }
+    FACULTY_STORAGE_ALLOCATIONS_EMAIL_ADMIN_NOTIFICATION_RECIPIENTS = env.json(
+        'HPCS__PLUGIN_FACULTY_STORAGE_ALLOCATIONS_EMAIL_ADMIN_NOTIFICATION_RECIPIENTS',
+        default={})
     # If enabled, a list of email addresses of PIs that are eligible to request
     # storage.
     FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED = env.bool(

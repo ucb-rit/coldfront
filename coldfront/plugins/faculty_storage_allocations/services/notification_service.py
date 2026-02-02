@@ -31,7 +31,7 @@ class FSARequestNotificationService:
             ),
         }
         sender = django_settings.EMAIL_SENDER
-        receiver_list = settings.ADMIN_EMAIL_LIST
+        receiver_list = _get_admin_notification_recipients('request_created')
 
         email_args = (subject, template_name, context, sender, receiver_list)
         email_strategy.process_email(send_email_template, *email_args)
@@ -87,3 +87,10 @@ class FSARequestNotificationService:
 
         email_args = (subject, template_name, context, sender, receiver_list)
         email_strategy.process_email(send_email_template, *email_args)
+
+
+def _get_admin_notification_recipients(event_type):
+    """Return the list of administrator email addresses to notify
+    for the given event type. Return the empty list if the event is
+    not "registered"."""
+    return settings.EMAIL_ADMIN_NOTIFICATION_RECIPIENTS.get(event_type, [])
