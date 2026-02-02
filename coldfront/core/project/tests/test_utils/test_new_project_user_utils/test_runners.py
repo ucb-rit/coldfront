@@ -397,6 +397,13 @@ class TestCommonRunnerMixin(object):
         self._assert_post_state()
 
 
+@override_settings(
+    EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'cluster_access_requests': {
+            'created': ['admin@example.com'],
+        },
+    }
+)
 class TestBRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
     """A class for testing BRCNewProjectUserRunner."""
 
@@ -544,6 +551,13 @@ class TestBRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
         self.assertIsInstance(runner, BRCNewProjectUserRunner)
 
 
+@override_settings(
+    EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'cluster_access_requests': {
+            'created': ['admin@example.com'],
+        },
+    }
+)
 class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
     """A class for testing LRCNewProjectUserRunner."""
 

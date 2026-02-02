@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import mail
+from django.test import override_settings
 
 from coldfront.api.statistics.utils import create_project_allocation
 from coldfront.api.statistics.utils import create_user_project_allocation
@@ -442,6 +443,13 @@ class TestClusterAccessRequestDenialRunner(TestClusterAccessRunnersBase):
         self.assertEqual(len(mail.outbox), 0)
 
 
+@override_settings(
+    EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'cluster_access_requests': {
+            'created': ['admin@example.com'],
+        },
+    }
+)
 class TestClusterAccessRequestRunner(TestBase):
     """A class for testing ClusterAccessRequestRunner."""
 
