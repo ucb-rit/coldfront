@@ -38,9 +38,6 @@ SESSION_COOKIE_AGE = 60 * 60
 # The ID of the Site object to use (probably 1).
 SITE_ID = 1
 
-# A list of admin email addresses to CC when certain requests are approved.
-REQUEST_APPROVAL_CC_LIST = []
-
 # The regex for a valid LBL billing ID (six digits, a hyphen, three digits.)
 LBL_BILLING_ID_REGEX = r"^\d{6}-\d{3}$"
 

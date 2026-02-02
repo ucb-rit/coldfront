@@ -13,7 +13,6 @@ from datetime import timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.core import mail
-from django.test import override_settings
 
 
 class TestSavioProjectApprovalRunner(TestRunnerMixinBase, TestBase):
@@ -40,8 +39,6 @@ class TestSavioProjectApprovalRunner(TestRunnerMixinBase, TestBase):
                 name='Approved - Processing'),
             request_time=utc_now_offset_aware() - timedelta(days=1))
 
-    @override_settings(
-        REQUEST_APPROVAL_CC_LIST=['admin0@email.com', 'admin1@email.com'])
     def test_runner_sends_emails_conditionally(self):
         """Test that the runner sends a notification email to the
         requester and the PI, CC'ing a designated list of admins, unless
@@ -101,9 +98,6 @@ class TestSavioProjectApprovalRunner(TestRunnerMixinBase, TestBase):
         expected_to = sorted([requester.email, pi.email])
         self.assertEqual(expected_to, sorted(email.to))
 
-        expected_cc = ['admin0@email.com', 'admin1@email.com']
-        self.assertEqual(expected_cc, sorted(email.cc))
-
         # If pooling, the email should be different.
         request.refresh_from_db()
         request.pool = True
@@ -129,7 +123,6 @@ class TestSavioProjectApprovalRunner(TestRunnerMixinBase, TestBase):
             self.assertIn(expected_body_snippet, email.body)
         self.assertEqual(expected_from_email, email.from_email)
         self.assertEqual(expected_to, sorted(email.to))
-        self.assertEqual(expected_cc, sorted(email.cc))
 
     def test_runner_sets_status_and_approval_time(self):
         """Test that the runner sets the status of the request to

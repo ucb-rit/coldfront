@@ -351,10 +351,9 @@ def send_allocation_renewal_request_approval_email(request, num_service_units):
 
     sender = settings.EMAIL_SENDER
     receiver_list = [request.requester.email, request.pi.email]
-    cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc)
+        subject, template_name, context, sender, receiver_list)
 
 
 def send_allocation_renewal_request_denial_email(request):
@@ -383,10 +382,9 @@ def send_allocation_renewal_request_denial_email(request):
 
     sender = settings.EMAIL_SENDER
     receiver_list = [request.requester.email, request.pi.email]
-    cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc)
+        subject, template_name, context, sender, receiver_list)
 
 
 def send_allocation_renewal_request_processing_email(request,
@@ -414,10 +412,9 @@ def send_allocation_renewal_request_processing_email(request,
 
     sender = settings.EMAIL_SENDER
     receiver_list = [request.requester.email, request.pi.email]
-    cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc)
+        subject, template_name, context, sender, receiver_list)
 
 
 def send_new_allocation_renewal_request_admin_notification_email(request):

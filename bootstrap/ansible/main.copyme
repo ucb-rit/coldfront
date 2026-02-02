@@ -444,9 +444,6 @@ sentry_dsn: ""
 # # periods.
 # # TODO: Set these addresses to yours.
 # allocation_period_audit_email_admin_list: []
-# # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: []
 
 #------------------------------------------------------------------------------
 # prod_settings
@@ -501,9 +498,6 @@ sentry_dsn: ""
 # # periods.
 # # TODO: Set these addresses to yours.
 # allocation_period_audit_email_admin_list: []
-# # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: []
 
 #------------------------------------------------------------------------------
 # dev_settings
@@ -557,6 +551,3 @@ sentry_dsn: ""
 # # periods.
 # # TODO: Set these addresses to yours.
 # allocation_period_audit_email_admin_list: ['placeholder@dev.dev']
-# # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: ['placeholder@dev.dev']

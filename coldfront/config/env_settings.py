@@ -86,11 +86,6 @@ API_LOG_PATH = env('HPCS__API_LOG_PATH')
 
 STREAM_LOGS_TO_STDOUT = env.bool('HPCS__STREAM_LOGS_TO_STDOUT', default=True)
 
-# TODO: Ideally, come up with an approach wherein admins may subscribe to
-#  individual types of events.
-# A list of admin email addresses to CC when certain requests are approved.
-REQUEST_APPROVAL_CC_LIST = env.list('HPCS__REQUEST_APPROVAL_CC_LIST')
-
 # A setting that, when true, allows all jobs, bypassing all checks at job
 # submission time.
 ALLOW_ALL_JOBS = env.bool('HPCS__ALLOW_ALL_JOBS', default=False)
