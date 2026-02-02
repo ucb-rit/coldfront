@@ -630,6 +630,10 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
             self.assertIn(email_body, email.body)
 
 
+@override_settings(
+    EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'project_user_removal_requests': {
+            'completed': ['admin0@example.com', 'admin1@example.com']}})
 class TestProjectRemovalRequestProcessingRunner(TestRemovalRequestRunnerBase):
     """A class for testing ProjectRemovalRequestProcessingRunner."""
 
@@ -671,8 +675,7 @@ class TestProjectRemovalRequestProcessingRunner(TestRemovalRequestRunnerBase):
         expected_from = settings.EMAIL_SENDER
         expected_to = {
             user.email for user in [self.user1, self.pi1, self.manager]}
-        expected_to.update(
-            settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST)
+        expected_admin_email_list = ['admin0@example.com', 'admin1@example.com']
         user_name = f'{self.user1.first_name} {self.user1.last_name}'
         pi_name = f'{self.pi1.first_name} {self.pi1.last_name}'
         project_name = self.project1.name
@@ -681,15 +684,22 @@ class TestProjectRemovalRequestProcessingRunner(TestRemovalRequestRunnerBase):
             f'initiated by {pi_name} has been completed. {user_name} is no '
             f'longer a user of Project {project_name}.')
 
+        admin_message_sent = False
+
         for email in mail.outbox:
             self.assertEqual(email.from_email, expected_from)
-            self.assertEqual(len(email.to), 1)
-            to = email.to[0]
-            self.assertIn(to, expected_to)
-            expected_to.remove(to)
+            recipients = sorted(email.to)
+            if recipients == expected_admin_email_list:
+                admin_message_sent = True
+            else:
+                self.assertEqual(len(email.to), 1)
+                to = email.to[0]
+                self.assertIn(to, expected_to)
+                expected_to.remove(to)
             self.assertIn(expected_body, email.body)
 
         self.assertFalse(expected_to)
+        self.assertTrue(admin_message_sent)
 
     def _assert_post_state(self):
         """Assert that the relevant objects have the expected state,

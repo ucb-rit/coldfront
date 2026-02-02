@@ -90,11 +90,6 @@ STREAM_LOGS_TO_STDOUT = env.bool('HPCS__STREAM_LOGS_TO_STDOUT', default=True)
 #  individual types of events.
 # A list of admin email addresses to CC when certain requests are approved.
 REQUEST_APPROVAL_CC_LIST = env.list('HPCS__REQUEST_APPROVAL_CC_LIST')
-# A list of admin email addresses to notify when a project-user removal request
-# is processed.
-# TODO: Transition this to EMAIL_ADMIN_NOTIFICATION_RECIPIENTS and retire it.
-PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST = env.list(
-    'HPCS__PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST')
 
 # A setting that, when true, allows all jobs, bypassing all checks at job
 # submission time.

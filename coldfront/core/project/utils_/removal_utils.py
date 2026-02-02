@@ -1,13 +1,11 @@
-from itertools import chain
 import logging
 
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.db import transaction
 from django.dispatch import Signal
 
-from coldfront.core.allocation.models import Allocation, \
+from coldfront.core.allocation.models import \
     AllocationUserStatusChoice, AllocationAttributeType
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.project.models import (ProjectUserRemovalRequestStatusChoice,
@@ -311,8 +309,8 @@ class ProjectRemovalRequestProcessingRunner(object):
 
         # To administrators who should be notified about ProjectUser removal
         # request processing, if any
-        receiver_list = \
-            settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST
+        receiver_list = get_email_admin_notification_recipients(
+            'project_user_removal_requests', 'completed')
         if receiver_list:
             template_name = (
                 'email/project_removal/project_removal_complete_admin.txt')
