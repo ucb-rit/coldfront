@@ -45,8 +45,9 @@ EMAIL_PORT = env.int('DJANGO__EMAIL_PORT')
 EMAIL_SUBJECT_PREFIX = env('DJANGO__EMAIL_SUBJECT_PREFIX')
 # A list of admin email addresses to be notified about new requests and other
 # events.
-# TODO: Transition this to EMAIL_ADMIN_NOTIFICATION_RECIPIENTS and retire it.
-EMAIL_ADMIN_LIST = env.list('COLDFRONT__EMAIL_ADMIN_LIST')
+# Note: This has been replaced by EMAIL_ADMIN_NOTIFICATION_RECIPIENTS. The
+# setting is retained for base Coldfront compatibility.
+EMAIL_ADMIN_LIST = []
 # A nested dict mapping domain -> event -> list of recipient admin email
 # addresses. Example:
 # {

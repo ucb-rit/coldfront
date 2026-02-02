@@ -4,6 +4,7 @@ from http import HTTPStatus
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import mail
+from django.test import override_settings
 from django.urls import reverse
 from flags.state import enable_flag
 from iso8601 import iso8601
@@ -193,6 +194,9 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
         self.assertTrue(request.completion_time is None)
         self.assertEqual(request.status.name, 'Under Review')
 
+    @override_settings(
+        EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+            'secure_directory_requests': {'created': ['admin@example.com']}})
     def test_emails_sent(self):
         """Test that a POST request sends the correct emails."""
 
@@ -210,7 +214,6 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
         # Test that the correct emails are sent.
-        admin_email = settings.EMAIL_ADMIN_LIST
         pi0_email = self.pi0.email
         pi_email_body = [
             (f'{self.user0.first_name} {self.user0.last_name} '
@@ -220,6 +223,7 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
             'view the details of the request',
             'would like to prevent this',
         ]
+        admin_email = 'admin@example.com'
         admin_email_body = [
             (f'There is a new secure directory request for project '
              f'{self.project1.name} under PI {self.pi0.first_name} '
@@ -230,16 +234,23 @@ class TestSecureDirRequestWizard(TestSecureDirRequestBase):
         ]
 
         self.assertEqual(2, len(mail.outbox))
+        pi_message, admin_message = None, None
         for email in mail.outbox:
-            if email.to[0] in admin_email:
-                for section in admin_email_body:
-                    self.assertIn(section, email.body)
-            elif email.to[0] == pi0_email:
-                for section in pi_email_body:
-                    self.assertIn(section, email.body)
-            else:
-                self.fail(f'Emails should only be sent to PI0 and admins.')
             self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+            self.assertEqual(len(email.to), 1)
+            recipient = email.to[0]
+            if recipient == pi0_email:
+                pi_message = email
+            elif recipient == admin_email:
+                admin_message = email
+
+        self.assertTrue(pi_message)
+        for section in pi_email_body:
+            self.assertIn(section, pi_message.body)
+
+        self.assertTrue(admin_message)
+        for section in admin_email_body:
+            self.assertIn(section, admin_message.body)
 
 
 class TestSecureDirRequestListView(TestSecureDirRequestBase):

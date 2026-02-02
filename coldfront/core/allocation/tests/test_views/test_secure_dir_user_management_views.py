@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
 from django.core import mail
 from django.core.management import call_command
+from django.test import override_settings
 from django.urls import reverse
 from flags.state import enable_flag
 
@@ -336,6 +337,10 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
         self.assertNotContains(response, self.user4.username)
         self.assertNotContains(response, self.admin.username)
 
+    @override_settings(
+        EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+            'secure_directory_add_user_requests': {
+                'created': ['admin0@example.com', 'admin1@example.com']}})
     def test_add_users(self):
         """Test that the correct SecureDirAddUserRequest is created"""
 
@@ -374,7 +379,7 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
                                          'pk': self.scratch_allocation.pk}))
 
         # Test that the correct email is sent.
-        recipients = settings.EMAIL_ADMIN_LIST
+        recipients = ['admin0@example.com', 'admin1@example.com']
         email_body = [
             'There is a new request to add user',
             self.scratch_path,
@@ -391,6 +396,10 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
                 self.assertIn(section, sent_email_obj.body)
             self.assertIn(added_user_emails[i], sent_email_obj.body)
 
+    @override_settings(
+        EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+            'secure_directory_remove_user_requests': {
+                'created': ['admin0@example.com', 'admin1@example.com']}})
     def test_remove_users(self):
         """Test that the correct SecureDirRemoveUserRequest is created"""
         # Add users to allocation.
@@ -436,7 +445,7 @@ class TestSecureDirManageUsersView(TestSecureDirBase):
                                      kwargs={'pk': self.groups_allocation.pk}))
 
         # Test that the correct email is sent.
-        recipients = settings.EMAIL_ADMIN_LIST
+        recipients = ['admin0@example.com', 'admin1@example.com']
         email_body = [
             'There is a new request to remove user',
             self.groups_path,

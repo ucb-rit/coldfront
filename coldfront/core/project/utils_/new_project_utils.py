@@ -22,6 +22,7 @@ from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import project_detail_url
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.common import validate_num_service_units
+from coldfront.core.utils.email import get_email_admin_notification_recipients
 from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
 from coldfront.core.utils.mail import send_email_template
 
@@ -457,7 +458,8 @@ def send_new_project_request_admin_notification_email(request):
     }
 
     sender = settings.EMAIL_SENDER
-    receiver_list = settings.EMAIL_ADMIN_LIST
+    receiver_list = get_email_admin_notification_recipients(
+        'new_project_requests', 'created')
 
     send_email_template(subject, template_name, context, sender, receiver_list)
 

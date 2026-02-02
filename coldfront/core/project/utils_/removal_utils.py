@@ -13,6 +13,7 @@ from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.project.models import (ProjectUserRemovalRequestStatusChoice,
                                            ProjectUserRemovalRequest,
                                            ProjectUserStatusChoice)
+from coldfront.core.utils.email import get_email_admin_notification_recipients
 from coldfront.core.utils.mail import send_email_template
 from coldfront.core.utils.common import import_from_settings
 
@@ -104,7 +105,8 @@ class ProjectRemovalRequestRunner(object):
             email_sender = import_from_settings('EMAIL_SENDER')
             email_signature = import_from_settings('EMAIL_SIGNATURE')
             support_email = import_from_settings('CENTER_HELP_EMAIL')
-            email_admin_list = import_from_settings('EMAIL_ADMIN_LIST')
+            email_admin_list = get_email_admin_notification_recipients(
+                'project_user_removal_requests', 'created')
 
             # Send emails to the removed user, the project's PIs (who have
             # notifications enabled), and the project's managers. Exclude the

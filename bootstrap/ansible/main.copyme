@@ -274,12 +274,25 @@ center_help_email: "brc-hpc-help@berkeley.edu"
 # Lists of admin email addresses to notify for domain-specific events.
 # Structure: domain -> event -> list of email addresses
 email_admin_notification_recipients:
+  allocation_renewal_requests:
+    created: []
+  cluster_access_requests:
+    created: []
   new_project_requests:
     agreement_uploaded: []
+    created: []
+  project_user_removal_requests:
+    created: []
   secure_directory_requests:
     agreement_uploaded: []
+    created: []
+  secure_directory_add_user_requests:
+    created: []
+  secure_directory_remove_user_requests:
+    created: []
   service_units_purchase_requests:
     agreement_uploaded: []
+    created: []
 
 #------------------------------------------------------------------------------
 # BRC Vector settings
@@ -426,10 +439,6 @@ sentry_dsn: ""
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
-# # A list of admin email addresses to be notified about new requests and other
-# # events.
-# # TODO: Set these addresses to yours.
-# email_admin_list: []
 # # A list of admin email addresses to be notified about audits of allocation
 # # periods.
 # # TODO: Set these addresses to yours.
@@ -491,10 +500,6 @@ sentry_dsn: ""
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
-# # A list of admin email addresses to be notified about new requests and other
-# # events.
-# # TODO: Set these addresses to yours.
-# email_admin_list: []
 # # A list of admin email addresses to be notified about audits of allocation
 # # periods.
 # # TODO: Set these addresses to yours.
@@ -555,9 +560,6 @@ sentry_dsn: ""
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
-# # A list of admin email addresses to be notified about new requests and other
-# # events.
-# email_admin_list: ['placeholder@dev.dev']
 # # A list of admin email addresses to be notified about audits of allocation
 # # periods.
 # # TODO: Set these addresses to yours.

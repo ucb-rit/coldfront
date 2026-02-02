@@ -14,6 +14,7 @@ from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.contrib.auth.models import User
 from django.core import mail
+from django.test import override_settings
 from django.urls import reverse
 
 from http import HTTPStatus
@@ -143,6 +144,10 @@ class TestAllocationAdditionRequestView(TestBase):
                 self.assertContains(response, 'Submit')
 
     @enable_deployment('BRC')
+    @override_settings(
+        EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+            'service_units_purchase_requests': {
+                'created': ['admin0@example.com', 'admin1@example.com']}})
     def test_valid_post(self):
         """Test that a valid POST request creates an
         AllocationAdditionRequest and sends a notification email."""
@@ -204,5 +209,5 @@ class TestAllocationAdditionRequestView(TestBase):
         expected_from_email = settings.EMAIL_SENDER
         self.assertEqual(expected_from_email, email.from_email)
 
-        expected_to = sorted(settings.EMAIL_ADMIN_LIST)
+        expected_to = ['admin0@example.com', 'admin1@example.com']
         self.assertEqual(expected_to, sorted(email.to))
