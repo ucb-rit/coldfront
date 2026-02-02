@@ -21,6 +21,7 @@ from coldfront.core.resource.utils_.allowance_utils.computing_allowance import C
 
 from coldfront.core.utils.common import build_absolute_url
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.email import get_email_admin_notification_recipients
 from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
 from coldfront.core.utils.forms.file_upload_forms import model_pdf_upload_form_factory
 from coldfront.core.utils.mou import get_mou_filename
@@ -149,8 +150,7 @@ class MOUUploadView(BaseMOUView, UpdateView):
             raise ValueError('Invalid request type')
 
         event = 'agreement_uploaded'
-        return settings.EMAIL_ADMIN_NOTIFICATION_RECIPIENTS.get(
-            domain, {}).get(event, [])
+        return get_email_admin_notification_recipients(domain, event)
 
     def _send_admin_notification_email(self):
         """Send a notification email to administrators that a signed
