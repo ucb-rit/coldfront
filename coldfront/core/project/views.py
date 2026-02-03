@@ -74,7 +74,6 @@ if EMAIL_ENABLED:
         'EMAIL_OPT_OUT_INSTRUCTION_URL')
     EMAIL_SIGNATURE = import_from_settings('EMAIL_SIGNATURE')
     SUPPORT_EMAIL = import_from_settings('CENTER_HELP_EMAIL')
-    EMAIL_ADMIN_LIST = import_from_settings('EMAIL_ADMIN_LIST')
 
 logger = logging.getLogger(__name__)
 

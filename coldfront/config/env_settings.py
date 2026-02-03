@@ -45,8 +45,9 @@ EMAIL_PORT = env.int('DJANGO__EMAIL_PORT')
 EMAIL_SUBJECT_PREFIX = env('DJANGO__EMAIL_SUBJECT_PREFIX')
 # A list of admin email addresses to be notified about new requests and other
 # events.
-# TODO: Transition this to EMAIL_ADMIN_NOTIFICATION_RECIPIENTS and retire it.
-EMAIL_ADMIN_LIST = env.list('COLDFRONT__EMAIL_ADMIN_LIST')
+# Note: This has been replaced by EMAIL_ADMIN_NOTIFICATION_RECIPIENTS. The
+# setting is retained for base Coldfront compatibility.
+EMAIL_ADMIN_LIST = []
 # A nested dict mapping domain -> event -> list of recipient admin email
 # addresses. Example:
 # {
@@ -84,16 +85,6 @@ LOG_PATH = env('HPCS__LOG_PATH')
 API_LOG_PATH = env('HPCS__API_LOG_PATH')
 
 STREAM_LOGS_TO_STDOUT = env.bool('HPCS__STREAM_LOGS_TO_STDOUT', default=True)
-
-# TODO: Ideally, come up with an approach wherein admins may subscribe to
-#  individual types of events.
-# A list of admin email addresses to CC when certain requests are approved.
-REQUEST_APPROVAL_CC_LIST = env.list('HPCS__REQUEST_APPROVAL_CC_LIST')
-# A list of admin email addresses to notify when a project-user removal request
-# is processed.
-# TODO: Transition this to EMAIL_ADMIN_NOTIFICATION_RECIPIENTS and retire it.
-PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST = env.list(
-    'HPCS__PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST')
 
 # A setting that, when true, allows all jobs, bypassing all checks at job
 # submission time.
@@ -425,8 +416,13 @@ if env.bool('HPCS__PLUGIN_FACULTY_STORAGE_ALLOCATIONS_ENABLED', default=False):
         'coldfront.plugins.faculty_storage_allocations'
     ]
 
-    FACULTY_STORAGE_ALLOCATIONS_ADMIN_EMAIL_LIST = env.list(
-        'HPCS__PLUGIN_FACULTY_STORAGE_ALLOCATIONS_ADMIN_EMAIL_LIST')
+    # A dict mapping event -> list of recipient admin email addresses. Example:
+    # {
+    #   "request_created": ["admin@example.com"]
+    # }
+    FACULTY_STORAGE_ALLOCATIONS_EMAIL_ADMIN_NOTIFICATION_RECIPIENTS = env.json(
+        'HPCS__PLUGIN_FACULTY_STORAGE_ALLOCATIONS_EMAIL_ADMIN_NOTIFICATION_RECIPIENTS',
+        default={})
     # If enabled, a list of email addresses of PIs that are eligible to request
     # storage.
     FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED = env.bool(

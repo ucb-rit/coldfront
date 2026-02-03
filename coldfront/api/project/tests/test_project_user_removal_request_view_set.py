@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from django.conf import settings
 from django.core import mail
+from django.test import override_settings
 
 from coldfront.api.project.tests.test_project_base import TestProjectBase
 from coldfront.api.project.tests.utils import assert_project_user_removal_request_serialization
@@ -160,6 +161,10 @@ class TestRetrieveProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase)
         self.assert_retrieve_invalid_response_format(url)
 
 
+@override_settings(
+    EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'project_user_removal_requests': {
+            'completed': ['admin0@example.com', 'admin1@example.com']}})
 class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase):
     """A class for testing PATCH /project_user_removal_requests/
     {project_user_removal_request_id}/."""
@@ -193,9 +198,7 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
             expected_to.add(project_user.user.email)
 
         # Also sent to admin list
-        admin_list = settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST
-        if admin_list:
-            expected_to.update(admin_list)
+        admin_list = ['admin0@example.com', 'admin1@example.com']
 
         user_name = f'{user.first_name} {user.last_name}'
         requester_name = f'{requester.first_name} {requester.last_name}'
@@ -205,20 +208,26 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
             f'initiated by {requester_name} has been completed. {user_name} '
             f'is no longer a user of Project {project_name}.')
 
-        # Should have one email per unique recipient
-        self.assertEqual(len(mail.outbox), len(expected_to))
+        # Should have one email per unique recipient, plus one email to admins
+        self.assertEqual(len(mail.outbox), len(expected_to) + 1)
 
         actual_to_checked = set()
+        admin_message_sent = False
         for email in mail.outbox:
             self.assertEqual(email.from_email, expected_from)
-            self.assertEqual(len(email.to), 1)
-            to = email.to[0]
-            self.assertIn(to, expected_to)
-            actual_to_checked.add(to)
+            recipients = sorted(email.to)
+            if recipients == sorted(admin_list):
+                admin_message_sent = True
+            else:
+                self.assertEqual(len(recipients), 1)
+                to = email.to[0]
+                self.assertIn(to, expected_to)
+                actual_to_checked.add(to)
             self.assertIn(expected_body, email.body)
 
         # Verify all expected recipients received an email
         self.assertEqual(actual_to_checked, expected_to)
+        self.assertTrue(admin_message_sent)
 
     def _assert_post_state(self, completion_time):
         """Assert that the relevant objects have the expected state,

@@ -209,7 +209,10 @@ plugin_departments_department_data_source: "coldfront.plugins.departments.utils.
 
 # TODO: Enable for BRC, disable for LRC.
 plugin_faculty_storage_allocations_enabled: true
-plugin_faculty_storage_allocations_admin_email_list: ['placeholder@dev.dev']
+# Lists of admin email addresses to notify for events.
+# Structure: event -> list of email addresses
+plugin_faculty_storage_allocations_email_admin_notification_recipients:
+  request_created: []
 # If enabled, a list of email addresses of PIs that are eligible to request storage.
 plugin_faculty_storage_allocations_eligible_pi_email_whitelist_enabled: false
 plugin_faculty_storage_allocations_eligible_pi_email_whitelist: []
@@ -274,12 +277,26 @@ center_help_email: "brc-hpc-help@berkeley.edu"
 # Lists of admin email addresses to notify for domain-specific events.
 # Structure: domain -> event -> list of email addresses
 email_admin_notification_recipients:
+  allocation_renewal_requests:
+    created: []
+  cluster_access_requests:
+    created: []
   new_project_requests:
     agreement_uploaded: []
+    created: []
+  project_user_removal_requests:
+    completed: []
+    created: []
   secure_directory_requests:
     agreement_uploaded: []
+    created: []
+  secure_directory_add_user_requests:
+    created: []
+  secure_directory_remove_user_requests:
+    created: []
   service_units_purchase_requests:
     agreement_uploaded: []
+    created: []
 
 #------------------------------------------------------------------------------
 # BRC Vector settings
@@ -426,21 +443,10 @@ sentry_dsn: ""
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
-# # A list of admin email addresses to be notified about new requests and other
-# # events.
-# # TODO: Set these addresses to yours.
-# email_admin_list: []
 # # A list of admin email addresses to be notified about audits of allocation
 # # periods.
 # # TODO: Set these addresses to yours.
 # allocation_period_audit_email_admin_list: []
-# # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: []
-# # A list of email addresses to be notified when a project-user removal request
-# # is processed.
-# # TODO: Set these addresses to yours.
-# project_user_removal_request_processed_email_admin_list: []
 
 #------------------------------------------------------------------------------
 # prod_settings
@@ -491,21 +497,10 @@ sentry_dsn: ""
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
-# # A list of admin email addresses to be notified about new requests and other
-# # events.
-# # TODO: Set these addresses to yours.
-# email_admin_list: []
 # # A list of admin email addresses to be notified about audits of allocation
 # # periods.
 # # TODO: Set these addresses to yours.
 # allocation_period_audit_email_admin_list: []
-# # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: []
-# # A list of email addresses to be notified when a project-user removal request
-# # is processed.
-# # TODO: Set these addresses to yours.
-# project_user_removal_request_processed_email_admin_list: []
 
 #------------------------------------------------------------------------------
 # dev_settings
@@ -555,16 +550,7 @@ sentry_dsn: ""
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
-# # A list of admin email addresses to be notified about new requests and other
-# # events.
-# email_admin_list: ['placeholder@dev.dev']
 # # A list of admin email addresses to be notified about audits of allocation
 # # periods.
 # # TODO: Set these addresses to yours.
 # allocation_period_audit_email_admin_list: ['placeholder@dev.dev']
-# # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: ['placeholder@dev.dev']
-# # A list of email addresses to be notified when a project-user removal request
-# # is processed.
-# project_user_removal_request_processed_email_admin_list: ['placeholder@dev.dev']

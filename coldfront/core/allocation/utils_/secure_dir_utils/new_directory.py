@@ -28,6 +28,7 @@ from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAl
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterfaceError
 
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.email import get_email_admin_notification_recipients
 from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
 from coldfront.core.utils.mail import send_email_template
 
@@ -193,7 +194,8 @@ class SecureDirRequestRunner(object):
         template_name = (
             'email/secure_dir_request/secure_dir_new_request_admin.txt')
         sender = settings.EMAIL_SENDER
-        recipients = settings.EMAIL_ADMIN_LIST
+        recipients = get_email_admin_notification_recipients(
+            'secure_directory_requests', 'created')
 
         send_email_template(subject, template_name, context, sender, recipients)
 

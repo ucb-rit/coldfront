@@ -9,6 +9,7 @@ from coldfront.core.project.utils_.addition_utils import has_pending_allocation_
 from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.email import get_email_admin_notification_recipients
 from coldfront.core.utils.mail import send_email_template
 
 from decimal import Decimal
@@ -249,7 +250,8 @@ class AllocationAdditionRequestView(LoginRequiredMixin, UserPassesTestMixin,
             }
 
             sender = settings.EMAIL_SENDER
-            receiver_list = settings.EMAIL_ADMIN_LIST
+            receiver_list = get_email_admin_notification_recipients(
+                'service_units_purchase_requests', 'created')
 
             send_email_template(
                 subject, template_name, context, sender, receiver_list)
