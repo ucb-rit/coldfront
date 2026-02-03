@@ -27,9 +27,9 @@ class TestRequestLifecycleEndToEnd:
 
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.FSARequestNotificationService.'
-           'send_completion_email')
+           'send_completion_email_to_users')
     def test_user_submits_request_admin_approves_agent_completes(
-        self, mock_send_completion_email,
+        self, mock_send_completion_email_to_users,
         test_project, test_user, test_pi, staff_user,
         resource_faculty_storage_directory
     ):
@@ -120,7 +120,7 @@ class TestRequestLifecycleEndToEnd:
             f"Expected allocation but found {allocations.count()}"
 
         # Step 10: Verify notification service was called
-        mock_send_completion_email.assert_called_once()
+        mock_send_completion_email_to_users.assert_called_once()
 
     def test_user_submits_request_admin_denies(
         self, test_project, test_user, test_pi
@@ -282,9 +282,9 @@ class TestAPIWorkflow:
 
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.FSARequestNotificationService.'
-           'send_completion_email')
+           'send_completion_email_to_users')
     def test_api_agent_full_workflow(
-        self, mock_send_completion_email,
+        self, mock_send_completion_email_to_users,
         test_project, test_user, test_pi, staff_user,
         resource_faculty_storage_directory
     ):
@@ -381,9 +381,9 @@ class TestAPIWorkflow:
 
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.FSARequestNotificationService.'
-           'send_completion_email')
+           'send_completion_email_to_users')
     def test_api_multiple_request_workflow(
-        self, mock_send_completion_email,
+        self, mock_send_completion_email_to_users,
         test_project, test_user, test_pi, staff_user
     ):
         """Test agent processing multiple requests sequentially.
@@ -493,7 +493,7 @@ class TestWebUIWorkflow:
         # State 4: Complete → Approved - Complete
         with patch('coldfront.plugins.faculty_storage_allocations.services.'
                    'request_service.FSARequestNotificationService.'
-                   'send_completion_email'):
+                   'send_completion_email_to_users'):
             FacultyStorageAllocationRequestService.complete_request(
                 request,
                 'fc_lifecycle_test'
@@ -569,7 +569,7 @@ class TestWebUIWorkflow:
         # Complete (only mock notifications)
         with patch('coldfront.plugins.faculty_storage_allocations.services.'
                    'request_service.FSARequestNotificationService.'
-                   'send_completion_email'):
+                   'send_completion_email_to_users'):
             FacultyStorageAllocationRequestService.complete_request(
                 claimed,
                 'fc_allocation_test'

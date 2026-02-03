@@ -1,0 +1,6 @@
+A Faculty Storage Allocation request has been approved, and is ready to be processed.
+
+Project: {{ project.name }}
+Amount: {{ amount_tb }} TB
+
+Please process the request: {{ review_url }}.

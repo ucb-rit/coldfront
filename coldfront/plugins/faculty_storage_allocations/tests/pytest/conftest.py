@@ -520,10 +520,10 @@ def mock_cache():
 def mock_email_strategy():
     """Return a mock email notification strategy."""
     mock = Mock()
-    mock.send_request_created_email = Mock()
+    mock.send_request_created_email_to_admins = Mock()
     mock.send_approval_email = Mock()
-    mock.send_denial_email = Mock()
-    mock.send_completion_email = Mock()
+    mock.send_denial_email_to_users = Mock()
+    mock.send_completion_email_to_users = Mock()
     return mock
 
 

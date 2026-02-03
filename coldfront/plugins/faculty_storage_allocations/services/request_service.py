@@ -22,7 +22,7 @@ class FacultyStorageAllocationRequestService:
         faculty_scratch_fsa_request = \
             FacultyStorageAllocationRequest.objects.create(**data)
 
-        FSARequestNotificationService.send_request_created_email(
+        FSARequestNotificationService.send_request_created_email_to_admins(
             faculty_scratch_fsa_request, email_strategy=email_strategy)
 
         return faculty_scratch_fsa_request
@@ -44,6 +44,9 @@ class FacultyStorageAllocationRequestService:
             )
 
         request.save()
+
+        FSARequestNotificationService.send_request_approved_email_to_admins(
+            request, email_strategy=email_strategy)
 
     @staticmethod
     def claim_next_request():
@@ -255,7 +258,7 @@ class FacultyStorageAllocationRequestService:
         FacultyStorageAllocationRequestService._add_project_users_to_allocation(
             request)
 
-        FSARequestNotificationService.send_completion_email(
+        FSARequestNotificationService.send_completion_email_to_users(
             request, email_strategy=email_strategy)
 
     @staticmethod
@@ -289,7 +292,7 @@ class FacultyStorageAllocationRequestService:
         request.status = status
         request.save()
 
-        FSARequestNotificationService.send_denial_email(
+        FSARequestNotificationService.send_denial_email_to_users(
             request, email_strategy=email_strategy)
 
     @staticmethod

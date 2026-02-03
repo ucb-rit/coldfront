@@ -25,6 +25,7 @@ class TestFSARequestNotificationService:
         self.mock_request.pi = Mock()
         self.mock_request.pi.email = 'pi@example.com'
         self.mock_request.requested_amount_gb = 5000
+        self.mock_request.approved_amount_gb = 5000
 
     def _get_email_strategy(self):
         return SendEmailStrategy()
@@ -32,10 +33,10 @@ class TestFSARequestNotificationService:
     @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.send_email_template')
     @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.django_settings')
     @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.settings')
-    def test_send_request_created_email_constructs_correct_parameters(
+    def test_send_request_created_email_to_admins_constructs_correct_parameters(
         self, mock_settings, mock_django_settings, mock_send_email
     ):
-        """Test that send_request_created_email constructs correct email parameters."""
+        """Test that send_request_created_email_to_admins constructs correct email parameters."""
         # Setup
         mock_django_settings.CENTER_BASE_URL = 'https://portal.example.com'
         mock_django_settings.EMAIL_SENDER = 'noreply@example.com'
@@ -46,7 +47,7 @@ class TestFSARequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        FSARequestNotificationService.send_request_created_email(
+        FSARequestNotificationService.send_request_created_email_to_admins(
             self.mock_request,
             email_strategy=email_strategy
         )
@@ -84,10 +85,10 @@ class TestFSARequestNotificationService:
     @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.django_settings')
     @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.settings')
     @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.validate_email_strategy_or_get_default')
-    def test_send_request_created_email_uses_default_strategy_when_none_provided(
+    def test_send_request_created_email_to_admins_uses_default_strategy_when_none_provided(
         self, mock_validate_strategy, mock_settings, mock_django_settings, mock_send_email
     ):
-        """Test that send_request_created_email uses default email strategy when none provided."""
+        """Test that send_request_created_email_to_admins uses default email strategy when none provided."""
         # Setup
         mock_django_settings.CENTER_BASE_URL = 'https://portal.example.com'
         mock_django_settings.EMAIL_SENDER = 'noreply@example.com'
@@ -99,7 +100,7 @@ class TestFSARequestNotificationService:
         mock_validate_strategy.return_value = SendEmailStrategy()
 
         # Execute - no email_strategy provided
-        FSARequestNotificationService.send_request_created_email(
+        FSARequestNotificationService.send_request_created_email_to_admins(
             self.mock_request
         )
 
@@ -111,10 +112,92 @@ class TestFSARequestNotificationService:
 
     @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.send_email_template')
     @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.django_settings')
-    def test_send_completion_email_constructs_correct_parameters(
+    @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.settings')
+    def test_send_request_approved_email_to_admins_constructs_correct_parameters(
+        self, mock_settings, mock_django_settings, mock_send_email
+    ):
+        """Test that send_request_approved_email_to_admins constructs correct email parameters."""
+        # Setup
+        self.mock_request.allocation = Mock()
+        self.mock_request.allocation.pk = 789
+        mock_django_settings.CENTER_BASE_URL = 'https://portal.example.com'
+        mock_django_settings.EMAIL_SENDER = 'noreply@example.com'
+        mock_settings.EMAIL_ADMIN_NOTIFICATION_RECIPIENTS = {
+            'request_approved': ['admin1@example.com', 'admin2@example.com'],
+        }
+
+        email_strategy = self._get_email_strategy()
+
+        # Execute
+        FSARequestNotificationService.send_request_approved_email_to_admins(
+            self.mock_request,
+            email_strategy=email_strategy
+        )
+
+        # Verify send_email_template was called once
+        assert mock_send_email.call_count == 1
+
+        # Get the call arguments
+        call_args = mock_send_email.call_args
+        args = call_args[0]  # Positional arguments
+
+        # Verify email parameters
+        subject = args[0]
+        template_name = args[1]
+        context = args[2]
+        sender = args[3]
+        receiver_list = args[4]
+
+        assert subject == 'Faculty Storage Allocation Request Approved - fc_test_project'
+        assert template_name == 'faculty_storage_allocations/email/request_approved.txt'
+        assert sender == 'noreply@example.com'
+        assert receiver_list == ['admin1@example.com', 'admin2@example.com']
+
+        # Verify context
+        assert context['project'] == self.mock_request.project
+        assert context['amount_tb'] == 5  # 5000 GB // 1000 = 5 TB
+        assert 'review_url' in context
+        # Verify URL contains request ID
+        assert '/123/' in context['review_url']
+        assert context['review_url'].startswith('https://portal.example.com')
+
+    @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.send_email_template')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.django_settings')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.settings')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.validate_email_strategy_or_get_default')
+    def test_send_request_approved_email_to_admins_uses_default_strategy_when_none_provided(
+        self, mock_validate_strategy, mock_settings, mock_django_settings, mock_send_email
+    ):
+        """Test that send_request_approved_email_to_admins uses default email strategy when none provided."""
+        # Setup
+        self.mock_request.allocation = Mock()
+        self.mock_request.allocation.pk = 789
+        mock_django_settings.CENTER_BASE_URL = 'https://portal.example.com'
+        mock_django_settings.EMAIL_SENDER = 'noreply@example.com'
+        mock_settings.EMAIL_ADMIN_NOTIFICATION_RECIPIENTS = {
+            'request_approved': ['admin@example.com'],
+        }
+
+        # Return a real SendEmailStrategy as the default
+        mock_validate_strategy.return_value = SendEmailStrategy()
+
+        # Execute - no email_strategy provided
+        FSARequestNotificationService.send_request_approved_email_to_admins(
+            self.mock_request
+        )
+
+        # Verify default strategy was requested
+        mock_validate_strategy.assert_called_once_with(None)
+
+        # Verify send_email_template was called (strategy was used)
+        assert mock_send_email.call_count == 1
+
+    @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.send_email_template')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.django_settings')
+    def test_send_completion_email_to_users_constructs_correct_parameters(
         self, mock_django_settings, mock_send_email
     ):
-        """Test that send_completion_email constructs correct email parameters."""
+        """Test that send_completion_email_to_users constructs correct email parameters."""
         # Setup
         mock_django_settings.CENTER_BASE_URL = 'https://portal.example.com'
         mock_django_settings.CENTER_NAME = 'Test Center'
@@ -125,7 +208,7 @@ class TestFSARequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        FSARequestNotificationService.send_completion_email(
+        FSARequestNotificationService.send_completion_email_to_users(
             self.mock_request,
             email_strategy=email_strategy
         )
@@ -162,10 +245,10 @@ class TestFSARequestNotificationService:
 
     @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.send_email_template')
     @patch('coldfront.plugins.faculty_storage_allocations.services.notification_service.django_settings')
-    def test_send_completion_email_deduplicates_recipient_list(
+    def test_send_completion_email_to_users_deduplicates_recipient_list(
         self, mock_django_settings, mock_send_email
     ):
-        """Test that send_completion_email removes duplicate emails when PI and requester are same."""
+        """Test that send_completion_email_to_users removes duplicate emails when PI and requester are same."""
         # Setup - PI and requester have same email
         self.mock_request.pi.email = 'same@example.com'
         self.mock_request.requester.email = 'same@example.com'
@@ -179,7 +262,7 @@ class TestFSARequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        FSARequestNotificationService.send_completion_email(
+        FSARequestNotificationService.send_completion_email_to_users(
             self.mock_request,
             email_strategy=email_strategy
         )
@@ -196,7 +279,7 @@ class TestFSARequestNotificationService:
     def test_send_denial_email_constructs_correct_parameters(
         self, mock_django_settings, mock_send_email
     ):
-        """Test that send_denial_email constructs correct email parameters."""
+        """Test that send_denial_email_to_users constructs correct email parameters."""
         # Setup
         DenialReason = namedtuple('DenialReason', 'category justification timestamp')
         denial_reason = DenialReason(
@@ -214,7 +297,7 @@ class TestFSARequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        FSARequestNotificationService.send_denial_email(
+        FSARequestNotificationService.send_denial_email_to_users(
             self.mock_request,
             email_strategy=email_strategy
         )
@@ -255,7 +338,7 @@ class TestFSARequestNotificationService:
     def test_send_denial_email_deduplicates_recipient_list(
         self, mock_django_settings, mock_send_email
     ):
-        """Test that send_denial_email removes duplicate emails when PI and requester are same."""
+        """Test that send_denial_email_to_users removes duplicate emails when PI and requester are same."""
         # Setup - PI and requester have same email
         self.mock_request.pi.email = 'same@example.com'
         self.mock_request.requester.email = 'same@example.com'
@@ -276,7 +359,7 @@ class TestFSARequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        FSARequestNotificationService.send_denial_email(
+        FSARequestNotificationService.send_denial_email_to_users(
             self.mock_request,
             email_strategy=email_strategy
         )
@@ -305,6 +388,7 @@ class TestFSARequestNotificationService:
         """Test that GB to TB conversion is correct in email context."""
         # Setup
         self.mock_request.requested_amount_gb = amount_gb
+        self.mock_request.approved_amount_gb = amount_gb
 
         mock_django_settings.CENTER_NAME = 'Test Center'
         mock_django_settings.EMAIL_SENDER = 'noreply@example.com'
@@ -315,7 +399,7 @@ class TestFSARequestNotificationService:
         email_strategy = self._get_email_strategy()
 
         # Execute
-        FSARequestNotificationService.send_completion_email(
+        FSARequestNotificationService.send_completion_email_to_users(
             self.mock_request,
             email_strategy=email_strategy
         )
