@@ -16,6 +16,7 @@ from coldfront.core.project.utils_.new_project_utils import SavioProjectApproval
 from coldfront.core.project.utils_.new_project_utils import SavioProjectProcessingRunner
 from coldfront.core.project.utils_.new_project_utils import savio_request_state_status
 from coldfront.core.project.utils_.new_project_utils import send_project_request_pooling_email
+from coldfront.core.project.utils_.new_project_utils import send_project_request_ready_for_processing_email
 from coldfront.core.project.utils_.new_project_utils import VectorProjectProcessingRunner
 from coldfront.core.project.utils_.new_project_utils import vector_request_state_status
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
@@ -112,6 +113,24 @@ class SavioProjectRequestMixin(object):
         """Assert that the attributes have been set."""
         assert isinstance(self.request_obj, SavioProjectAllocationRequest)
         assert isinstance(self.computing_allowance_obj, ComputingAllowance)
+
+    def conditionally_send_project_ready_for_processing_email(self):
+        """If the request is ready for processing, send a notification
+        email to admins.
+
+        This method is intended to be called in each view that modifies
+        the system administrator checklist, except for the view that
+        performs processing on the cluster.
+
+        It is called in each because requests differ in what checklist
+        steps they have."""
+        if self.request_obj.status.name != 'Approved - Processing':
+            return
+        try:
+            send_project_request_ready_for_processing_email(self.request_obj)
+        except Exception as e:
+            self.logger.error('Failed to send notification email. Details:\n')
+            self.logger.exception(e)
 
     def get_extra_fields_form(self, disable_fields=True):
         """Return a form of extra fields for the request, based on its
@@ -625,6 +644,8 @@ class SavioProjectReviewEligibilityView(LoginRequiredMixin,
 
         self.request_obj.save()
 
+        self.conditionally_send_project_ready_for_processing_email()
+
         message = (
             f'Eligibility status for request {self.request_obj.pk} has been '
             f'set to {status}.')
@@ -702,6 +723,8 @@ class SavioProjectReviewReadinessView(LoginRequiredMixin, UserPassesTestMixin,
 
         self.request_obj.save()
 
+        self.conditionally_send_project_ready_for_processing_email()
+
         message = (
             f'Readiness status for request {self.request_obj.pk} has been set '
             f'to {status}.')
@@ -773,6 +796,8 @@ class SavioProjectReviewMemorandumSignedView(LoginRequiredMixin,
 
         self.request_obj.status = savio_request_state_status(self.request_obj)
         self.request_obj.save()
+
+        self.conditionally_send_project_ready_for_processing_email()
 
         message = (
             f'Memorandum Signed status for request {self.request_obj.pk} has '

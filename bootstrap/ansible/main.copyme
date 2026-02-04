@@ -283,6 +283,7 @@ email_admin_notification_recipients:
     created: []
   new_project_requests:
     agreement_uploaded: []
+    approved: []
     created: []
   project_user_removal_requests:
     completed: []
