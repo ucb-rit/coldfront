@@ -78,7 +78,7 @@ class TestRequestServiceCreate:
         FacultyStorageAllocationRequestService.create_request(data)
 
         # Assert - notification was sent
-        mock_notification.send_request_created_email.assert_called_once_with(
+        mock_notification.send_request_created_email_to_admins.assert_called_once_with(
             mock_request,
             email_strategy=None
         )
@@ -109,7 +109,7 @@ class TestRequestServiceCreate:
         )
 
         # Assert - custom strategy was passed
-        mock_notification.send_request_created_email.assert_called_once_with(
+        mock_notification.send_request_created_email_to_admins.assert_called_once_with(
             mock_request,
             email_strategy=mock_email_strategy
         )
@@ -123,8 +123,10 @@ class TestRequestServiceApproval:
            'request_service.FacultyStorageAllocationRequestStatusChoice')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.utc_now_offset_aware')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.FSARequestNotificationService')
     def test_approve_request_sets_approved_amount_if_not_provided(
-        self, mock_now, mock_status_choice
+        self, mock_notification, mock_now, mock_status_choice
     ):
         """Test approve_request() defaults approved_amount to
         requested_amount."""
@@ -137,6 +139,7 @@ class TestRequestServiceApproval:
         mock_now.return_value = now
 
         mock_request = Mock()
+        mock_request.pk = 1
         mock_request.requested_amount_gb = 1000
         mock_request.approved_amount_gb = None  # Not set
 
@@ -153,8 +156,10 @@ class TestRequestServiceApproval:
            'request_service.FacultyStorageAllocationRequestStatusChoice')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.utc_now_offset_aware')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.FSARequestNotificationService')
     def test_approve_request_keeps_existing_approved_amount(
-        self, mock_now, mock_status_choice
+        self, mock_notification, mock_now, mock_status_choice
     ):
         """Test approve_request() doesn't override existing approved_amount."""
         # Setup
@@ -165,6 +170,7 @@ class TestRequestServiceApproval:
         mock_now.return_value = now
 
         mock_request = Mock()
+        mock_request.pk = 1
         mock_request.requested_amount_gb = 1000
         mock_request.approved_amount_gb = 500  # Already set to different value
 
@@ -178,8 +184,10 @@ class TestRequestServiceApproval:
            'request_service.FacultyStorageAllocationRequestStatusChoice')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.utc_now_offset_aware')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.FSARequestNotificationService')
     def test_approve_request_sets_approval_time(
-        self, mock_now, mock_status_choice
+        self, mock_notification, mock_now, mock_status_choice
     ):
         """Test approve_request() sets approval_time timestamp."""
         # Setup
@@ -190,6 +198,7 @@ class TestRequestServiceApproval:
         mock_now.return_value = expected_time
 
         mock_request = Mock()
+        mock_request.pk = 1
         mock_request.requested_amount_gb = 1000
         mock_request.approved_amount_gb = 1000
 
@@ -203,8 +212,10 @@ class TestRequestServiceApproval:
            'request_service.FacultyStorageAllocationRequestStatusChoice')
     @patch('coldfront.plugins.faculty_storage_allocations.services.'
            'request_service.utc_now_offset_aware')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.FSARequestNotificationService')
     def test_approve_request_updates_status_to_approved_queued(
-        self, mock_now, mock_status_choice
+        self, mock_notification, mock_now, mock_status_choice
     ):
         """Test approve_request() changes status to 'Approved - Queued'."""
         # Setup
@@ -215,6 +226,7 @@ class TestRequestServiceApproval:
         mock_now.return_value = timezone.now()
 
         mock_request = Mock()
+        mock_request.pk = 1
         mock_request.requested_amount_gb = 1000
         mock_request.approved_amount_gb = 1000
 
@@ -226,6 +238,72 @@ class TestRequestServiceApproval:
             name='Approved - Queued'
         )
         assert mock_request.status == expected_status
+
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.FacultyStorageAllocationRequestStatusChoice')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.utc_now_offset_aware')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.FSARequestNotificationService')
+    def test_approve_request_sends_notification_email(
+        self, mock_notification, mock_now, mock_status_choice
+    ):
+        """Test approve_request() triggers notification email."""
+        # Setup
+        mock_status = Mock()
+        mock_status.name = 'Approved - Queued'
+        mock_status_choice.objects.get.return_value = mock_status
+
+        mock_now.return_value = timezone.now()
+
+        mock_request = Mock()
+        mock_request.pk = 1
+        mock_request.requested_amount_gb = 1000
+        mock_request.approved_amount_gb = 1000
+
+        # Execute
+        FacultyStorageAllocationRequestService.approve_request(mock_request)
+
+        # Assert - notification was sent
+        mock_notification.send_request_approved_email_to_admins.assert_called_once_with(
+            mock_request,
+            email_strategy=None
+        )
+
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.FacultyStorageAllocationRequestStatusChoice')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.utc_now_offset_aware')
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.FSARequestNotificationService')
+    def test_approve_request_with_custom_email_strategy(
+        self, mock_notification, mock_now, mock_status_choice
+    ):
+        """Test approve_request() uses provided email strategy."""
+        # Setup
+        mock_status = Mock()
+        mock_status.name = 'Approved - Queued'
+        mock_status_choice.objects.get.return_value = mock_status
+
+        mock_now.return_value = timezone.now()
+
+        mock_request = Mock()
+        mock_request.pk = 1
+        mock_request.requested_amount_gb = 1000
+        mock_request.approved_amount_gb = 1000
+
+        mock_email_strategy = Mock()
+
+        # Execute
+        FacultyStorageAllocationRequestService.approve_request(
+            mock_request, email_strategy=mock_email_strategy
+        )
+
+        # Assert - custom strategy was passed
+        mock_notification.send_request_approved_email_to_admins.assert_called_once_with(
+            mock_request,
+            email_strategy=mock_email_strategy
+        )
 
 
 @pytest.mark.unit

@@ -72,8 +72,8 @@ class TestRequestServiceCreate:
         request = FacultyStorageAllocationRequestService.create_request(data)
 
         # Assert - notification was called
-        mock_notification.send_request_created_email.assert_called_once()
-        call_args = mock_notification.send_request_created_email.call_args
+        mock_notification.send_request_created_email_to_admins.assert_called_once()
+        call_args = mock_notification.send_request_created_email_to_admins.call_args
         assert call_args[0][0].id == request.id
 
 
@@ -145,6 +145,29 @@ class TestRequestServiceApproval:
         # Assert - custom amount preserved
         db_request = FacultyStorageAllocationRequest.objects.get(id=request.id)
         assert db_request.approved_amount_gb == 1000
+
+    @patch('coldfront.plugins.faculty_storage_allocations.services.'
+           'request_service.FSARequestNotificationService')
+    def test_approve_request_sends_notification(
+        self, mock_notification, test_project, test_user, test_pi
+    ):
+        """Test approve_request() triggers notification."""
+        # Setup
+        request = create_fsa_request(
+            status='Under Review',
+            project=test_project,
+            requester=test_user,
+            pi=test_pi,
+            requested_amount_gb=1000
+        )
+
+        # Execute
+        FacultyStorageAllocationRequestService.approve_request(request)
+
+        # Assert - notification was called
+        mock_notification.send_request_approved_email_to_admins.assert_called_once()
+        call_args = mock_notification.send_request_approved_email_to_admins.call_args
+        assert call_args[0][0].id == request.id
 
 
 @pytest.mark.component

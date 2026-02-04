@@ -13,7 +13,7 @@ class FSARequestNotificationService:
     """Handle all email notifications for FSA requests."""
 
     @staticmethod
-    def send_request_created_email(request, email_strategy=None):
+    def send_request_created_email_to_admins(request, email_strategy=None):
         """Notify admins when a new request is created."""
         email_strategy = validate_email_strategy_or_get_default(email_strategy)
 
@@ -37,7 +37,30 @@ class FSARequestNotificationService:
         email_strategy.process_email(send_email_template, *email_args)
 
     @staticmethod
-    def send_completion_email(request, email_strategy=None):
+    def send_request_approved_email_to_admins(request, email_strategy=None):
+        """Notify admins when a request is approved."""
+        email_strategy = validate_email_strategy_or_get_default(email_strategy)
+
+        subject = (
+            f'Faculty Storage Allocation Request Approved - '
+            f'{request.project.name}')
+        template_name = 'faculty_storage_allocations/email/request_approved.txt'
+        context = {
+            'project': request.project,
+            'amount_tb': request.approved_amount_gb // 1000,
+            'review_url': urljoin(
+                django_settings.CENTER_BASE_URL,
+                reverse('faculty-storage-allocation-request-detail', kwargs={'pk': request.pk})
+            ),
+        }
+        sender = django_settings.EMAIL_SENDER
+        receiver_list = _get_admin_notification_recipients('request_approved')
+
+        email_args = (subject, template_name, context, sender, receiver_list)
+        email_strategy.process_email(send_email_template, *email_args)
+
+    @staticmethod
+    def send_completion_email_to_users(request, email_strategy=None):
         """Notify the PI and requester when the request is completed."""
         email_strategy = validate_email_strategy_or_get_default(email_strategy)
 
@@ -48,7 +71,7 @@ class FSARequestNotificationService:
         context = {
             'center_name': django_settings.CENTER_NAME,
             'project': request.project,
-            'amount_tb': request.requested_amount_gb // 1000,
+            'amount_tb': request.approved_amount_gb // 1000,
             'project_url': urljoin(
                 django_settings.CENTER_BASE_URL,
                 reverse('project-detail', kwargs={'pk': request.project.pk})
@@ -63,7 +86,7 @@ class FSARequestNotificationService:
         email_strategy.process_email(send_email_template, *email_args)
 
     @staticmethod
-    def send_denial_email(request, email_strategy=None):
+    def send_denial_email_to_users(request, email_strategy=None):
         """Notify the PI and requester when their request is denied."""
         email_strategy = validate_email_strategy_or_get_default(email_strategy)
 
