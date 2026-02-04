@@ -290,6 +290,7 @@ email_admin_notification_recipients:
     created: []
   secure_directory_requests:
     agreement_uploaded: []
+    approved: []
     created: []
   secure_directory_add_user_requests:
     created: []

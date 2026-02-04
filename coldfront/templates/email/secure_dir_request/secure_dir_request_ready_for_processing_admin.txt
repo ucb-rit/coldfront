@@ -1,0 +1,3 @@
+A secure directory request for project {{ project_name }} has been approved and is ready for processing.
+
+Please process the request here: {{ review_url }}.
