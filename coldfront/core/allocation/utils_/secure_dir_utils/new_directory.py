@@ -639,6 +639,33 @@ def is_secure_directory_name_suffix_available(proposed_directory_name_suffix,
     return proposed_directory_name_suffix not in unavailable_name_suffixes
 
 
+def send_secure_directory_request_ready_for_processing_email(request_obj):
+    """Send a notification email to admins that the given
+    SecureDirRequest is ready for processing."""
+    if not settings.EMAIL_ENABLED:
+        return
+
+    subject = 'Secure Directory Request Ready for Processing'
+    template_name = (
+        'email/secure_dir_request/'
+        'secure_dir_request_ready_for_processing_admin.txt')
+
+    domain = settings.CENTER_BASE_URL
+    view = reverse('secure-dir-request-detail', kwargs={'pk': request_obj.pk})
+    review_url = urljoin(domain, view)
+
+    context = {
+        'project_name': request_obj.project.name,
+        'review_url': review_url,
+    }
+
+    sender = settings.EMAIL_SENDER
+    receiver_list = get_email_admin_notification_recipients(
+        'secure_directory_requests', 'approved')
+
+    send_email_template(subject, template_name, context, sender, receiver_list)
+
+
 def set_sec_dir_context(context_dict, request_obj):
     """
     Sets the sec_dir_request, groups_path, and scratch_path items in the given

@@ -24,6 +24,7 @@ from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import get_
 from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import secure_dir_request_state_status
 from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import SecureDirRequestApprovalRunner
 from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import SecureDirRequestDenialRunner
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import send_secure_directory_request_ready_for_processing_email
 from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import set_sec_dir_context
 
 from coldfront.core.project.forms import ReviewStatusForm, ReviewDenyForm
@@ -478,6 +479,8 @@ class SecureDirRequestReviewMOUView(LoginRequiredMixin,
             runner = SecureDirRequestDenialRunner(self.request_obj)
             runner.run()
 
+        self._conditionally_send_ready_for_processing_email()
+
         message = (
             f'MOU status for the secure directory request of project '
             f'{self.request_obj.project.pk} has been set to {status}.')
@@ -501,6 +504,18 @@ class SecureDirRequestReviewMOUView(LoginRequiredMixin,
         return reverse(
             'secure-dir-request-detail',
             kwargs={'pk': self.kwargs.get('pk')})
+
+    def _conditionally_send_ready_for_processing_email(self):
+        """If the request is ready for processing, send a notification
+        email to admins."""
+        if self.request_obj.status.name != 'Approved - Processing':
+            return
+        try:
+            send_secure_directory_request_ready_for_processing_email(
+                self.request_obj)
+        except Exception as e:
+            logger.exception(
+                f'Failed to send notification email. Details:\n{e}')
 
 
 class SecureDirRequestReviewSetupView(LoginRequiredMixin,
