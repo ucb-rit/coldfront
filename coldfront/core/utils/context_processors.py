@@ -119,7 +119,10 @@ def request_alert_counts(request):
             context['faculty_storage_allocations_req_count'] = \
                 FacultyStorageAllocationRequest.objects.filter(
                     status__name__in=[
-                        'Under Review', 'Approved - Processing']).count()
+                        'Under Review',
+                        'Approved - Queued',
+                        'Approved - Processing',
+                    ]).count()
 
         if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
             from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
