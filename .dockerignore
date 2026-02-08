@@ -54,9 +54,6 @@ CHANGELOG*
 
 # Ansible
 bootstrap/ansible*
-bootstrap/production/
-# But keep the docker entrypoint script
-!bootstrap/production/docker/docker-entrypoint.sh
 
 # Local settings (will be generated in container)
 coldfront/config/local_settings.py
