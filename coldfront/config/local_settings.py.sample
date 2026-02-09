@@ -68,12 +68,34 @@ DISPLAY_TIME_ZONE = 'America/Los_Angeles'
 # Logging
 #------------------------------------------------------------------------------
 import os
+import structlog
 LOG_PATH = os.path.join('/var/log/user_portals/cf_mybrc', 'cf_mybrc_portal.log')
 API_LOG_PATH = os.path.join('/var/log/user_portals/cf_mybrc', 'cf_mybrc_api.log')
+_log_formatter = 'console_dev' if DEBUG else 'json'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
+        'console_dev': {
+            '()': structlog.stdlib.ProcessorFormatter,
+            'processor': structlog.dev.ConsoleRenderer(colors=True),
+            'foreign_pre_chain': [
+                structlog.contextvars.merge_contextvars,
+                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.stdlib.add_logger_name,
+                structlog.stdlib.add_log_level,
+            ],
+        },
+        'json': {
+            '()': structlog.stdlib.ProcessorFormatter,
+            'processor': structlog.processors.JSONRenderer(),
+            'foreign_pre_chain': [
+                structlog.contextvars.merge_contextvars,
+                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.stdlib.add_logger_name,
+                structlog.stdlib.add_log_level,
+            ],
+        },
         'verbose': {
             'format': '[{asctime}] {levelname} {module}.{funcName}: {message}',
             'style': '{',
@@ -82,18 +104,19 @@ LOGGING = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': _log_formatter,
         },
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': LOG_PATH,
-            'formatter': 'verbose',
+            'formatter': 'json',
         },
         'api_file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': API_LOG_PATH,
-            'formatter': 'verbose',
+            'formatter': 'json',
         },
     },
     'loggers': {
@@ -116,7 +139,31 @@ LOGGING = {
             'level': 'INFO',
         }
     },
+    'root': {
+        'handlers': ['file'],
+        'level': 'INFO',
+    },
 }
+
+# structlog configuration
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.filter_by_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    wrapper_class=structlog.stdlib.BoundLogger,
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
 
 #------------------------------------------------------------------------------
 # Advanced ColdFront configurations
@@ -471,11 +518,11 @@ LOGGING['handlers']['api_file']['filename'] = API_LOG_PATH
 if STREAM_LOGS_TO_STDOUT:
     LOGGING['handlers']['file'] = {
         'class': 'logging.StreamHandler',
-        'formatter': 'verbose',
+        'formatter': _log_formatter,
     }
     LOGGING['handlers']['api_file'] = {
         'class': 'logging.StreamHandler',
-        'formatter': 'verbose',
+        'formatter': _log_formatter,
     }
 
 # Update allauth settings based on potentially-updated variables.
