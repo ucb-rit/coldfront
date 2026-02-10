@@ -237,15 +237,6 @@
             owner: "{{ djangooperator }}"
             group: apache
 
-        - name: Create a log file for Django API logs
-          copy:
-            content: ""
-            force: false
-            dest: "{{ log_path }}/{{ api_log_file }}"
-            mode: 0660
-            owner: "{{ djangooperator }}"
-            group: apache
-
         # Create the Django MEDIA_ROOT directory and subdirectories for file
         # storage if required.
 

@@ -82,7 +82,6 @@ DATABASES = {
 }
 
 LOG_PATH = env('HPCS__LOG_PATH')
-API_LOG_PATH = env('HPCS__API_LOG_PATH')
 
 STREAM_LOGS_TO_STDOUT = env.bool('HPCS__STREAM_LOGS_TO_STDOUT', default=True)
 

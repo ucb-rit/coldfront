@@ -57,7 +57,6 @@ redis_host: localhost
 # TODO: For LRC, use the substring 'cf_mylrc'.
 log_path: /var/log/user_portals/cf_mybrc
 portal_log_file: cf_mybrc_portal.log
-api_log_file: cf_mybrc_api.log
 
 logrotate_entry_name: cf_mybrc
 
