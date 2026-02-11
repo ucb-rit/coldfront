@@ -2,7 +2,6 @@ db_name: cf_lrc_db
 
 log_path: /var/log/user_portals/cf_mylrc
 portal_log_file: cf_mylrc_portal.log
-api_log_file: cf_mylrc_api.log
 logrotate_entry_name: cf_mylrc
 
 wsgi_conf_file_name: cf_mylrc_wsgi.conf

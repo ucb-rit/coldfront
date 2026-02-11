@@ -69,12 +69,10 @@ jobs:
         # Create log files
         sudo mkdir -p /var/log/user_portals/cf_mybrc
         sudo touch /var/log/user_portals/cf_mybrc/cf_mybrc_portal.log
-        sudo touch /var/log/user_portals/cf_mybrc/cf_mybrc_api.log
         
         # Modify log file permssions to allow testing to function properly
         sudo chmod 775 /var/log/user_portals/cf_mybrc
         sudo chmod 666 /var/log/user_portals/cf_mybrc/cf_mybrc_portal.log
-        sudo chmod 666 /var/log/user_portals/cf_mybrc/cf_mybrc_api.log
         
         # Give Apache permission to logs
         sudo chown -R :www-data /var/log/user_portals/cf_mybrc
