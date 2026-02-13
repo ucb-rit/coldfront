@@ -142,6 +142,7 @@
               - httpd
               - httpd-devel
               - mod_ssl
+              - python3-passlib
             state: present
 
         # Install and configure Redis.
