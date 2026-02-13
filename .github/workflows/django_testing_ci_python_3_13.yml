@@ -64,19 +64,8 @@ jobs:
         source ~/venv/bin/activate
         pip install -r requirements.txt
 
-    - name: Create settings files from samples and create log files needed for testing
+    - name: Create settings files from samples and other directories needed for testing
       run: |
-        # Create log files
-        sudo mkdir -p /var/log/user_portals/cf_mybrc
-        sudo touch /var/log/user_portals/cf_mybrc/cf_mybrc_portal.log
-        
-        # Modify log file permssions to allow testing to function properly
-        sudo chmod 775 /var/log/user_portals/cf_mybrc
-        sudo chmod 666 /var/log/user_portals/cf_mybrc/cf_mybrc_portal.log
-        
-        # Give Apache permission to logs
-        sudo chown -R :www-data /var/log/user_portals/cf_mybrc
-        
         # Get setting configuration from samples
         cp coldfront/config/local_strings.py.sample coldfront/config/local_strings.py
         cp coldfront/config/local_settings.py.sample coldfront/config/local_settings.py

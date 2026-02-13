@@ -134,11 +134,7 @@ LOGGING = {
             'handlers': ['file'],
             'level': 'INFO',
         },
-        'coldfront.commands': {
-            'handlers': ['console', 'file'] if sys.stdout.isatty() else ['file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
+        # 'coldfront.commands' is defined below.
     },
     'root': {
         'handlers': ['file'],
@@ -516,11 +512,32 @@ EXTRA_MIDDLEWARE += EXTRA_EXTRA_MIDDLEWARE
 LOGGING['handlers']['file']['filename'] = LOG_PATH
 
 if STREAM_LOGS_TO_STDOUT:
-    LOGGING['handlers']['file'] = {
-        'class': 'logging.StreamHandler',
-        'formatter': _log_formatter,
-    }
-    LOGGING['loggers']['coldfront.commands']['handlers'] = ['file']
+    if sys.argv[1:2] == ['test']:
+        LOGGING['handlers']['file'] = {
+            'class': 'logging.NullHandler',
+        }
+        _commands_handlers = []
+    else:
+        # Redirect logs to stdout.
+        LOGGING['handlers']['file'] = {
+            'class': 'logging.StreamHandler',
+            'formatter': _log_formatter,
+        }
+        _commands_handlers = ['file']
+else:
+    if sys.argv[1:2] == ['test']:
+        _commands_handlers = ['file']
+    else:
+        _commands_handlers = ['file']
+        # Interactive sessions: Also show management command output on console
+        # (CI environments have no TTY, so logs go to file only)
+        if sys.stdout.isatty():
+            _commands_handlers.insert(0, 'console')
+LOGGING['loggers']['coldfront.commands'] = {
+    'handlers': _commands_handlers,
+    'level': 'INFO',
+    'propagate': False,
+}
 
 # Update allauth settings based on potentially-updated variables.
 SOCIALACCOUNT_PROVIDERS['cilogon']['APP']['client_id'] = CILOGON_APP_CLIENT_ID
