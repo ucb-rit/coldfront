@@ -83,6 +83,7 @@ LOGGING = {
                 structlog.processors.TimeStamper(fmt="iso"),
                 structlog.stdlib.add_logger_name,
                 structlog.stdlib.add_log_level,
+                structlog.stdlib.ExtraAdder(),
             ],
         },
         'json': {
@@ -93,6 +94,7 @@ LOGGING = {
                 structlog.processors.TimeStamper(fmt="iso"),
                 structlog.stdlib.add_logger_name,
                 structlog.stdlib.add_log_level,
+                structlog.stdlib.ExtraAdder(),
             ],
         },
         'verbose': {
@@ -130,7 +132,12 @@ LOGGING = {
         'coldfront': {
             'handlers': ['file'],
             'level': 'INFO',
-        }
+        },
+        'coldfront.commands': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
     'root': {
         'handlers': ['file'],
@@ -512,6 +519,7 @@ if STREAM_LOGS_TO_STDOUT:
         'class': 'logging.StreamHandler',
         'formatter': _log_formatter,
     }
+    LOGGING['loggers']['coldfront.commands']['handlers'] = ['file']
 
 # Update allauth settings based on potentially-updated variables.
 SOCIALACCOUNT_PROVIDERS['cilogon']['APP']['client_id'] = CILOGON_APP_CLIENT_ID

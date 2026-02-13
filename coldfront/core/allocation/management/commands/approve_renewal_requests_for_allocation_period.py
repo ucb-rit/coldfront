@@ -29,7 +29,7 @@ class Command(BaseCommand):
         'currently "Under Review". Warning: Currently, this command is only '
         'intended for use for renewal requests for yearly allowances.')
 
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -106,7 +106,7 @@ class Command(BaseCommand):
             if dry_run:
                 phrase = 'Would automatically approve'
                 message = message_template.format(phrase, *message_args)
-                self.stdout.write(self.style.WARNING(message))
+                self.logger.info(f'DRY RUN: {message}')
             else:
                 try:
                     self.update_request_state(request)
@@ -118,11 +118,10 @@ class Command(BaseCommand):
                         f'Failed to approve AllocationRenewalRequest '
                         f'{request.pk}. Details:\n'
                         f'{e}')
-                    self.stderr.write(self.style.ERROR(message))
-
-                phrase = 'Automatically approved'
-                message = message_template.format(phrase, *message_args)
-                self.stdout.write(self.style.SUCCESS(message))
+                    self.logger.error(message)
+                else:
+                    phrase = 'Automatically approved'
+                    message = message_template.format(phrase, *message_args)
                 self.logger.info(message)
 
     @staticmethod

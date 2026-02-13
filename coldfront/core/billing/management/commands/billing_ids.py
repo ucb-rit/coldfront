@@ -25,7 +25,7 @@ class Command(BaseCommand):
 
     help = 'Create, set, or validate billing IDs.'
 
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     def add_arguments(self, parser):
         """Define subcommands with different functions."""
