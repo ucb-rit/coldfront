@@ -427,6 +427,7 @@ sentry_dsn: ""
 # # Host settings.
 # hostname: scgup-dev.lbl.gov
 # host_ip: 131.243.130.236
+# extra_allowed_hosts: []
 # app_port: 8000
 # full_host_path: http://scgup-dev.lbl.gov:8000
 
@@ -480,6 +481,7 @@ sentry_dsn: ""
 # hostname: mybrc.brc.berkeley.edu
 # # TODO: For LRC, use 128.3.7.213.
 # host_ip: 136.152.224.34
+# extra_allowed_hosts: []
 # app_port: 80
 # # TODO: For LRC, use https://mylrc.lbl.gov.
 # full_host_path: https://mybrc.brc.berkeley.edu
@@ -535,6 +537,7 @@ sentry_dsn: ""
 # # Host settings.
 # hostname: localhost
 # host_ip: localhost
+# extra_allowed_hosts: []
 # app_port: 80
 # full_host_path: http://localhost:8880
 
