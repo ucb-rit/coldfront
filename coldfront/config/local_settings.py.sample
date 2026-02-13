@@ -530,7 +530,6 @@ else:
     else:
         _commands_handlers = ['file']
         # Interactive sessions: Also show management command output on console
-        # (CI environments have no TTY, so logs go to file only)
         if sys.stdout.isatty():
             _commands_handlers.insert(0, 'console')
 LOGGING['loggers']['coldfront.commands'] = {
