@@ -728,6 +728,17 @@
             dest: /etc/httpd/conf.d/{{ wsgi_conf_file_name }}
           when: ssl_enabled
 
+        - name: Create or update htpasswd file for /metrics basic authentication
+          community.general.htpasswd:
+            path: "{{ htpasswd_file }}"
+            name: "{{ metrics_htpasswd_user }}"
+            password: "{{ metrics_htpasswd_password }}"
+            crypt_scheme: bcrypt
+            owner: "{{ djangooperator }}"
+            group: apache
+            mode: 0640
+          when: metrics_htpasswd_password is defined and metrics_htpasswd_password | length > 0
+
         # Configure the Django application.
 
         - name: Copy the ColdFront local_settings.py file from the sample
