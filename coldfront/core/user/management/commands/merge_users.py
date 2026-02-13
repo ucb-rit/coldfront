@@ -42,7 +42,6 @@ class Command(BaseCommand):
         try:
             user_1 = User.objects.get(username=username_1)
         except User.DoesNotExist:
-
             self.stderr.write(
                 self.style.ERROR(f'User "{username_1}" does not exist.'))
             return
