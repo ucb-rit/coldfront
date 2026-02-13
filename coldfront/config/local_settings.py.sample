@@ -68,6 +68,7 @@ DISPLAY_TIME_ZONE = 'America/Los_Angeles'
 # Logging
 #------------------------------------------------------------------------------
 import os
+import sys
 import structlog
 LOG_PATH = os.path.join('/var/log/user_portals/cf_mybrc', 'cf_mybrc_portal.log')
 _log_formatter = 'console_dev' if DEBUG else 'json'
@@ -134,7 +135,7 @@ LOGGING = {
             'level': 'INFO',
         },
         'coldfront.commands': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'file'] if sys.stdout.isatty() else ['file'],
             'level': 'INFO',
             'propagate': False,
         },
