@@ -187,6 +187,14 @@ flag_renewal_survey_enabled: True
 django_constance_enabled: true
 
 #------------------------------------------------------------------------------
+# django-prometheus settings
+#------------------------------------------------------------------------------
+
+# The namespace for metrics in Prometheus.
+# TODO: For LRC, use "mylrc".
+prometheus_metric_namespace: mybrc
+
+#------------------------------------------------------------------------------
 # Django-Q settings
 #------------------------------------------------------------------------------
 

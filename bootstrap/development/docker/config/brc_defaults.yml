@@ -35,3 +35,5 @@ center_login_guide: https://docs-research-it.berkeley.edu/services/high-performa
 center_help_email: brc-hpc-help@berkeley.edu
 
 email_subject_prefix: "[MyBRC-User-Portal]"
+
+prometheus_metric_namespace: mybrc

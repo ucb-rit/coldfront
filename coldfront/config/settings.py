@@ -82,6 +82,7 @@ INSTALLED_APPS += [
 # Django Middleware
 # ------------------------------------------------------------------------------
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django_structlog.middlewares.RequestMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

@@ -498,7 +498,6 @@ else:
 # django-maintenance-mode settings
 #------------------------------------------------------------------------------
 
-# Note: This should be the last-defined middleware.
 EXTRA_EXTRA_MIDDLEWARE += [
     'maintenance_mode.middleware.MaintenanceModeMiddleware',
 ]
@@ -523,3 +522,18 @@ if env.bool('HPCS__ENABLE_MAINTENANCE_MODE', default=False):
     MAINTENANCE_MODE_STATE_FILE_PATH = '/tmp/maintenance_mode_state.txt'
 else:
     MAINTENANCE_MODE = False
+
+#------------------------------------------------------------------------------
+# Django Prometheus settings
+#------------------------------------------------------------------------------
+
+EXTRA_EXTRA_APPS += [
+    'django_prometheus',
+]
+
+EXTRA_EXTRA_MIDDLEWARE += [
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
+]
+
+PROMETHEUS_METRIC_NAMESPACE = env(
+    'DJANGO_PROMETHEUS__PROMETHEUS_METRIC_NAMESPACE', default='coldfront')
