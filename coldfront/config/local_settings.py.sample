@@ -68,6 +68,7 @@ DISPLAY_TIME_ZONE = 'America/Los_Angeles'
 # Logging
 #------------------------------------------------------------------------------
 import os
+import sys
 import structlog
 LOG_PATH = os.path.join('/var/log/user_portals/cf_mybrc', 'cf_mybrc_portal.log')
 _log_formatter = 'console_dev' if DEBUG else 'json'
@@ -83,6 +84,7 @@ LOGGING = {
                 structlog.processors.TimeStamper(fmt="iso"),
                 structlog.stdlib.add_logger_name,
                 structlog.stdlib.add_log_level,
+                structlog.stdlib.ExtraAdder(),
             ],
         },
         'json': {
@@ -93,6 +95,7 @@ LOGGING = {
                 structlog.processors.TimeStamper(fmt="iso"),
                 structlog.stdlib.add_logger_name,
                 structlog.stdlib.add_log_level,
+                structlog.stdlib.ExtraAdder(),
             ],
         },
         'verbose': {
@@ -130,7 +133,8 @@ LOGGING = {
         'coldfront': {
             'handlers': ['file'],
             'level': 'INFO',
-        }
+        },
+        # 'coldfront.commands' is defined below.
     },
     'root': {
         'handlers': ['file'],
@@ -508,10 +512,31 @@ EXTRA_MIDDLEWARE += EXTRA_EXTRA_MIDDLEWARE
 LOGGING['handlers']['file']['filename'] = LOG_PATH
 
 if STREAM_LOGS_TO_STDOUT:
-    LOGGING['handlers']['file'] = {
-        'class': 'logging.StreamHandler',
-        'formatter': _log_formatter,
-    }
+    if sys.argv[1:2] == ['test']:
+        LOGGING['handlers']['file'] = {
+            'class': 'logging.NullHandler',
+        }
+        _commands_handlers = []
+    else:
+        # Redirect logs to stdout.
+        LOGGING['handlers']['file'] = {
+            'class': 'logging.StreamHandler',
+            'formatter': _log_formatter,
+        }
+        _commands_handlers = ['file']
+else:
+    if sys.argv[1:2] == ['test']:
+        _commands_handlers = ['file']
+    else:
+        _commands_handlers = ['file']
+        # Interactive sessions: Also show management command output on console
+        if sys.stdout.isatty():
+            _commands_handlers.insert(0, 'console')
+LOGGING['loggers']['coldfront.commands'] = {
+    'handlers': _commands_handlers,
+    'level': 'INFO',
+    'propagate': False,
+}
 
 # Update allauth settings based on potentially-updated variables.
 SOCIALACCOUNT_PROVIDERS['cilogon']['APP']['client_id'] = CILOGON_APP_CLIENT_ID

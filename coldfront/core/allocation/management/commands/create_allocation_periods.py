@@ -14,7 +14,7 @@ import os
 class Command(BaseCommand):
 
     help = 'Create AllocationPeriods from a JSON.'
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     date_format = '%Y-%m-%d'
 
@@ -42,19 +42,18 @@ class Command(BaseCommand):
                     f'{end_date}.')
                 if dry_run:
                     message = message_template.format('Would create', 'PK')
-                    self.stdout.write(self.style.WARNING(message))
+                    self.logger.info(f'DRY RUN: {message}')
                 else:
                     allocation_period = AllocationPeriod.objects.create(
                         **period)
                     message = message_template.format(
                         'Created', allocation_period.pk)
                     self.logger.info(message)
-                    self.stdout.write(self.style.SUCCESS(message))
             except AllocationPeriod.MultipleObjectsReturned:
                 message = (
                     f'Unexpectedly found multiple AllocationPeriods named '
                     f'{name}. Skipping.')
-                self.stderr.write(self.style.ERROR(message))
+                self.logger.warning(message)
             else:
                 prev_start_date = allocation_period.start_date
                 prev_end_date = allocation_period.end_date
@@ -67,14 +66,13 @@ class Command(BaseCommand):
                     f'to ({start_date}, {end_date}).')
                 if dry_run:
                     message = message_template.format('Would update')
-                    self.stdout.write(self.style.WARNING(message))
+                    self.logger.warning(f'DRY RUN: {message}')
                 else:
                     allocation_period.start_date = start_date
                     allocation_period.end_date = end_date
                     allocation_period.save()
                     message = message_template.format('Updated')
                     self.logger.info(message)
-                    self.stdout.write(self.style.SUCCESS(message))
 
     def clean_periods(self, periods):
         """Given a list of dictionaries, validate that each has the keys

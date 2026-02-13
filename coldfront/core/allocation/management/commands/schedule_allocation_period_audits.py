@@ -23,7 +23,7 @@ from coldfront.core.utils.mail import send_email_template
 import logging
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('coldfront.commands')
 
 
 # If an audit fails or raises an error, retry it in X days.
@@ -111,13 +111,7 @@ class Command(BaseCommand):
             year)
         for allocation_period_name in allocation_period_names:
             schedule_args = (allocation_period_name, '--email', *emails)
-            audit_task_scheduled = self._schedule_audit_task_if_not_scheduled(
-                *schedule_args)
-            if not audit_task_scheduled:
-                message = (
-                    f'An audit for AllocationPeriod "{allocation_period_name}" '
-                    f'is already scheduled.')
-                self.stdout.write(self.style.WARNING(message))
+            self._schedule_audit_task_if_not_scheduled(*schedule_args)
 
     @staticmethod
     def _next_instance_of_date(month, day):

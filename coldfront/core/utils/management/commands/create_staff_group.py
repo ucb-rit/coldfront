@@ -42,7 +42,3 @@ class Command(BaseCommand):
             except Permission.DoesNotExist:
                 raise LookupError('Queried permission does not exist. Examine '
                                   'core/utils/management/commands/create_staff_group.py')
-
-        # Send a joined list of permissions to a command-line output.
-        self.stdout.write('Created staff group and permissions.')
-

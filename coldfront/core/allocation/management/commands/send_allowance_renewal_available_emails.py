@@ -23,7 +23,7 @@ class Command(BaseCommand):
         'notifying them that they may renew their computing allowance for the '
         'upcoming allowance year.')
 
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     # TODO: Consider only sending the email to projects that have not yet
     #  renewed, so that this command can be safely re-run for subsequent emails.
@@ -57,7 +57,7 @@ class Command(BaseCommand):
         num_emails = len(email_strategy.get_queue())
         if dry_run:
             message = f'Would send emails to {num_emails} projects.'
-            self.stdout.write(self.style.WARNING(message))
+            self.logger.info(f'DRY RUN: {message}')
         else:
             user_confirmation = input(
                 f'This will send emails to {num_emails} projects. Are you sure '
@@ -70,4 +70,4 @@ class Command(BaseCommand):
 
             sent_message = (
                 f'Sent emails to {num_emails} projects. Check logs for errors.')
-            self.stdout.write(self.style.SUCCESS(sent_message))
+            self.logger.info(sent_message)

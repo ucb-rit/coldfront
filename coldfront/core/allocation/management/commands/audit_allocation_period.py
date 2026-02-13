@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 
@@ -18,6 +19,9 @@ from coldfront.core.resource.models import TimedResourceAttribute
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
 from coldfront.core.utils.mail import send_email_template
+
+
+logger = logging.getLogger('coldfront.commands')
 
 
 class Command(BaseCommand):
@@ -61,13 +65,18 @@ class Command(BaseCommand):
         audit_successful = auditor.audit_successful()
         check_results = auditor.check_results
 
-        for check_result in check_results:
-            if check_result.success:
-                self.stdout.write(
-                    self.style.SUCCESS(f'(SUCCEEDED) {check_result.message}'))
-            else:
-                self.stderr.write(
-                    self.style.ERROR(f'(FAILED) {check_result.message}'))
+        log_level = logging.INFO if audit_successful else logging.WARNING
+        logger.log(
+            log_level,
+            'AllocationPeriod audit completed',
+            extra={
+                'allocation_period_name': allocation_period_name,
+                'audit_successful': audit_successful,
+                'successful_checks': [
+                    c.message for c in check_results if c.success],
+                'failed_checks': [
+                    c.message for c in check_results if not c.success],
+            })
 
         emails = options.get('email', []) or []
         if emails:

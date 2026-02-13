@@ -44,7 +44,7 @@ import logging
 class Command(BaseCommand):
 
     help = 'Manage projects.'
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     def add_arguments(self, parser):
         """Define subcommands with different functions."""
@@ -204,7 +204,7 @@ class Command(BaseCommand):
             f'"{compute_resource.name}" Resource under PIs {pi_users_str}.')
         if options['dry_run']:
             message = message_template.format('Would create')
-            self.stdout.write(self.style.WARNING(message))
+            self.logger.info(f'DRY RUN: {message}')
             return
 
         try:
@@ -212,11 +212,9 @@ class Command(BaseCommand):
                 project_name, compute_resource, pi_users)
         except Exception as e:
             message = message_template.format('Failed to create')
-            self.stderr.write(self.style.ERROR(message))
             self.logger.exception(f'{message}\n{e}')
         else:
             message = message_template.format('Created')
-            self.stdout.write(self.style.SUCCESS(message))
             self.logger.info(message)
 
     @staticmethod
@@ -296,7 +294,7 @@ class Command(BaseCommand):
             f'requested by {requester_str}.')
         if options['dry_run']:
             message = message_template.format('Would renew')
-            self.stdout.write(self.style.WARNING(message))
+            self.logger.info(f'DRY RUN: {message}')
             return
 
         try:
@@ -309,11 +307,9 @@ class Command(BaseCommand):
                 cleaned_options['num_service_units'])
         except Exception as e:
             message = message_template.format('Failed to renew')
-            self.stderr.write(self.style.ERROR(message))
             self.logger.exception(f'{message}\n{e}')
         else:
             message = message_template.format('Renewed')
-            self.stdout.write(self.style.SUCCESS(message))
             self.logger.info(message)
 
     @staticmethod

@@ -11,8 +11,7 @@ redis_host: localhost
 db_admin_user: test
 db_admin_passwd: test
 
-# Don't stream logs to stdout
-stream_logs_to_stdout: false
+stream_logs_to_stdout: true
 
 # Use dummy cache backend for testing (no Redis required)
 django_cache_backend_short: dummy

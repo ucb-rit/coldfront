@@ -16,7 +16,7 @@ class Command(BaseCommand):
 
     help = (
         'Send PIs reminder emails of pending join requests.')
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     def handle(self, *args, **options):
 
@@ -82,11 +82,8 @@ class Command(BaseCommand):
 
                     emails_sent += len(recipients)
                 except Exception as e:
-                    message = 'Failed to send reminder email. Details:'
-                    self.stderr.write(self.style.ERROR(message))
-                    self.stderr.write(self.style.ERROR(str(e)))
-                    self.logger.error(message)
-                    self.logger.exception(e)
+                    message = f'Failed to send reminder email. Details:\n{e}'
+                    self.logger.exception(message)
 
         for pk in users_with_pending_join_requests:
             user = User.objects.get(pk=pk)
@@ -127,11 +124,7 @@ class Command(BaseCommand):
                         html_template='email/project_join_request/pending_project_join_request_user.html')
                     emails_sent += 1
                 except Exception as e:
-                    message = 'Failed to send reminder email. Details:'
-                    self.stderr.write(self.style.ERROR(message))
-                    self.stderr.write(self.style.ERROR(str(e)))
-                    self.logger.error(message)
-                    self.logger.exception(e)
+                    message = f'Failed to send reminder email. Details:\n{e}'
+                    self.logger.exception(message)
 
-        self.stdout.write(self.style.SUCCESS(f'Sent {str(emails_sent)} '
-                                             f'reminder emails.'))
+        self.logger.info(f'Sent {str(emails_sent)} reminder emails.')
