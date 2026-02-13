@@ -738,6 +738,8 @@
             owner: "{{ djangooperator }}"
             group: apache
             mode: 0640
+          vars:
+            ansible_python_interpreter: /usr/libexec/platform-python
           when: metrics_htpasswd_password is defined and metrics_htpasswd_password | length > 0
 
         # Configure the Django application.
