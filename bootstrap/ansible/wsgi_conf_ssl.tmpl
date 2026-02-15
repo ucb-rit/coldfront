@@ -61,6 +61,22 @@ WSGIPassAuthorization On
     </LocationMatch>
     {% endif %}
 
+    <Location "/metrics">
+        AuthType Basic
+        AuthName "Metrics"
+        AuthUserFile {{ htpasswd_file }}
+        <RequireAll>
+        {% if ip_range_with_metrics_access is defined and ip_range_with_metrics_access | length > 0 %}
+            <RequireAny>
+            {% for ip_range in ip_range_with_metrics_access %}
+                Require ip {{ ip_range }}
+            {% endfor %}
+            </RequireAny>
+        {% endif %}
+            Require user {{ metrics_htpasswd_user }}
+        </RequireAll>
+    </Location>
+
 </VirtualHost>
 
 <VirtualHost *:80>

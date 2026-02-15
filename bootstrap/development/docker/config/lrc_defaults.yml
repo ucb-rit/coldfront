@@ -35,3 +35,5 @@ center_login_guide: https://it.lbl.gov/resource/hpc/for-users/getting-started/
 center_help_email: hpcshelp@lbl.gov
 
 email_subject_prefix: "[MyLRC-User-Portal]"
+
+prometheus_metric_namespace: mylrc
