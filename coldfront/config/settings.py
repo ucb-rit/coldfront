@@ -270,3 +270,67 @@ try:
     SETTINGS_EXPORT = SETTINGS_EXPORT + LOCAL_SETTINGS_EXPORT
 except NameError:
     SETTINGS_EXPORT = SETTINGS_EXPORT
+
+
+
+
+
+# TODO: Move this into its own module.
+# ------------------------------------------------------------------------------
+# OpenTelemetry Manual Instrumentation
+# ------------------------------------------------------------------------------
+# Apply Django instrumentation manually since auto-instrumentation doesn't work
+# reliably with Django's runserver command
+if os.environ.get('OTEL_TRACES_EXPORTER', 'none') != 'none':
+    try:
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+        from opentelemetry.instrumentation.django import DjangoInstrumentor
+
+        # Initialize SDK with resource attributes
+        service_name = os.environ.get('OTEL_SERVICE_NAME', 'coldfront')
+        resource_attrs = os.environ.get('OTEL_RESOURCE_ATTRIBUTES', '')
+        resource_dict = {'service.name': service_name}
+        for attr in resource_attrs.split(','):
+            if '=' in attr:
+                key, val = attr.split('=', 1)
+                resource_dict[key] = val
+
+        resource = Resource.create(resource_dict)
+        provider = TracerProvider(resource=resource)
+
+        # Configure OTLP exporter
+        otlp_endpoint = os.environ.get('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://otel-collector:4317')
+        exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
+        processor = BatchSpanProcessor(exporter)
+        provider.add_span_processor(processor)
+
+        # Set the global tracer provider
+        trace.set_tracer_provider(provider)
+
+        # Instrument Django
+        DjangoInstrumentor().instrument()
+
+        # Instrument other libraries
+        try:
+            from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
+            Psycopg2Instrumentor().instrument()
+        except ImportError:
+            pass
+
+        try:
+            from opentelemetry.instrumentation.requests import RequestsInstrumentor
+            RequestsInstrumentor().instrument()
+        except ImportError:
+            pass
+
+        try:
+            from opentelemetry.instrumentation.logging import LoggingInstrumentor
+            LoggingInstrumentor().instrument(set_logging_format=True)
+        except ImportError:
+            pass
+    except ImportError:
+        pass  # OpenTelemetry not installed, skip instrumentation

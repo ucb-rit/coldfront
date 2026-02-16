@@ -1,0 +1,11 @@
+services:
+  jaeger:
+    image: jaegertracing/jaeger:latest
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # Jaeger UI
+
+  otel-collector:
+    volumes:
+      - ./config/otel-collector-config-jaeger.yaml:/etc/otel/config.yaml

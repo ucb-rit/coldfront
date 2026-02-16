@@ -71,6 +71,27 @@ import os
 import structlog
 LOG_PATH = os.path.join('/var/log/user_portals/cf_mybrc', 'cf_mybrc_portal.log')
 _log_formatter = 'console_dev' if DEBUG else 'json'
+
+
+def add_otel_trace_context(_, __, event_dict):
+    record = event_dict.get('_record')
+    if not record:
+        return event_dict
+
+    trace_id = getattr(record, 'otelTraceID', None)
+    span_id = getattr(record, 'otelSpanID', None)
+    sampled = getattr(record, 'otelTraceSampled', None)
+
+    if trace_id:
+        event_dict['trace_id'] = trace_id
+    if span_id:
+        event_dict['span_id'] = span_id
+    if sampled is not None:
+        event_dict['trace_sampled'] = sampled
+
+    return event_dict
+
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -83,6 +104,7 @@ LOGGING = {
                 structlog.processors.TimeStamper(fmt="iso"),
                 structlog.stdlib.add_logger_name,
                 structlog.stdlib.add_log_level,
+                add_otel_trace_context,
             ],
         },
         'json': {
@@ -93,6 +115,7 @@ LOGGING = {
                 structlog.processors.TimeStamper(fmt="iso"),
                 structlog.stdlib.add_logger_name,
                 structlog.stdlib.add_log_level,
+                add_otel_trace_context,
             ],
         },
         'verbose': {

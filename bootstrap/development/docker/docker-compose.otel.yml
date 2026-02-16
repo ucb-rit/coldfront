@@ -1,0 +1,21 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otel/config.yaml
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+
+  app-shell:
+    env_file:
+      - ./config/otel.env
+
+  web:
+    env_file:
+      - ./config/otel.env
+
+  qcluster:
+    env_file:
+      - ./config/otel.env
