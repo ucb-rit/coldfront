@@ -37,6 +37,9 @@
         <li id="navbar-jobs-list" class="nav-item">
           <a class="nav-link" href="{% url 'slurm-job-list' %}">Jobs</a>
         </li>
+        <li id="navbar-analytics" class="nav-item">
+          <a class="nav-link" href="{% url 'analytics-dashboard' %}"><i class="fas fa-chart-line"></i> Analytics</a>
+        </li>
         {% if request.user.is_superuser %}
         {% include 'common/navbar_admin.html' %}
         {% elif request.user.is_staff %}

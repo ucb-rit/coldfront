@@ -1,5 +1,6 @@
 import csv
 import itertools
+import json
 import logging
 
 from decimal import Decimal
@@ -14,11 +15,12 @@ from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 
 from coldfront.core.project.models import ProjectUser
-from coldfront.core.statistics.models import Job
+from coldfront.core.statistics.models import Job, JobWaitHeatmap30d
 from coldfront.core.statistics.forms import JobSearchForm
 from coldfront.core.statistics.utils_.job_accessibility_manager import JobAccessibilityManager
 from coldfront.core.statistics.utils_.job_query_filtering import job_query_filtering
 from coldfront.core.statistics.utils_.job_query_filtering import JobSearchFilterSessionStorage
+from coldfront.core.statistics.utils_.queue_wait_analytics import CPU_BUCKET_ORDER
 from coldfront.core.utils.common import Echo
 
 
@@ -259,3 +261,57 @@ class ExportJobListView(LoginRequiredMixin,
         response['Content-Disposition'] = 'attachment; filename="job_list.csv"'
 
         return response
+
+
+class AnalyticsView(LoginRequiredMixin, TemplateView):
+    template_name = 'analytics_dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Fetch latest heatmap data
+        heatmap_data = JobWaitHeatmap30d.objects.all().order_by('partition', 'cpu_bucket')
+
+        if not heatmap_data.exists():
+            context['no_data'] = True
+            return context
+
+        # Get unique partitions and ensure bucket order
+        partitions = sorted(set(row.partition for row in heatmap_data))
+
+        # Build 2D data structure for heatmap: rows=partitions, cols=buckets
+        # C3.js expects data in columnar format
+        heatmap_matrix = {}
+        sample_sizes = {}
+
+        for row in heatmap_data:
+            if row.partition not in heatmap_matrix:
+                heatmap_matrix[row.partition] = {}
+                sample_sizes[row.partition] = {}
+
+            # Convert seconds to hours for display
+            wait_hours = float(row.p50_wait_seconds) / 3600.0
+            heatmap_matrix[row.partition][row.cpu_bucket] = wait_hours
+            sample_sizes[row.partition][row.cpu_bucket] = row.sample_size
+
+        # Fill missing cells with null
+        for partition in partitions:
+            for bucket in CPU_BUCKET_ORDER:
+                if bucket not in heatmap_matrix[partition]:
+                    heatmap_matrix[partition][bucket] = None
+
+        # Compute cluster-wide median for context
+        total_jobs = sum(row.sample_size for row in heatmap_data)
+
+        # Get generation timestamp
+        generated_at = heatmap_data.first().generated_at if heatmap_data else None
+
+        context['partitions'] = partitions
+        context['cpu_buckets'] = CPU_BUCKET_ORDER
+        context['heatmap_matrix'] = json.dumps(heatmap_matrix)
+        context['sample_sizes'] = json.dumps(sample_sizes)
+        context['total_jobs'] = total_jobs
+        context['generated_at'] = generated_at
+        context['no_data'] = False
+
+        return context

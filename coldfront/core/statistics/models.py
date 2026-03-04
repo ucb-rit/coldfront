@@ -65,6 +65,11 @@ class Job(TimeStampedModel):
     raw_time = models.FloatField(default=None, blank=True, null=True)
     cpu_time = models.FloatField(default=None, blank=True, null=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['startdate'], name='job_startdate_idx'),
+        ]
+
     def __str__(self):
         return self.jobslurmid
 
@@ -107,3 +112,27 @@ class ProjectUserTransaction(models.Model):
 
     class Meta:
         verbose_name = 'Project User Transaction'
+
+
+class JobWaitHeatmap30d(models.Model):
+    """Precomputed 30-day median queue wait times by partition and CPU bucket."""
+    generated_at = models.DateTimeField()
+    partition = models.CharField(max_length=50)
+    cpu_bucket = models.CharField(max_length=20)
+    p50_wait_seconds = models.DecimalField(
+        max_digits=settings.DECIMAL_MAX_DIGITS,
+        decimal_places=2,
+        help_text='Median wait time in seconds'
+    )
+    sample_size = models.IntegerField(
+        help_text='Number of jobs in this bucket'
+    )
+
+    class Meta:
+        verbose_name = 'Job Wait Heatmap (30-day)'
+        indexes = [
+            models.Index(fields=['generated_at'], name='heatmap_generated_at_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.partition} / {self.cpu_bucket} - {self.p50_wait_seconds}s'
