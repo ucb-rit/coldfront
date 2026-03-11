@@ -38,11 +38,8 @@ SESSION_COOKIE_AGE = 60 * 60
 # The ID of the Site object to use (probably 1).
 SITE_ID = 1
 
-# A list of admin email addresses to CC when certain requests are approved.
-REQUEST_APPROVAL_CC_LIST = []
-
 # The regex for a valid LBL billing ID (six digits, a hyphen, three digits.)
-LBL_BILLING_ID_REGEX = "^\d{6}-\d{3}$"
+LBL_BILLING_ID_REGEX = r"^\d{6}-\d{3}$"
 
 #------------------------------------------------------------------------------
 # General Center Information
@@ -71,12 +68,36 @@ DISPLAY_TIME_ZONE = 'America/Los_Angeles'
 # Logging
 #------------------------------------------------------------------------------
 import os
+import sys
+import structlog
 LOG_PATH = os.path.join('/var/log/user_portals/cf_mybrc', 'cf_mybrc_portal.log')
-API_LOG_PATH = os.path.join('/var/log/user_portals/cf_mybrc', 'cf_mybrc_api.log')
+_log_formatter = 'console_dev' if DEBUG else 'json'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
+        'console_dev': {
+            '()': structlog.stdlib.ProcessorFormatter,
+            'processor': structlog.dev.ConsoleRenderer(colors=True),
+            'foreign_pre_chain': [
+                structlog.contextvars.merge_contextvars,
+                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.stdlib.add_logger_name,
+                structlog.stdlib.add_log_level,
+                structlog.stdlib.ExtraAdder(),
+            ],
+        },
+        'json': {
+            '()': structlog.stdlib.ProcessorFormatter,
+            'processor': structlog.processors.JSONRenderer(),
+            'foreign_pre_chain': [
+                structlog.contextvars.merge_contextvars,
+                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.stdlib.add_logger_name,
+                structlog.stdlib.add_log_level,
+                structlog.stdlib.ExtraAdder(),
+            ],
+        },
         'verbose': {
             'format': '[{asctime}] {levelname} {module}.{funcName}: {message}',
             'style': '{',
@@ -85,18 +106,13 @@ LOGGING = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': _log_formatter,
         },
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': LOG_PATH,
-            'formatter': 'verbose',
-        },
-        'api_file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': API_LOG_PATH,
-            'formatter': 'verbose',
+            'formatter': 'json',
         },
     },
     'loggers': {
@@ -110,16 +126,41 @@ LOGGING = {
             'level': 'INFO',
         },
         'coldfront.api': {
-            'handlers': ['api_file'],
+            'handlers': ['file'],
             'level': 'INFO',
             'propagate': False,
         },
         'coldfront': {
             'handlers': ['file'],
             'level': 'INFO',
-        }
+        },
+        # 'coldfront.commands' is defined below.
+    },
+    'root': {
+        'handlers': ['file'],
+        'level': 'INFO',
     },
 }
+
+# structlog configuration
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.filter_by_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    wrapper_class=structlog.stdlib.BoundLogger,
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
 
 #------------------------------------------------------------------------------
 # Advanced ColdFront configurations
@@ -399,6 +440,10 @@ EXTRA_AUTHENTICATION_BACKENDS += [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
+EXTRA_MIDDLEWARE += [
+    'allauth.account.middleware.AccountMiddleware',
+]
+
 # Use a custom adapter to handle email differently.
 ACCOUNT_ADAPTER = 'coldfront.core.account.adapter.AccountAdapter'
 
@@ -450,29 +495,12 @@ EXTRA_MIDDLEWARE += [
 # Deployment-specific settings
 #------------------------------------------------------------------------------
 
-# If we are running on Production, we hope to see prod_settings.py we will
-# first try to apply it and exit. If prod_settings is not present, then we
-# assume we are running on Staging. If staging_settings is not present, then we
-# assume we are running on Dev., we hope to find
-# dev_settings.py and we will try to apply it.
-
-# Use this if needed to place prod_settings in a different folder
-# sys.path.insert(0,'/var/www/django-settings')
-# Also remove the '.' in front of the prod_settings and dev_settings below.
-
 try:
-    from .prod_settings import *
+    from .env_settings import *
 except ImportError:
-    try:
-        from .staging_settings import *
-    except ImportError:
-        try:
-            from .dev_settings import *
-        except ImportError:
-            try:
-                from .test_settings import *
-            except ImportError:
-                pass
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        'Environment-based settings module should be present.')
 
 # Update extra apps based on potentially-updated variables.
 EXTRA_APPS += EXTRA_EXTRA_APPS
@@ -482,17 +510,33 @@ EXTRA_MIDDLEWARE += EXTRA_EXTRA_MIDDLEWARE
 
 # Update logging settings based on potentially-updated variables.
 LOGGING['handlers']['file']['filename'] = LOG_PATH
-LOGGING['handlers']['api_file']['filename'] = API_LOG_PATH
 
 if STREAM_LOGS_TO_STDOUT:
-    LOGGING['handlers']['file'] = {
-        'class': 'logging.StreamHandler',
-        'formatter': 'verbose',
-    }
-    LOGGING['handlers']['api_file'] = {
-        'class': 'logging.StreamHandler',
-        'formatter': 'verbose',
-    }
+    if sys.argv[1:2] == ['test']:
+        LOGGING['handlers']['file'] = {
+            'class': 'logging.NullHandler',
+        }
+        _commands_handlers = []
+    else:
+        # Redirect logs to stdout.
+        LOGGING['handlers']['file'] = {
+            'class': 'logging.StreamHandler',
+            'formatter': _log_formatter,
+        }
+        _commands_handlers = ['file']
+else:
+    if sys.argv[1:2] == ['test']:
+        _commands_handlers = ['file']
+    else:
+        _commands_handlers = ['file']
+        # Interactive sessions: Also show management command output on console
+        if sys.stdout.isatty():
+            _commands_handlers.insert(0, 'console')
+LOGGING['loggers']['coldfront.commands'] = {
+    'handlers': _commands_handlers,
+    'level': 'INFO',
+    'propagate': False,
+}
 
 # Update allauth settings based on potentially-updated variables.
 SOCIALACCOUNT_PROVIDERS['cilogon']['APP']['client_id'] = CILOGON_APP_CLIENT_ID

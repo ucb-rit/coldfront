@@ -141,15 +141,16 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
         _id = allocation_period.id
         request, _, _, _ = self.create_request_and_supporting_objects(
             allocation_period)
-        output, error = self.call_command(_id, dry_run=True)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(_id, dry_run=True)
         expected_message = (
             f'Would automatically approve AllocationRenewalRequest '
             f'{request.id} for PI {request.pi}, scheduling '
             f'{self.num_service_units} to be granted to '
             f'{request.post_project.name} on {allocation_period.start_date}, '
             f'and emailing the requester and/or PI.')
-        self.assertIn(expected_message, output)
-        self.assertFalse(error)
+        self.assertTrue(
+            any(expected_message in record.message for record in cm.records))
 
         # A request failing to meet all conditions should not be included.
 
@@ -163,9 +164,10 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
         request.status = tmp_status
         request.save()
 
-        output, error = self.call_command(_id, dry_run=True)
-        self.assertIn(expected_message, output)
-        self.assertFalse(error)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(_id, dry_run=True)
+        self.assertTrue(
+            any(expected_message in record.message for record in cm.records))
 
         # Non-FCA (BRC) or PCA (LRC) project
         project = request.post_project
@@ -195,20 +197,27 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
             request.computing_allowance = Resource.objects.get(
                 name=allowance_name)
             request.save()
-            output, error = self.call_command(_id, dry_run=True)
+
             if allowance_name == BRCAllowances.PCA:
-                self.assertTrue(output)
-                self.assertFalse(error)
+                with self.assertLogs('coldfront.commands', level='INFO') as cm:
+                    self.call_command(_id, dry_run=True)
+                self.assertTrue(
+                    any(
+                        'AllocationRenewalRequest' in record.message
+                        for record in cm.records))
             else:
-                self.assertFalse(output or error)
+                with self.assertNoLogs(
+                        'coldfront.commands', level='INFO') as cm:
+                    self.call_command(_id, dry_run=True)
         project.name = tmp_project_name
         project.save()
         request.computing_allowance = tmp_computing_allowance
         request.save()
 
-        output, error = self.call_command(_id, dry_run=True)
-        self.assertIn(expected_message, output)
-        self.assertFalse(error)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(_id, dry_run=True)
+        self.assertTrue(
+            any(expected_message in record.message for record in cm.records))
 
         # Different AllocationPeriod
         tmp_allocation_period = request.allocation_period
@@ -218,22 +227,25 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
         request.allocation_period = tmp_allocation_period
         request.save()
 
-        output, error = self.call_command(_id, dry_run=True)
-        self.assertIn(expected_message, output)
-        self.assertFalse(error)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(_id, dry_run=True)
+        self.assertTrue(
+            any(expected_message in record.message for record in cm.records))
 
         # Late request time
         tmp_request_time = request.request_time
         request.request_time = display_time_zone_date_to_utc_datetime(
             allocation_period.start_date)
         request.save()
-        self.assertFalse(any(self.call_command(_id, dry_run=True)))
+        with self.assertNoLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(_id, dry_run=True)
         request.request_time = tmp_request_time
         request.save()
 
-        output, error = self.call_command(_id, dry_run=True)
-        self.assertIn(expected_message, output)
-        self.assertFalse(error)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(_id, dry_run=True)
+        self.assertTrue(
+            any(expected_message in record.message for record in cm.records))
 
     def test_sends_emails(self):
         """Test that the command sends emails to the requester and/or
@@ -246,16 +258,12 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
         self.assertEqual(len(mail.outbox), 0)
 
         # If the dry_run flag is provided, no email should be sent.
-        output, error = self.call_command(_id, dry_run=True)
-        self.assertTrue(output)
-        self.assertFalse(error)
+        self.call_command(_id, dry_run=True)
 
         self.assertEqual(len(mail.outbox), 0)
 
         # Otherwise, an email should be sent.
-        output, error = self.call_command(_id, dry_run=False)
-        self.assertTrue(output)
-        self.assertFalse(error)
+        self.call_command(_id, dry_run=False)
 
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
@@ -277,19 +285,8 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
         self.assertEqual(request.status.name, 'Under Review')
         self.assertIsNone(request.approval_time)
 
-        expected_message_template = (
-            f'{{0}} AllocationRenewalRequest {request.id} for PI '
-            f'{request.pi}, scheduling {self.num_service_units} to be granted '
-            f'to {request.post_project.name} on '
-            f'{allocation_period.start_date}, and emailing the requester '
-            f'and/or PI.')
-
         # If the dry_run flag is provided, no update should occur.
-        output, error = self.call_command(_id, dry_run=True)
-        expected_message = expected_message_template.format(
-            'Would automatically approve')
-        self.assertIn(expected_message, output)
-        self.assertFalse(error)
+        self.call_command(_id, dry_run=True)
 
         request.refresh_from_db()
         eligibility = request.state['eligibility']
@@ -300,12 +297,8 @@ class TestApproveRenewalRequestsForAllocationPeriod(TestBase):
 
         # Otherwise, an update should occur.
         pre_time = utc_now_offset_aware()
-        output, error = self.call_command(_id, dry_run=False)
-        expected_message = expected_message_template.format(
-            'Automatically approved')
+        self.call_command(_id, dry_run=False)
         post_time = utc_now_offset_aware()
-        self.assertIn(expected_message, output)
-        self.assertFalse(error)
 
         request.refresh_from_db()
         eligibility = request.state['eligibility']

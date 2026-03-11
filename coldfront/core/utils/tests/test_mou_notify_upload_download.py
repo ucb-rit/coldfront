@@ -20,6 +20,7 @@ from coldfront.core.utils.common import utc_now_offset_aware
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.test import Client
+from django.test import override_settings
 from django.core import mail
 from django.core.files import File
 from decimal import Decimal
@@ -71,7 +72,9 @@ class MOUTestBase(TestBase):
     def download_mou_url(pk, request_type):
         return reverse(f'{request_type}-request-download-mou', kwargs={'pk': pk, 'request_type': request_type})
     
-    def _test_download_upload_download(self, request_type):
+    def _test_download_upload_download(self, request_type, expected_recipients):
+        """Test MOU download, upload, and download again. Verify email is sent
+        to expected recipients during upload."""
         url = self.download_unsigned_mou_url(self.request.pk, request_type)
         self.assert_has_access(url, self.user)
         self.assert_has_access(url, self.admin_user)
@@ -87,9 +90,18 @@ class MOUTestBase(TestBase):
         self.assert_has_access(url, self.admin_user)
         self.assert_has_access(url, self.other_user, False)
         self.client.login(username=self.user.username, password=self.password)
-        self.request.mou_file = File(BytesIO(b'abc'), 'mou.pdf')
-        self.request.save()
+
+        # Clear mailbox before upload to verify email sent during upload
+        mail.outbox = []
+
+        mou_file = File(BytesIO(b'abc'), 'mou.pdf')
+        response = self.client.post(url, {'mou_file': mou_file})
+        self.assertEqual(response.status_code, 302)
         self.request.refresh_from_db()
+
+        # Verify notification email was sent to configured admin recipients
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(set(mail.outbox[0].to), set(expected_recipients))
 
         url = self.download_mou_url(self.request.pk, request_type)
         self.assert_has_access(url, self.user)
@@ -168,6 +180,11 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
         return reverse(f'new-project-request-edit-extra-fields', kwargs={'pk': pk})
         
     @enable_deployment('BRC')
+    @override_settings(EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'new_project_requests': {
+            'agreement_uploaded': ['new_project_admin@example.com']
+        }
+    })
     def test_new_project(self):
         """Test that the MOU notification task, MOU upload, and MOU download
         features work as expected."""
@@ -223,7 +240,8 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, '[MyBRC-User-Portal] Savio Project Request Ready To Be Signed')
 
-        self._test_download_upload_download(request_type)
+        self._test_download_upload_download(
+            request_type, ['new_project_admin@example.com'])
 
 class TestAllocationAdditionMOUNotifyUploadDownload(MOUTestBase):
 
@@ -251,6 +269,11 @@ class TestAllocationAdditionMOUNotifyUploadDownload(MOUTestBase):
         return reverse(f'service-units-purchase-request-edit-extra-fields', kwargs={'pk': pk})
 
     @enable_deployment('BRC')
+    @override_settings(EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'service_units_purchase_requests': {
+            'agreement_uploaded': ['service_units_admin@example.com']
+        }
+    })
     def test_allocation_addition(self):
         """Test that the MOU notification task, MOU upload, and MOU download
         features work as expected."""
@@ -285,7 +308,8 @@ class TestAllocationAdditionMOUNotifyUploadDownload(MOUTestBase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, '[MyBRC-User-Portal] Service Units Purchase Request Ready To Be Signed')
 
-        self._test_download_upload_download(request_type)
+        self._test_download_upload_download(
+            request_type, ['service_units_admin@example.com'])
 
 class SecureDirMOUNotifyUploadDownload(MOUTestBase):
 
@@ -318,6 +342,11 @@ class SecureDirMOUNotifyUploadDownload(MOUTestBase):
         return reverse(f'secure-dir-request-edit-department', kwargs={'pk': pk})
 
     @enable_deployment('BRC')
+    @override_settings(EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'secure_directory_requests': {
+            'agreement_uploaded': ['secure_dir_admin@example.com']
+        }
+    })
     def test_secure_dir(self):
         """Test that the MOU notification task, MOU upload, and MOU download
         features work as expected."""
@@ -343,7 +372,7 @@ class SecureDirMOUNotifyUploadDownload(MOUTestBase):
         self.assert_has_access(url, self.user, False)
         self.assert_has_access(url, self.other_user, False)
         self.admin_client.post(url, data=department)
-        
+
 
         self.request.refresh_from_db()
         self.assertEqual(self.request.state['notified']['status'], 'Complete')
@@ -351,4 +380,5 @@ class SecureDirMOUNotifyUploadDownload(MOUTestBase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, '[MyBRC-User-Portal] Secure Directory Request Ready To Be Signed')
 
-        self._test_download_upload_download(request_type)
+        self._test_download_upload_download(
+            request_type, ['secure_dir_admin@example.com'])

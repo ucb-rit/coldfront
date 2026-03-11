@@ -2,7 +2,6 @@ db_name: cf_brc_db
 
 log_path: /var/log/user_portals/cf_mybrc
 portal_log_file: cf_mybrc_portal.log
-api_log_file: cf_mybrc_api.log
 logrotate_entry_name: cf_mybrc
 
 wsgi_conf_file_name: cf_mybrc_wsgi.conf
@@ -36,3 +35,5 @@ center_login_guide: https://docs-research-it.berkeley.edu/services/high-performa
 center_help_email: brc-hpc-help@berkeley.edu
 
 email_subject_prefix: "[MyBRC-User-Portal]"
+
+prometheus_metric_namespace: mybrc

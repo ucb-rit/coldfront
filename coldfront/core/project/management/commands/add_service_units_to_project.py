@@ -16,7 +16,7 @@ from coldfront.core.utils.common import add_argparse_dry_run_argument
 class Command(BaseCommand):
 
     help = 'Command to add SUs to a given project.'
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -110,7 +110,7 @@ class Command(BaseCommand):
             f'"{change_reason}".')
         if dry_run:
             message = message_text.format('Would add')
-            self.stdout.write(self.style.WARNING(message))
+            self.logger.info(f'DRY RUN: {message}')
         else:
             set_service_units(
                 accounting_allocation_objects,
@@ -119,5 +119,4 @@ class Command(BaseCommand):
                 user_allowance=updated_allowance,
                 user_change_reason=change_reason)
             message = message_text.format('Added')
-            self.stdout.write(self.style.SUCCESS(message))
             self.logger.info(message)

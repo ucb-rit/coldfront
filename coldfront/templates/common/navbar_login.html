@@ -4,6 +4,11 @@
   </a>
   <div class="dropdown-menu">
     <a id="navbar-user-user-profile" class="dropdown-item" href="{% url 'user-profile' %}"><i class="fas fa-user-circle" aria-hidden="true"></i> User Profile</a>
-    <a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Log Out</a>
+    <form action="{% url 'logout' %}" method="post" style="display:inline;">
+      {% csrf_token %}
+      <button class="dropdown-item" type="submit">
+        <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Log Out
+      </button>
+    </form>
   </div>
 </li>

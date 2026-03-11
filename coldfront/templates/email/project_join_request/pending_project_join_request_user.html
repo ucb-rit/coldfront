@@ -1,0 +1,25 @@
+<p>Dear {{ user_name }},</p>
+
+<p>This is a reminder that you have {{ num_requests }} project join request(s) in the {{ PORTAL_NAME }} User Portal.</p>
+
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+  <thead>
+    <tr style="background-color: #f0f0f0;">
+      <th style="text-align: left; padding: 8px;">Project</th>
+      <th style="text-align: left; padding: 8px;">Request Time</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for entry in request_entries %}
+    <tr>
+      <td style="padding: 8px;">{{ entry.project }}</td>
+      <td style="padding: 8px;">{{ entry.created }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p>You may review these requests <a href="{{ review_url }}">here</a>. You will periodically receive reminder emails until the managers/PIs of each project approve/deny your request(s).</p>
+
+<p>Thank you,<br>
+{{ signature_html|safe }}</p>

@@ -22,6 +22,7 @@ from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import project_detail_url
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.common import validate_num_service_units
+from coldfront.core.utils.email import get_email_admin_notification_recipients
 from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
 from coldfront.core.utils.mail import send_email_template
 
@@ -457,7 +458,8 @@ def send_new_project_request_admin_notification_email(request):
     }
 
     sender = settings.EMAIL_SENDER
-    receiver_list = settings.EMAIL_ADMIN_LIST
+    receiver_list = get_email_admin_notification_recipients(
+        'new_project_requests', 'created')
 
     send_email_template(subject, template_name, context, sender, receiver_list)
 
@@ -552,10 +554,9 @@ def send_project_request_approval_email(request, num_service_units):
 
     sender = settings.EMAIL_SENDER
     receiver_list = [request.requester.email, request.pi.email]
-    cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc)
+        subject, template_name, context, sender, receiver_list)
 
 
 def send_project_request_denial_email(request):
@@ -587,10 +588,9 @@ def send_project_request_denial_email(request):
 
     sender = settings.EMAIL_SENDER
     receiver_list = [request.requester.email, request.pi.email]
-    cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc)
+        subject, template_name, context, sender, receiver_list)
 
 
 def send_project_request_pooling_email(request):
@@ -629,6 +629,40 @@ def send_project_request_pooling_email(request):
     send_email_template(subject, template_name, context, sender, receiver_list)
 
 
+def send_project_request_ready_for_processing_email(request):
+    """Email admins notifying them that a Savio or Vector
+    ProjectAllocationRequest is ready for processing."""
+    email_enabled = import_from_settings('EMAIL_ENABLED', False)
+    if not email_enabled:
+        return
+
+    if isinstance(request, SavioProjectAllocationRequest) and request.pool:
+        subject = (
+            f'Pooled Project Request ({request.project.name}) Ready for '
+            f'Processing')
+        pooling = True
+    else:
+        subject = (
+            f'New Project Request ({request.project.name}) Ready for '
+            f'Processing')
+        pooling = False
+    template_name = (
+        'email/project_request/admins_project_request_ready_for_processing.txt')
+
+    project_url = project_detail_url(request.project)
+    context = {
+        'pooling': pooling,
+        'project_name': request.project.name,
+        'review_url': project_url,
+    }
+
+    sender = settings.EMAIL_SENDER
+    receiver_list = get_email_admin_notification_recipients(
+        'new_project_requests', 'approved')
+
+    send_email_template(subject, template_name, context, sender, receiver_list)
+
+
 def send_project_request_processing_email(request):
     """Send a notification email to the requester and PI associated with
     the given project allocation request stating that the request has
@@ -657,10 +691,9 @@ def send_project_request_processing_email(request):
 
     sender = settings.EMAIL_SENDER
     receiver_list = [request.requester.email, request.pi.email]
-    cc = settings.REQUEST_APPROVAL_CC_LIST
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list, cc=cc)
+        subject, template_name, context, sender, receiver_list)
 
 
 class VectorProjectProcessingRunner(ProjectProcessingRunner):

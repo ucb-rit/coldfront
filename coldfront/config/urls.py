@@ -34,6 +34,9 @@ urlpatterns = [
 if 'debug_toolbar' in settings.EXTRA_APPS:
     urlpatterns.append(path('__debug__/', include('debug_toolbar.urls')))
 
+if 'django_prometheus' in settings.EXTRA_APPS:
+    urlpatterns.append(path('', include('django_prometheus.urls')))
+
 if 'coldfront.api' in settings.EXTRA_APPS:
     urlpatterns.append(path('api/', include('coldfront.api.urls')))
 

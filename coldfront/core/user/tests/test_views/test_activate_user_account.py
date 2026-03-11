@@ -83,18 +83,13 @@ class TestActivateUserAccount(TestUserBase):
             verified=False,
             primary=False)
 
-        # Create other primary EmailAddresses.
+        # Create other EmailAddresses.
         other_email_addresses = []
         kwargs['verified'] = True
         for i in range(3):
             kwargs['email'] = f'{i}@email.com'
             other_email_addresses.append(
                 EmailAddress.objects.create(**kwargs))
-        # Bypass the "save" method, which prevents multiple primary addresses,
-        # by using the "update" method.
-        EmailAddress.objects.filter(
-            pk__in=[ea.pk for ea in other_email_addresses]).update(
-                primary=True)
 
         url = account_activation_url(self.user)
         response = self.client.get(url)
@@ -107,6 +102,7 @@ class TestActivateUserAccount(TestUserBase):
         self.assertTrue(email_address.verified)
         self.assertTrue(email_address.primary)
 
+        # Other EmailAddresses should remain non-primary.
         for ea in other_email_addresses:
             ea.refresh_from_db()
             self.assertFalse(ea.primary)

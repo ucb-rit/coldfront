@@ -21,10 +21,13 @@
       </ul>
       <ul class="navbar-nav ml-auto">
         <li id="navbar-login" class="nav-item">
-          <a class="nav-link" href="{% url 'login' %}">
-            <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-            Log In
-          </a>
+          <form action="{% url 'login' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button class="nav-link" type="submit" style="background:none;border:none;">
+              <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+              Log In
+            </button>
+          </form>
         </li>
         {% flag_enabled 'BASIC_AUTH_ENABLED' as basic_auth_enabled %}
         {% if basic_auth_enabled %}

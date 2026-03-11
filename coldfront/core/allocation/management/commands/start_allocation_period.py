@@ -36,7 +36,7 @@ class Command(BaseCommand):
         'scheduled new project requests and allocation renewal requests and '
         '(de)activating project allocations.')
 
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -101,7 +101,6 @@ class Command(BaseCommand):
                     message = (
                         f'Failed to retrieve expected accounting objects for '
                         f'Project {project.pk} ({project.name}).')
-                    self.stderr.write(self.style.ERROR(message))
                     log_message = message + f' Details:\n{e}'
                     self.logger.exception(log_message)
                 else:
@@ -109,7 +108,7 @@ class Command(BaseCommand):
                     message = (
                         f'Would deactivate Project {project.pk} '
                         f'({project.name}) and reset Service Units.')
-                    self.stdout.write(self.style.WARNING(message))
+                    self.logger.info(f'DRY RUN: {message}')
             else:
                 try:
                     deactivate_project_and_allocation(project)
@@ -117,7 +116,6 @@ class Command(BaseCommand):
                     message = (
                         f'Failed to deactivate Project {project.pk} '
                         f'({project.name}).')
-                    self.stderr.write(self.style.ERROR(message))
                     log_message = message + f' Details:\n{e}'
                     self.logger.exception(log_message)
                 else:
@@ -125,7 +123,6 @@ class Command(BaseCommand):
                     message = (
                         f'Deactivated Project {project.pk} ({project.name}) '
                         f'and reset Service Units.')
-                    self.stdout.write(self.style.SUCCESS(message))
                     self.logger.info(message)
         return num_successes
 
@@ -282,7 +279,7 @@ class Command(BaseCommand):
                 message = (
                     f'Failed to compute service units to grant to '
                     f'{model_name} {request.pk}: {e}')
-                self.stderr.write(self.style.ERROR(message))
+                self.logger.exception(message)
                 continue
 
             try:
@@ -293,7 +290,7 @@ class Command(BaseCommand):
                 message = (
                     f'Failed to instantiate email strategy for {model_name} '
                     f'{request.pk}: {e}')
-                self.stderr.write(self.style.ERROR(message))
+                self.logger.exception(message)
                 continue
 
             try:
@@ -304,7 +301,7 @@ class Command(BaseCommand):
                 message = (
                     f'Failed to initialize processing runner for {model_name} '
                     f'{request.pk}: {e}')
-                self.stderr.write(self.style.ERROR(message))
+                self.logger.exception(message)
                 continue
 
             message_template = (
@@ -312,7 +309,7 @@ class Command(BaseCommand):
                 f'service units.')
             if dry_run:
                 message = message_template.format('Would process')
-                self.stdout.write(self.style.WARNING(message))
+                self.logger.info(f'DRY RUN: {message}')
             else:
                 try:
                     runner.run()
@@ -320,12 +317,11 @@ class Command(BaseCommand):
                     num_failures = num_failures + 1
                     message = (
                         f'Failed to process {model_name} {request.pk}: {e}')
-                    self.stderr.write(self.style.ERROR(message))
                     self.logger.exception(e)
                 else:
                     num_successes = num_successes + 1
                     message = message_template.format('Processed')
-                    self.stdout.write(self.style.SUCCESS(message))
+                    self.logger.info(message)
 
         if not dry_run:
             self.write_statistics(
@@ -340,8 +336,6 @@ class Command(BaseCommand):
             f'Processed {num_total} {model_name}s, with {num_successes} '
             f'successes and {num_failures} failures.')
         if num_failures == 0:
-            self.stdout.write(self.style.SUCCESS(message))
             self.logger.info(message)
         else:
-            self.stderr.write(self.style.ERROR(message))
             self.logger.error(message)

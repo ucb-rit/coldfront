@@ -22,7 +22,7 @@ class Command(BaseCommand):
         'refresh to occur at a set interval. This command will fail if '
         'the cached data source backend is not installed.')
 
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -58,10 +58,6 @@ class Command(BaseCommand):
 
         task_exists = Schedule.objects.filter(name=task_name).exists()
         if task_exists:
-            message = (
-                f'A task to refresh the cache is already scheduled, under the '
-                f'name "{task_name}".')
-            self.stdout.write(self.style.WARNING(message))
             return
 
         func = 'django.core.management.call_command'
@@ -76,7 +72,7 @@ class Command(BaseCommand):
         message = (
             f'Scheduled a task to refresh the cache every {interval} '
             f'minutes, under the name "{task_name}".')
-        self.stdout.write(self.style.SUCCESS(message))
+        self.logger.info(message)
 
     def _handle_synchronous(self, data_source_config):
         """Refresh the cache."""
@@ -84,4 +80,4 @@ class Command(BaseCommand):
         data_source.clear_cache()
         data_source.populate_cache_if_needed()
 
-        self.stdout.write(self.style.SUCCESS('Cache refreshed.'))
+        self.logger.info('Hardware procurements cache refreshed.')

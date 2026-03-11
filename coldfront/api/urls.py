@@ -1,17 +1,17 @@
 from django.conf import settings
-from django.conf.urls import url
 from django.urls import include
+from django.urls import re_path
 
 from flags.urls import flagged_paths
 
 
 urlpatterns = [
-    url(r'^', include('coldfront.api.allocation.urls')),
-    url(r'^', include('coldfront.api.billing.urls')),
-    url(r'^', include('coldfront.api.statistics.urls')),
-    url(r'^', include('coldfront.api.project.urls')),
-    url(r'^', include('coldfront.api.user.urls')),
-    url(r'^', include('coldfront.api.utils.urls')),
+    re_path(r'^', include('coldfront.api.allocation.urls')),
+    re_path(r'^', include('coldfront.api.billing.urls')),
+    re_path(r'^', include('coldfront.api.statistics.urls')),
+    re_path(r'^', include('coldfront.api.project.urls')),
+    re_path(r'^', include('coldfront.api.user.urls')),
+    re_path(r'^', include('coldfront.api.utils.urls')),
 ]
 
 # Faculty Storage Allocations API

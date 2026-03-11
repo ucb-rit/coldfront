@@ -20,7 +20,7 @@ class Command(BaseCommand):
         'that instance\'s relationships, requests, etc. to the other, and then '
         'deletes it.')
 
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     def add_arguments(self, parser):
         add_argparse_dry_run_argument(parser)

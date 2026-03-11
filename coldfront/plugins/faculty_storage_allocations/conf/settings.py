@@ -1,9 +1,10 @@
 from django.conf import settings as django_settings
 
 
-ADMIN_EMAIL_LIST = getattr(
-    django_settings, 'FACULTY_STORAGE_ALLOCATIONS_ADMIN_EMAIL_LIST', [])
-
+EMAIL_ADMIN_NOTIFICATION_RECIPIENTS = getattr(
+    django_settings,
+    'FACULTY_STORAGE_ALLOCATIONS_EMAIL_ADMIN_NOTIFICATION_RECIPIENTS',
+    {})
 
 ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED = getattr(
     django_settings, 'FACULTY_STORAGE_ALLOCATIONS_ELIGIBLE_PI_EMAIL_WHITELIST_ENABLED',

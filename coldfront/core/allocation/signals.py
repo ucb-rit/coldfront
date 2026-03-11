@@ -4,10 +4,8 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import m2m_changed
 import django.dispatch
 
-allocation_activate_user = django.dispatch.Signal(
-    providing_args=["allocation_user_pk"])
-allocation_remove_user = django.dispatch.Signal(
-    providing_args=["allocation_user_pk"])
+allocation_activate_user = django.dispatch.Signal()
+allocation_remove_user = django.dispatch.Signal()
 
 
 @django.dispatch.receiver(m2m_changed, sender=Allocation.resources.through)

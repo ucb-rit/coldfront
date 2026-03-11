@@ -520,10 +520,10 @@ def mock_cache():
 def mock_email_strategy():
     """Return a mock email notification strategy."""
     mock = Mock()
-    mock.send_request_created_email = Mock()
+    mock.send_request_created_email_to_admins = Mock()
     mock.send_approval_email = Mock()
-    mock.send_denial_email = Mock()
-    mock.send_completion_email = Mock()
+    mock.send_denial_email_to_users = Mock()
+    mock.send_completion_email_to_users = Mock()
     return mock
 
 
@@ -552,5 +552,7 @@ def mock_email_settings():
         'EMAIL_SENDER': 'noreply@example.com',
         'CENTER_HELP_EMAIL': 'help@example.com',
         'EMAIL_SIGNATURE': 'Test Research Team',
-        'ADMIN_EMAIL_LIST': ['admin1@example.com', 'admin2@example.com'],
+        'EMAIL_ADMIN_NOTIFICATION_RECIPIENTS': {
+            'request_created': ['admin1@example.com', 'admin2@example.com'],
+        },
     }

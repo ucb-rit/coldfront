@@ -16,7 +16,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.urls import reverse_lazy
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -695,7 +695,7 @@ class UserReactivateView(FormView):
 
 def activate_user_account(request, uidb64=None, token=None):
     try:
-        user_pk = int(force_text(urlsafe_base64_decode(uidb64)))
+        user_pk = int(force_str(urlsafe_base64_decode(uidb64)))
         user = User.objects.get(pk=user_pk)
     except:
         user = None

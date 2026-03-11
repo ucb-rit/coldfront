@@ -1,18 +1,17 @@
-from itertools import chain
 import logging
 
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.db import transaction
 from django.dispatch import Signal
 
-from coldfront.core.allocation.models import Allocation, \
+from coldfront.core.allocation.models import \
     AllocationUserStatusChoice, AllocationAttributeType
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.project.models import (ProjectUserRemovalRequestStatusChoice,
                                            ProjectUserRemovalRequest,
                                            ProjectUserStatusChoice)
+from coldfront.core.utils.email import get_email_admin_notification_recipients
 from coldfront.core.utils.mail import send_email_template
 from coldfront.core.utils.common import import_from_settings
 
@@ -104,7 +103,8 @@ class ProjectRemovalRequestRunner(object):
             email_sender = import_from_settings('EMAIL_SENDER')
             email_signature = import_from_settings('EMAIL_SIGNATURE')
             support_email = import_from_settings('CENTER_HELP_EMAIL')
-            email_admin_list = import_from_settings('EMAIL_ADMIN_LIST')
+            email_admin_list = get_email_admin_notification_recipients(
+                'project_user_removal_requests', 'created')
 
             # Send emails to the removed user, the project's PIs (who have
             # notifications enabled), and the project's managers. Exclude the
@@ -309,8 +309,8 @@ class ProjectRemovalRequestProcessingRunner(object):
 
         # To administrators who should be notified about ProjectUser removal
         # request processing, if any
-        receiver_list = \
-            settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST
+        receiver_list = get_email_admin_notification_recipients(
+            'project_user_removal_requests', 'completed')
         if receiver_list:
             template_name = (
                 'email/project_removal/project_removal_complete_admin.txt')

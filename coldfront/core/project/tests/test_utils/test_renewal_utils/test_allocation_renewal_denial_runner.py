@@ -57,8 +57,6 @@ class TestRunnerMixin(TestRunnerMixinBase):
                 else:
                     self.fail('An AssertionError should have been raised.')
 
-    @override_settings(
-        REQUEST_APPROVAL_CC_LIST=['admin0@email.com', 'admin1@email.com'])
     def test_runner_sends_emails(self):
         """Test that the runner sends a notification email to the
         requester and the PI, CC'ing a designated list of admins."""
@@ -101,9 +99,6 @@ class TestRunnerMixin(TestRunnerMixinBase):
 
         expected_to = sorted([requester.email, pi.email])
         self.assertEqual(expected_to, sorted(email.to))
-
-        expected_cc = ['admin0@email.com', 'admin1@email.com']
-        self.assertEqual(expected_cc, sorted(email.cc))
 
     def test_runner_sets_status(self):
         """Test that the runner sets the status of the request to

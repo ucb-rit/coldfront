@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.models import Permission
 from django.contrib.messages import get_messages
 from django.core import mail
+from django.test import override_settings
 from django.urls import reverse
 
 from coldfront.core.allocation.models import *
@@ -611,6 +612,10 @@ class TestProjectRemovalRequestUpdateStatusView(TestBase):
         self.client.logout()
 
 
+@override_settings(
+    EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'project_user_removal_requests': {
+            'completed': ['admin0@example.com', 'admin1@example.com']}})
 class TestProjectRemovalRequestCompleteStatusView(TestBase):
     """A class for testing ProjectRemovalRequestCompleteStatusView."""
 
@@ -649,8 +654,6 @@ class TestProjectRemovalRequestCompleteStatusView(TestBase):
         expected_from = settings.EMAIL_SENDER
         expected_to = {
             user.email for user in [self.user2, self.pi1, self.manager1]}
-        expected_to.update(
-            settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST)
         user_name = f'{self.user2.first_name} {self.user2.last_name}'
         pi_name = f'{self.pi1.first_name} {self.pi1.last_name}'
         project_name = self.project1.name
@@ -659,15 +662,26 @@ class TestProjectRemovalRequestCompleteStatusView(TestBase):
             f'initiated by {pi_name} has been completed. {user_name} is no '
             f'longer a user of Project {project_name}.')
 
+        admin_list = ['admin0@example.com', 'admin1@example.com']
+
+        # Should have one email per unique recipient, plus one email to admins
+        self.assertEqual(len(mail.outbox), len(expected_to) + 1)
+
+        admin_message_sent = False
         for email in mail.outbox:
             self.assertEqual(email.from_email, expected_from)
-            self.assertEqual(len(email.to), 1)
-            to = email.to[0]
-            self.assertIn(to, expected_to)
-            expected_to.remove(to)
+            recipients = sorted(email.to)
+            if recipients == sorted(admin_list):
+                admin_message_sent = True
+            else:
+                self.assertEqual(len(email.to), 1)
+                to = email.to[0]
+                self.assertIn(to, expected_to)
+                expected_to.remove(to)
             self.assertIn(expected_body, email.body)
 
         self.assertFalse(expected_to)
+        self.assertTrue(admin_message_sent)
 
     def _assert_message_counts(self, response, num_debug=0, num_info=0,
                                num_success=0, num_warning=0, num_error=0):
@@ -875,7 +889,7 @@ class TestProjectRemovalRequestCompleteStatusView(TestBase):
             AllocationUserStatusChoice.objects.get(name='Removed')
 
         allocation_user.refresh_from_db()
-        self.assertEquals(allocation_user.status,
+        self.assertEqual(allocation_user.status,
                           allocation_user_status_choice_removed)
 
         cluster_account_status = \
@@ -883,7 +897,7 @@ class TestProjectRemovalRequestCompleteStatusView(TestBase):
                 allocation_attribute_type=AllocationAttributeType.objects.get(
                     name='Cluster Account Status'))
 
-        self.assertEquals(cluster_account_status.value, 'Denied')
+        self.assertEqual(cluster_account_status.value, 'Denied')
 
         self.client.logout()
 
@@ -922,9 +936,11 @@ class TestProjectRemovalRequestCompleteStatusView(TestBase):
                          self.project1.projectuser_set.filter(
                              role__name__in=['Manager', 'Principal Investigator'],
                              status__name='Active',
-                             enable_notifications=True)] + [self.user2.email] +
-                         settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST)
-        self.assertEqual(len(mail.outbox), len(email_to_list))
+                             enable_notifications=True)] + [self.user2.email])
+        admin_list = ['admin0@example.com', 'admin1@example.com']
+
+        # Should have one email per unique recipient, plus one email to admins
+        self.assertEqual(len(mail.outbox), len(email_to_list) + 1)
 
         email_body = f'The request to remove {self.user2.first_name} ' \
                      f'{self.user2.last_name} of Project ' \
@@ -933,11 +949,18 @@ class TestProjectRemovalRequestCompleteStatusView(TestBase):
                      f'{self.user2.first_name} {self.user2.last_name}' \
                      f' is no longer a user of Project {self.project1.name}.'
 
+        admin_message_sent = False
         for email in mail.outbox:
             self.assertIn(email_body, email.body)
-            self.assertIn(email.to[0], email_to_list)
-            self.assertNotEqual(email.to[0], self.pi2.email)
+            recipients = sorted(email.to)
+            if recipients == sorted(admin_list):
+                admin_message_sent = True
+            else:
+                self.assertIn(email.to[0], email_to_list)
+                self.assertNotEqual(email.to[0], self.pi2.email)
             self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+
+        self.assertTrue(admin_message_sent)
 
         self.client.logout()
 

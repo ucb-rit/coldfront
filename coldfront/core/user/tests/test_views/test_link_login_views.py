@@ -1,3 +1,5 @@
+import importlib
+
 from copy import deepcopy
 from http import HTTPStatus
 from urllib.parse import urlparse
@@ -277,26 +279,26 @@ class TestLoginLinkViews(TestBase):
         fails."""
         # Set the max age of a token to 0 seconds.
         with override_settings(SESAME_MAX_AGE=0):
-            sesame_settings.load()
+            importlib.reload(sesame_settings)
 
-        response = self._request_login_link(self.email_address.email)
-        self._assert_ack_message_sent(response)
+            response = self._request_login_link(self.email_address.email)
+            self._assert_ack_message_sent(response)
 
-        # A login link is sent to the address.
-        self.assertEqual(len(mail.outbox), 1)
-        urls = self.parse_urls_from_str(mail.outbox[0].body)
-        self.assertTrue(urls)
-        login_url = urls[0]
+            # A login link is sent to the address.
+            self.assertEqual(len(mail.outbox), 1)
+            urls = self.parse_urls_from_str(mail.outbox[0].body)
+            self.assertTrue(urls)
+            login_url = urls[0]
 
-        # The user clicks on the link, but is not authenticated.
-        response = self.client.get(login_url)
-        self.assertEqual(response.status_code, HTTPStatus.FORBIDDEN)
-        client_user = get_user(self.client)
-        self.assertFalse(client_user.is_authenticated)
-        self._assert_bad_link_message_sent(response)
+            # The user clicks on the link, but is not authenticated.
+            response = self.client.get(login_url)
+            self.assertEqual(response.status_code, HTTPStatus.FORBIDDEN)
+            client_user = get_user(self.client)
+            self.assertFalse(client_user.is_authenticated)
+            self._assert_bad_link_message_sent(response)
 
         # Revert the max age of a token for subsequent tests.
-        sesame_settings.load()
+        importlib.reload(sesame_settings)
 
     def test_login_link_invalid(self):
         """Test that, if the login link is invalid, authentication

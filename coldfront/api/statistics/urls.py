@@ -1,6 +1,6 @@
 from coldfront.api.statistics.views import can_submit_job
 from coldfront.api.statistics.views import JobViewSet
-from django.conf.urls import url
+from django.urls import re_path
 from rest_framework.routers import DefaultRouter
 
 
@@ -12,4 +12,4 @@ can_submit_job_url = (
     r'^can_submit_job/(?P<job_cost>.*)/(?P<user_id>.*)/'
     r'(?P<account_id>.*)/$')
 urlpatterns.append(
-    url(can_submit_job_url, can_submit_job, name='can_submit_job'))
+    re_path(can_submit_job_url, can_submit_job, name='can_submit_job'))

@@ -315,9 +315,10 @@ class TestStartAllocationPeriod(TestBase):
         num_new_project_requests = len(num_sus_by_new_project_request_id)
         num_renewal_requests = len(num_sus_by_renewal_request_id)
 
-        deactivation_prefix = 'Would deactivate' if dry_run else 'Deactivated'
+        deactivation_prefix = (
+            'DRY RUN: Would deactivate' if dry_run else 'Deactivated')
         processing_prefix_template = (
-            'Would process {0}' if dry_run else 'Processed {0}')
+            'DRY RUN: Would process {0}' if dry_run else 'Processed {0}')
         new_project_request_processing_prefix = \
             processing_prefix_template.format(
                 SavioProjectAllocationRequest.__name__)
@@ -815,7 +816,7 @@ class TestStartAllocationPeriod(TestBase):
                 allocation=allocation, user=user,
                 status=active_allocation_status)
             allocation_user_allowance = Decimal(
-                random.randint(1, allocation_allowance))
+                random.randint(1, int(allocation_allowance)))
             allocation_user_attribute = AllocationUserAttribute.objects.create(
                 allocation_attribute_type=service_units_type,
                 allocation=allocation,
@@ -823,7 +824,7 @@ class TestStartAllocationPeriod(TestBase):
                 value=str(allocation_user_allowance))
 
             allocation_user_usage = Decimal(
-                random.randint(1, allocation_user_allowance))
+                random.randint(1, int(allocation_user_allowance)))
             allocation_user_attribute_usage = \
                 allocation_user_attribute.allocationuserattributeusage
             allocation_user_attribute_usage.value = allocation_user_usage
@@ -838,13 +839,13 @@ class TestStartAllocationPeriod(TestBase):
     def extract_deactivation_message_entries(message, dry_run=False):
         """Given a line relating to Project deactivation, return the
         outputted Project ID and name."""
-        pattern_template = (
-            '{0} Project (?P<project_id>\d+) \((?P<project_name>[a-z0-9_]+)\) '
-            'and reset Service Units\.')
         if dry_run:
-            pattern = pattern_template.format('Would deactivate')
+            prefix = 'DRY RUN: Would deactivate'
         else:
-            pattern = pattern_template.format('Deactivated')
+            prefix = 'Deactivated'
+        pattern = (
+            rf'{prefix} Project (?P<project_id>\d+) '
+            rf'\((?P<project_name>[a-z0-9_]+)\) and reset Service Units\.')
         return re.match(pattern, message).groups()
 
     @staticmethod
@@ -852,10 +853,10 @@ class TestStartAllocationPeriod(TestBase):
         """Given a line relating to request processing, return the
         outputted request ID and number of service units."""
         pattern_template = (
-            f'{{0}} {model.__name__} (?P<request_id>\d+) with '
-            f'(?P<num_service_units>[0-9.]+) service units.')
+            rf'{{0}} {model.__name__} (?P<request_id>\d+) with '
+            rf'(?P<num_service_units>[0-9.]+) service units.')
         if dry_run:
-            pattern = pattern_template.format('Would process')
+            pattern = pattern_template.format('DRY RUN: Would process')
         else:
             pattern = pattern_template.format('Processed')
         return re.match(pattern, message).groups()
@@ -875,7 +876,8 @@ class TestStartAllocationPeriod(TestBase):
         error."""
         _id = sum(AllocationPeriod.objects.values_list('id', flat=True))
         with self.assertRaises(CommandError) as cm:
-            self.call_command(_id)
+            with self.assertLogs('coldfront.commands', level='ERROR'):
+                self.call_command(_id)
         self.assertIn('does not exist', str(cm.exception))
 
     @enable_deployment('BRC')
@@ -886,14 +888,15 @@ class TestStartAllocationPeriod(TestBase):
         future_id = self.next_allowance_year.id
         for _id in (past_id, future_id):
             with self.assertRaises(CommandError) as cm:
-                self.call_command(_id)
+                with self.assertLogs('coldfront.commands', level='ERROR'):
+                    self.call_command(_id)
             self.assertIn('is not current', str(cm.exception))
 
     @enable_deployment('BRC')
     def test_allocation_renewal_request_processing_eligibility(self):
         """Test that AllocationRenewalRequests that do not meet all
         conditions for processing are not processed."""
-        message_prefix = 'Would process AllocationRenewalRequest {0}'
+        message_prefix = 'DRY RUN: Would process AllocationRenewalRequest {0}'
         approved_status = AllocationRenewalRequestStatusChoice.objects.get(
             name='Approved')
 
@@ -904,19 +907,19 @@ class TestStartAllocationPeriod(TestBase):
         fc_existing_request.allocation_period = self.previous_allowance_year
         fc_existing_request.save()
 
-        output, error = self.call_command(
-            self.current_allowance_year.id, dry_run=True)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(self.current_allowance_year.id, dry_run=True)
+        output = '\n'.join(record.message for record in cm.records)
         self.assertNotIn(message_prefix.format(fc_existing_request.id), output)
-        self.assertFalse(error)
 
         # A request for a future AllocationPeriod should not be processed.
         fc_existing_request.allocation_period = self.next_allowance_year
         fc_existing_request.save()
 
-        output, error = self.call_command(
-            self.current_allowance_year.id, dry_run=True)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(self.current_allowance_year.id, dry_run=True)
+        output = '\n'.join(record.message for record in cm.records)
         self.assertNotIn(message_prefix.format(fc_existing_request.id), output)
-        self.assertFalse(error)
 
         # A request with a status other than 'Approved' should not be
         # processed.
@@ -927,13 +930,15 @@ class TestStartAllocationPeriod(TestBase):
         for status in statuses:
             fc_existing_request.status = status
             fc_existing_request.save()
-            output, error = self.call_command(
-                self.current_allowance_year.id, dry_run=True)
+            with self.assertLogs('coldfront.commands', level='INFO') as cm:
+                self.call_command(self.current_allowance_year.id, dry_run=True)
+            output = '\n'.join(record.message for record in cm.records)
+            fc_message_present = any(
+                fc_message in record.message for record in cm.records)
             if status == approved_status:
-                self.assertIn(fc_message, output)
+                self.assertTrue(fc_message_present)
             else:
-                self.assertNotIn(fc_message, output)
-            self.assertFalse(error)
+                self.assertFalse(fc_message_present)
 
     @enable_deployment('BRC')
     def test_failed_deactivations_preempt_processing(self):
@@ -955,7 +960,9 @@ class TestStartAllocationPeriod(TestBase):
                 with patch(method_to_patch) as patched_method:
                     patched_method.side_effect = raise_exception
                     with self.assertRaises(CommandError) as cm:
-                        self.call_command(_id, dry_run=dry_run)
+                        with self.assertLogs(
+                                'coldfront.commands', level='ERROR'):
+                            self.call_command(_id, dry_run=dry_run)
                     self.assertEqual(error_message, str(cm.exception))
 
         # Retrieve the numbers of deactivated Projects and complete requests.
@@ -999,10 +1006,10 @@ class TestStartAllocationPeriod(TestBase):
         requests."""
         allocation_period_id = self.current_allowance_year.id
 
-        # Run the command the first time,
-        output, error = self.call_command(allocation_period_id, dry_run=False)
-        self.assertTrue(output)
-        self.assertFalse(error)
+        # Run the command the first time.
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(allocation_period_id, dry_run=False)
+        output = '\n'.join(record.message for record in cm.records)
 
         fc_existing = Project.objects.get(name='fc_existing')
         fc_existing_str = (
@@ -1035,7 +1042,9 @@ class TestStartAllocationPeriod(TestBase):
         # The Projects should not appear in a subsequent run because their end
         # dates are no longer less than the start date of the AllocationPeriod.
         # The requests should not appear because they are in a completed state.
-        output, error = self.call_command(allocation_period_id, dry_run=False)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(allocation_period_id, dry_run=False)
+        output = '\n'.join(record.message for record in cm.records)
         self.assertNotIn('Deactivated', output)
         self.assertNotIn(fc_existing_str, output)
         self.assertNotIn(pc_existing_str, output)
@@ -1044,13 +1053,12 @@ class TestStartAllocationPeriod(TestBase):
         self.assertNotIn(fc_renewal_request_str, output)
         self.assertIn('Processed 0 SavioProjectAllocationRequests', output)
         self.assertIn('Processed 0 AllocationRenewalRequests', output)
-        self.assertFalse(error)
 
     @enable_deployment('BRC')
     def test_new_project_request_processing_eligibility(self):
         """Test that new project requests that do not meet all
         conditions for processing are not processed."""
-        message_prefix = 'Would process SavioProjectAllocationRequest {0}'
+        message_prefix = 'DRY RUN: Would process SavioProjectAllocationRequest {0}'
         approved_scheduled_status = \
             ProjectAllocationRequestStatusChoice.objects.get(
                 name='Approved - Scheduled')
@@ -1071,11 +1079,11 @@ class TestStartAllocationPeriod(TestBase):
             project=fc_future)
         self.assertEqual(fc_future_request.status, approved_scheduled_status)
 
-        output, error = self.call_command(
-            self.current_allowance_year.id, dry_run=True)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(self.current_allowance_year.id, dry_run=True)
+        output = '\n'.join(record.message for record in cm.records)
         for request in (fc_existing_request, fc_future_request):
             self.assertNotIn(message_prefix.format(request.id), output)
-        self.assertFalse(error)
 
         # A request with a status other than 'Approved - Scheduled' should not
         # be processed.
@@ -1090,14 +1098,14 @@ class TestStartAllocationPeriod(TestBase):
         for status in statuses:
             pc_new_request.status = status
             pc_new_request.save()
-            output, error = self.call_command(
-                self.current_allowance_year.id, dry_run=True)
+            with self.assertLogs('coldfront.commands', level='INFO') as cm:
+                self.call_command(self.current_allowance_year.id, dry_run=True)
+            output = '\n'.join(record.message for record in cm.records)
             self.assertIn(fc_message, output)
             if status == approved_scheduled_status:
                 self.assertIn(pc_message, output)
             else:
                 self.assertNotIn(pc_message, output)
-            self.assertFalse(error)
 
     @enable_deployment('BRC')
     def test_output_for_allowance_year_period(self):
@@ -1123,10 +1131,9 @@ class TestStartAllocationPeriod(TestBase):
         self.assertEqual(expected_num_entities, 5)
 
         for dry_run in (True, False):
-            output, error = self.call_command(
-                allocation_period_id, dry_run=dry_run)
-            self.assertTrue(output)
-            self.assertFalse(error)
+            with self.assertLogs('coldfront.commands', level='INFO') as cm:
+                self.call_command(allocation_period_id, dry_run=dry_run)
+            output = '\n'.join(record.message for record in cm.records)
             # When dry_run is False, there should be two more lines of output.
             self.assert_output(
                 output, expected_num_entities + 2 * int(not dry_run),
@@ -1157,10 +1164,9 @@ class TestStartAllocationPeriod(TestBase):
         self.assertEqual(expected_num_entities, 2)
 
         for dry_run in (True, False):
-            output, error = self.call_command(
-                allocation_period_id, dry_run=dry_run)
-            self.assertTrue(output)
-            self.assertFalse(error)
+            with self.assertLogs('coldfront.commands', level='INFO') as cm:
+                self.call_command(allocation_period_id, dry_run=dry_run)
+            output = '\n'.join(record.message for record in cm.records)
             # When dry_run is False, there should be two more lines of output.
             self.assert_output(
                 output, expected_num_entities + 2 * int(not dry_run),
@@ -1176,15 +1182,16 @@ class TestStartAllocationPeriod(TestBase):
         def assert_message_in_command_output(included,
                                              project_name='fc_existing'):
             message_template = (
-                'Would deactivate Project {0} ({1}) and reset Service Units.')
+                'DRY RUN: Would deactivate Project {0} ({1}) and reset Service '
+                'Units.')
             message = message_template.format(fc_existing.id, project_name)
-            output, error = self.call_command(
-                allocation_period.id, dry_run=True)
+            with self.assertLogs('coldfront.commands', level='INFO') as cm:
+                self.call_command(allocation_period.id, dry_run=True)
+            output = '\n'.join(record.message for record in cm.records)
             if included:
                 self.assertIn(message, output)
             else:
                 self.assertNotIn(message, output)
-            self.assertFalse(error)
 
         project_name_prefix = \
             self.computing_allowance_interface.code_from_name(
@@ -1263,15 +1270,17 @@ class TestStartAllocationPeriod(TestBase):
 
         dry_run = True
 
-        output, error = self.call_command(
-            allocation_period_id, skip_deactivations=False, dry_run=dry_run)
-        self.assertIn('Would deactivate', output)
-        self.assertFalse(error)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(
+                allocation_period_id, skip_deactivations=False, dry_run=dry_run)
+        output = '\n'.join(record.message for record in cm.records)
+        self.assertIn('DRY RUN: Would deactivate', output)
 
-        output, error = self.call_command(
-            allocation_period_id, skip_deactivations=True, dry_run=dry_run)
-        self.assertNotIn('Would deactivate', output)
-        self.assertFalse(error)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command(
+                allocation_period_id, skip_deactivations=True, dry_run=dry_run)
+        output = '\n'.join(record.message for record in cm.records)
+        self.assertNotIn('DRY RUN: Would deactivate', output)
 
         # Raise an exception during deactivation so that processing is avoided
         # on the first run.
@@ -1280,14 +1289,17 @@ class TestStartAllocationPeriod(TestBase):
                 StartAllocationPeriodCommand, 'deactivate_projects',
                 raise_exception):
             with self.assertRaises(Exception):
-                self.call_command(
-                    allocation_period_id, skip_deactivations=False,
-                    dry_run=dry_run)
+                with self.assertLogs('coldfront.commands', level='ERROR'):
+                    self.call_command(
+                        allocation_period_id, skip_deactivations=False,
+                        dry_run=dry_run)
 
-            output, error = self.call_command(
-                allocation_period_id, skip_deactivations=True, dry_run=dry_run)
+            with self.assertLogs('coldfront.commands', level='INFO') as cm:
+                self.call_command(
+                    allocation_period_id, skip_deactivations=True,
+                    dry_run=dry_run)
+            output = '\n'.join(record.message for record in cm.records)
             self.assertNotIn('Deactivated', output)
-            self.assertFalse(error)
 
     @enable_deployment('BRC')
     def test_starts_allowance_year_period(self):

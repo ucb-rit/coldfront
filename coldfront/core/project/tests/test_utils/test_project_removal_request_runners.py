@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from django.conf import settings
 from django.core import mail
+from django.test import override_settings
 
 from coldfront.api.statistics.utils import create_project_allocation
 from coldfront.api.statistics.utils import create_user_project_allocation
@@ -130,6 +131,10 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
         """Set up test data."""
         super().setUp()
 
+    @override_settings(
+        EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+            'project_user_removal_requests': {
+                'created': ['admin0@example.com', 'admin1@example.com']}})
     def test_normal_user_self_removal_request(self):
         """
         Testing when a single user self requests to be removed
@@ -173,8 +178,8 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
             role__name__in=['Manager', 'Principal Investigator'],
             status__name='Active').exclude(user=removal_request.requester)
 
-        email_to_list = [proj_user.user.email for proj_user in manager_pi_queryset]
-        self.assertEqual(len(mail.outbox), len(manager_pi_queryset) + 1)
+        email_to_set = {
+            proj_user.user.email for proj_user in manager_pi_queryset}
 
         email_body = f'{self.user1.first_name} {self.user1.last_name} of ' \
                      f'Project {self.project1.name} has requested to remove ' \
@@ -184,13 +189,25 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
                            f'{self.user1.first_name} {self.user1.last_name} ' \
                            f'from {self.project1.name}.'
 
+        admin_emails = ['admin0@example.com', 'admin1@example.com']
+
+        user_messages, admin_message = [], None
+
+        self.assertEqual(len(mail.outbox), len(manager_pi_queryset) + 1)
         for email in mail.outbox:
-            if email.to[0] in settings.EMAIL_ADMIN_LIST:
-                self.assertIn(email_body_admin, email.body)
-            else:
-                self.assertIn(email_body, email.body)
-                self.assertIn(email.to[0], email_to_list)
             self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+            if sorted(email.to) == admin_emails:
+                admin_message = email
+            elif email.to[0] in email_to_set:
+                user_messages.append(email)
+                email_to_set.remove(email.to[0])
+
+        self.assertTrue(admin_message)
+        self.assertIn(email_body_admin, admin_message.body)
+
+        self.assertFalse(email_to_set)
+        for email in user_messages:
+            self.assertIn(email_body, email.body)
 
         # Test creating another project removal request after self removal request
         request_runner = ProjectRemovalRequestRunner(
@@ -209,6 +226,10 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
         self.assertEqual(len(success_messages), 0)
         self.assertEqual(len(error_messages), 1)
 
+    @override_settings(
+        EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+            'project_user_removal_requests': {
+                'created': ['admin0@example.com', 'admin1@example.com']}})
     def test_normal_user_pi_removal_request(self):
         """
         Testing when a pi requests for a normal user to be removed
@@ -252,9 +273,9 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
             role__name__in=['Manager', 'Principal Investigator'],
             status__name='Active').exclude(user=removal_request.requester)
 
-        email_to_list = [proj_user.user.email for proj_user in manager_pi_queryset]\
-                        + [self.user1.email]
-        self.assertEqual(len(mail.outbox), len(manager_pi_queryset) + 2)
+        email_to_set = {
+            proj_user.user.email for proj_user in manager_pi_queryset}
+        email_to_set.add(self.user1.email)
 
         email_body = f'{self.pi1.first_name} {self.pi1.last_name} of ' \
                      f'Project {self.project1.name} has requested to remove ' \
@@ -264,13 +285,25 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
                            f'{self.user1.first_name} {self.user1.last_name} ' \
                            f'from {self.project1.name}.'
 
+        admin_emails = ['admin0@example.com', 'admin1@example.com']
+
+        user_messages, admin_message = [], None
+
+        self.assertEqual(len(mail.outbox), len(manager_pi_queryset) + 2)
         for email in mail.outbox:
-            if email.to[0] in settings.EMAIL_ADMIN_LIST:
-                self.assertIn(email_body_admin, email.body)
-            else:
-                self.assertIn(email_body, email.body)
-                self.assertIn(email.to[0], email_to_list)
             self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+            if sorted(email.to) == admin_emails:
+                admin_message = email
+            elif email.to[0] in email_to_set:
+                user_messages.append(email)
+                email_to_set.remove(email.to[0])
+
+        self.assertTrue(admin_message)
+        self.assertIn(email_body_admin, admin_message.body)
+
+        self.assertFalse(email_to_set)
+        for email in user_messages:
+            self.assertIn(email_body, email.body)
 
         # Test creating another project removal request after pi removal request
         request_runner = ProjectRemovalRequestRunner(
@@ -393,6 +426,10 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
         self.assertEqual(self.project1.projectuser_set.get(user=self.user1).status.name,
                          'Pending - Remove')
 
+    @override_settings(
+        EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+            'project_user_removal_requests': {
+                'created': ['admin0@example.com', 'admin1@example.com']}})
     def test_manager_removal_request_given_multiple_managers(self):
         """
         Testing when a PI requests to remove a manager given that
@@ -459,8 +496,8 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
             role__name__in=['Manager', 'Principal Investigator'],
             status__name='Active').exclude(user=removal_request.requester)
 
-        email_to_list = [proj_user.user.email for proj_user in manager_pi_queryset]
-        self.assertEqual(len(mail.outbox), len(manager_pi_queryset) + 2)
+        email_to_set = {
+            proj_user.user.email for proj_user in manager_pi_queryset}
 
         email_body = f'{self.pi1.first_name} {self.pi1.last_name} of ' \
                      f'Project {self.project1.name} has requested to remove ' \
@@ -470,13 +507,25 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
                            f'{manager2.first_name} {manager2.last_name} ' \
                            f'from {self.project1.name}.'
 
+        admin_emails = ['admin0@example.com', 'admin1@example.com']
+
+        user_messages, admin_message = [], None
+
+        self.assertEqual(len(mail.outbox), len(manager_pi_queryset) + 2)
         for email in mail.outbox:
-            if email.to[0] in settings.EMAIL_ADMIN_LIST:
-                self.assertIn(email_body_admin, email.body)
-            else:
-                self.assertIn(email_body, email.body)
-                self.assertIn(email.to[0], email_to_list)
             self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+            if sorted(email.to) == admin_emails:
+                admin_message = email
+            elif email.to[0] in email_to_set:
+                user_messages.append(email)
+                email_to_set.remove(email.to[0])
+
+        self.assertTrue(admin_message)
+        self.assertIn(email_body_admin, admin_message.body)
+
+        self.assertFalse(email_to_set)
+        for email in user_messages:
+            self.assertIn(email_body, email.body)
 
         # Test creating another project removal request after pi removal request
         request_runner = ProjectRemovalRequestRunner(
@@ -495,6 +544,10 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
         self.assertEqual(len(success_messages), 0)
         self.assertEqual(len(error_messages), 1)
 
+    @override_settings(
+        EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+            'project_user_removal_requests': {
+                'created': ['admin0@example.com', 'admin1@example.com']}})
     def test_normal_user_self_removal_request_pi_no_notifications(self):
         """
         Testing when a single user self requests to be removed and the PI
@@ -545,8 +598,8 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
             status__name='Active',
             enable_notifications=True).exclude(user=removal_request.requester)
 
-        email_to_list = [proj_user.user.email for proj_user in manager_pi_queryset]
-        self.assertEqual(len(mail.outbox), len(manager_pi_queryset) + 1)
+        email_to_set = {
+            proj_user.user.email for proj_user in manager_pi_queryset}
 
         email_body = f'{self.user1.first_name} {self.user1.last_name} of ' \
                      f'Project {self.project1.name} has requested to remove ' \
@@ -556,16 +609,31 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
                            f'{self.user1.first_name} {self.user1.last_name} ' \
                            f'from {self.project1.name}.'
 
+        admin_emails = ['admin0@example.com', 'admin1@example.com']
+
+        user_messages, admin_message = [], None
+
+        self.assertEqual(len(mail.outbox), len(manager_pi_queryset) + 1)
         for email in mail.outbox:
-            if email.to[0] in settings.EMAIL_ADMIN_LIST:
-                self.assertIn(email_body_admin, email.body)
-            else:
-                self.assertIn(email_body, email.body)
-                self.assertIn(email.to[0], email_to_list)
-            self.assertNotEqual(email.to, self.pi1.email)
             self.assertEqual(settings.EMAIL_SENDER, email.from_email)
+            if sorted(email.to) == admin_emails:
+                admin_message = email
+            elif email.to[0] in email_to_set:
+                user_messages.append(email)
+                email_to_set.remove(email.to[0])
+
+        self.assertTrue(admin_message)
+        self.assertIn(email_body_admin, admin_message.body)
+
+        self.assertFalse(email_to_set)
+        for email in user_messages:
+            self.assertIn(email_body, email.body)
 
 
+@override_settings(
+    EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'project_user_removal_requests': {
+            'completed': ['admin0@example.com', 'admin1@example.com']}})
 class TestProjectRemovalRequestProcessingRunner(TestRemovalRequestRunnerBase):
     """A class for testing ProjectRemovalRequestProcessingRunner."""
 
@@ -607,8 +675,7 @@ class TestProjectRemovalRequestProcessingRunner(TestRemovalRequestRunnerBase):
         expected_from = settings.EMAIL_SENDER
         expected_to = {
             user.email for user in [self.user1, self.pi1, self.manager]}
-        expected_to.update(
-            settings.PROJECT_USER_REMOVAL_REQUEST_PROCESSED_EMAIL_ADMIN_LIST)
+        expected_admin_email_list = ['admin0@example.com', 'admin1@example.com']
         user_name = f'{self.user1.first_name} {self.user1.last_name}'
         pi_name = f'{self.pi1.first_name} {self.pi1.last_name}'
         project_name = self.project1.name
@@ -617,15 +684,22 @@ class TestProjectRemovalRequestProcessingRunner(TestRemovalRequestRunnerBase):
             f'initiated by {pi_name} has been completed. {user_name} is no '
             f'longer a user of Project {project_name}.')
 
+        admin_message_sent = False
+
         for email in mail.outbox:
             self.assertEqual(email.from_email, expected_from)
-            self.assertEqual(len(email.to), 1)
-            to = email.to[0]
-            self.assertIn(to, expected_to)
-            expected_to.remove(to)
+            recipients = sorted(email.to)
+            if recipients == expected_admin_email_list:
+                admin_message_sent = True
+            else:
+                self.assertEqual(len(email.to), 1)
+                to = email.to[0]
+                self.assertIn(to, expected_to)
+                expected_to.remove(to)
             self.assertIn(expected_body, email.body)
 
         self.assertFalse(expected_to)
+        self.assertTrue(admin_message_sent)
 
     def _assert_post_state(self):
         """Assert that the relevant objects have the expected state,

@@ -112,7 +112,7 @@ class TestAPIBase(TestCase):
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         json = response.json()
         self.assertIn('detail', json)
-        self.assertEqual(json['detail'], 'Not found.')
+        self.assertIn('matches the given query', json['detail'])
 
     def assert_retrieve_result_format(self, url, result_fields):
         """Make a GET request to the given URL. Assert that the response

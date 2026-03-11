@@ -34,11 +34,13 @@ INSTALLED_APPS = [
 # Additional Apps
 INSTALLED_APPS += [
     'crispy_forms',
+    'crispy_bootstrap4',
     'sslserver',
     'django_q',
     'simple_history',
     'durationwidget',
     'maintenance_mode',
+    'django_structlog',
 ]
 
 # Fork-specific Additional Apps
@@ -80,7 +82,9 @@ INSTALLED_APPS += [
 # Django Middleware
 # ------------------------------------------------------------------------------
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'django_structlog.middlewares.RequestMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -181,6 +185,7 @@ MESSAGE_TAGS = {
     messages.ERROR: 'danger',
 }
 
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap4'
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 STATIC_URL = '/static/'

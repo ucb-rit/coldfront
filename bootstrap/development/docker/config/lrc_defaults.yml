@@ -2,7 +2,6 @@ db_name: cf_lrc_db
 
 log_path: /var/log/user_portals/cf_mylrc
 portal_log_file: cf_mylrc_portal.log
-api_log_file: cf_mylrc_api.log
 logrotate_entry_name: cf_mylrc
 
 wsgi_conf_file_name: cf_mylrc_wsgi.conf
@@ -36,3 +35,5 @@ center_login_guide: https://it.lbl.gov/resource/hpc/for-users/getting-started/
 center_help_email: hpcshelp@lbl.gov
 
 email_subject_prefix: "[MyLRC-User-Portal]"
+
+prometheus_metric_namespace: mylrc

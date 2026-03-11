@@ -57,7 +57,6 @@ redis_host: localhost
 # TODO: For LRC, use the substring 'cf_mylrc'.
 log_path: /var/log/user_portals/cf_mybrc
 portal_log_file: cf_mybrc_portal.log
-api_log_file: cf_mybrc_api.log
 
 logrotate_entry_name: cf_mybrc
 
@@ -79,6 +78,50 @@ apache_num_threads_per_process: 10
 wsgi_conf_file_name: cf_mybrc_wsgi.conf
 # TODO: For LRC, use the substring 'cf_lrc'.
 wsgi_conf_log_prefix: cf_brc
+
+#-------------------
+# Access to /metrics
+#-------------------
+
+# IP ranges, in CIDR notation, from which /metrics is accessible.
+# If the list is empty, metrics access is not restricted by IP.
+ip_range_with_metrics_access:
+  - 127.0.0.1/32
+
+# Apache htpasswd file path for /metrics basic auth.
+htpasswd_file: /etc/httpd/.htpasswd
+
+# The username and password required for /metrics access.
+# The password is hashed to bcrypt by Ansible's htpasswd module.
+# TODO: Replace the password.
+metrics_htpasswd_user: prometheus
+metrics_htpasswd_password: password
+
+#------------------------------------------------------------------------------
+# Django Caching settings
+#------------------------------------------------------------------------------
+
+# A short name representing a cache backend for Django.
+# Supported options: "redis", "dummy"
+django_cache_backend_short: redis
+
+#------------------------------------------------------------------------------
+# BRC OpenDKIM settings
+#------------------------------------------------------------------------------
+
+# Whether to configure OpenDKIM for email signing.
+# TODO: For BRC production deployments, enable OpenDKIM.
+# Note: This flag is somewhat redundant, because, in the playbook, configuration
+# already only occurs for BRC production deployments.
+opendkim_enabled: false
+
+# OpenDKIM configuration for signing outgoing emails.
+# TODO: For BRC production deployments, configure these settings.
+# Reference: https://security.berkeley.edu/education-awareness/mass-email-communication-guideline
+opendkim_domain: berkeley.edu
+opendkim_selector: researchit-brc-hpc-mybrc
+opendkim_key_dir: /etc/opendkim/keys
+opendkim_port: 8891
 
 #------------------------------------------------------------------------------
 # LRC Cloudflare settings
@@ -155,6 +198,28 @@ flag_mou_generation_enabled: False
 flag_renewal_survey_enabled: True
 
 #------------------------------------------------------------------------------
+# django-constance settings
+#------------------------------------------------------------------------------
+
+# Whether to enable django-constance
+django_constance_enabled: true
+
+#------------------------------------------------------------------------------
+# django-prometheus settings
+#------------------------------------------------------------------------------
+
+# The namespace for metrics in Prometheus.
+# TODO: For LRC, use "mylrc".
+prometheus_metric_namespace: mybrc
+
+#------------------------------------------------------------------------------
+# Django-Q settings
+#------------------------------------------------------------------------------
+
+# How to run jobs enqueued to Django-Q: "sync" or "async".
+django_q_job_queue_mode: async
+
+#------------------------------------------------------------------------------
 # Plugin: departments
 #------------------------------------------------------------------------------
 
@@ -169,7 +234,11 @@ plugin_departments_department_data_source: "coldfront.plugins.departments.utils.
 
 # TODO: Enable for BRC, disable for LRC.
 plugin_faculty_storage_allocations_enabled: true
-plugin_faculty_storage_allocations_admin_email_list: ['placeholder@dev.dev']
+# Lists of admin email addresses to notify for events.
+# Structure: event -> list of email addresses
+plugin_faculty_storage_allocations_email_admin_notification_recipients:
+  request_approved: []
+  request_created: []
 # If enabled, a list of email addresses of PIs that are eligible to request storage.
 plugin_faculty_storage_allocations_eligible_pi_email_whitelist_enabled: false
 plugin_faculty_storage_allocations_eligible_pi_email_whitelist: []
@@ -226,6 +295,36 @@ center_user_guide: "https://docs-research-it.berkeley.edu/services/high-performa
 center_login_guide: "https://docs-research-it.berkeley.edu/services/high-performance-computing/user-guide/logging-brc-clusters/#Logging-in"
 # TODO: For MyLRC, use "hpcshelp@lbl.gov".
 center_help_email: "brc-hpc-help@berkeley.edu"
+
+#------------------------------------------------------------------------------
+# Email admin notification settings
+#------------------------------------------------------------------------------
+
+# Lists of admin email addresses to notify for domain-specific events.
+# Structure: domain -> event -> list of email addresses
+email_admin_notification_recipients:
+  allocation_renewal_requests:
+    created: []
+  cluster_access_requests:
+    created: []
+  new_project_requests:
+    agreement_uploaded: []
+    approved: []
+    created: []
+  project_user_removal_requests:
+    completed: []
+    created: []
+  secure_directory_requests:
+    agreement_uploaded: []
+    approved: []
+    created: []
+  secure_directory_add_user_requests:
+    created: []
+  secure_directory_remove_user_requests:
+    created: []
+  service_units_purchase_requests:
+    agreement_uploaded: []
+    created: []
 
 #------------------------------------------------------------------------------
 # BRC Vector settings
@@ -346,6 +445,7 @@ sentry_dsn: ""
 # # Host settings.
 # hostname: scgup-dev.lbl.gov
 # host_ip: 131.243.130.236
+# extra_allowed_hosts: []
 # app_port: 8000
 # full_host_path: http://scgup-dev.lbl.gov:8000
 
@@ -360,8 +460,8 @@ sentry_dsn: ""
 # # API is accessible. If none are given, API access is not restricted.
 # ip_range_with_api_access:
 
-# # IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-# debug_toolbar_ips: []
+# # IP addresses that can view the django debug toolbar.
+# debug_toolbar_ips: ['127.0.0.1']
 
 # # Email settings.
 # email_host: localhost
@@ -372,21 +472,10 @@ sentry_dsn: ""
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
-# # A list of admin email addresses to be notified about new requests and other
-# # events.
-# # TODO: Set these addresses to yours.
-# email_admin_list: []
 # # A list of admin email addresses to be notified about audits of allocation
 # # periods.
 # # TODO: Set these addresses to yours.
 # allocation_period_audit_email_admin_list: []
-# # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: []
-# # A list of email addresses to be notified when a project-user removal request
-# # is processed.
-# # TODO: Set these addresses to yours.
-# project_user_removal_request_processed_email_admin_list: []
 
 #------------------------------------------------------------------------------
 # prod_settings
@@ -410,6 +499,7 @@ sentry_dsn: ""
 # hostname: mybrc.brc.berkeley.edu
 # # TODO: For LRC, use 128.3.7.213.
 # host_ip: 136.152.224.34
+# extra_allowed_hosts: []
 # app_port: 80
 # # TODO: For LRC, use https://mylrc.lbl.gov.
 # full_host_path: https://mybrc.brc.berkeley.edu
@@ -425,8 +515,8 @@ sentry_dsn: ""
 # # API is accessible. If none are given, API access is not restricted.
 # ip_range_with_api_access: 10.0.0.0/8
 
-# # IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-# debug_toolbar_ips: []
+# # IP addresses that can view the django debug toolbar.
+# debug_toolbar_ips: ['127.0.0.1']
 
 # # Email settings.
 # email_host: localhost
@@ -437,21 +527,10 @@ sentry_dsn: ""
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
-# # A list of admin email addresses to be notified about new requests and other
-# # events.
-# # TODO: Set these addresses to yours.
-# email_admin_list: []
 # # A list of admin email addresses to be notified about audits of allocation
 # # periods.
 # # TODO: Set these addresses to yours.
 # allocation_period_audit_email_admin_list: []
-# # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: []
-# # A list of email addresses to be notified when a project-user removal request
-# # is processed.
-# # TODO: Set these addresses to yours.
-# project_user_removal_request_processed_email_admin_list: []
 
 #------------------------------------------------------------------------------
 # dev_settings
@@ -476,6 +555,7 @@ sentry_dsn: ""
 # # Host settings.
 # hostname: localhost
 # host_ip: localhost
+# extra_allowed_hosts: []
 # app_port: 80
 # full_host_path: http://localhost:8880
 
@@ -490,8 +570,8 @@ sentry_dsn: ""
 # # API is accessible. If none are given, API access is not restricted.
 # ip_range_with_api_access:
 
-# # IP addresses other than 127.0.0.1 that can view the django debug toolbar.
-# debug_toolbar_ips: ['10.0.2.2']  # 10.0.2.2 is the vagrant host.
+# # IP addresses that can view the django debug toolbar.
+# debug_toolbar_ips: ['127.0.0.1', '10.0.2.2']  # 10.0.2.2 is the vagrant host.
 
 # # Email settings.
 # email_host: localhost
@@ -501,16 +581,7 @@ sentry_dsn: ""
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
-# # A list of admin email addresses to be notified about new requests and other
-# # events.
-# email_admin_list: ['placeholder@dev.dev']
 # # A list of admin email addresses to be notified about audits of allocation
 # # periods.
 # # TODO: Set these addresses to yours.
 # allocation_period_audit_email_admin_list: ['placeholder@dev.dev']
-# # A list of email addresses to CC when certain requests are processed.
-# # TODO: Set these addresses to yours.
-# request_approval_cc_list: ['placeholder@dev.dev']
-# # A list of email addresses to be notified when a project-user removal request
-# # is processed.
-# project_user_removal_request_processed_email_admin_list: ['placeholder@dev.dev']

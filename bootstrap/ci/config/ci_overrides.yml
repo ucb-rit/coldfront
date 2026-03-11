@@ -1,0 +1,26 @@
+# =============================================================================
+# CI Testing Configuration Overrides
+# =============================================================================
+
+# Database and service hosts for CI environment (running on localhost)
+db_host: localhost
+email_host: localhost
+redis_host: localhost
+
+# Database credentials for CI (matches postgres service in workflow)
+db_admin_user: test
+db_admin_passwd: test
+
+stream_logs_to_stdout: true
+
+# Use dummy cache backend for testing (no Redis required)
+django_cache_backend_short: dummy
+
+# Disable django-constance (no Redis required)
+django_constance_enabled: false
+
+# Use synchronous job queue mode for testing (no Redis required)
+django_q_job_queue_mode: sync
+
+# Use the dummy backend for the departments plugin
+plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.dummy.DummyDataSourceBackend"

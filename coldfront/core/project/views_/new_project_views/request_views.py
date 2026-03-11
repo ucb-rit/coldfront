@@ -698,17 +698,20 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         allocation_period_form_step = \
             self.step_numbers_by_form_name['allocation_period']
         if step > allocation_period_form_step:
-            allocation_period_form_data = self.get_cleaned_data_for_step(
-                str(allocation_period_form_step))
-            if allocation_period_form_data:
-                dictionary.update(allocation_period_form_data)
+            try:
+                allocation_period_form_data = self.get_cleaned_data_for_step(
+                    str(allocation_period_form_step))
+            except KeyError:
+                pass
+            else:
+                if allocation_period_form_data:
+                    dictionary.update(allocation_period_form_data)
 
         existing_pi_step = self.step_numbers_by_form_name['existing_pi']
         new_pi_step = self.step_numbers_by_form_name['new_pi']
         if step > new_pi_step:
             existing_pi_form_data = self.get_cleaned_data_for_step(
                 str(existing_pi_step))
-            new_pi_form_data = self.get_cleaned_data_for_step(str(new_pi_step))
             if existing_pi_form_data['PI'] is not None:
                 pi = existing_pi_form_data['PI']
                 dictionary.update({
@@ -717,6 +720,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                         f'({pi.email})'),
                 })
             else:
+                new_pi_form_data = self.get_cleaned_data_for_step(
+                    str(new_pi_step))
                 first_name = new_pi_form_data['first_name']
                 last_name = new_pi_form_data['last_name']
                 email = new_pi_form_data['email']

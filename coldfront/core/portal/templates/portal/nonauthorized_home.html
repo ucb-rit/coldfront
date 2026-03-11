@@ -38,20 +38,29 @@
   {% if sso_enabled %}
     {% flag_enabled 'BRC_ONLY' as brc_only %}
     {% if brc_only %}
-    <a class="btn btn-primary btn-lg" href="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:berkeley.edu' %}" role="button">
-      <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-      CalNet: Log In
-    </a>
+    <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:berkeley.edu' %}" method="post" style="display:inline;">
+      {% csrf_token %}
+      <button class="btn btn-primary btn-lg" type="submit" role="button">
+        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+        CalNet: Log In
+      </button>
+    </form>
     {% else %}
-    <a class="btn btn-primary btn-lg" href="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:lbl.gov' %}" role="button">
-      <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-      Berkeley Lab: Log In
-    </a>
+    <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:lbl.gov' %}" method="post" style="display:inline;">
+      {% csrf_token %}
+      <button class="btn btn-primary btn-lg" type="submit" role="button">
+        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+        Berkeley Lab: Log In
+      </button>
+    </form>
     {% endif %}
-    <a class="btn btn-secondary btn-lg" href="{% url 'login' %}" role="button">
-      <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-      Other: Log In
-    </a>
+    <form action="{% url 'login' %}" method="post" style="display:inline;">
+      {% csrf_token %}
+      <button class="btn btn-secondary btn-lg" type="submit" role="button">
+        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+        Other: Log In
+      </button>
+    </form>
   {% endif %}
 </p>
 

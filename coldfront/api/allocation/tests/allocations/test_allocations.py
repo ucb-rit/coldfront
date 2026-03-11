@@ -165,4 +165,4 @@ class TestRetrieveAllocations(TestAllocationBase):
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         json = response.json()
         self.assertIn('detail', json)
-        self.assertEqual(json['detail'], 'Not found.')
+        self.assertIn('matches the given query', json['detail'])

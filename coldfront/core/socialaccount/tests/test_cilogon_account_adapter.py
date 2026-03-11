@@ -15,12 +15,12 @@ from django.utils.http import urlencode
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialAccount
 from allauth.socialaccount.providers.base import AuthProcess
-from allauth.tests import MockedResponse
-from allauth.tests import mocked_response
 from flags.state import disable_flag
 from flags.state import enable_flag
 from flags.state import flag_enabled
 
+from coldfront.core.socialaccount.tests.mocking import MockedResponse
+from coldfront.core.socialaccount.tests.mocking import mocked_response
 from coldfront.core.utils.tests.test_base import TestBase
 
 import json
@@ -55,7 +55,7 @@ class TestCILogonAccountAdapter(TestBase):
                 f'{response.wsgi_request.user.username}.')
             redirect_url = reverse('home')
         elif process == AuthProcess.CONNECT:
-            expected_message = 'The social account has been connected.'
+            expected_message = 'The third-party account has been connected.'
             redirect_url = reverse('socialaccount_connections')
         else:
             raise ValueError('Unexpected auth process.')

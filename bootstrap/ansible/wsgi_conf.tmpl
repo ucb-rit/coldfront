@@ -17,6 +17,7 @@ WSGIPassAuthorization On
 
     WSGIDaemonProcess coldfront python-path={{ git_prefix }}/{{ reponame }} python-home={{ git_prefix }}/venv/ processes={{ apache_num_processes }} threads={{ apache_num_threads_per_process }} display-name=coldfront
     WSGIProcessGroup coldfront
+    WSGIApplicationGroup %{GLOBAL}
 
     WSGIScriptAlias / {{ git_prefix }}/{{ reponame }}/{{ djangoprojname }}/config/wsgi.py process-group=coldfront
 
@@ -28,5 +29,21 @@ WSGIPassAuthorization On
 
     ErrorLog /var/log/httpd/{{ wsgi_conf_log_prefix }}.error.log
     CustomLog /var/log/httpd/{{ wsgi_conf_log_prefix }}.custom.log combined
+
+    <Location "/metrics">
+        AuthType Basic
+        AuthName "Metrics"
+        AuthUserFile {{ htpasswd_file }}
+        <RequireAll>
+        {% if ip_range_with_metrics_access is defined and ip_range_with_metrics_access | length > 0 %}
+            <RequireAny>
+            {% for ip_range in ip_range_with_metrics_access %}
+                Require ip {{ ip_range }}
+            {% endfor %}
+            </RequireAny>
+        {% endif %}
+            Require user {{ metrics_htpasswd_user }}
+        </RequireAll>
+    </Location>
 
 </VirtualHost>

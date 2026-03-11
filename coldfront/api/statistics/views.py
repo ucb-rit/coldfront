@@ -205,14 +205,14 @@ class JobViewSet(mixins.CreateModelMixin, mixins.ListModelMixin,
 
             # Convert Unix timestamps to UTC datetimes.
             try:
-                start_time = datetime.utcfromtimestamp(
-                    float(start_time)).replace(tzinfo=pytz.utc)
+                start_time = datetime.fromtimestamp(
+                    float(start_time), tz=pytz.utc)
             except (TypeError, ValueError) as e:
                 raise serializers.ValidationError(
                     f'Invalid starting timestamp {start_time}. Details: {e}')
             try:
-                end_time = datetime.utcfromtimestamp(
-                    float(end_time)).replace(tzinfo=pytz.utc)
+                end_time = datetime.fromtimestamp(
+                    float(end_time), tz=pytz.utc)
             except (TypeError, ValueError) as e:
                 raise serializers.ValidationError(
                     f'Invalid ending timestamp {start_time}. Details: {e}')

@@ -21,7 +21,7 @@ class Command(BaseCommand):
     help = (
         'Expire ICA projects whose end dates have passed. Optionally notify '
         'project owners')
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('coldfront.commands')
 
     def add_arguments(self, parser):
         add_argparse_dry_run_argument(parser)
@@ -76,14 +76,13 @@ class Command(BaseCommand):
                 f'Would deactivate Project {project.name} ({project.pk}), '
                 f'update Allocation {allocation.pk}, and update Service Units '
                 f'from {current_allowance} to {updated_allowance}.')
-            self.stdout.write(self.style.WARNING(message))
+            self.logger.info(f'DRY RUN: {message}')
         else:
             deactivate_project_and_allocation(project)
             message = (
                 f'Deactivated Project {project.name} ({project.pk}), updated '
                 f'Allocation {allocation.pk}, and updated Service Units from '
                 f'{current_allowance} to {updated_allowance}.')
-            self.stdout.write(self.style.SUCCESS(message))
             self.logger.info(message)
 
     def send_emails(self, project, expiry_date, dry_run):
@@ -95,8 +94,10 @@ class Command(BaseCommand):
             f'{num_recipients} user' + int(num_recipients > 1) * 's')
 
         if dry_run:
-            message = f'Would send a notification email to {recipients_noun}.'
-            self.stdout.write(self.style.WARNING(message))
+            message = (
+                f'DRY RUN: Would send a notification email to '
+                f'{recipients_noun}.')
+            self.logger.info(message)
             return
 
         subject = 'Expired ICA Project Deactivation'
@@ -113,11 +114,8 @@ class Command(BaseCommand):
             send_email_template(
                 subject, template_name, context, sender, recipients)
         except Exception as e:
-            message = 'Failed to send notification email. Details:'
-            self.stderr.write(self.style.ERROR(message))
-            self.stderr.write(self.style.ERROR(str(e)))
-            self.logger.error(message)
+            message = f'Failed to send notification email. Details:\n{e}'
             self.logger.exception(e)
         else:
             message = f'Sent a notification email to {recipients_noun}.'
-            self.stdout.write(self.style.SUCCESS(message))
+            self.logger.info(message)

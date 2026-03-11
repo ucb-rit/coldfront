@@ -3,6 +3,7 @@ from http import HTTPStatus
 from django.conf import settings
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
+from django.test import override_settings
 from django.urls import reverse
 
 from flags.state import flag_enabled
@@ -24,6 +25,13 @@ from coldfront.core.utils.tests.test_base import TestBase
 from decimal import Decimal
 
 
+@override_settings(
+    EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
+        'cluster_access_requests': {
+            'created': ['admin@example.com'],
+        },
+    }
+)
 class TestSavioProjectRequestDetailView(TestBase):
     """A class for testing SavioProjectRequestDetailView."""
 
