@@ -37,10 +37,10 @@ jobs:
     - name: Checkout the current commit
       uses: actions/checkout@v3
 
-    - name: Set up Python 3.10
+    - name: Set up Python 3.13
       uses: actions/setup-python@v3
       with:
-        python-version: "3.10"
+        python-version: "3.13"
 
     - name: Cache and/or Install apache2-dev needed for testing suite
       uses: awalsh128/cache-apt-pkgs-action@latest
@@ -52,35 +52,32 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/venv
-        key: ${{ runner.os }}-python-310-packages-${{ hashFiles('requirements.txt') }}
+        key: ${{ runner.os }}-python-313-packages-${{ hashFiles('requirements.txt') }}
 
     - if: ${{ steps.cache-python.outputs.cache-hit != 'true' }} # If a cache is not found
       name: Install Python packages
       run: |
-        python3.10 -m venv ~/venv
+        python3.13 -m venv ~/venv
         source ~/venv/bin/activate
-        pip install "setuptools<58"
         pip install -r requirements.txt
 
-    - name: Create settings files from samples and create log files needed for testing
+    - name: Create settings files from samples and other directories needed for testing
       run: |
-        # Create log files
-        sudo mkdir -p /var/log/user_portals/cf_mybrc
-        sudo touch /var/log/user_portals/cf_mybrc/cf_mybrc_portal.log
-        sudo touch /var/log/user_portals/cf_mybrc/cf_mybrc_api.log
-        
-        # Modify log file permssions to allow testing to function properly
-        sudo chmod 775 /var/log/user_portals/cf_mybrc
-        sudo chmod 666 /var/log/user_portals/cf_mybrc/cf_mybrc_portal.log
-        sudo chmod 666 /var/log/user_portals/cf_mybrc/cf_mybrc_api.log
-        
-        # Give Apache permission to logs
-        sudo chown -R :www-data /var/log/user_portals/cf_mybrc
-        
         # Get setting configuration from samples
         cp coldfront/config/local_strings.py.sample coldfront/config/local_strings.py
         cp coldfront/config/local_settings.py.sample coldfront/config/local_settings.py
-        cp coldfront/config/test_settings.py.sample coldfront/config/test_settings.py
+
+        # Create/override YML configuration files needed to generate .env.
+        cp bootstrap/ansible/main.copyme bootstrap/development/docker/config/main.yml
+        cp bootstrap/ci/config/ci_overrides.yml bootstrap/development/docker/config/overrides.yml
+        echo "{}" > bootstrap/development/docker/config/cilogon.yml
+        echo "{}" > bootstrap/development/docker/config/secrets.yml
+
+        # Generate .env.
+        pip install Jinja2 PyYAML
+        python bootstrap/development/docker/scripts/generate_django_env_file.py BRC 8000 \
+          --template-dir bootstrap/ansible \
+          --config-dir bootstrap/development/docker/config > coldfront/config/.env
 
         # Create MOU directories
         sudo mkdir -p "/media/New Project Request MOUs/"
@@ -92,13 +89,13 @@ jobs:
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest -m unit
+        pytest coldfront/ -m unit
 
     - name: Run pytest component tests
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest -m component
+        pytest coldfront/ -m component
 
     # - name: Run pytest acceptance tests
     #   run: |
