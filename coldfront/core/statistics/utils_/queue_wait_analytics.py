@@ -32,23 +32,27 @@ def get_cpu_bucket(num_cpus):
         return '1024+'
 
 
-def get_cpu_bucket_sql_case():
+def get_cpu_bucket_sql_case(table_alias=None):
     """
     Return SQL CASE expression for CPU bucketing.
 
     For use in raw SQL queries or Django ORM annotations.
 
+    Args:
+        table_alias: Optional table alias (e.g., 'j' for 'j.num_cpus')
+
     Returns:
         String containing SQL CASE expression
     """
-    return """
+    column = f"{table_alias}.num_cpus" if table_alias else "num_cpus"
+    return f"""
     CASE
-        WHEN num_cpus = 1 THEN '1'
-        WHEN num_cpus <= 4 THEN '2-4'
-        WHEN num_cpus <= 16 THEN '5-16'
-        WHEN num_cpus <= 64 THEN '17-64'
-        WHEN num_cpus <= 256 THEN '65-256'
-        WHEN num_cpus <= 1024 THEN '257-1024'
+        WHEN {column} = 1 THEN '1'
+        WHEN {column} <= 4 THEN '2-4'
+        WHEN {column} <= 16 THEN '5-16'
+        WHEN {column} <= 64 THEN '17-64'
+        WHEN {column} <= 256 THEN '65-256'
+        WHEN {column} <= 1024 THEN '257-1024'
         ELSE '1024+'
     END
     """

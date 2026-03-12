@@ -1,0 +1,164 @@
+{% extends "common/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}
+Project Analytics - {{ project.name }}
+{% endblock %}
+
+{% block content %}
+<h1>Project Queue Wait Time Analysis</h1>
+<hr>
+
+{% if error %}
+<div class="alert alert-danger">
+  <i class="fas fa-exclamation-triangle"></i>
+  {{ error }}
+</div>
+{% elif no_data %}
+<div class="alert alert-warning">
+  <i class="fas fa-exclamation-triangle"></i>
+  {{ message }}
+</div>
+{% else %}
+
+<!-- Project Info Card -->
+<div class="card mb-3">
+  <div class="card-body">
+    <h5 class="card-title">{{ project.name }}</h5>
+    <p class="card-text">
+      Analyzing queue wait times for jobs that started in the <strong>last {{ days }} days</strong>,
+      compared to cluster-wide averages for the same time period.
+    </p>
+    <ul>
+      <li><strong>Total Project Jobs:</strong> {{ total_project_jobs|intcomma }}</li>
+      <li><strong>Total Cluster Jobs:</strong> {{ total_cluster_jobs|intcomma }}</li>
+      <li><strong>Project QoS Values:</strong> {{ project_qos|join:", " }}</li>
+      <li><strong>Cluster QoS Values:</strong> {{ cluster_qos|join:", " }}</li>
+    </ul>
+    <div class="btn-group" role="group">
+      <a href="?days=30" class="btn btn-sm {% if days == 30 %}btn-primary{% else %}btn-outline-primary{% endif %}">30 days</a>
+      <a href="?days=90" class="btn btn-sm {% if days == 90 %}btn-primary{% else %}btn-outline-primary{% endif %}">90 days</a>
+      <a href="?days=180" class="btn btn-sm {% if days == 180 %}btn-primary{% else %}btn-outline-primary{% endif %}">180 days</a>
+    </div>
+  </div>
+</div>
+
+<!-- Comparison Table -->
+<div class="card mb-3 border-primary">
+  <div class="card-header bg-primary text-white">
+    <i class="fas fa-table"></i> Project vs. Cluster Comparison
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered table-hover">
+        <thead class="thead-light">
+          <tr>
+            <th rowspan="2">Partition</th>
+            <th rowspan="2">CPUs</th>
+            <th rowspan="2">QoS</th>
+            <th colspan="4" class="text-center bg-info text-white">{{ project.name }}</th>
+            <th colspan="4" class="text-center bg-secondary text-white">Cluster-Wide</th>
+            <th rowspan="2">Diff %</th>
+          </tr>
+          <tr>
+            <th class="bg-light">Jobs</th>
+            <th class="bg-light">P50</th>
+            <th class="bg-light">P90</th>
+            <th class="bg-light">P99</th>
+            <th class="bg-light">Jobs</th>
+            <th class="bg-light">P50</th>
+            <th class="bg-light">P90</th>
+            <th class="bg-light">P99</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in comparison_data %}
+          <tr>
+            <td>{{ row.partition }}</td>
+            <td>{{ row.cpu_bucket }}</td>
+            <td>{{ row.qos }}</td>
+            <!-- Project stats -->
+            <td class="text-right">{{ row.project_jobs|intcomma }}</td>
+            <td class="text-right">{{ row.project_p50|floatformat:2 }}h</td>
+            <td class="text-right">{{ row.project_p90|floatformat:2 }}h</td>
+            <td class="text-right">{{ row.project_p99|floatformat:2 }}h</td>
+            <!-- Cluster stats -->
+            <td class="text-right">{{ row.cluster_jobs|intcomma }}</td>
+            <td class="text-right">
+              {% if row.cluster_p50 %}{{ row.cluster_p50|floatformat:2 }}h{% else %}—{% endif %}
+            </td>
+            <td class="text-right">
+              {% if row.cluster_p90 %}{{ row.cluster_p90|floatformat:2 }}h{% else %}—{% endif %}
+            </td>
+            <td class="text-right">
+              {% if row.cluster_p99 %}{{ row.cluster_p99|floatformat:2 }}h{% else %}—{% endif %}
+            </td>
+            <!-- Difference -->
+            <td class="text-right {% if row.p50_diff_pct %}{% if row.p50_diff_pct > 10 %}text-danger{% elif row.p50_diff_pct < -10 %}text-success{% endif %}{% endif %}">
+              {% if row.p50_diff_pct != None %}
+                {{ row.p50_diff_pct|floatformat:1 }}%
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-3">
+      <small class="text-muted">
+        <i class="fas fa-info-circle"></i>
+        <strong>How to read:</strong>
+        <ul class="mb-0">
+          <li><strong>P50 (median):</strong> Half of jobs waited less, half waited more</li>
+          <li><strong>P90:</strong> 90% of jobs waited less than this time</li>
+          <li><strong>P99:</strong> 99% of jobs waited less than this time</li>
+          <li><strong>Diff %:</strong> Percentage difference between project P50 and cluster-wide P50 (positive = slower, negative = faster)</li>
+          <li>Green = project is faster than cluster average, Red = project is slower</li>
+          <li>Only partition/CPU/QoS combinations with 5+ jobs are shown</li>
+        </ul>
+      </small>
+    </div>
+  </div>
+</div>
+
+<!-- Key Insights -->
+<div class="card mb-3">
+  <div class="card-header">
+    <i class="fas fa-lightbulb"></i> Key Insights
+  </div>
+  <div class="card-body">
+    <h6>Understanding Your Results:</h6>
+    <ul>
+      <li>
+        <strong>Apples-to-apples comparison:</strong> Each row compares jobs with the same partition, CPU count, and QoS tier.
+        This ensures a fair comparison.
+      </li>
+      <li>
+        <strong>Look at P90/P99:</strong> These show the variability and worst-case scenarios. High P90/P99 values
+        indicate unpredictable wait times even if P50 is reasonable.
+      </li>
+      <li>
+        <strong>QoS matters:</strong> Different QoS tiers (e.g., condo_owner, normal) have dramatically different wait times.
+        Check if you're using the best available QoS for your needs.
+      </li>
+      <li>
+        <strong>Recent trends:</strong> Use the time window buttons above to see if wait times have changed over time.
+        Compare 30-day (current), 90-day, and 180-day windows.
+      </li>
+    </ul>
+  </div>
+</div>
+
+{% endif %}
+
+<script>
+  // Activate navbar (if applicable)
+  $("#navbar-main > ul > li.active").removeClass("active")
+  $("#navbar-analytics").addClass("active")
+</script>
+
+{% endblock %}

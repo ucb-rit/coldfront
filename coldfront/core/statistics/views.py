@@ -14,13 +14,18 @@ from django.utils.html import strip_tags
 from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 
-from coldfront.core.project.models import ProjectUser
+from django.db import connection
+
+from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.statistics.models import Job, JobWaitHeatmap30d
 from coldfront.core.statistics.forms import JobSearchForm
 from coldfront.core.statistics.utils_.job_accessibility_manager import JobAccessibilityManager
 from coldfront.core.statistics.utils_.job_query_filtering import job_query_filtering
 from coldfront.core.statistics.utils_.job_query_filtering import JobSearchFilterSessionStorage
-from coldfront.core.statistics.utils_.queue_wait_analytics import CPU_BUCKET_ORDER
+from coldfront.core.statistics.utils_.queue_wait_analytics import (
+    CPU_BUCKET_ORDER,
+    get_cpu_bucket_sql_case,
+)
 from coldfront.core.utils.common import Echo
 
 
@@ -315,3 +320,208 @@ class AnalyticsView(LoginRequiredMixin, TemplateView):
         context['no_data'] = False
 
         return context
+
+
+class ProjectAnalyticsView(LoginRequiredMixin, TemplateView):
+    """
+    Ad-hoc project-specific analytics view.
+
+    URL: /analytics/project/<project_name>/?days=90
+
+    Queries wait time statistics on-demand for a specific project
+    and compares to cluster-wide stats.
+    """
+    template_name = 'project_analytics_dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        project_name = self.kwargs.get('project_name')
+        days = int(self.request.GET.get('days', 90))
+        min_sample = 5  # Lower threshold for project-specific data
+
+        # Verify project exists
+        try:
+            project = Project.objects.get(name=project_name)
+        except Project.DoesNotExist:
+            context['error'] = f"Project '{project_name}' not found"
+            return context
+
+        context['project'] = project
+        context['days'] = days
+
+        # Get project stats
+        project_stats = self._get_wait_stats(project_name, days, min_sample)
+
+        # Get cluster-wide stats for comparison
+        cluster_stats = self._get_wait_stats(None, days, min_sample)
+
+        if not project_stats:
+            context['no_data'] = True
+            context['message'] = f"No job data found for {project_name} in the last {days} days"
+            return context
+
+        # Build heat map data structures
+        context['project_heatmap'] = self._build_heatmap_data(project_stats)
+        context['cluster_heatmap'] = self._build_heatmap_data(cluster_stats)
+        context['comparison_data'] = self._build_comparison_data(project_stats, cluster_stats)
+
+        # Summary stats
+        context['total_project_jobs'] = sum(s['jobs'] for s in project_stats)
+        context['total_cluster_jobs'] = sum(s['jobs'] for s in cluster_stats)
+
+        # QoS breakdown
+        project_qos = set(s['qos'] or 'None' for s in project_stats)
+        cluster_qos = set(s['qos'] or 'None' for s in cluster_stats)
+        context['project_qos'] = sorted(project_qos)
+        context['cluster_qos'] = sorted(cluster_qos)
+
+        context['no_data'] = False
+
+        return context
+
+    def _get_wait_stats(self, project_name, days, min_sample):
+        """Query wait time statistics, optionally filtered by project."""
+        project_filter = ""
+        params = {'days': days, 'min_sample': min_sample}
+
+        if project_name:
+            project_filter = "AND p.name = %(project_name)s"
+            params['project_name'] = project_name
+
+        sql = f"""
+            WITH job_waits AS (
+                SELECT
+                    j.partition,
+                    j.qos,
+                    j.num_cpus,
+                    {get_cpu_bucket_sql_case('j')} AS cpu_bucket,
+                    EXTRACT(EPOCH FROM (j.startdate - j.submitdate)) AS wait_seconds
+                FROM statistics_job j
+                JOIN project_project p ON j.accountid_id = p.id
+                WHERE j.startdate >= NOW() - INTERVAL '%(days)s days'
+                    AND j.startdate IS NOT NULL
+                    AND j.submitdate IS NOT NULL
+                    {project_filter}
+            )
+            SELECT
+                partition,
+                qos,
+                cpu_bucket,
+                COUNT(*) as jobs,
+                percentile_cont(0.5) WITHIN GROUP (ORDER BY wait_seconds) AS p50_seconds,
+                percentile_cont(0.90) WITHIN GROUP (ORDER BY wait_seconds) AS p90_seconds,
+                percentile_cont(0.99) WITHIN GROUP (ORDER BY wait_seconds) AS p99_seconds
+            FROM job_waits
+            GROUP BY partition, qos, cpu_bucket
+            HAVING COUNT(*) >= %(min_sample)s
+            ORDER BY partition, qos, cpu_bucket;
+        """
+
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        return results
+
+    def _build_heatmap_data(self, stats):
+        """Build heatmap matrix structure for rendering."""
+        partitions = sorted(set(s['partition'] for s in stats))
+        qos_values = sorted(set(s['qos'] or 'None' for s in stats))
+
+        # Group by partition, QoS, CPU bucket
+        heatmap = {}
+
+        for stat in stats:
+            partition = stat['partition']
+            qos = stat['qos'] or 'None'
+            cpu_bucket = stat['cpu_bucket']
+
+            key = f"{partition}|{qos}"
+            if key not in heatmap:
+                heatmap[key] = {}
+
+            heatmap[key][cpu_bucket] = {
+                'p50': stat['p50_seconds'] / 3600,  # Convert to hours
+                'p90': stat['p90_seconds'] / 3600,
+                'p99': stat['p99_seconds'] / 3600,
+                'jobs': stat['jobs']
+            }
+
+        # Fill missing cells with None
+        for partition in partitions:
+            for qos in qos_values:
+                key = f"{partition}|{qos}"
+                if key not in heatmap:
+                    heatmap[key] = {}
+                for bucket in CPU_BUCKET_ORDER:
+                    if bucket not in heatmap[key]:
+                        heatmap[key][bucket] = None
+
+        return {
+            'partitions': partitions,
+            'qos_values': qos_values,
+            'matrix': json.dumps(heatmap),
+            'cpu_buckets': CPU_BUCKET_ORDER
+        }
+
+    def _build_comparison_data(self, project_stats, cluster_stats):
+        """Build comparison table data."""
+        comparisons = []
+
+        # Create lookup for cluster stats
+        cluster_lookup = {}
+        for stat in cluster_stats:
+            key = (stat['partition'], stat['qos'] or 'None', stat['cpu_bucket'])
+            cluster_lookup[key] = stat
+
+        for pstat in project_stats:
+            partition = pstat['partition']
+            qos = pstat['qos'] or 'None'
+            cpu_bucket = pstat['cpu_bucket']
+
+            key = (partition, qos, cpu_bucket)
+            cstat = cluster_lookup.get(key)
+
+            comparison = {
+                'partition': partition,
+                'qos': qos,
+                'cpu_bucket': cpu_bucket,
+                'project_jobs': pstat['jobs'],
+                'project_p50': pstat['p50_seconds'] / 3600,
+                'project_p90': pstat['p90_seconds'] / 3600,
+                'project_p99': pstat['p99_seconds'] / 3600,
+            }
+
+            if cstat:
+                comparison['cluster_jobs'] = cstat['jobs']
+                comparison['cluster_p50'] = cstat['p50_seconds'] / 3600
+                comparison['cluster_p90'] = cstat['p90_seconds'] / 3600
+                comparison['cluster_p99'] = cstat['p99_seconds'] / 3600
+
+                # Calculate percentage difference
+                if cstat['p50_seconds'] > 0:
+                    comparison['p50_diff_pct'] = (
+                        (pstat['p50_seconds'] - cstat['p50_seconds']) /
+                        cstat['p50_seconds'] * 100
+                    )
+            else:
+                comparison['cluster_jobs'] = 0
+                comparison['cluster_p50'] = None
+                comparison['cluster_p90'] = None
+                comparison['cluster_p99'] = None
+                comparison['p50_diff_pct'] = None
+
+            comparisons.append(comparison)
+
+        # Sort by partition, QoS, CPU bucket
+        comparisons.sort(
+            key=lambda x: (
+                x['partition'],
+                x['qos'],
+                CPU_BUCKET_ORDER.index(x['cpu_bucket']) if x['cpu_bucket'] in CPU_BUCKET_ORDER else 999
+            )
+        )
+
+        return comparisons
