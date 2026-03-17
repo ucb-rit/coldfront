@@ -486,13 +486,16 @@ class ProjectAnalyticsView(LoginRequiredMixin, TemplateView):
 
             # Helper to format time with appropriate precision
             def format_time(seconds):
-                hours = seconds / 3600
-                if hours < 1:
-                    # For < 1 hour, show minutes with 1 decimal
+                if seconds < 60:
+                    # For < 60 seconds, show seconds with 1 decimal
+                    return f"{seconds:.1f}s"
+                elif seconds < 3600:
+                    # For 60s - 1 hour, show minutes with 1 decimal
                     minutes = seconds / 60
                     return f"{minutes:.1f}m"
                 else:
                     # For >= 1 hour, show hours with 2 decimals
+                    hours = seconds / 3600
                     return f"{hours:.2f}h"
 
             comparison = {
