@@ -80,19 +80,19 @@ Project Analytics - {{ project.name }}
             <td>{{ row.qos }}</td>
             <!-- Project stats -->
             <td class="text-right">{{ row.project_jobs|intcomma }}</td>
-            <td class="text-right">{{ row.project_p50|floatformat:2 }}h</td>
-            <td class="text-right">{{ row.project_p90|floatformat:2 }}h</td>
-            <td class="text-right">{{ row.project_p99|floatformat:2 }}h</td>
+            <td class="text-right">{{ row.project_p50 }}</td>
+            <td class="text-right">{{ row.project_p90 }}</td>
+            <td class="text-right">{{ row.project_p99 }}</td>
             <!-- Cluster stats -->
             <td class="text-right">{{ row.cluster_jobs|intcomma }}</td>
             <td class="text-right">
-              {% if row.cluster_p50 %}{{ row.cluster_p50|floatformat:2 }}h{% else %}—{% endif %}
+              {% if row.cluster_p50 %}{{ row.cluster_p50 }}{% else %}—{% endif %}
             </td>
             <td class="text-right">
-              {% if row.cluster_p90 %}{{ row.cluster_p90|floatformat:2 }}h{% else %}—{% endif %}
+              {% if row.cluster_p90 %}{{ row.cluster_p90 }}{% else %}—{% endif %}
             </td>
             <td class="text-right">
-              {% if row.cluster_p99 %}{{ row.cluster_p99|floatformat:2 }}h{% else %}—{% endif %}
+              {% if row.cluster_p99 %}{{ row.cluster_p99 }}{% else %}—{% endif %}
             </td>
             <!-- Difference -->
             <td class="text-right {% if row.p50_diff_pct %}{% if row.p50_diff_pct > 10 %}text-danger{% elif row.p50_diff_pct < -10 %}text-success{% endif %}{% endif %}">

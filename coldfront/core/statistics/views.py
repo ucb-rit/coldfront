@@ -484,21 +484,32 @@ class ProjectAnalyticsView(LoginRequiredMixin, TemplateView):
             key = (partition, qos, cpu_bucket)
             cstat = cluster_lookup.get(key)
 
+            # Helper to format time with appropriate precision
+            def format_time(seconds):
+                hours = seconds / 3600
+                if hours < 1:
+                    # For < 1 hour, show minutes with 1 decimal
+                    minutes = seconds / 60
+                    return f"{minutes:.1f}m"
+                else:
+                    # For >= 1 hour, show hours with 2 decimals
+                    return f"{hours:.2f}h"
+
             comparison = {
                 'partition': partition,
                 'qos': qos,
                 'cpu_bucket': cpu_bucket,
                 'project_jobs': pstat['jobs'],
-                'project_p50': pstat['p50_seconds'] / 3600,
-                'project_p90': pstat['p90_seconds'] / 3600,
-                'project_p99': pstat['p99_seconds'] / 3600,
+                'project_p50': format_time(pstat['p50_seconds']),
+                'project_p90': format_time(pstat['p90_seconds']),
+                'project_p99': format_time(pstat['p99_seconds']),
             }
 
             if cstat:
                 comparison['cluster_jobs'] = cstat['jobs']
-                comparison['cluster_p50'] = cstat['p50_seconds'] / 3600
-                comparison['cluster_p90'] = cstat['p90_seconds'] / 3600
-                comparison['cluster_p99'] = cstat['p99_seconds'] / 3600
+                comparison['cluster_p50'] = format_time(cstat['p50_seconds'])
+                comparison['cluster_p90'] = format_time(cstat['p90_seconds'])
+                comparison['cluster_p99'] = format_time(cstat['p99_seconds'])
 
                 # Calculate percentage difference
                 if cstat['p50_seconds'] > 0:
