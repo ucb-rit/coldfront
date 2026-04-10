@@ -60,7 +60,7 @@ class FSARequestNotificationService:
         email_strategy.process_email(send_email_template, *email_args)
 
     @staticmethod
-    def send_completion_email_to_users(request, email_strategy=None):
+    def send_completion_email_to_users(request, directory_path, email_strategy=None):
         """Notify the PI and requester when the request is completed."""
         email_strategy = validate_email_strategy_or_get_default(email_strategy)
 
@@ -72,6 +72,7 @@ class FSARequestNotificationService:
             'center_name': django_settings.CENTER_NAME,
             'project': request.project,
             'amount_tb': request.approved_amount_gb // 1000,
+            'directory_path': directory_path,
             'project_url': urljoin(
                 django_settings.CENTER_BASE_URL,
                 reverse('project-detail', kwargs={'pk': request.project.pk})
