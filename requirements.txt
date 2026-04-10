@@ -54,7 +54,7 @@ python-dateutil==2.9.0.post0
 python-memcached==1.62
 pytz==2025.2
 redis==6.2.0
-requests==2.32.4
+requests==2.33.0
 sentry-sdk==2.34.1
 six==1.17.0
 sqlparse==0.5.4
