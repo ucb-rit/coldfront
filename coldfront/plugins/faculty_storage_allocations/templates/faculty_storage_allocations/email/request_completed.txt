@@ -3,6 +3,7 @@ Dear {{ center_name }} user,
 Your Faculty Storage Allocation request is complete, and your storage has been provisioned.
 
 Project: {{ project.name }}
+Directory: {{ directory_path }}
 Amount: {{ amount_tb }} TB
 
 You may view your storage on the project page: {{ project_url }}.

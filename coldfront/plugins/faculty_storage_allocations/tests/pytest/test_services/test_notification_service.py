@@ -210,6 +210,7 @@ class TestFSARequestNotificationService:
         # Execute
         FSARequestNotificationService.send_completion_email_to_users(
             self.mock_request,
+            '/global/scratch/fc_test_project',
             email_strategy=email_strategy
         )
 
@@ -236,6 +237,7 @@ class TestFSARequestNotificationService:
         assert context['center_name'] == 'Test Center'
         assert context['project'] == self.mock_request.project
         assert context['amount_tb'] == 5  # 5000 GB // 1000 = 5 TB
+        assert context['directory_path'] == '/global/scratch/fc_test_project'
         assert context['support_email'] == 'help@example.com'
         assert context['signature'] == 'Test Team'
         assert 'project_url' in context
@@ -264,6 +266,7 @@ class TestFSARequestNotificationService:
         # Execute
         FSARequestNotificationService.send_completion_email_to_users(
             self.mock_request,
+            '/global/scratch/fc_test_project',
             email_strategy=email_strategy
         )
 
@@ -401,6 +404,7 @@ class TestFSARequestNotificationService:
         # Execute
         FSARequestNotificationService.send_completion_email_to_users(
             self.mock_request,
+            '/global/scratch/fc_test_project',
             email_strategy=email_strategy
         )
 
