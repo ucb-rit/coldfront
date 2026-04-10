@@ -115,7 +115,26 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
                 type=openapi.TYPE_STRING,
                 enum=['project'],
             ),
-        ]
+        ],
+        responses={
+            200: openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'user': openapi.Schema(type=openapi.TYPE_STRING),
+                        'projects': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            description=(
+                                'List of project PKs (default), or project '
+                                'objects with id, name, and pis when '
+                                '?expand=project is used.'),
+                            items=openapi.Schema(type=openapi.TYPE_INTEGER),
+                        ),
+                    }
+                )
+            ),
+        }
     )
     @action(detail=False, methods=['post'], url_path='project_memberships',
             permission_classes=[IsSuperuserOrStaff])
