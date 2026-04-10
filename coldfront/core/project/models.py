@@ -302,6 +302,10 @@ class ProjectUser(TimeStampedModel):
     class Meta:
         unique_together = ('user', 'project')
         verbose_name_plural = "Project User Status"
+        permissions = [
+            ('can_view_project_memberships',
+             'Can view project memberships via API'),
+        ]
 
 
 class ProjectUserJoinRequest(TimeStampedModel):

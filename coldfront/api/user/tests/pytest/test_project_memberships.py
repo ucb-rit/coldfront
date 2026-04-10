@@ -36,7 +36,7 @@ class TestProjectMembershipsAuth:
 @pytest.mark.component
 @pytest.mark.usefixtures('api_test_data')
 class TestProjectMembershipsPermissions:
-    """Test that only superusers and staff can access the endpoint."""
+    """Test that only superusers or users with the explicit permission can access the endpoint."""
 
     def test_regular_user_forbidden(self, api_test_data):
         token = api_test_data['tokens']['user0']
@@ -45,8 +45,8 @@ class TestProjectMembershipsPermissions:
         response = client.post(URL, {'users': []}, format='json')
         assert response.status_code == HTTPStatus.FORBIDDEN
 
-    def test_staff_forbidden(self, api_test_data):
-        """Staff can only use SAFE_METHODS with IsSuperuserOrStaff."""
+    def test_staff_without_perm_forbidden(self, api_test_data):
+        """Staff without the explicit permission are denied."""
         token = api_test_data['tokens']['staff']
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
@@ -55,6 +55,18 @@ class TestProjectMembershipsPermissions:
 
     def test_superuser_allowed(self, api_client, api_test_data):
         response = api_client.post(URL, {'users': []}, format='json')
+        assert response.status_code != HTTPStatus.FORBIDDEN
+
+    def test_user_with_perm_allowed(self, api_test_data):
+        """A non-superuser granted can_view_project_memberships is allowed."""
+        from django.contrib.auth.models import Permission
+        user0 = api_test_data['users']['user0']
+        perm = Permission.objects.get(codename='can_view_project_memberships')
+        user0.user_permissions.add(perm)
+        token = api_test_data['tokens']['user0']
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+        response = client.post(URL, {'users': []}, format='json')
         assert response.status_code != HTTPStatus.FORBIDDEN
 
 

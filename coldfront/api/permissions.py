@@ -21,6 +21,28 @@ class IsAdminUserOrReadOnly(IsAuthenticated):
         )
 
 
+def IsSuperuserOrHasPerm(perm_codename):
+    """
+    Return a permission class that allows superusers or users with the
+    given Django permission codename. Unauthenticated users and staff
+    without the explicit permission are denied.
+
+    Usage::
+
+        permission_classes=[IsSuperuserOrHasPerm('app.codename')]
+    """
+    class Permission(IsAuthenticated):
+        def has_permission(self, request, view):
+            if not super().has_permission(request, view):
+                return False
+            return (
+                request.user.is_superuser or
+                request.user.has_perm(perm_codename)
+            )
+    Permission.__name__ = f'IsSuperuserOrHasPerm<{perm_codename}>'
+    return Permission
+
+
 class IsSuperuserOrStaff(IsAuthenticated):
     """
     Allows write access to superusers, read access to staff, and no

@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from coldfront.api.permissions import IsAdminUserOrReadOnly
+from coldfront.api.permissions import IsSuperuserOrHasPerm
 from coldfront.api.permissions import IsSuperuserOrStaff
 from coldfront.api.user.authentication import is_token_expired
 from coldfront.api.user.filters import IdentityLinkingRequestFilter
@@ -137,7 +138,7 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         }
     )
     @action(detail=False, methods=['post'], url_path='project_memberships',
-            permission_classes=[IsSuperuserOrStaff])
+            permission_classes=[IsSuperuserOrHasPerm('project.can_view_project_memberships')])
     def project_memberships(self, request):
         """Return project memberships for a batch of users.
 
