@@ -25,7 +25,7 @@ def pytest_configure(config):
     ]
 
 
-def pytest_ignore_collect(collection_path, path, config):
+def pytest_ignore_collect(collection_path, config):
     """Skip collection of plugin tests if the plugin is not installed.
 
     This prevents pytest from trying to import plugin modules (and their
