@@ -259,7 +259,8 @@ class FacultyStorageAllocationRequestService:
             request)
 
         FSARequestNotificationService.send_completion_email_to_users(
-            request, email_strategy=email_strategy)
+            request, directory_service.directory_path,
+            email_strategy=email_strategy)
 
     @staticmethod
     def _add_project_users_to_allocation(request):

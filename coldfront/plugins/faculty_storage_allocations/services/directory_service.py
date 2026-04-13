@@ -57,6 +57,10 @@ class DirectoryService:
         # Cache for allocation (lazy-loaded)
         self._allocation = None
 
+    @property
+    def directory_path(self):
+        return self._directory_path
+
     @staticmethod
     def get_faculty_storage_base_path():
         """
