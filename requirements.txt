@@ -31,7 +31,7 @@ django-structlog==10.0.0
 django-su==1.0.0
 djangorestframework==3.17.1
 doi2bib==0.4.0
-drf-nested-routers==0.94.2
+drf-nested-routers==0.95.0
 drf-yasg==1.21.10
 factory-boy==3.3.3
 Faker==37.5.3
