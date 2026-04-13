@@ -29,7 +29,7 @@ django-simple-history==3.10.1
 django-sslserver==0.22
 django-structlog==10.0.0
 django-su==1.0.0
-djangorestframework==3.16.0
+djangorestframework==3.17.1
 doi2bib==0.4.0
 drf-nested-routers==0.94.2
 drf-yasg==1.21.10
