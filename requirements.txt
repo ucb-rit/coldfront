@@ -3,7 +3,7 @@ beautifulsoup4==4.13.4
 bibtexparser==1.4.4
 blessed==1.21.0
 chardet==7.4.2
-coverage==7.10.1
+coverage==7.13.5
 crispy-bootstrap4==2025.6
 Django==5.2.13
 django-allauth==65.13.0
