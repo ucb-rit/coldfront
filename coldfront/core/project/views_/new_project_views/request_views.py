@@ -176,6 +176,50 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             'new project.')
         messages.error(self.request, message)
 
+    def get_cleaned_data_for_step(self, step):
+        """Return cleaned data for the given step, caching successful results.
+
+        Formtools re-validates the form on every call to this method.
+        get_form_list() evaluates all condition functions, several of which
+        call this method; get_form_kwargs() → __set_data_from_previous_steps()
+        also calls it for each earlier step, and those form constructions in
+        turn call get_form_list() again — creating a recursive chain that
+        multiplies query counts. Caching the result per-step breaks the
+        recursion and eliminates all redundant re-validation within a request.
+
+        The cache lives on self, which is instantiated fresh per HTTP request
+        (Django CBV contract), so going back and changing a field is safe: the
+        new POST sees a brand-new cache populated from the updated session data.
+
+        Two invariants keep the cache correct within a single request:
+        1. The current step (self.steps.current) is never cached. Session data
+           for that step is stale at the start of a POST — either not yet
+           present (first submission) or holding the old value (re-submission
+           after going back). set_step_data() updates it mid-request, so the
+           second read (from render_next_step → get_form_list) must go to the
+           session to pick up the new value.
+        2. Only non-None results are cached. None from a non-current step
+           (e.g. partial session loss) should not be frozen into the cache.
+        """
+        try:
+            cache = self._cleaned_data_cache
+        except AttributeError:
+            cache = self._cleaned_data_cache = {}
+        # Never cache the current step. Its session data is stale at the
+        # start of a POST (first submission: not in session yet; re-submission:
+        # old value still in session), and set_step_data() updates it
+        # mid-request before render_next_step calls get_form_list() again.
+        # Bypassing the cache here ensures the second read goes to the session
+        # and picks up the new value.
+        if step == self.steps.current:
+            return super().get_cleaned_data_for_step(step)
+        if step in cache:
+            return cache[step]
+        result = super().get_cleaned_data_for_step(step)
+        if result is not None:
+            cache[step] = result
+        return result
+
     def get_context_data(self, form, **kwargs):
         context = super().get_context_data(form=form, **kwargs)
         current_step = int(self.steps.current)
