@@ -1,5 +1,5 @@
 from coldfront.core.project.models import Project
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 
 from django import forms
 from django.core.validators import MinLengthValidator
@@ -68,7 +68,7 @@ class SavioProjectReviewSetupForm(forms.Form):
     def clean_final_name(self):
         cleaned_data = super().clean()
         final_name = cleaned_data.get('final_name', '').lower()
-        expected_prefix = ComputingAllowanceInterface().code_from_name(
+        expected_prefix = get_computing_allowance_interface().code_from_name(
             self.computing_allowance.name)
         if not final_name.startswith(expected_prefix):
             raise forms.ValidationError(

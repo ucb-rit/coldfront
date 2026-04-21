@@ -11,7 +11,7 @@ from coldfront.core.statistics.models import Job
 from coldfront.core.statistics.utils_.accounting_utils import set_job_amount
 from coldfront.core.statistics.utils_.accounting_utils import validate_job_dates
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterfaceError
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 
@@ -150,7 +150,7 @@ class Command(BaseCommand):
         appropriate. Optionally only consider jobs under the given
         Project. Optionally display updates instead of performing
         them."""
-        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance_interface = get_computing_allowance_interface()
         periodic_project_name_prefixes = tuple([
             computing_allowance_interface.code_from_name(allowance.name)
             for allowance in computing_allowance_interface.allowances()

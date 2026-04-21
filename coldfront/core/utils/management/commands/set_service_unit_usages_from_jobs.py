@@ -3,7 +3,7 @@ from coldfront.core.allocation.models import AllocationAttributeUsage
 from coldfront.core.allocation.models import AllocationUserAttributeUsage
 from coldfront.core.project.models import Project
 from coldfront.core.resource.utils import get_primary_compute_resource
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.statistics.models import Job
 from collections import defaultdict
 from decimal import Decimal
@@ -24,7 +24,7 @@ class Command(BaseCommand):
     logger = logging.getLogger(__name__)
 
     def handle(self, *args, **options):
-        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance_interface = get_computing_allowance_interface()
         prefixes = []
         for allowance in computing_allowance_interface.allowances():
             prefixes.append(

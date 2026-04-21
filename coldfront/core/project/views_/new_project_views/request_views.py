@@ -30,7 +30,7 @@ from coldfront.core.project.utils_.new_project_utils import send_new_project_req
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
@@ -102,7 +102,7 @@ class NewProjectRequestLandingView(LoginRequiredMixin, UserPassesTestMixin,
 
         allowances = []
         yearly_allowance_names = []
-        interface = ComputingAllowanceInterface()
+        interface = get_computing_allowance_interface()
         for allowance in sorted(interface.allowances(), key=lambda a: a.pk):
             wrapper = ComputingAllowance(allowance)
             allowance_name = wrapper.get_name()
@@ -255,7 +255,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 # Store transformed form data in a request.
                 # TODO: allocation_type will eventually be removed from the
                 # TODO: model.
-                computing_allowance_interface = ComputingAllowanceInterface()
+                computing_allowance_interface = get_computing_allowance_interface()
                 request_kwargs['allocation_type'] = \
                     computing_allowance_interface.name_short_from_name(
                         computing_allowance_wrapper.get_name())

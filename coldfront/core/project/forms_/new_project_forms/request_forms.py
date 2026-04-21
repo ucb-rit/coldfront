@@ -12,7 +12,7 @@ from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.user.utils_.host_user_utils import lbl_employees
 from coldfront.core.utils.common import utc_now_offset_aware
 
@@ -533,7 +533,7 @@ class SavioProjectPooledProjectSelectionForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
-        self.interface = ComputingAllowanceInterface()
+        self.interface = get_computing_allowance_interface()
         super().__init__(*args, **kwargs)
 
         f = Q(status__name__in=['Pending - Add', 'New', 'Active'])
@@ -604,7 +604,7 @@ class SavioProjectDetailsForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
-        self.interface = ComputingAllowanceInterface()
+        self.interface = get_computing_allowance_interface()
         super().__init__(*args, **kwargs)
         if self.computing_allowance is not None:
             self.computing_allowance = ComputingAllowance(

@@ -1,3 +1,5 @@
+import functools
+
 from django.db.models import Prefetch
 
 from coldfront.core.allocation.models import AllocationPeriod
@@ -149,3 +151,15 @@ class ComputingAllowanceInterface(object):
 class ComputingAllowanceInterfaceError(Exception):
     """An exception to be raised by the ComputingAllowanceInterface."""
     pass
+
+
+@functools.lru_cache(maxsize=1)
+def get_computing_allowance_interface():
+    """Return a cached ComputingAllowanceInterface instance.
+
+    The cache lives for the lifetime of the process (one entry per gunicorn
+    worker). Computing allowances change extremely rarely; if they do change,
+    call get_computing_allowance_interface.cache_clear() on each worker, or
+    simply restart the server.
+    """
+    return ComputingAllowanceInterface()

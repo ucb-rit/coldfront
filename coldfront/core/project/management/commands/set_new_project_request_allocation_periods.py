@@ -1,7 +1,7 @@
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 from django.core.management import CommandError
 from django.core.management.base import BaseCommand
@@ -61,7 +61,7 @@ class Command(BaseCommand):
 
     def handle_auto(self, *args, **options):
         """Handle the 'auto' subcommand."""
-        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance_interface = get_computing_allowance_interface()
         yearly_allowances, instructional_allowances = [], []
         for allowance in computing_allowance_interface.allowances():
             wrapper = ComputingAllowance(allowance)

@@ -7,7 +7,7 @@ from coldfront.api.statistics.utils import get_accounting_allocation_objects
 from coldfront.core.project.models import Project
 from coldfront.core.project.utils import deactivate_project_and_allocation
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.mail import send_email_template
@@ -45,7 +45,7 @@ class Command(BaseCommand):
 
         current_date = display_time_zone_current_date()
 
-        project_name_prefix = ComputingAllowanceInterface().code_from_name(
+        project_name_prefix = get_computing_allowance_interface().code_from_name(
             BRCAllowances.ICA)
 
         for project in Project.objects.filter(

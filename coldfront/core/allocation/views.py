@@ -49,7 +49,7 @@ from coldfront.core.project.models import (Project, ProjectUser,
 from coldfront.core.project.utils import is_primary_cluster_project
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import get_domain_url, import_from_settings
 from coldfront.core.utils.mail import send_email_template
@@ -452,7 +452,7 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         # Recharge fee billing IDs
         if not is_primary_cluster_project(allocation_obj.project):
             return
-        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance_interface = get_computing_allowance_interface()
         allowance_resource = \
             computing_allowance_interface.allowance_from_project(
                 allocation_obj.project)

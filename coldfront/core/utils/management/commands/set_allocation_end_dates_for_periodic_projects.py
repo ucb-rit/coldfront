@@ -1,7 +1,7 @@
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.project.models import Project
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -33,7 +33,7 @@ class Command(BaseCommand):
             return
 
         prefixes = []
-        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance_interface = get_computing_allowance_interface()
         for allowance in computing_allowance_interface.allowances():
             wrapper = ComputingAllowance(allowance)
             if wrapper.is_periodic():

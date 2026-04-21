@@ -14,7 +14,7 @@ from coldfront.core.allocation.models import AllocationUserAttribute
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.resource.models import Resource
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.user.utils_.host_user_utils import is_lbl_employee
 
 
@@ -34,7 +34,7 @@ class Command(BaseCommand):
     def assert_condo_and_recharge_project_allocation_values(self):
         lawrencium_compute_resource = Resource.objects.get(
             name='LAWRENCIUM Compute')
-        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance_interface = get_computing_allowance_interface()
         for resource_name in ('Condo Allocation', 'Recharge Allocation'):
             prefix = computing_allowance_interface.code_from_name(
                 resource_name)
@@ -143,7 +143,7 @@ class Command(BaseCommand):
         computing_allowance = Resource.objects.get(
             name='PI Computing Allowance')
 
-        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance_interface = get_computing_allowance_interface()
         prefix = computing_allowance_interface.code_from_name(
             'PI Computing Allowance')
         num_service_units = Decimal(

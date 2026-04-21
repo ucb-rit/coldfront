@@ -8,7 +8,7 @@ from coldfront.core.project.models import ProjectUserRemovalRequestStatusChoice
 from coldfront.core.project.models import ProjectUserRemovalRequest
 from coldfront.core.project.models import ProjectUserRoleChoice
 from coldfront.core.project.models import ProjectUserStatusChoice
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 
 
 class ProjectFilter(django_filters.FilterSet):
@@ -33,7 +33,7 @@ class ProjectFilter(django_filters.FilterSet):
 
     def _get_allowance_type_choices(self):
         """Get allowance type choices."""
-        interface = ComputingAllowanceInterface()
+        interface = get_computing_allowance_interface()
         allowances = interface.allowances()
         type_choices = []
         for allowance in allowances:

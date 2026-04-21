@@ -13,7 +13,7 @@ from coldfront.core.project.utils_.new_project_utils import pis_with_new_project
 from coldfront.core.project.utils_.renewal_utils import non_denied_renewal_request_statuses
 from coldfront.core.project.utils_.renewal_utils import pis_with_renewal_requests_pks
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.project.utils_.renewal_survey import is_renewal_survey_completed
 
 from flags.state import flag_enabled
@@ -170,7 +170,7 @@ class ProjectRenewalProjectSelectionForm(forms.Form):
 
         if not self.computing_allowance:
             return
-        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance_interface = get_computing_allowance_interface()
         self.computing_allowance = ComputingAllowance(self.computing_allowance)
 
         role = ProjectUserRoleChoice.objects.get(name='Principal Investigator')

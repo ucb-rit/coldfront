@@ -49,7 +49,7 @@ from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_p
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.project.utils_.renewal_utils import is_any_project_pi_renewable
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.user.forms import UserSearchForm
 from coldfront.core.user.utils import CombinedUserSearch, access_agreement_signed
 from coldfront.core.utils.common import (get_domain_url, import_from_settings)
@@ -232,7 +232,7 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         # under the primary cluster.
         renew_allowance_visible = False
         if _is_primary_cluster_project:
-            computing_allowance_interface = ComputingAllowanceInterface()
+            computing_allowance_interface = get_computing_allowance_interface()
             computing_allowance = ComputingAllowance(
                 computing_allowance_interface.allowance_from_project(
                     self.object))

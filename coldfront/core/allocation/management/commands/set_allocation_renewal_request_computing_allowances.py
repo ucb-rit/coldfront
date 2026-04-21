@@ -3,7 +3,7 @@ import logging
 from django.core.management.base import BaseCommand
 
 from coldfront.core.allocation.models import AllocationRenewalRequest
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 
 
@@ -21,7 +21,7 @@ class Command(BaseCommand):
         """Instantiate an interface for retrieving computing
         allowances."""
         super().__init__(*args, **kwargs)
-        self.interface = ComputingAllowanceInterface()
+        self.interface = get_computing_allowance_interface()
 
     def add_arguments(self, parser):
         add_argparse_dry_run_argument(parser)

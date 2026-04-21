@@ -19,7 +19,7 @@ from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcessingRunner
 from coldfront.core.project.utils_.renewal_utils import has_non_denied_renewal_request
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.common import validate_num_service_units
@@ -215,7 +215,7 @@ class Command(BaseCommand):
 
         If dry_run is True, write the details to stdout without creating
         any objects."""
-        interface = ComputingAllowanceInterface()
+        interface = get_computing_allowance_interface()
         approved_renewal_status = \
             AllocationRenewalRequestStatusChoice.objects.get(name='Approved')
         complete_renewal_status = \
