@@ -6,7 +6,7 @@ chardet==7.4.2
 coverage==7.13.5
 crispy-bootstrap4==2025.6
 Django==5.2.13
-django-allauth==65.14.1
+django-allauth==65.13.0
 django-constance==4.3.2
 django-crispy-forms==2.4
 django-debug-toolbar==6.0.0
