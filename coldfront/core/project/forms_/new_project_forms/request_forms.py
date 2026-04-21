@@ -2,6 +2,7 @@ from coldfront.core.allocation.forms import AllocationPeriodChoiceField
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.project.forms import DisabledChoicesSelectWidget
 from coldfront.core.project.models import Project
+from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses
 from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
 from coldfront.core.project.utils_.new_project_utils import project_pi_pks
@@ -22,6 +23,7 @@ from django.core.validators import MaxValueValidator
 from django.core.validators import MinLengthValidator
 from django.core.validators import MinValueValidator
 from django.core.validators import RegexValidator
+from django.db.models import Prefetch
 from django.db.models import Q
 from django.forms.widgets import TextInput
 from django.utils.safestring import mark_safe
@@ -508,13 +510,16 @@ class SavioProjectPoolAllocationsForm(forms.Form):
 class PooledProjectChoiceField(forms.ModelChoiceField):
 
     def label_from_instance(self, obj):
-        names = []
-        project_users = obj.projectuser_set.filter(
-            role__name='Principal Investigator')
-        for project_user in project_users:
-            user = project_user.user
-            names.append(f'{user.first_name} {user.last_name}')
-        names.sort()
+        # Use the pre-fetched PI list set by SavioProjectPooledProjectSelectionForm
+        # via Prefetch(..., to_attr='pi_project_users') when available, to avoid
+        # issuing one query per project.
+        pi_project_users = getattr(obj, 'pi_project_users', None)
+        if pi_project_users is None:
+            pi_project_users = obj.projectuser_set.filter(
+                role__name='Principal Investigator').select_related('user')
+        names = sorted(
+            f'{pu.user.first_name} {pu.user.last_name}'
+            for pu in pi_project_users)
         return f'{obj.name} ({", ".join(names)})'
 
 
@@ -540,8 +545,20 @@ class SavioProjectPooledProjectSelectionForm(forms.Form):
                 self.computing_allowance.get_name())
             f = f & Q(name__startswith=prefix)
 
+        # Use a targeted Prefetch with to_attr so that label_from_instance()
+        # can read obj.pi_project_users directly (a plain Python list) without
+        # issuing one extra query per project. A generic prefetch_related with
+        # a string path would be bypassed by the .filter() call inside
+        # label_from_instance(), defeating the prefetch entirely.
         self.fields['project'].queryset = Project.objects.prefetch_related(
-            'projectuser_set__user').filter(f)
+            Prefetch(
+                'projectuser_set',
+                queryset=ProjectUser.objects.filter(
+                    role__name='Principal Investigator'
+                ).select_related('user'),
+                to_attr='pi_project_users',
+            )
+        ).filter(f)
 
     def clean(self):
         cleaned_data = super().clean()
