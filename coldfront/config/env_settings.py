@@ -252,7 +252,12 @@ if env.bool('HPCS__ENABLE_DJANGO_DEBUG_TOOLBAR', default=False):
         'HPCS__DJANGO_DEBUG_TOOLBAR_INTERNAL_IPS', default=[])
 
     if DEBUG:
-        # For Docker support
+        # For Docker support: bypass IP-based check entirely, since the host's
+        # IP as seen by the container varies by Docker runtime / OS and is not
+        # reliably derivable from the container's own IP list.
+        DEBUG_TOOLBAR_CONFIG = {
+            'SHOW_TOOLBAR_CALLBACK': lambda request: True,
+        }
         import socket
         hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
         INTERNAL_IPS = [ip[: ip.rfind('.')] + '.1' for ip in ips] + ['10.0.2.2']
