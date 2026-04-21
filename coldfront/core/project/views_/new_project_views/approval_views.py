@@ -73,7 +73,10 @@ class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
             order_by = '-request_time'
 
         return annotate_queryset_with_allocation_period_not_started_bool(
-            SavioProjectAllocationRequest.objects.order_by(order_by))
+            SavioProjectAllocationRequest.objects.select_related(
+                'pi', 'project', 'status', 'computing_allowance',
+                'allocation_period', 'requester',
+            ).order_by(order_by))
 
     def get_context_data(self, **kwargs):
         """Include either pending or completed requests. If the user is
