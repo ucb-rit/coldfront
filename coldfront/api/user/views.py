@@ -80,8 +80,22 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
     permission_class = [IsAdminUserOrReadOnly]
     serializer_class = UserSerializer
 
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter(
+            'username', openapi.IN_QUERY,
+            description='Filter by username. May be repeated for multiple values.',
+            type=openapi.TYPE_STRING,
+        ),
+    ])
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):
-        return User.objects.order_by('id')
+        queryset = User.objects.order_by('id')
+        usernames = self.request.query_params.getlist('username')
+        if usernames:
+            queryset = queryset.filter(username__in=usernames)
+        return queryset
 
     @swagger_auto_schema(
         methods=['post'],
