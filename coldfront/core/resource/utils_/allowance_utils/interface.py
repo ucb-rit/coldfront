@@ -1,6 +1,10 @@
+from django.db.models import Prefetch
+
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.resource.models import Resource
+from coldfront.core.resource.models import ResourceAttribute
 from coldfront.core.resource.models import ResourceType
+from coldfront.core.resource.models import TimedResourceAttribute
 
 
 class ComputingAllowanceInterface(object):
@@ -11,7 +15,17 @@ class ComputingAllowanceInterface(object):
         """Retrieve database objects and instantiate data structures."""
         resource_type = ResourceType.objects.get(name='Computing Allowance')
         allowances = Resource.objects.prefetch_related(
-            'resourceattribute_set').filter(resource_type=resource_type)
+            Prefetch(
+                'resourceattribute_set',
+                queryset=ResourceAttribute.objects.select_related(
+                    'resource_attribute_type'),
+            ),
+            Prefetch(
+                'timedresourceattribute_set',
+                queryset=TimedResourceAttribute.objects.select_related(
+                    'resource_attribute_type'),
+            ),
+        ).filter(resource_type=resource_type)
 
         # A mapping from code values to allowance Resource objects.
         self._code_to_object = {}
