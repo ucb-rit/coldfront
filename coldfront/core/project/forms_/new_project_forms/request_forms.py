@@ -12,7 +12,7 @@ from coldfront.core.resource.utils_.allowance_utils.computing_allowance import C
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
-from coldfront.core.user.utils_.host_user_utils import is_lbl_employee
+from coldfront.core.user.utils_.host_user_utils import lbl_employees
 from coldfront.core.utils.common import utc_now_offset_aware
 
 from django import forms
@@ -215,10 +215,11 @@ class SavioProjectExistingPIForm(forms.Form):
 
         if flag_enabled('LRC_ONLY'):
             # On LRC, PIs must be LBL employees.
-            non_lbl_employees = set(
-                [user.pk for user in User.objects.all()
-                 if not is_lbl_employee(user)])
-            disable_user_pks.update(non_lbl_employees)
+            disable_user_pks.update(
+                User.objects.exclude(
+                    pk__in=lbl_employees()
+                ).values_list('pk', flat=True)
+            )
 
         self.fields['PI'].widget.disabled_choices = disable_user_pks
 
