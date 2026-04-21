@@ -18,7 +18,6 @@ from django.test import override_settings
 from django.urls import reverse
 import unittest
 
-from flags.state import enable_flag
 from http import HTTPStatus
 
 
@@ -220,9 +219,11 @@ class TestProjectDetailView(TestBase):
             self.assertNotContains(response, renewal_url)
 
         # Renewals for the next allocation period can be requested.
-        enable_flag(flag_name)
-        response = self.client.get(project_detail_url)
-        self.assertContains(response, renewal_url)
+        flags_copy_enabled = deepcopy(settings.FLAGS)
+        flags_copy_enabled[flag_name] = [{'condition': 'boolean', 'value': True}]
+        with override_settings(FLAGS=flags_copy_enabled):
+            response = self.client.get(project_detail_url)
+            self.assertContains(response, renewal_url)
 
     def test_renew_allowance_button_conditionally_visible(self):
         """Test that the 'Renew Allowance' button is only visible to

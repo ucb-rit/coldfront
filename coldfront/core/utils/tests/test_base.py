@@ -230,27 +230,19 @@ class enable_deployment(TestContextDecorator):
 
     def enable(self):
         flags_copy = deepcopy(settings.FLAGS)
-        flags_copy[self._flag_to_enable] = {
-            'condition': 'boolean', 'value': True}
-        flags_copy[self._flag_to_disable] = {
-            'condition': 'boolean', 'value': False}
+        flags_copy[self._flag_to_enable] = [
+            {'condition': 'boolean', 'value': True}]
+        flags_copy[self._flag_to_disable] = [
+            {'condition': 'boolean', 'value': False}]
 
         self._override_settings_cm = override_settings(
             FLAGS=flags_copy, **self._settings)
         self._override_settings_cm.__enter__()
 
-        enable_flag(self._flag_to_enable)
-        disable_flag(self._flag_to_disable)
         assert flag_enabled(self._flag_to_enable)
         assert not flag_enabled(self._flag_to_disable)
 
     def disable(self):
-        for flag_name, pre_state in self._pre_states.items():
-            if pre_state:
-                enable_flag(flag_name)
-            else:
-                disable_flag(flag_name)
-
         if self._override_settings_cm is not None:
             self._override_settings_cm.__exit__(None, None, None)
 

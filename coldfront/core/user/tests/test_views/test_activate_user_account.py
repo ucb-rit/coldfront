@@ -7,14 +7,14 @@ from django.test import Client
 from django.test import override_settings
 
 from allauth.account.models import EmailAddress
-from flags.state import enable_flag
 
 from coldfront.core.user.tests.utils import TestUserBase
 from coldfront.core.user.utils import account_activation_url
 
 
 FLAGS_COPY = deepcopy(settings.FLAGS)
-FLAGS_COPY['SSO_ENABLED'] = {'condition': 'boolean', 'value': False}
+FLAGS_COPY['SSO_ENABLED'] = [{'condition': 'boolean', 'value': False}]
+FLAGS_COPY['BASIC_AUTH_ENABLED'] = [{'condition': 'boolean', 'value': True}]
 
 
 @override_settings(FLAGS=FLAGS_COPY)
@@ -25,7 +25,6 @@ class TestActivateUserAccount(TestUserBase):
 
     def setUp(self):
         """Set up test data."""
-        enable_flag('BASIC_AUTH_ENABLED')
         super().setUp()
 
         self.user = User.objects.create(
