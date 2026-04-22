@@ -153,6 +153,24 @@ class PIChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return f'{obj.first_name} {obj.last_name} ({obj.email})'
 
+    def to_python(self, value):
+        """Return a User for the given pk, using _to_python_cache when set.
+
+        The wizard re-validates the existing_pi form on every get_form_list()
+        call (~18x per request). Each call hits the DB for the same pk. This
+        override caches the result in the shared per-request dict supplied by
+        the wizard via exclude_pi_choices(), eliminating the repeated lookups.
+        """
+        if value in self.empty_values:
+            return None
+        cache = getattr(self, '_to_python_cache', None)
+        if cache is not None and value in cache:
+            return cache[value]
+        result = super().to_python(value)
+        if cache is not None and result is not None:
+            cache[value] = result
+        return result
+
 
 class SavioProjectExistingPIForm(forms.Form):
 
@@ -177,11 +195,7 @@ class SavioProjectExistingPIForm(forms.Form):
         self.exclude_pi_choices()
 
     def clean(self):
-        cleaned_data = super().clean()
-        pi = self.cleaned_data['PI']
-        if pi is not None and pi not in self.fields['PI'].queryset:
-            raise forms.ValidationError(f'Invalid selection {pi.username}.')
-        return cleaned_data
+        return super().clean()
 
     def disable_pi_choices(self):
         """Prevent certain Users, who should be displayed, from being
@@ -189,9 +203,20 @@ class SavioProjectExistingPIForm(forms.Form):
         # The wizard view passes _pi_choices_cache so that the expensive
         # queries below run only once per request — even though the form is
         # re-validated on every get_form_list() call (typically ~18x).
+        #
+        # The cache key includes the computing_allowance resource pk and the
+        # allocation_period pk so that early calls with stale session data
+        # (triggered by condition functions before set_step_data() runs) do
+        # not poison the entry for the correct allowance seen later in the
+        # same request.
         cache = self._pi_choices_cache
-        if cache is not None and 'disabled_pks' in cache:
-            self.fields['PI'].widget.disabled_choices = cache['disabled_pks']
+        cache_key = (
+            'disabled_pks',
+            self.computing_allowance.get_resource().pk,
+            getattr(self.allocation_period, 'pk', None),
+        )
+        if cache is not None and cache_key in cache:
+            self.fields['PI'].widget.disabled_choices = cache[cache_key]
             return
 
         disable_user_pks = set()
@@ -236,7 +261,7 @@ class SavioProjectExistingPIForm(forms.Form):
             )
 
         if cache is not None:
-            cache['disabled_pks'] = disable_user_pks
+            cache[cache_key] = disable_user_pks
         self.fields['PI'].widget.disabled_choices = disable_user_pks
 
     def exclude_pi_choices(self):
@@ -244,6 +269,12 @@ class SavioProjectExistingPIForm(forms.Form):
         # Exclude any user that does not have an email address or is inactive.
         self.fields['PI'].queryset = User.objects.exclude(
             Q(email__isnull=True) | Q(email__exact='') | Q(is_active=False))
+        # Share the per-request cache with PIChoiceField.to_python() so that
+        # repeated re-validations within the same request (driven by
+        # get_form_list()) reuse the already-fetched User objects instead of
+        # hitting the DB once per call.
+        if self._pi_choices_cache is not None:
+            self.fields['PI']._to_python_cache = self._pi_choices_cache
 
 
 class SavioProjectNewPIForm(forms.Form):
