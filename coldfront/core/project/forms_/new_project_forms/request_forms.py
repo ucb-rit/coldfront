@@ -165,6 +165,10 @@ class SavioProjectExistingPIForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
         self.allocation_period = kwargs.pop('allocation_period', None)
+        # Shared mutable dict provided by the wizard view for per-request
+        # caching. None when the form is instantiated outside the wizard
+        # (e.g., in tests), in which case caching is simply skipped.
+        self._pi_choices_cache = kwargs.pop('pi_choices_cache', None)
         super().__init__(*args, **kwargs)
         if self.computing_allowance is not None:
             self.computing_allowance = ComputingAllowance(
@@ -182,6 +186,14 @@ class SavioProjectExistingPIForm(forms.Form):
     def disable_pi_choices(self):
         """Prevent certain Users, who should be displayed, from being
         selected as PIs."""
+        # The wizard view passes _pi_choices_cache so that the expensive
+        # queries below run only once per request — even though the form is
+        # re-validated on every get_form_list() call (typically ~18x).
+        cache = self._pi_choices_cache
+        if cache is not None and 'disabled_pks' in cache:
+            self.fields['PI'].widget.disabled_choices = cache['disabled_pks']
+            return
+
         disable_user_pks = set()
 
         if self.computing_allowance.is_one_per_pi() and self.allocation_period:
@@ -223,6 +235,8 @@ class SavioProjectExistingPIForm(forms.Form):
                 ).values_list('pk', flat=True)
             )
 
+        if cache is not None:
+            cache['disabled_pks'] = disable_user_pks
         self.fields['PI'].widget.disabled_choices = disable_user_pks
 
     def exclude_pi_choices(self):

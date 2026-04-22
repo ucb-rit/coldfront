@@ -19,11 +19,11 @@ class TestConditionallySendProjectReadyForProcessingEmail:
 
     @pytest.fixture(autouse=True)
     def mock_computing_allowance(self):
-        """Patch ComputingAllowanceInterface to avoid DB access during
+        """Patch get_computing_allowance_interface to avoid DB access during
         mixin init."""
         with patch(
                 'coldfront.core.project.views_.new_project_views.'
-                'approval_views.ComputingAllowanceInterface'):
+                'approval_views.get_computing_allowance_interface'):
             yield
 
     def _create_mixin(self):

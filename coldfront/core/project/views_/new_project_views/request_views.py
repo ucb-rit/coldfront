@@ -164,6 +164,11 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         self.step_numbers_by_form_name = {
             name: i for i, (name, _) in enumerate(self.__forms)}
 
+        # Per-request cache shared with SavioProjectExistingPIForm so that
+        # disable_pi_choices() DB queries run only once even though the form
+        # is re-validated on every get_form_list() call during a request.
+        self._pi_choices_cache = {}
+
     def test_func(self):
         if self.request.user.is_superuser:
             return True
@@ -252,6 +257,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         step_name = step_names_by_step_number[step_number]
         for key in required_keys_by_step_name[step_name]:
             kwargs[key] = data.get(key, None)
+        if step_name == 'existing_pi':
+            kwargs['pi_choices_cache'] = self._pi_choices_cache
         return kwargs
 
     def get_template_names(self):
