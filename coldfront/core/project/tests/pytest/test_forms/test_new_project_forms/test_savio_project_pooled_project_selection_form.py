@@ -37,6 +37,7 @@ def _make_pi_project_user(project, user):
 # PooledProjectChoiceField.label_from_instance()
 # =============================================================================
 
+@pytest.mark.component
 @pytest.mark.django_db
 class TestPooledProjectChoiceFieldLabelFromInstance:
     """Tests for PooledProjectChoiceField.label_from_instance()."""
@@ -96,6 +97,7 @@ class TestPooledProjectChoiceFieldLabelFromInstance:
 # SavioProjectPooledProjectSelectionForm — prefetch correctness
 # =============================================================================
 
+@pytest.mark.component
 @pytest.mark.django_db
 class TestSavioProjectPooledProjectSelectionFormPrefetch:
     """Tests that the form queryset attaches pi_project_users via Prefetch."""

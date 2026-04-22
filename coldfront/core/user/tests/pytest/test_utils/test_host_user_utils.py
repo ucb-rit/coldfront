@@ -8,6 +8,7 @@ from allauth.account.models import EmailAddress
 from coldfront.core.user.utils_.host_user_utils import lbl_employees
 
 
+@pytest.mark.component
 @pytest.mark.django_db
 class TestLblEmployees:
     """Tests for lbl_employees()."""

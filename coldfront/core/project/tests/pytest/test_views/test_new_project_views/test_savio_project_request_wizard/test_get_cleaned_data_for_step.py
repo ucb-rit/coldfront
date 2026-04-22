@@ -28,11 +28,12 @@ class TestGetCleanedDataForStepCache:
     SavioProjectRequestWizard."""
 
     # -------------------------------------------------------------------------
-    # Current step is never cached
+    # Current step: never cached (session data may be stale mid-request)
     # -------------------------------------------------------------------------
 
     def test_current_step_calls_super_every_time(self):
-        """super() is called on every call when step == steps.current."""
+        """super() is called on every call for the current step; result is
+        never cached so stale session data cannot be frozen."""
         wizard = _make_wizard(current_step='2')
         data = {'PI': Mock()}
 
@@ -45,18 +46,20 @@ class TestGetCleanedDataForStepCache:
         assert super_mock.call_count == 2
 
     def test_current_step_not_stored_in_cache(self):
-        """The cache dict is not populated for the current step."""
+        """The result for the current step is never stored in
+        _cleaned_data_cache."""
         wizard = _make_wizard(current_step='2')
+        data = {'PI': Mock()}
 
         with patch.object(
                 SessionWizardView, 'get_cleaned_data_for_step',
-                return_value={'PI': Mock()}):
+                return_value=data):
             wizard.get_cleaned_data_for_step('2')
 
         assert '2' not in getattr(wizard, '_cleaned_data_cache', {})
 
     # -------------------------------------------------------------------------
-    # Non-current step with non-None result is cached
+    # Non-current step with non-None result is cached in _cleaned_data_cache
     # -------------------------------------------------------------------------
 
     def test_non_current_step_cached_after_first_call(self):

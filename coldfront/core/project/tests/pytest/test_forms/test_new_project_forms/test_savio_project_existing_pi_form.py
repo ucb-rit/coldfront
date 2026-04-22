@@ -40,6 +40,7 @@ def _ca_wrapper(is_one_per_pi=True):
     return wrapper
 
 
+@pytest.mark.component
 @pytest.mark.django_db
 class TestDisablePIChoicesCache:
     """Tests for the per-request cache in disable_pi_choices()."""
@@ -85,8 +86,9 @@ class TestDisablePIChoicesCache:
     # -------------------------------------------------------------------------
 
     def test_cache_populated_after_first_instantiation(self):
-        """The cache dict gains a 'disabled_pks' entry after the first form
-        instantiation and is not re-computed on the second."""
+        """The cache dict gains one entry after the first form instantiation
+        and is not re-computed on the second.  The key is a tuple whose first
+        element is 'disabled_pks' (the rest encode the allowance and period)."""
         wrapper = _ca_wrapper()
         cache = {}
 
@@ -101,15 +103,17 @@ class TestDisablePIChoicesCache:
              patch(f'{_BASE}.pis_with_renewal_requests_pks',
                    return_value={40}):
 
-            assert 'disabled_pks' not in cache
+            assert not cache
             SavioProjectExistingPIForm(
                 computing_allowance=Mock(),
                 allocation_period=Mock(),
                 pi_choices_cache=cache,
             )
 
-        assert 'disabled_pks' in cache
-        assert cache['disabled_pks'] == {10, 20, 30, 40}
+        assert len(cache) == 1
+        (cache_key, cached_value), = cache.items()
+        assert cache_key[0] == 'disabled_pks'
+        assert cached_value == {10, 20, 30, 40}
 
     def test_second_form_uses_cached_disabled_pks(self):
         """The second form's disabled_choices equals the cached set from the
@@ -136,9 +140,11 @@ class TestDisablePIChoicesCache:
 
             form1 = SavioProjectExistingPIForm(**kwargs)
 
-            # Mutate the cache to simulate a different value; the second form
-            # must use the cached set, not re-run queries.
-            cache['disabled_pks'] = {42}
+            # Mutate the cache entry (using the tuple key written by the first
+            # form) to simulate a different value; the second form must use the
+            # cached set, not re-run queries.
+            cache_key = next(iter(cache))
+            cache[cache_key] = {42}
             form2 = SavioProjectExistingPIForm(**kwargs)
 
         assert form2.fields['PI'].widget.disabled_choices == {42}
@@ -205,4 +211,7 @@ class TestDisablePIChoicesCache:
         assert mock_pks.call_count == 0
         assert mock_new_pks.call_count == 0
         assert mock_renewal_pks.call_count == 0
-        assert cache['disabled_pks'] == set()
+        assert len(cache) == 1
+        (cache_key, cached_value), = cache.items()
+        assert cache_key[0] == 'disabled_pks'
+        assert cached_value == set()

@@ -14,6 +14,7 @@ from coldfront.core.resource.utils_.allowance_utils.interface import (
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.component
 @pytest.mark.django_db
 class TestComputingAllowanceInterface:
 
@@ -89,6 +90,7 @@ class TestComputingAllowanceInterface:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.component
 @pytest.mark.django_db
 class TestGetComputingAllowanceInterface:
 
