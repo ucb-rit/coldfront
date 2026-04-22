@@ -1,3 +1,5 @@
+import functools
+
 from django.conf import settings
 
 from coldfront.core.resource.models import Resource
@@ -27,6 +29,7 @@ def get_computing_allowance_project_prefixes():
     return tuple(prefixes)
 
 
+@functools.lru_cache(maxsize=1)
 def get_primary_compute_resource():
     """Return the 'Compute' Resource representing access to the primary
     cluster."""
