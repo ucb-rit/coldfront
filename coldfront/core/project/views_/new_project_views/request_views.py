@@ -155,6 +155,13 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
         super().__init__(*args, **kwargs)
 
+        # condition_dict() is evaluated once at URL-conf load time. Any flag
+        # that affects which steps are included could in principle differ between
+        # URL-conf load and a later request, leaving the stale condition_dict out
+        # of sync with the per-request form_list built above. Recomputing it
+        # here keeps the two always consistent.
+        self.condition_dict = type(self).condition_dict()
+
         # A list of tuples (form name, form class) in order of appearance.
         self.__forms = self.__wizard_form_names_and_classes()
         # A dict mapping form name to the corresponding template.
@@ -197,12 +204,9 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         new POST sees a brand-new cache populated from the updated session data.
 
         Two invariants keep the cache correct within a single request:
-        1. The current step (self.steps.current) is never cached. Session data
-           for that step is stale at the start of a POST — either not yet
-           present (first submission) or holding the old value (re-submission
-           after going back). set_step_data() updates it mid-request, so the
-           second read (from render_next_step → get_form_list) must go to the
-           session to pick up the new value.
+        1. The current step is never cached. Its session data may be stale
+           at the start of certain requests (e.g. after going back and
+           resubmitting), so always re-read from the session.
         2. Only non-None results are cached. None from a non-current step
            (e.g. partial session loss) should not be frozen into the cache.
         """
@@ -210,12 +214,6 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             cache = self._cleaned_data_cache
         except AttributeError:
             cache = self._cleaned_data_cache = {}
-        # Never cache the current step. Its session data is stale at the
-        # start of a POST (first submission: not in session yet; re-submission:
-        # old value still in session), and set_step_data() updates it
-        # mid-request before render_next_step calls get_form_list() again.
-        # Bypassing the cache here ensures the second read goes to the session
-        # and picks up the new value.
         if step == self.steps.current:
             return super().get_cleaned_data_for_step(step)
         if step in cache:
