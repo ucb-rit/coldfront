@@ -16,7 +16,7 @@ from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.project.utils_.request_processing_utils import create_project_users
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.statistics.models import ProjectTransaction
 from coldfront.core.statistics.models import ProjectUserTransaction
 from coldfront.core.utils.common import build_absolute_url
@@ -263,7 +263,7 @@ def pis_with_renewal_requests_pks(allocation_period, computing_allowance=None,
     f = Q(allocation_period=allocation_period)
     if computing_allowance is not None:
         assert isinstance(computing_allowance, Resource)
-        interface = ComputingAllowanceInterface()
+        interface = get_computing_allowance_interface()
         project_prefix = interface.code_from_name(computing_allowance.name)
         f = f & Q(post_project__name__startswith=project_prefix)
     if request_status_names:
@@ -683,7 +683,7 @@ class AllowanceRenewalAvailableEmailSender(object):
         assert self._computing_allowance.is_renewable()
         assert self._computing_allowance.is_renewal_supported()
 
-        self._computing_allowance_interface = ComputingAllowanceInterface()
+        self._computing_allowance_interface = get_computing_allowance_interface()
         self._allowance_name_long = self._computing_allowance.get_name()
         self._allowance_name_short = \
             self._computing_allowance_interface.name_short_from_name(
@@ -758,7 +758,7 @@ class AllocationRenewalRunnerBase(object):
     def __init__(self, request_obj, *args, **kwargs):
         self.request_obj = request_obj
         self.current_display_tz_date = display_time_zone_current_date()
-        self.computing_allowance_interface = ComputingAllowanceInterface()
+        self.computing_allowance_interface = get_computing_allowance_interface()
         self.computing_allowance = self.request_obj.computing_allowance
 
     def run(self):

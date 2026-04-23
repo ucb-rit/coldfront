@@ -13,8 +13,6 @@ from django.urls import reverse
 
 from allauth.account.models import EmailAddress
 
-from flags.state import disable_flag
-from flags.state import enable_flag
 from flags.state import flag_enabled
 
 from sesame import settings as sesame_settings
@@ -24,15 +22,18 @@ from coldfront.core.user.views_.link_login_views import RequestLoginLinkView
 from coldfront.core.utils.tests.test_base import TestBase
 
 
+FLAGS_COPY = deepcopy(settings.FLAGS)
+FLAGS_COPY['BASIC_AUTH_ENABLED'] = [{'condition': 'boolean', 'value': True}]
+FLAGS_COPY['LINK_LOGIN_ENABLED'] = [{'condition': 'boolean', 'value': True}]
+
+
+@override_settings(FLAGS=FLAGS_COPY)
 class TestLoginLinkViews(TestBase):
     """A class for testing the views for requesting a short-lived login
     link and for authenticating using such links."""
 
     def setUp(self):
         """Set up test data."""
-        enable_flag('BASIC_AUTH_ENABLED')
-        enable_flag('LINK_LOGIN_ENABLED')
-
         super().setUp()
 
         self.user = User.objects.create(
@@ -105,7 +106,6 @@ class TestLoginLinkViews(TestBase):
         """Test that the views are inaccessible if the
         LINK_LOGIN_ENABLED flag is disabled."""
         flag_name = 'LINK_LOGIN_ENABLED'
-        enable_flag(flag_name)
 
         response = self.client.get(self._view_url())
         self.assertEqual(response.status_code, HTTPStatus.OK)
@@ -119,9 +119,8 @@ class TestLoginLinkViews(TestBase):
         self.client.logout()
 
         flags_copy = deepcopy(settings.FLAGS)
-        flags_copy[flag_name] = {'condition': 'boolean', 'value': False}
+        flags_copy[flag_name] = [{'condition': 'boolean', 'value': False}]
         with override_settings(FLAGS=flags_copy):
-            disable_flag(flag_name)
             self.assertFalse(flag_enabled(flag_name))
             response = self.client.get(self._view_url())
             self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)

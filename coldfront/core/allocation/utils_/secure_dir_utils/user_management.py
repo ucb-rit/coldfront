@@ -3,6 +3,8 @@ import logging
 from abc import ABC
 from abc import abstractmethod
 
+from urllib.parse import urljoin
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import transaction
@@ -141,9 +143,11 @@ class SecureDirectoryAddUserRequestRunner(SecureDirectoryManageUserRequestRunner
         user_str = (
             f'{self._user.first_name} {self._user.last_name} '
             f'({self._user.email})')
-        review_url = reverse(
+        domain = settings.CENTER_BASE_URL
+        view = reverse(
             'secure-dir-manage-users-request-list',
             kwargs={'action': 'add', 'status': 'pending'})
+        review_url = urljoin(domain, view)
         context = {
             'user_str': user_str,
             'directory_name': self._secure_directory.get_path(),
@@ -174,9 +178,11 @@ class SecureDirectoryRemoveUserRequestRunner(SecureDirectoryManageUserRequestRun
         user_str = (
             f'{self._user.first_name} {self._user.last_name} '
             f'({self._user.email})')
-        review_url = reverse(
+        domain = settings.CENTER_BASE_URL
+        view = reverse(
             'secure-dir-manage-users-request-list',
             kwargs={'action': 'remove', 'status': 'pending'})
+        review_url = urljoin(domain, view)
         context = {
             'user_str': user_str,
             'directory_name': self._secure_directory.get_path(),

@@ -29,7 +29,7 @@ from coldfront.core.allocation.signals import allocation_activate_user
 from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource_name
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import utc_now_offset_aware
 
@@ -161,7 +161,7 @@ def get_project_compute_resource_name(project_obj):
     one cannot be determined, return the empty string."""
     project_name = project_obj.name
 
-    computing_allowance_interface = ComputingAllowanceInterface()
+    computing_allowance_interface = get_computing_allowance_interface()
     project_name_prefixes = tuple([
         computing_allowance_interface.code_from_name(allowance.name)
         for allowance in computing_allowance_interface.allowances()])
@@ -242,7 +242,7 @@ def calculate_service_units_to_allocate(computing_allowance,
         kwargs['is_timed'] = True
         kwargs['allocation_period'] = allocation_period
 
-    computing_allowance_interface = ComputingAllowanceInterface()
+    computing_allowance_interface = get_computing_allowance_interface()
     num_service_units = Decimal(
         computing_allowance_interface.service_units_from_name(
             computing_allowance.get_name(), **kwargs))

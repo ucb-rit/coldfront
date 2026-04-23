@@ -2,6 +2,7 @@ from coldfront.core.allocation.forms import AllocationPeriodChoiceField
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.project.forms import DisabledChoicesSelectWidget
 from coldfront.core.project.models import Project
+from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.utils_.new_project_utils import non_denied_new_project_request_statuses
 from coldfront.core.project.utils_.new_project_utils import pis_with_new_project_requests_pks
 from coldfront.core.project.utils_.new_project_utils import project_pi_pks
@@ -11,8 +12,8 @@ from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
-from coldfront.core.user.utils_.host_user_utils import is_lbl_employee
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
+from coldfront.core.user.utils_.host_user_utils import lbl_employees
 from coldfront.core.utils.common import utc_now_offset_aware
 
 from django import forms
@@ -22,6 +23,7 @@ from django.core.validators import MaxValueValidator
 from django.core.validators import MinLengthValidator
 from django.core.validators import MinValueValidator
 from django.core.validators import RegexValidator
+from django.db.models import Prefetch
 from django.db.models import Q
 from django.forms.widgets import TextInput
 from django.utils.safestring import mark_safe
@@ -151,6 +153,24 @@ class PIChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return f'{obj.first_name} {obj.last_name} ({obj.email})'
 
+    def to_python(self, value):
+        """Return a User for the given pk, using _to_python_cache when set.
+
+        The wizard re-validates the existing_pi form on every get_form_list()
+        call (~18x per request). Each call hits the DB for the same pk. This
+        override caches the result in the shared per-request dict supplied by
+        the wizard via exclude_pi_choices(), eliminating the repeated lookups.
+        """
+        if value in self.empty_values:
+            return None
+        cache = getattr(self, '_to_python_cache', None)
+        if cache is not None and value in cache:
+            return cache[value]
+        result = super().to_python(value)
+        if cache is not None and result is not None:
+            cache[value] = result
+        return result
+
 
 class SavioProjectExistingPIForm(forms.Form):
 
@@ -163,6 +183,10 @@ class SavioProjectExistingPIForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
         self.allocation_period = kwargs.pop('allocation_period', None)
+        # Shared mutable dict provided by the wizard view for per-request
+        # caching. None when the form is instantiated outside the wizard
+        # (e.g., in tests), in which case caching is simply skipped.
+        self._pi_choices_cache = kwargs.pop('pi_choices_cache', None)
         super().__init__(*args, **kwargs)
         if self.computing_allowance is not None:
             self.computing_allowance = ComputingAllowance(
@@ -171,15 +195,30 @@ class SavioProjectExistingPIForm(forms.Form):
         self.exclude_pi_choices()
 
     def clean(self):
-        cleaned_data = super().clean()
-        pi = self.cleaned_data['PI']
-        if pi is not None and pi not in self.fields['PI'].queryset:
-            raise forms.ValidationError(f'Invalid selection {pi.username}.')
-        return cleaned_data
+        return super().clean()
 
     def disable_pi_choices(self):
         """Prevent certain Users, who should be displayed, from being
         selected as PIs."""
+        # The wizard view passes _pi_choices_cache so that the expensive
+        # queries below run only once per request — even though the form is
+        # re-validated on every get_form_list() call (typically ~18x).
+        #
+        # The cache key includes the computing_allowance resource pk and the
+        # allocation_period pk so that early calls with stale session data
+        # (triggered by condition functions before set_step_data() runs) do
+        # not poison the entry for the correct allowance seen later in the
+        # same request.
+        cache = self._pi_choices_cache
+        cache_key = (
+            'disabled_pks',
+            self.computing_allowance.get_resource().pk,
+            getattr(self.allocation_period, 'pk', None),
+        )
+        if cache is not None and cache_key in cache:
+            self.fields['PI'].widget.disabled_choices = cache[cache_key]
+            return
+
         disable_user_pks = set()
 
         if self.computing_allowance.is_one_per_pi() and self.allocation_period:
@@ -215,11 +254,14 @@ class SavioProjectExistingPIForm(forms.Form):
 
         if flag_enabled('LRC_ONLY'):
             # On LRC, PIs must be LBL employees.
-            non_lbl_employees = set(
-                [user.pk for user in User.objects.all()
-                 if not is_lbl_employee(user)])
-            disable_user_pks.update(non_lbl_employees)
+            disable_user_pks.update(
+                User.objects.exclude(
+                    pk__in=lbl_employees()
+                ).values_list('pk', flat=True)
+            )
 
+        if cache is not None:
+            cache[cache_key] = disable_user_pks
         self.fields['PI'].widget.disabled_choices = disable_user_pks
 
     def exclude_pi_choices(self):
@@ -227,6 +269,12 @@ class SavioProjectExistingPIForm(forms.Form):
         # Exclude any user that does not have an email address or is inactive.
         self.fields['PI'].queryset = User.objects.exclude(
             Q(email__isnull=True) | Q(email__exact='') | Q(is_active=False))
+        # Share the per-request cache with PIChoiceField.to_python() so that
+        # repeated re-validations within the same request (driven by
+        # get_form_list()) reuse the already-fetched User objects instead of
+        # hitting the DB once per call.
+        if self._pi_choices_cache is not None:
+            self.fields['PI']._to_python_cache = self._pi_choices_cache
 
 
 class SavioProjectNewPIForm(forms.Form):
@@ -507,13 +555,16 @@ class SavioProjectPoolAllocationsForm(forms.Form):
 class PooledProjectChoiceField(forms.ModelChoiceField):
 
     def label_from_instance(self, obj):
-        names = []
-        project_users = obj.projectuser_set.filter(
-            role__name='Principal Investigator')
-        for project_user in project_users:
-            user = project_user.user
-            names.append(f'{user.first_name} {user.last_name}')
-        names.sort()
+        # Use the pre-fetched PI list set by SavioProjectPooledProjectSelectionForm
+        # via Prefetch(..., to_attr='pi_project_users') when available, to avoid
+        # issuing one query per project.
+        pi_project_users = getattr(obj, 'pi_project_users', None)
+        if pi_project_users is None:
+            pi_project_users = obj.projectuser_set.filter(
+                role__name='Principal Investigator').select_related('user')
+        names = sorted(
+            f'{pu.user.first_name} {pu.user.last_name}'
+            for pu in pi_project_users)
         return f'{obj.name} ({", ".join(names)})'
 
 
@@ -527,7 +578,7 @@ class SavioProjectPooledProjectSelectionForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
-        self.interface = ComputingAllowanceInterface()
+        self.interface = get_computing_allowance_interface()
         super().__init__(*args, **kwargs)
 
         f = Q(status__name__in=['Pending - Add', 'New', 'Active'])
@@ -539,8 +590,20 @@ class SavioProjectPooledProjectSelectionForm(forms.Form):
                 self.computing_allowance.get_name())
             f = f & Q(name__startswith=prefix)
 
+        # Use a targeted Prefetch with to_attr so that label_from_instance()
+        # can read obj.pi_project_users directly (a plain Python list) without
+        # issuing one extra query per project. A generic prefetch_related with
+        # a string path would be bypassed by the .filter() call inside
+        # label_from_instance(), defeating the prefetch entirely.
         self.fields['project'].queryset = Project.objects.prefetch_related(
-            'projectuser_set__user').filter(f)
+            Prefetch(
+                'projectuser_set',
+                queryset=ProjectUser.objects.filter(
+                    role__name='Principal Investigator'
+                ).select_related('user'),
+                to_attr='pi_project_users',
+            )
+        ).filter(f)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -586,7 +649,7 @@ class SavioProjectDetailsForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.computing_allowance = kwargs.pop('computing_allowance', None)
-        self.interface = ComputingAllowanceInterface()
+        self.interface = get_computing_allowance_interface()
         super().__init__(*args, **kwargs)
         if self.computing_allowance is not None:
             self.computing_allowance = ComputingAllowance(

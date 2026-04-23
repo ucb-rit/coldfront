@@ -24,7 +24,7 @@ from coldfront.core.project.models import ProjectStatusChoice
 
 from coldfront.core.resource.models import Resource, ResourceAttribute
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterfaceError
 
 from coldfront.core.utils.common import utc_now_offset_aware
@@ -546,7 +546,7 @@ def is_project_eligible_for_secure_dirs(project):
         BRCAllowances.FCA,
         BRCAllowances.ICA,
     }
-    computing_allowance_interface = ComputingAllowanceInterface()
+    computing_allowance_interface = get_computing_allowance_interface()
     try:
         computing_allowance = \
             computing_allowance_interface.allowance_from_project(project)

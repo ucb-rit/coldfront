@@ -1,6 +1,6 @@
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 
 from coldfront.plugins.faculty_storage_allocations.services.eligibility_service import FSARequestEligibilityService
 
@@ -20,7 +20,7 @@ def has_eligible_pi_for_fsa_request(project):
 def is_project_eligible_for_faculty_storage_allocations(project):
     """Return whether the given Project is eligible to request cluster
     storage."""
-    computing_allowance_interface = ComputingAllowanceInterface()
+    computing_allowance_interface = get_computing_allowance_interface()
     allowance = computing_allowance_interface.allowance_from_project(project)
     computing_allowance = ComputingAllowance(allowance)
     allowance_name = computing_allowance.get_name()

@@ -11,10 +11,6 @@ from datetime import timedelta
 from django.conf import settings
 from django.test import override_settings
 
-from flags.state import disable_flag
-from flags.state import enable_flag
-
-
 class TestSavioProjectAllocationPeriodForm(TestBase):
     """A class for testing SavioProjectAllocationPeriodForm."""
 
@@ -84,7 +80,6 @@ class TestSavioProjectAllocationPeriodForm(TestBase):
 
         # If renewal for the next period may not be requested, the next period
         # should not be selectable.
-        disable_flag(flag_name)
         flags_copy = deepcopy(settings.FLAGS)
         flags_copy.pop(flag_name)
         with override_settings(FLAGS=flags_copy):
@@ -95,13 +90,15 @@ class TestSavioProjectAllocationPeriodForm(TestBase):
                 self.assertIn(self.current_fca_pca_period, period_choices)
 
         # Otherwise, it should be selectable.
-        enable_flag(flag_name)
-        for computing_allowance in computing_allowances:
-            form = self.form_class(computing_allowance=computing_allowance)
-            period_choices = form.fields['allocation_period'].queryset
-            self.assertEqual(period_choices.count(), 2)
-            self.assertIn(self.current_fca_pca_period, period_choices)
-            self.assertIn(self.next_fca_pca_period, period_choices)
+        flags_copy_enabled = deepcopy(settings.FLAGS)
+        flags_copy_enabled[flag_name] = [{'condition': 'boolean', 'value': True}]
+        with override_settings(FLAGS=flags_copy_enabled):
+            for computing_allowance in computing_allowances:
+                form = self.form_class(computing_allowance=computing_allowance)
+                period_choices = form.fields['allocation_period'].queryset
+                self.assertEqual(period_choices.count(), 2)
+                self.assertIn(self.current_fca_pca_period, period_choices)
+                self.assertIn(self.next_fca_pca_period, period_choices)
 
     @enable_deployment('BRC')
     def test_ica_allowance_choices(self):

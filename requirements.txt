@@ -3,7 +3,7 @@ beautifulsoup4==4.13.4
 bibtexparser==1.4.4
 blessed==1.21.0
 chardet==7.4.2
-coverage==7.10.1
+coverage==7.13.5
 crispy-bootstrap4==2025.6
 Django==5.2.13
 django-allauth==65.13.0
@@ -19,7 +19,7 @@ django-googledrive-storage==1.6.0
 django-maintenance-mode==0.22.0
 django-model-utils==5.0.0
 django-phonenumber-field==8.1.0
-django-picklefield==3.3
+django-picklefield==3.4.0
 django-prometheus==2.4.1
 django-q2==1.8.0
 django-redis==6.0.0
@@ -32,7 +32,7 @@ django-su==1.0.0
 djangorestframework==3.17.1
 doi2bib==0.4.0
 drf-nested-routers==0.95.0
-drf-yasg==1.21.10
+drf-yasg==1.21.15
 factory-boy==3.3.3
 Faker==37.5.3
 gspread==6.2.1

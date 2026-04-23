@@ -14,7 +14,7 @@ from coldfront.core.allocation.models import AllocationStatusChoice
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
 from coldfront.core.allocation.utils import calculate_service_units_to_allocate
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectStatusChoice
 from coldfront.core.project.models import ProjectUser
@@ -408,7 +408,7 @@ class Command(BaseCommand):
             raise CommandError(
                 f'A Project with name "{project_name}" does not exist.')
 
-        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance_interface = get_computing_allowance_interface()
         computing_allowance = ComputingAllowance(
             computing_allowance_interface.allowance_from_project(project))
         if not computing_allowance.is_renewable():

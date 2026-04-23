@@ -33,7 +33,7 @@ from coldfront.core.project.models import ProjectUser
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.resource.utils import get_computing_allowance_project_prefixes
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.statistics.models import Job
 from coldfront.core.statistics.utils_.accounting_utils import validate_job_dates
 from coldfront.core.user.models import UserProfile
@@ -671,7 +671,7 @@ def can_submit_job(request, job_cost, user_id, account_id):
     # If the account has infinite service units, allow the job, regardless of
     # cost.
     computing_allowance = ComputingAllowance(
-        ComputingAllowanceInterface().allowance_from_project(account))
+        get_computing_allowance_interface().allowance_from_project(account))
     if computing_allowance.has_infinite_service_units():
         return affirmative
 

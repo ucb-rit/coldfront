@@ -35,7 +35,7 @@ from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
 from coldfront.core.utils.common import utc_now_offset_aware
@@ -85,7 +85,7 @@ class AllocationRenewalLandingView(LoginRequiredMixin, UserPassesTestMixin,
         yearly_allowance_names = []
         renewal_supported_allowance_names = []
         renewal_not_supported_allowance_names = []
-        interface = ComputingAllowanceInterface()
+        interface = get_computing_allowance_interface()
         for allowance in sorted(interface.allowances(), key=lambda a: a.pk):
             wrapper = ComputingAllowance(allowance)
             allowance_name = wrapper.get_name()
@@ -134,7 +134,7 @@ class AllocationRenewalMixin(object):
             raise ImproperlyConfigured(
                 'One of the following flags must be enabled: BRC_ONLY, '
                 'LRC_ONLY.')
-        self.interface = ComputingAllowanceInterface()
+        self.interface = get_computing_allowance_interface()
 
     def get_context_data(self, form, **kwargs):
         context = super().get_context_data(form=form, **kwargs)

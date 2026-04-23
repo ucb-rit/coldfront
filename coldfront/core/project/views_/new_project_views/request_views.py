@@ -30,7 +30,7 @@ from coldfront.core.project.utils_.new_project_utils import send_new_project_req
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.user.models import UserProfile
 from coldfront.core.user.utils import access_agreement_signed
 from coldfront.core.utils.common import session_wizard_all_form_data
@@ -102,7 +102,7 @@ class NewProjectRequestLandingView(LoginRequiredMixin, UserPassesTestMixin,
 
         allowances = []
         yearly_allowance_names = []
-        interface = ComputingAllowanceInterface()
+        interface = get_computing_allowance_interface()
         for allowance in sorted(interface.allowances(), key=lambda a: a.pk):
             wrapper = ComputingAllowance(allowance)
             allowance_name = wrapper.get_name()
@@ -155,6 +155,13 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
 
         super().__init__(*args, **kwargs)
 
+        # condition_dict() is evaluated once at URL-conf load time. Any flag
+        # that affects which steps are included could in principle differ between
+        # URL-conf load and a later request, leaving the stale condition_dict out
+        # of sync with the per-request form_list built above. Recomputing it
+        # here keeps the two always consistent.
+        self.condition_dict = type(self).condition_dict()
+
         # A list of tuples (form name, form class) in order of appearance.
         self.__forms = self.__wizard_form_names_and_classes()
         # A dict mapping form name to the corresponding template.
@@ -163,6 +170,11 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         # Define a lookup table from form name to step number.
         self.step_numbers_by_form_name = {
             name: i for i, (name, _) in enumerate(self.__forms)}
+
+        # Per-request cache shared with SavioProjectExistingPIForm so that
+        # disable_pi_choices() DB queries run only once even though the form
+        # is re-validated on every get_form_list() call during a request.
+        self._pi_choices_cache = {}
 
     def test_func(self):
         if self.request.user.is_superuser:
@@ -175,6 +187,41 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
             'You must sign the User Access Agreement before you can create a '
             'new project.')
         messages.error(self.request, message)
+
+    def get_cleaned_data_for_step(self, step):
+        """Return cleaned data for the given step, caching successful results.
+
+        Formtools re-validates the form on every call to this method.
+        get_form_list() evaluates all condition functions, several of which
+        call this method; get_form_kwargs() → __set_data_from_previous_steps()
+        also calls it for each earlier step, and those form constructions in
+        turn call get_form_list() again — creating a recursive chain that
+        multiplies query counts. Caching the result per-step breaks the
+        recursion and eliminates all redundant re-validation within a request.
+
+        The cache lives on self, which is instantiated fresh per HTTP request
+        (Django CBV contract), so going back and changing a field is safe: the
+        new POST sees a brand-new cache populated from the updated session data.
+
+        Two invariants keep the cache correct within a single request:
+        1. The current step is never cached. Its session data may be stale
+           at the start of certain requests (e.g. after going back and
+           resubmitting), so always re-read from the session.
+        2. Only non-None results are cached. None from a non-current step
+           (e.g. partial session loss) should not be frozen into the cache.
+        """
+        try:
+            cache = self._cleaned_data_cache
+        except AttributeError:
+            cache = self._cleaned_data_cache = {}
+        if step == self.steps.current:
+            return super().get_cleaned_data_for_step(step)
+        if step in cache:
+            return cache[step]
+        result = super().get_cleaned_data_for_step(step)
+        if result is not None:
+            cache[step] = result
+        return result
 
     def get_context_data(self, form, **kwargs):
         context = super().get_context_data(form=form, **kwargs)
@@ -208,6 +255,8 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
         step_name = step_names_by_step_number[step_number]
         for key in required_keys_by_step_name[step_name]:
             kwargs[key] = data.get(key, None)
+        if step_name == 'existing_pi':
+            kwargs['pi_choices_cache'] = self._pi_choices_cache
         return kwargs
 
     def get_template_names(self):
@@ -255,7 +304,7 @@ class SavioProjectRequestWizard(LoginRequiredMixin, UserPassesTestMixin,
                 # Store transformed form data in a request.
                 # TODO: allocation_type will eventually be removed from the
                 # TODO: model.
-                computing_allowance_interface = ComputingAllowanceInterface()
+                computing_allowance_interface = get_computing_allowance_interface()
                 request_kwargs['allocation_type'] = \
                     computing_allowance_interface.name_short_from_name(
                         computing_allowance_wrapper.get_name())

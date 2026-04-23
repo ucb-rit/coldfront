@@ -5,8 +5,6 @@ from django.conf import settings
 from django.test import override_settings
 from django.urls import reverse
 
-from flags.state import disable_flag
-from flags.state import enable_flag
 from flags.state import flag_enabled
 
 from coldfront.core.utils.tests.test_base import TestBase
@@ -31,19 +29,20 @@ class TestEmailAddresses(TestBase):
         """Test that, if the 'MULTIPLE_EMAIL_ADDRESSES_ALLOWED' feature
         flag is disabled, the section is hidden."""
         flag_name = 'MULTIPLE_EMAIL_ADDRESSES_ALLOWED'
-        enable_flag(flag_name)
-
-        response = self.client.get(self.user_profile_url())
-        self.assertContains(response, 'Other Email Addresses')
         section_url = reverse('account_email')
-        self.assertContains(response, section_url)
-        response = self.client.get(section_url)
-        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        flags_enabled = deepcopy(settings.FLAGS)
+        flags_enabled[flag_name] = [{'condition': 'boolean', 'value': True}]
+        with override_settings(FLAGS=flags_enabled):
+            response = self.client.get(self.user_profile_url())
+            self.assertContains(response, 'Other Email Addresses')
+            self.assertContains(response, section_url)
+            response = self.client.get(section_url)
+            self.assertEqual(response.status_code, HTTPStatus.OK)
 
         flags_copy = deepcopy(settings.FLAGS)
-        flags_copy[flag_name] = {'condition': 'boolean', 'value': False}
+        flags_copy[flag_name] = [{'condition': 'boolean', 'value': False}]
         with override_settings(FLAGS=flags_copy):
-            disable_flag(flag_name)
             self.assertFalse(flag_enabled(flag_name))
             response = self.client.get(self.user_profile_url())
             self.assertNotContains(response, 'Other Email Addresses')
