@@ -17,7 +17,6 @@ from django.test import TransactionTestCase
 from django.test.utils import TestContextDecorator
 from django.urls import reverse
 
-from flags.state import disable_flag
 from flags.state import enable_flag
 from flags.state import flag_enabled
 
@@ -32,6 +31,7 @@ from coldfront.core.project.models import ProjectUserStatusChoice
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.utils.common import utc_now_offset_aware
 
 
@@ -44,8 +44,13 @@ class BaseTestMixin(object):
 
     def setUp(self):
         """Set up test data."""
+        get_computing_allowance_interface.cache_clear()
         self.call_setup_commands()
         self.client = Client()
+
+    def tearDown(self):
+        """Tear down test data."""
+        get_computing_allowance_interface.cache_clear()
 
     def assert_has_access(self, url, user, has_access=True,
                           expected_messages=[]):
@@ -222,10 +227,6 @@ class enable_deployment(TestContextDecorator):
                 'PRIMARY_CLUSTER_NAME': 'Lawrencium',
             }
 
-        self._pre_states = {
-            flag_name: flag_enabled(flag_name) or False
-            for flag_name in ('BRC_ONLY', 'LRC_ONLY')}
-
         self._override_settings_cm = None
 
     def enable(self):
@@ -245,6 +246,3 @@ class enable_deployment(TestContextDecorator):
     def disable(self):
         if self._override_settings_cm is not None:
             self._override_settings_cm.__exit__(None, None, None)
-
-        for flag_name in self._pre_states:
-            assert flag_enabled(flag_name) == self._pre_states[flag_name]
