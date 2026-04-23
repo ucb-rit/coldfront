@@ -22,7 +22,7 @@ from coldfront.core.resource.models import Resource, ResourceType
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.common import utc_now_offset_aware
@@ -285,7 +285,7 @@ class AllocationPeriodChoiceField(forms.ModelChoiceField):
                 not isinstance(self.computing_allowance, ComputingAllowance)):
             self.computing_allowance = ComputingAllowance(
                 self.computing_allowance)
-        self.interface = ComputingAllowanceInterface()
+        self.interface = get_computing_allowance_interface()
         super().__init__(*args, **kwargs)
 
     def label_from_instance(self, obj):

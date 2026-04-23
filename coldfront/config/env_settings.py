@@ -252,7 +252,12 @@ if env.bool('HPCS__ENABLE_DJANGO_DEBUG_TOOLBAR', default=False):
         'HPCS__DJANGO_DEBUG_TOOLBAR_INTERNAL_IPS', default=[])
 
     if DEBUG:
-        # For Docker support
+        # For Docker support: bypass IP-based check entirely, since the host's
+        # IP as seen by the container varies by Docker runtime / OS and is not
+        # reliably derivable from the container's own IP list.
+        DEBUG_TOOLBAR_CONFIG = {
+            'SHOW_TOOLBAR_CALLBACK': lambda request: True,
+        }
         import socket
         hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
         INTERNAL_IPS = [ip[: ip.rfind('.')] + '.1' for ip in ips] + ['10.0.2.2']
@@ -276,6 +281,15 @@ if env.bool('HPCS__ENABLE_DJANGO_DEBUG_TOOLBAR', default=False):
 #------------------------------------------------------------------------------
 # django-flags settings
 #------------------------------------------------------------------------------
+
+# Exclude DatabaseFlagsSource (the default also includes it), which issues one
+# SQL query per flag_enabled() call with no caching. All flags are defined in
+# settings.FLAGS, so the DB source adds only overhead. Note: as a side effect,
+# any FlagState rows in the database and the Django admin UI for them are
+# inert — edits there will not affect flag evaluation.
+FLAG_SOURCES = [
+    'flags.sources.SettingsFlagsSource',
+]
 
 FLAGS = {
     'ALLOCATION_RENEWAL_FOR_NEXT_PERIOD_REQUESTABLE': [

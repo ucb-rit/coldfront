@@ -1,6 +1,12 @@
+import functools
+
+from django.db.models import Prefetch
+
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.resource.models import Resource
+from coldfront.core.resource.models import ResourceAttribute
 from coldfront.core.resource.models import ResourceType
+from coldfront.core.resource.models import TimedResourceAttribute
 
 
 class ComputingAllowanceInterface(object):
@@ -11,7 +17,17 @@ class ComputingAllowanceInterface(object):
         """Retrieve database objects and instantiate data structures."""
         resource_type = ResourceType.objects.get(name='Computing Allowance')
         allowances = Resource.objects.prefetch_related(
-            'resourceattribute_set').filter(resource_type=resource_type)
+            Prefetch(
+                'resourceattribute_set',
+                queryset=ResourceAttribute.objects.select_related(
+                    'resource_attribute_type'),
+            ),
+            Prefetch(
+                'timedresourceattribute_set',
+                queryset=TimedResourceAttribute.objects.select_related(
+                    'resource_attribute_type'),
+            ),
+        ).filter(resource_type=resource_type)
 
         # A mapping from code values to allowance Resource objects.
         self._code_to_object = {}
@@ -135,3 +151,15 @@ class ComputingAllowanceInterface(object):
 class ComputingAllowanceInterfaceError(Exception):
     """An exception to be raised by the ComputingAllowanceInterface."""
     pass
+
+
+@functools.lru_cache(maxsize=1)
+def get_computing_allowance_interface():
+    """Return a cached ComputingAllowanceInterface instance.
+
+    The cache lives for the lifetime of the process (one entry per gunicorn
+    worker). Computing allowances change extremely rarely; if they do change,
+    call get_computing_allowance_interface.cache_clear() on each worker, or
+    simply restart the server.
+    """
+    return ComputingAllowanceInterface()

@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db.models import Q
 
 from allauth.account.models import EmailAddress
 
@@ -25,6 +26,22 @@ def host_user_lbl_email(user):
 def is_lbl_employee(user):
     """Return whether the given User is an LBL employee."""
     return bool(lbl_email_address(user))
+
+
+def lbl_employees():
+    """Return a queryset of Users who are LBL employees.
+
+    A user is considered an LBL employee if their primary email ends
+    with '@lbl.gov', or if they have a verified EmailAddress ending
+    with '@lbl.gov'. Bulk queryset equivalent of is_lbl_employee().
+    """
+    domain = '@lbl.gov'
+    lbl_email_user_ids = EmailAddress.objects.filter(
+        verified=True, email__endswith=domain
+    ).values('user_id')
+    return User.objects.filter(
+        Q(email__endswith=domain) | Q(pk__in=lbl_email_user_ids)
+    )
 
 
 def lbl_email_address(user):

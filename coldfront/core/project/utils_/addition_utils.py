@@ -8,7 +8,7 @@ from coldfront.core.allocation.models import AllocationAdditionRequestStatusChoi
 from coldfront.core.project.models import Project
 from coldfront.core.project.utils_.email_utils import project_email_receiver_list
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterfaceError
 from coldfront.core.statistics.models import ProjectTransaction
 from coldfront.core.statistics.models import ProjectUserTransaction
@@ -213,7 +213,7 @@ def can_project_purchase_service_units(project):
     """Return whether the given Project is eligible to purchase
     additional Service Units for its allowance."""
     assert isinstance(project, Project)
-    computing_allowance_interface = ComputingAllowanceInterface()
+    computing_allowance_interface = get_computing_allowance_interface()
     try:
         computing_allowance = ComputingAllowance(
             computing_allowance_interface.allowance_from_project(project))

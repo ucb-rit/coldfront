@@ -13,7 +13,7 @@ from coldfront.core.project.signals import new_project_request_denied
 from coldfront.core.project.utils_.request_processing_utils import create_project_users
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.statistics.models import ProjectTransaction
 from coldfront.core.statistics.models import ProjectUserTransaction
 from coldfront.core.user.utils import account_activation_url
@@ -104,7 +104,7 @@ def project_pi_pks(computing_allowance=None, project_status_names=[]):
     project_prefix = ''
     if computing_allowance is not None:
         assert isinstance(computing_allowance, Resource)
-        interface = ComputingAllowanceInterface()
+        interface = get_computing_allowance_interface()
         project_prefix = interface.code_from_name(computing_allowance.name)
     return set(
         ProjectUser.objects.filter(

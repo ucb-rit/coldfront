@@ -10,7 +10,7 @@ from coldfront.core.project.utils_.new_project_utils import SavioProjectProcessi
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcessingRunner
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.utils.common import add_argparse_dry_run_argument
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.email.email_strategy import DropEmailStrategy
@@ -40,7 +40,7 @@ class Command(BaseCommand):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.computing_allowance_interface = ComputingAllowanceInterface()
+        self.computing_allowance_interface = get_computing_allowance_interface()
 
     def add_arguments(self, parser):
         parser.add_argument(

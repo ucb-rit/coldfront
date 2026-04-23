@@ -4,7 +4,7 @@ from django.db.models import Q
 
 from coldfront.core.project.models import Project
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 
 from .form_utils import PIUserChoiceField
 from .form_utils import ReviewDenyForm as FSARequestReviewDenyForm
@@ -47,7 +47,7 @@ class FSARequestSearchForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance_interface = get_computing_allowance_interface()
         prefix = computing_allowance_interface.code_from_name(BRCAllowances.FCA)
 
         self.fields['project'].queryset = Project.objects.filter(

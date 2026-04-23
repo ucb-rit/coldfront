@@ -14,7 +14,7 @@ from coldfront.core.project.models import Project, ProjectStatusChoice, \
     SavioProjectAllocationRequest, VectorProjectAllocationRequest
 from django.contrib.auth.models import User
 from coldfront.core.project.forms_.renewal_forms.request_forms import DeprecatedProjectRenewalSurveyForm
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
 from django import forms
@@ -30,7 +30,7 @@ class Command(BaseCommand):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.computing_allowance_interface = ComputingAllowanceInterface()
+        self.computing_allowance_interface = get_computing_allowance_interface()
         self.allowance_prefixes = []
         for allowance in self.computing_allowance_interface.allowances():
             self.allowance_prefixes.append(

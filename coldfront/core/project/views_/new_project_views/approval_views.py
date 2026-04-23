@@ -20,7 +20,7 @@ from coldfront.core.project.utils_.new_project_utils import send_project_request
 from coldfront.core.project.utils_.new_project_utils import VectorProjectProcessingRunner
 from coldfront.core.project.utils_.new_project_utils import vector_request_state_status
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.utils.common import display_time_zone_current_date
 from coldfront.core.utils.common import format_date_month_name_day_year
 from coldfront.core.utils.common import utc_now_offset_aware
@@ -73,7 +73,10 @@ class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
             order_by = '-request_time'
 
         return annotate_queryset_with_allocation_period_not_started_bool(
-            SavioProjectAllocationRequest.objects.order_by(order_by))
+            SavioProjectAllocationRequest.objects.select_related(
+                'pi', 'project', 'status', 'computing_allowance',
+                'allocation_period', 'requester',
+            ).order_by(order_by))
 
     def get_context_data(self, **kwargs):
         """Include either pending or completed requests. If the user is
@@ -105,7 +108,7 @@ class SavioProjectRequestMixin(object):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.interface = ComputingAllowanceInterface()
+        self.interface = get_computing_allowance_interface()
         self.request_obj = None
         self.computing_allowance_obj = None
 

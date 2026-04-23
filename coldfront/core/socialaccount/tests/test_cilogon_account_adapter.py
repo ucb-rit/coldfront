@@ -15,8 +15,6 @@ from django.utils.http import urlencode
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialAccount
 from allauth.socialaccount.providers.base import AuthProcess
-from flags.state import disable_flag
-from flags.state import enable_flag
 from flags.state import flag_enabled
 
 from coldfront.core.socialaccount.tests.mocking import MockedResponse
@@ -26,12 +24,16 @@ from coldfront.core.utils.tests.test_base import TestBase
 import json
 
 
+FLAGS_COPY = deepcopy(settings.FLAGS)
+FLAGS_COPY['SSO_ENABLED'] = [{'condition': 'boolean', 'value': True}]
+
+
+@override_settings(FLAGS=FLAGS_COPY)
 class TestCILogonAccountAdapter(TestBase):
 
     def setUp(self):
         """Set up test data."""
         super().setUp()
-        enable_flag('SSO_ENABLED')
         self._cilogon_provider = 'cilogon'
         self._assert_authenticated(negate=True)
 
@@ -149,9 +151,8 @@ class TestCILogonAccountAdapter(TestBase):
 
         # Disabled
         flags_copy = deepcopy(settings.FLAGS)
-        flags_copy[flag_name] = {'condition': 'boolean', 'value': False}
+        flags_copy[flag_name] = [{'condition': 'boolean', 'value': False}]
         with override_settings(FLAGS=flags_copy):
-            disable_flag(flag_name)
             self.assertFalse(flag_enabled(flag_name))
             response = self._simulate_cilogon_login(
                 new_cilogon_user_data, process=AuthProcess.CONNECT)
@@ -166,9 +167,8 @@ class TestCILogonAccountAdapter(TestBase):
             self.assertEqual(SocialAccount.objects.count(), num_social_accounts)
 
         # Enabled
-        flags_copy[flag_name]['value'] = True
+        flags_copy[flag_name] = [{'condition': 'boolean', 'value': True}]
         with override_settings(FLAGS=flags_copy):
-            enable_flag(flag_name)
             self.assertTrue(flag_enabled(flag_name))
             response = self._simulate_cilogon_login(
                 new_cilogon_user_data, process=AuthProcess.CONNECT)

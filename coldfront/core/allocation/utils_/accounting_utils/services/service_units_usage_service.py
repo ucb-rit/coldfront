@@ -5,7 +5,7 @@ from ..domain import AllowanceUsage
 
 from coldfront.core.project.utils import is_primary_cluster_project
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface, get_computing_allowance_interface
 
 
 class ServiceUnitsUsageService:
@@ -26,7 +26,7 @@ class ServiceUnitsUsageService:
             computing_allowance_interface: Optional[
                 ComputingAllowanceInterface] = None):
         self._computing_allowance_interface = (
-            computing_allowance_interface or ComputingAllowanceInterface())
+            computing_allowance_interface or get_computing_allowance_interface())
 
     def get_usage_display(self, project, allocation_attribute=None) -> str:
         """Return a str representing the service unit usage for the

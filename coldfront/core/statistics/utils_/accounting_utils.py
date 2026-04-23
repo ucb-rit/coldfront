@@ -12,7 +12,7 @@ from coldfront.api.statistics.utils import get_accounting_allocation_objects
 from coldfront.core.allocation.models import AllocationAttributeUsage
 from coldfront.core.allocation.models import AllocationUserAttributeUsage
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 from coldfront.core.statistics.models import Job
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
@@ -121,7 +121,7 @@ def validate_job_dates(job_data, allocation, end_date_expected=False):
 
     # The Job's corresponding Allocation may have an end date. (Compare
     # against the maximum date if not.)
-    computing_allowance_interface = ComputingAllowanceInterface()
+    computing_allowance_interface = get_computing_allowance_interface()
     periodic_project_name_prefixes = tuple([
         computing_allowance_interface.code_from_name(allowance.name)
         for allowance in computing_allowance_interface.allowances()
