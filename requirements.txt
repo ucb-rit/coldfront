@@ -25,7 +25,7 @@ django-q2==1.8.0
 django-redis==6.0.0
 django-sesame==3.2.3
 django-settings-export==1.2.1
-django-simple-history==3.10.1
+django-simple-history==3.11.0
 django-sslserver==0.22
 django-structlog==10.0.0
 django-su==1.0.0
