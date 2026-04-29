@@ -6,7 +6,8 @@
         {"allocation_period": "Allowance Year 2023 - 2024", "value": "300000.00"},
         {"allocation_period": "Allowance Year 2024 - 2025", "value": "300000.00"},
         {"allocation_period": "Allowance Year 2025 - 2026", "value": "300000.00"},
-        {"allocation_period": "Allowance Year 2026 - 2027", "value": "300000.00"}
+        {"allocation_period": "Allowance Year 2026 - 2027", "value": "300000.00"},
+        {"allocation_period": "Allowance Year 2027 - 2028", "value": "300000.00"}
     ],
     "Instructional Computing Allowance": [
         {"allocation_period": "Fall Semester 2021", "value": "200000.00"},
@@ -48,7 +49,15 @@
         {"allocation_period": "Summer Sessions 2026 - Session C", "value": "200000.00"},
         {"allocation_period": "Summer Sessions 2026 - Session D", "value": "200000.00"},
         {"allocation_period": "Summer Sessions 2026 - Session E", "value": "200000.00"},
-        {"allocation_period": "Summer Sessions 2026 - Session F", "value": "200000.00"}
+        {"allocation_period": "Summer Sessions 2026 - Session F", "value": "200000.00"},
+        {"allocation_period": "Fall Semester 2026", "value": "200000.00"},
+        {"allocation_period": "Spring Semester 2027", "value": "200000.00"},
+        {"allocation_period": "Summer Sessions 2027 - Session A", "value": "200000.00"},
+        {"allocation_period": "Summer Sessions 2027 - Session B", "value": "200000.00"},
+        {"allocation_period": "Summer Sessions 2027 - Session C", "value": "200000.00"},
+        {"allocation_period": "Summer Sessions 2027 - Session D", "value": "200000.00"},
+        {"allocation_period": "Summer Sessions 2027 - Session E", "value": "200000.00"},
+        {"allocation_period": "Summer Sessions 2027 - Session F", "value": "200000.00"}
     ],
     "Partner Computing Allowance": [
         {"allocation_period": "Allowance Year 2020 - 2021", "value": "300000.00"},
@@ -57,6 +66,7 @@
         {"allocation_period": "Allowance Year 2023 - 2024", "value": "300000.00"},
         {"allocation_period": "Allowance Year 2024 - 2025", "value": "300000.00"},
         {"allocation_period": "Allowance Year 2025 - 2026", "value": "300000.00"},
-        {"allocation_period": "Allowance Year 2026 - 2027", "value": "300000.00"}
+        {"allocation_period": "Allowance Year 2026 - 2027", "value": "300000.00"},
+        {"allocation_period": "Allowance Year 2027 - 2028", "value": "300000.00"}
     ]
 }
