@@ -178,7 +178,7 @@ class Command(BaseCommand):
             runner_factory = NewProjectUserRunnerFactory()
             for project_user in project_users:
                 runner = runner_factory.get_runner(
-                    project_user, NewProjectUserSource.AUTO_ADDED,
+                    project_user, NewProjectUserSource.NEW_PROJECT_NON_REQUESTER_PI,
                     email_strategy=DropEmailStrategy())
                 runner.run()
 
