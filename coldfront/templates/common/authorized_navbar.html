@@ -17,23 +17,12 @@
         <li id="navbar-center-summary" class="nav-item">
           <a class="nav-link" href="{% url 'center-summary' %}">Center Summary</a>
         </li>
-        <li id="navbar-project-menu" class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">Project</a>
-          <div class="dropdown-menu">
-            <a id="navbar-project" class="dropdown-item" href="{% url 'project-list' %}">Projects</a>
-            {% if ALLOCATION_VISIBLE %}
-            <a id="navbar-allocation" class="dropdown-item" href="{% url 'allocation-list' %}">Allocations</a>
-            {% endif %}
-<!--            {% if settings.ALLOCATION_ACCOUNT_ENABLED  %}-->
-<!--            <a class="dropdown-item" href="{% url 'allocation-account-list' %}">Allocation Accounts</a>-->
-<!--            {% endif %}-->
-<!--            {% if request.user.userprofile.is_pi  %}-->
-<!--            <a id="navbar-user-allocation" class="dropdown-item" href="{% url 'user-list-allocations' %}">User Allocations</a>-->
-<!--            {% endif %}-->
-          </div>
+        <li id="navbar-project" class="nav-item">
+          <a class="nav-link" href="{% url 'project-list' %}">Projects</a>
         </li>
         <li id="navbar-request-hub" class="nav-item">
           <a class="nav-link" href="{% url 'request-hub' %}">Requests</a>
+        </li>
         <li id="navbar-jobs-list" class="nav-item">
           <a class="nav-link" href="{% url 'slurm-job-list' %}">Jobs</a>
         </li>
@@ -44,9 +33,6 @@
         {% elif perms.project.can_review_pending_project_reviews or perms.grant.can_view_all_grants %}
         {% include 'common/navbar_director.html' %}
         {% endif %}
-        <li id="navbar-help" class="nav-item">
-          <a class="nav-link" href="{% settings_value 'CENTER_HELP_URL' %}">Help</a>
-        </li>
       </ul>
       <ul class="navbar-nav ml-auto">
         {% include 'common/navbar_login.html' %}
