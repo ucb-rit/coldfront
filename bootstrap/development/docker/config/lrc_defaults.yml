@@ -30,8 +30,8 @@ portal_name: MyLRC
 program_name_long: Laboratory Research Computing
 program_name_short: LRC
 primary_cluster_name: Lawrencium
-center_user_guide: https://it.lbl.gov/service/scienceit/high-performance-computing/lrc/
-center_login_guide: https://it.lbl.gov/resource/hpc/for-users/getting-started/
+center_user_guide: https://scienceit-docs.lbl.gov/hpc/
+center_login_guide: https://scienceit-docs.lbl.gov/hpc/accounts/loggingin/
 center_help_email: hpcshelp@lbl.gov
 
 email_subject_prefix: "[MyLRC-User-Portal]"
