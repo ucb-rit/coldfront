@@ -1,4 +1,4 @@
-{% extends "common/base.html" %} {% load common_tags %} {% block content %}
+{% extends "common/base.html" %} {% load common_tags %} {% load feature_flags %} {% block content %}
 
 <div class="row">
   <div class="col-lg-12">
@@ -80,7 +80,12 @@
       <div class="card-body text-center py-4">
         <i class="fas fa-folder-plus fa-3x mb-3 {% if user.userprofile.access_agreement_signed_date %}text-primary{% else %}text-muted{% endif %}" aria-hidden="true"></i>
         <h4 class="card-title">Create a project</h4>
-        <p class="card-text text-muted">For PIs, faculty, and instructors who need a new computing allowance</p>
+        {% flag_enabled 'BRC_ONLY' as brc_only %}
+        {% if brc_only %}
+          <p class="card-text text-muted">For PIs, faculty, and instructors who need a new computing allowance</p>
+        {% else %}
+          <p class="card-text text-muted">For PIs who need a new computing allowance</p>
+        {% endif %}
         {% if user.userprofile.access_agreement_signed_date is not None %}
           <a href="{% url 'project-request' %}" class="btn btn-primary stretched-link">Create project</a>
         {% else %}
@@ -96,7 +101,12 @@
       <div class="card-body text-center py-4">
         <i class="fas fa-users fa-3x mb-3 {% if user.userprofile.access_agreement_signed_date %}text-primary{% else %}text-muted{% endif %}" aria-hidden="true"></i>
         <h4 class="card-title">Join a project</h4>
-        <p class="card-text text-muted">For collaborators whose PI or supervisor already has a project</p>
+        {% flag_enabled 'BRC_ONLY' as brc_only %}
+        {% if brc_only %}
+          <p class="card-text text-muted">For collaborators and students whose PI or advisor already has a project</p>
+        {% else %}
+          <p class="card-text text-muted">For collaborators whose PI already has a project</p>
+        {% endif %}
         {% if user.userprofile.access_agreement_signed_date is not None %}
           <a href="{% url 'project-join-list' %}" class="btn btn-primary stretched-link">Browse projects</a>
         {% else %}
