@@ -152,10 +152,6 @@ Project Detail
         {% endif %}
     </p>
     <p class="card-text text-justify"><strong>Created: </strong>{{ project.created|date:"M. d, Y" }}</p>
-    <p class="card-text text-justify">
-      <strong>Requests to Join: </strong>
-      User requests to join the project must be approved by a PI.
-    </p>
 
     <!-- show survey answers if available -->
     {% if survey_answers %}
@@ -318,8 +314,8 @@ Project Detail
             </th>
             <th>Cluster Username</th>
             <th>
-              Project Access on Cluster
-              {% include "portal/info_hover_popup.html" with title="Project Access on Cluster" content="This denotes whether the user's cluster account has been configured to have access to the project." %}
+              Cluster Access
+              {% include "portal/info_hover_popup.html" with title="Cluster Access" content="This denotes whether the user's cluster account has been configured to have access to the project." %}
             </th>
             {% if is_allowed_to_update_project %}
               <th>Actions</th>
@@ -377,6 +373,7 @@ Project Detail
 <!-- End Project Users -->
 
 
+{% comment %}
 <!-- Start Admin Messages -->
 <div class="card mb-3">
   <div class="card-header">
@@ -413,6 +410,7 @@ Project Detail
 
   </div>
 </div>
+{% endcomment %}
 
 <script>
 

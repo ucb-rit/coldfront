@@ -106,20 +106,20 @@ def home(request):
             )
         ]
 
-        if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
-
-            from coldfront.plugins.hardware_procurements.utils import UserInfoDict
-            from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
-
-            user_data = UserInfoDict.from_user(request.user)
-            hardware_procurements = []
-            for hardware_procurement in fetch_hardware_procurements(
-                    user_data=user_data, status='Complete'):
-                hardware_procurements.append(hardware_procurement)
-            hardware_procurements.sort(reverse=True)
-            hardware_procurements = [
-                hp.get_renderable_data() for hp in hardware_procurements]
-            context['hardware_procurements'] = hardware_procurements
+        # if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
+        #
+        #     from coldfront.plugins.hardware_procurements.utils import UserInfoDict
+        #     from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
+        #
+        #     user_data = UserInfoDict.from_user(request.user)
+        #     hardware_procurements = []
+        #     for hardware_procurement in fetch_hardware_procurements(
+        #             user_data=user_data, status='Complete'):
+        #         hardware_procurements.append(hardware_procurement)
+        #     hardware_procurements.sort(reverse=True)
+        #     hardware_procurements = [
+        #         hp.get_renderable_data() for hp in hardware_procurements]
+        #     context['hardware_procurements'] = hardware_procurements
 
     else:
         template_name = 'portal/nonauthorized_home.html'

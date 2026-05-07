@@ -3,7 +3,7 @@
 {% load feature_flags %}
 <nav class="navbar navbar-expand-md navbar-dark bg-primary">
   <div class="container">
-    <a class="navbar-brand d-block d-sm-none text-primary" href="#">{{ PORTAL_NAME }}</a>
+    <a class="navbar-brand d-block d-sm-none text-white" href="#">{{ PORTAL_NAME }}</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-main">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -11,12 +11,6 @@
       <ul class="navbar-nav">
         <li id="navbar-home" class="nav-item active">
           <a class="nav-link" href="/">Home</a>
-        </li>
-        <li id="navbar-center-summary" class="nav-item">
-          <a class="nav-link" href="{% url 'center-summary' %}">Center Summary</a>
-        </li>
-        <li id="navbar-help" class="nav-item">
-          <a class="nav-link" href="{% settings_value 'CENTER_HELP_URL' %}">Help</a>
         </li>
       </ul>
       <ul class="navbar-nav ml-auto">
