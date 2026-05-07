@@ -80,7 +80,7 @@
       <div class="card-body text-center py-4">
         <i class="fas fa-folder-plus fa-3x mb-3 {% if user.userprofile.access_agreement_signed_date %}text-primary{% else %}text-muted{% endif %}" aria-hidden="true"></i>
         <h4 class="card-title">Create a project</h4>
-        <p class="card-text text-muted">For PIs, faculty, and instructors who need a new computing allowance.</p>
+        <p class="card-text text-muted">For PIs, faculty, and instructors who need a new computing allowance</p>
         {% if user.userprofile.access_agreement_signed_date is not None %}
           <a href="{% url 'project-request' %}" class="btn btn-primary stretched-link">Create project</a>
         {% else %}
@@ -96,7 +96,7 @@
       <div class="card-body text-center py-4">
         <i class="fas fa-users fa-3x mb-3 {% if user.userprofile.access_agreement_signed_date %}text-primary{% else %}text-muted{% endif %}" aria-hidden="true"></i>
         <h4 class="card-title">Join a project</h4>
-        <p class="card-text text-muted">For students and collaborators whose PI or advisor already has a project.</p>
+        <p class="card-text text-muted">For students and collaborators whose PI or advisor already has a project</p>
         {% if user.userprofile.access_agreement_signed_date is not None %}
           <a href="{% url 'project-join-list' %}" class="btn btn-primary stretched-link">Browse projects</a>
         {% else %}
