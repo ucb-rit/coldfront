@@ -11,98 +11,60 @@ Log In
 
 {% block content %}
 
-<h1>Log In: I am a...</h1>
+<h1>Log In</h1>
 
-<!-- TODO: Remove this temporary section once enough time has passed or a sufficient % of users have logged in via SSO. -->
-<hr>
-<br>
-<div class="row">
-  <div class="col-sm-12">
-    <div class="alert alert-success" role="alert">
-      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-      </button>
-      Attention: For users who have logged into {{ PORTAL_NAME }} in the past,
-      password-based authentication is no longer in use. To connect to your
-      existing portal account, select the identity provider corresponding to the
-      email address associated with your portal account.
-      <br>
-      <br>
-      If you are unsure which provider to choose, or do not see the expected
-      user and project information upon logging in, please refer to the "Hints"
-      section below and our <a href="https://docs-research-it.berkeley.edu/services/high-performance-computing/getting-account/#setting-up-a-mybrc-user-portal-account">documentation</a> before contacting us.
-    </div>
-  </div>
-</div>
-
-<div class="row">
-  <div class="col-sm-6 col-md-4">
-    <hr>
-    <div class="thumbnail">
-      <img src="{% static 'core/portal/imgs/uc_berkeley_logo_words.png' %}" alt="uc_berkeley_logo_words" height="64" vspace="16">
-      <hr>
-      <div class="caption">
-        <h3>UC Berkeley User</h3>
-        <p>
-          I have a CalNet ID.
-          <br><br>
-        </p>
-        <p>
-          <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:berkeley.edu' %}" method="post" style="display:inline;">
+<div class="row mt-3">
+  <div class="col-sm-6 col-md-4 mb-3">
+    <div class="card h-100 card-hover" style="cursor: pointer;" onclick="this.querySelector('form').submit()">
+      <div class="card-body d-flex flex-column text-center py-4">
+        <img src="{% static 'core/portal/imgs/uc_berkeley_logo_words.png' %}" alt="UC Berkeley logo" height="64" class="mb-3 mx-auto">
+        <h4 class="card-title" style="min-height: 3.6rem;">UC Berkeley Affiliates</h4>
+        <p class="card-text text-muted flex-grow-1">For users with a CalNet ID</p>
+        <div class="mt-auto">
+          <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:berkeley.edu' %}" method="post">
             {% csrf_token %}
-            <button class="btn btn-primary btn-lg" type="submit" role="button">
+            <button class="btn btn-primary btn-lg" type="submit">
               <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
               Log In
             </button>
           </form>
-        </p>
-        <hr>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-4">
-    <hr>
-    <div class="thumbnail">
-      <img src="{% static 'core/portal/imgs/berkeley_lab_logo.png' %}" alt="berkeley_lab_logo" height="64" vspace="16">
-      <hr>
-      <div class="caption">
-        <h3>Berkeley Lab Collaborator</h3>
-        <p>
-          I do not have a CalNet ID, but I do have a Berkeley Lab Identity.
-        </p>
-        <p>
-          <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:lbl.gov' %}" method="post" style="display:inline;">
+  <div class="col-sm-6 col-md-4 mb-3">
+    <div class="card h-100 card-hover" style="cursor: pointer;" onclick="this.querySelector('form').submit()">
+      <div class="card-body d-flex flex-column text-center py-4">
+        <img src="{% static 'core/portal/imgs/berkeley_lab_logo.png' %}" alt="Berkeley Lab logo" height="64" class="mb-3 mx-auto">
+        <h4 class="card-title" style="min-height: 3.6rem;">Berkeley Lab Collaborators</h4>
+        <p class="card-text text-muted flex-grow-1">For users without a CalNet ID, but with a Berkeley Lab Identity</p>
+        <div class="mt-auto">
+          <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:lbl.gov' %}" method="post">
             {% csrf_token %}
-            <button class="btn btn-secondary btn-lg" type="submit" role="button">
+            <button class="btn btn-secondary btn-lg" type="submit">
               <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
               Log In
             </button>
           </form>
-        </p>
-        <hr>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-4">
-    <hr>
-    <div class="thumbnail">
-      <img src="{% static 'core/portal/imgs/cilogon_logo.png' %}" alt="cilogon_logo" height="64" vspace="16">
-      <hr>
-      <div class="caption">
-        <h3>External Collaborator</h3>
-        <p>
-          I do not have a CalNet ID, and I do not have a Berkeley Lab Identity.
-        </p>
-        <p>
-          <form action="{% provider_login_url 'cilogon' process='login' auth_params='initialidp=https://accounts.google.com/o/oauth2/auth' %}" method="post" style="display:inline;">
+  <div class="col-sm-6 col-md-4 mb-3">
+    <div class="card h-100 card-hover" style="cursor: pointer;" onclick="this.querySelector('form').submit()">
+      <div class="card-body d-flex flex-column text-center py-4">
+        <img src="{% static 'core/portal/imgs/cilogon_logo.png' %}" alt="CILogon logo" height="64" class="mb-3 mx-auto">
+        <h4 class="card-title" style="min-height: 3.6rem;">External Collaborators</h4>
+        <p class="card-text text-muted flex-grow-1">For users without a CalNet ID or a Berkeley Lab Identity</p>
+        <div class="mt-auto">
+          <form action="{% provider_login_url 'cilogon' process='login' auth_params='initialidp=https://accounts.google.com/o/oauth2/auth' %}" method="post">
             {% csrf_token %}
-            <button class="btn btn-secondary btn-lg" type="submit" role="button">
+            <button class="btn btn-secondary btn-lg" type="submit">
               <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
               Log In
             </button>
           </form>
-        </p>
-        <hr>
+        </div>
       </div>
     </div>
   </div>
