@@ -114,7 +114,7 @@
     {% endif %}
   </div>
 </div>
-<br></br>
+<br>
 
 <div class="row">
   <div class="col-lg-12 mt-2">
@@ -207,61 +207,6 @@
   {% endif %}
 
 
-<!-- We do not need to display allocations for the users in the home page -krishna.
-  <div class="col-lg-6 mt-2">
-    <a href="{% url 'allocation-list' %}">
-      <h3>Allocations &raquo;</h3>
-    </a>
-    <hr>
-    {% if allocation_list %}
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">Project</th>
-          <th scope="col">Resource</th>
-          <th scope="col">Status</th>
-
-        </tr>
-      </thead>
-      <tbody>
-        {% for allocation in allocation_list %}
-        <tr>
-          <td>{{allocation.project.title}}</td>
-          <td>{{allocation.get_parent_resource}}</td>
-          {%  if allocation.status.name == "Expired" and allocation.expires_in < 0 %}
-          <td><a href="{% url 'allocation-detail' allocation.id %}" class="btn btn-danger btn-block">Expired</a></td>
-          {%  elif allocation.status.name == "Renewal Requested" %}
-          <td><a href="{% url 'allocation-detail' allocation.id %}" class="btn btn-danger btn-block">Renewal
-              Requested</a></td>
-          {%  elif allocation.expires_in >= 0 and  allocation.expires_in <= 30 %}
-          <td><a href="{% url 'allocation-detail' allocation.id %}" class="btn btn-danger btn-block">Expires in <span
-                class="badge badge-light">{{allocation.expires_in}}</span> day{{allocation.expires_in|pluralize }}</a>
-          </td>
-          {% elif allocation.expires_in > 30 and allocation.expires_in <= 90 %}
-          <td><a href="{% url 'allocation-detail' allocation.id %}" class="btn btn-warning btn-block">Expires in <span
-                class="badge badge-light">{{allocation.expires_in}}</span> day{{allocation.expires_in|pluralize }}</a>
-          </td>
-          {% elif allocation.status.name == "Pending" %}
-          <td><a href="{% url 'allocation-detail' allocation.id %}"
-              class="btn btn-info btn-block">{{allocation.status}}</a></td>
-          {% elif allocation.status.name == "Active" %}
-          <td><a href="{% url 'allocation-detail' allocation.id %}"
-              class="btn btn-success btn-block">{{allocation.status}}</a></td>
-          {% else %}
-          <td><a href="{% url 'allocation-detail' allocation.id %}"
-              class="btn btn-info btn-block">{{allocation.status}}</a></td>
-          {% endif %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
-    {% else %}
-    <div class="alert alert-info" role="alert"><i class="fa fa-info-circle" aria-hidden="true"></i> There are no allocations to display.
-    </div>
-    {% endif %}
-  </div>
--->
 
 </div>
 <div class="row">
