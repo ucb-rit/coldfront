@@ -152,10 +152,6 @@ Project Detail
         {% endif %}
     </p>
     <p class="card-text text-justify"><strong>Created: </strong>{{ project.created|date:"M. d, Y" }}</p>
-    <p class="card-text text-justify">
-      <strong>Requests to Join: </strong>
-      User requests to join the project must be approved by a PI.
-    </p>
 
     <!-- show survey answers if available -->
     {% if survey_answers %}
@@ -377,6 +373,7 @@ Project Detail
 <!-- End Project Users -->
 
 
+{% comment %}
 <!-- Start Admin Messages -->
 <div class="card mb-3">
   <div class="card-header">
@@ -413,6 +410,7 @@ Project Detail
 
   </div>
 </div>
+{% endcomment %}
 
 <script>
 

@@ -188,13 +188,13 @@ class AllocationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         else:
             context['is_allowed_to_update_project'] = False
 
-        if self.request.user.is_superuser:
-            notes = allocation_obj.allocationusernote_set.all()
-        else:
-            notes = allocation_obj.allocationusernote_set.filter(
-                is_private=False)
-
-        context['notes'] = notes
+        # Notes card commented out in allocation_detail.html — not used.
+        # if self.request.user.is_superuser:
+        #     notes = allocation_obj.allocationusernote_set.all()
+        # else:
+        #     notes = allocation_obj.allocationusernote_set.filter(
+        #         is_private=False)
+        # context['notes'] = notes
         context['ALLOCATION_ENABLE_ALLOCATION_RENEWAL'] = ALLOCATION_ENABLE_ALLOCATION_RENEWAL
 
         self._update_context(allocation_obj, attributes, context)
