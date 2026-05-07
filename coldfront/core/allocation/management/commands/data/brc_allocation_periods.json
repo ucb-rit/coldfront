@@ -35,6 +35,11 @@
         "end_date": "2027-05-31"
     },
     {
+        "name": "Allowance Year 2027 - 2028",
+        "start_date": "2027-06-01",
+        "end_date": "2028-05-31"
+    },
+    {
         "name": "Fall Semester 2021",
         "start_date": "2021-08-18",
         "end_date": "2021-12-17"
@@ -233,5 +238,45 @@
         "name": "Summer Sessions 2026 - Session F",
         "start_date": "2026-07-06",
         "end_date": "2026-07-24"
+    },
+    {
+        "name": "Fall Semester 2026",
+        "start_date": "2026-08-19",
+        "end_date": "2026-12-18"
+    },
+    {
+        "name": "Spring Semester 2027",
+        "start_date": "2027-01-12",
+        "end_date": "2027-05-14"
+    },
+    {
+        "name": "Summer Sessions 2027 - Session A",
+        "start_date": "2027-05-24",
+        "end_date": "2027-07-02"
+    },
+    {
+        "name": "Summer Sessions 2027 - Session B",
+        "start_date": "2027-06-07",
+        "end_date": "2027-08-13"
+    },
+    {
+        "name": "Summer Sessions 2027 - Session C",
+        "start_date": "2027-06-21",
+        "end_date": "2027-08-13"
+    },
+    {
+        "name": "Summer Sessions 2027 - Session D",
+        "start_date": "2027-07-06",
+        "end_date": "2027-08-13"
+    },
+    {
+        "name": "Summer Sessions 2027 - Session E",
+        "start_date": "2027-07-26",
+        "end_date": "2027-08-13"
+    },
+    {
+        "name": "Summer Sessions 2027 - Session F",
+        "start_date": "2027-07-06",
+        "end_date": "2027-07-23"
     }
 ]

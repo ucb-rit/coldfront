@@ -17,9 +17,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain'), name="robots"),
     path('', portal_views.home, name='home'),
-    path('center-summary', portal_views.center_summary, name='center-summary'),
-    path('allocation-summary', portal_views.allocation_summary, name='allocation-summary'),
-    path('allocation-by-fos', portal_views.allocation_by_fos, name='allocation-by-fos'),
+    # path('center-summary', portal_views.center_summary, name='center-summary'),
+    # path('allocation-summary', portal_views.allocation_summary, name='allocation-summary'),
+    # path('allocation-by-fos', portal_views.allocation_by_fos, name='allocation-by-fos'),
     path('user/', include('coldfront.core.user.urls')),
     path('project/', include('coldfront.core.project.urls')),
     path('allocation/', include('coldfront.core.allocation.urls')),
@@ -28,7 +28,6 @@ urlpatterns = [
     # path('grant/', include('coldfront.core.grant.urls')),
     # path('publication/', include('coldfront.core.publication.urls')),
     # path('research-output/', include('coldfront.core.research_output.urls')),
-    path('help', TemplateView.as_view(template_name='portal/help.html'), name='help'),
 ]
 
 if 'debug_toolbar' in settings.EXTRA_APPS:

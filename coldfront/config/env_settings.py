@@ -217,7 +217,6 @@ CILOGON_APP_SECRET = env('HPCS__CILOGON_APP_SECRET')
 if env.bool('HPCS__DJANGO_CONSTANCE_ENABLED', default=False):
 
     CONSTANCE_CONFIG = {
-        'FEEDBACK_FORM_URL': ('', 'The URL to the feedback form.'),
         'DOCS_GETTING_HELP_URL': (
             '', 'The URL to the documentation page on getting help.'),
         'LAUNCH_DATE': (date(1970, 1, 1), 'The date the portal was launched.'),

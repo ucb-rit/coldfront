@@ -192,6 +192,19 @@ a {
     color: #0000ff
 }
 
+.text-primary {
+    color: #0c2d4d !important;
+}
+
 .text-success {
     color: #006400 !important;
+}
+
+.card-hover {
+    transition: background-color 0.15s ease;
+    cursor: pointer;
+}
+
+.card-hover:hover {
+    background-color: rgba(0, 0, 0, 0.075);
 }
