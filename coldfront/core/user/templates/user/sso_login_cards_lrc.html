@@ -1,0 +1,100 @@
+{% load static %}
+{% load socialaccount %}
+{% load feature_flags %}
+<div class="row mt-3">
+  <div class="col-sm-6 col-md-4 mb-3">
+    <div class="card h-100 card-hover" style="cursor: pointer;" onclick="this.querySelector('form').submit()">
+      <div class="card-body d-flex flex-column text-center py-4">
+        <img src="{% static 'core/portal/imgs/berkeley_lab_logo.png' %}" alt="Berkeley Lab logo" height="64" class="mb-3 mx-auto">
+        <h4 class="card-title" style="min-height: 3.6rem;">Berkeley Lab Members</h4>
+        <p class="card-text text-muted flex-grow-1">For users with a Berkeley Lab Identity</p>
+        <div class="mt-auto">
+          <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:lbl.gov' %}" method="post">
+            {% csrf_token %}
+            <button class="btn btn-primary btn-lg" type="submit">
+              <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+              Log In
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-md-4 mb-3">
+    <div class="card h-100 card-hover" style="cursor: pointer;" onclick="this.querySelector('form').submit()">
+      <div class="card-body d-flex flex-column text-center py-4">
+        <img src="{% static 'core/portal/imgs/uc_berkeley_logo_words.png' %}" alt="UC Berkeley logo" height="64" class="mb-3 mx-auto">
+        <h4 class="card-title" style="min-height: 3.6rem;">UC Berkeley Collaborators</h4>
+        <p class="card-text text-muted flex-grow-1">For users without a Berkeley Lab Identity, but with a CalNet ID</p>
+        <div class="mt-auto">
+          <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:berkeley.edu' %}" method="post">
+            {% csrf_token %}
+            <button class="btn btn-secondary btn-lg" type="submit">
+              <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+              Log In
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-md-4 mb-3">
+    <div class="card h-100 card-hover" style="cursor: pointer;" onclick="this.querySelector('form').submit()">
+      <div class="card-body d-flex flex-column text-center py-4">
+        <img src="{% static 'core/portal/imgs/cilogon_logo.png' %}" alt="CILogon logo" height="64" class="mb-3 mx-auto">
+        <h4 class="card-title" style="min-height: 3.6rem;">External Collaborators</h4>
+        <p class="card-text text-muted flex-grow-1">For users without a Berkeley Lab Identity or a CalNet ID</p>
+        <div class="mt-auto">
+          <form action="{% provider_login_url 'cilogon' process='login' auth_params='initialidp=https://accounts.google.com/o/oauth2/auth' %}" method="post">
+            {% csrf_token %}
+            <button class="btn btn-secondary btn-lg" type="submit">
+              <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+              Log In
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mb-3 mt-3" id="hintsAccordion">
+  <div class="card">
+    <div class="card-header">
+      <a id="expand_button" role="button" class="card-link" data-toggle="collapse" href="#hintsCollapse">
+        <i class="fas fa-info-circle"></i>
+        Hints
+      </a>
+    </div>
+    <div id="hintsCollapse" class="collapse" data-parent="#hintsAccordion">
+      <div class="card-body">
+        <ul>
+          <li>
+            Authentication is managed by
+            <a href="https://www.cilogon.org/">CILogon</a>. You will be
+            redirected there, where you will select a provider to authenticate
+            with (<b>Lawrence Berkeley National Laboratory</b> for most users).
+          </li>
+          <li>
+            If you have a Berkeley Lab Identity, please authenticate using the
+            first option above. Lab users who do not use their Lab Identity may
+            experience delays when requesting cluster access.
+          </li>
+          <li>
+            External collaborators should select their home institution as the
+            provider. If you are a new user and your institution is not listed,
+            select the <b>Google</b> provider.
+          </li>
+          {% flag_enabled 'LINK_LOGIN_ENABLED' as link_login_enabled %}
+          {% if link_login_enabled %}
+          <li>
+            If you are an existing external collaborator whose institution is
+            not listed, you may request a short-lived login link
+            <a href="{% url 'request-login-link' %}">here</a>.
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

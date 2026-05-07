@@ -7,25 +7,16 @@
 {% block content %}
 
 <h1>Welcome to {{ PORTAL_NAME }}</h1>
-<p class="text-justify">
+<p class="lead">
   {{ PORTAL_NAME }} is a user portal for managing access to the clusters and
   other resources provided by the {{ PROGRAM_NAME_LONG }}
   ({{ PROGRAM_NAME_SHORT }}) program.
+  For more information, refer to our <a href="{% settings_value 'CENTER_USER_GUIDE' %}">documentation</a>.
 </p>
-<ul>
-  <li>Join projects and gain access to {{ PRIMARY_CLUSTER_NAME }} and other clusters.</li>
-  <li>Create new projects and manage project users.</li>
-  <li>Request or purchase computing allowances.</li>
-  <li>View details of current and past jobs, and allowance usages.</li>
-  <li>And more!</li>
-</ul>
-<p>
-	For more information, refer to our
-	<a href="{% settings_value 'CENTER_USER_GUIDE' %}">documentation</a>.
-</p>
-<p>
-  {% flag_enabled 'BASIC_AUTH_ENABLED' as basic_auth_enabled %}
-  {% if basic_auth_enabled %}
+
+{% flag_enabled 'BASIC_AUTH_ENABLED' as basic_auth_enabled %}
+{% if basic_auth_enabled %}
+<div class="mt-3">
   <a class="btn btn-primary btn-lg" href="{% url 'login' %}" role="button">
     <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
     Log In
@@ -33,40 +24,19 @@
   <a class="btn btn-secondary btn-lg" href="{% url 'register' %}" role="button">
     Register
   </a>
+</div>
+{% endif %}
+{% flag_enabled 'SSO_ENABLED' as sso_enabled %}
+{% if sso_enabled %}
+  {% flag_enabled 'BRC_ONLY' as brc_only %}
+  {% if brc_only %}
+    {% include "user/sso_login_cards_brc.html" %}
+  {% else %}
+    {% include "user/sso_login_cards_lrc.html" %}
   {% endif %}
-  {% flag_enabled 'SSO_ENABLED' as sso_enabled %}
-  {% if sso_enabled %}
-    {% flag_enabled 'BRC_ONLY' as brc_only %}
-    {% if brc_only %}
-    <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:berkeley.edu' %}" method="post" style="display:inline;">
-      {% csrf_token %}
-      <button class="btn btn-primary btn-lg" type="submit" role="button">
-        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-        CalNet: Log In
-      </button>
-    </form>
-    {% else %}
-    <form action="{% provider_login_url 'cilogon' process='login' auth_params='idphint=urn:mace:incommon:lbl.gov' %}" method="post" style="display:inline;">
-      {% csrf_token %}
-      <button class="btn btn-primary btn-lg" type="submit" role="button">
-        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-        Berkeley Lab: Log In
-      </button>
-    </form>
-    {% endif %}
-    <form action="{% url 'login' %}" method="post" style="display:inline;">
-      {% csrf_token %}
-      <button class="btn btn-secondary btn-lg" type="submit" role="button">
-        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-        Other: Log In
-      </button>
-    </form>
-  {% endif %}
-</p>
-
+{% endif %}
 
 {% include "portal/extra_app_templates.html" %}
-
 
 {% endblock %}
 
@@ -77,11 +47,4 @@
   $("#navbar-main > ul > li.active").removeClass("active");
   $("#navbar-home").addClass("active");
 </script>
-
-<script>
-  $("#expand_button").click(function() {
-    $('#externalProviderCollapse').collapse();
-  });
-</script>
-
 {% endblock %}
