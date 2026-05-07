@@ -28,7 +28,6 @@ urlpatterns = [
     # path('grant/', include('coldfront.core.grant.urls')),
     # path('publication/', include('coldfront.core.publication.urls')),
     # path('research-output/', include('coldfront.core.research_output.urls')),
-    path('help', TemplateView.as_view(template_name='portal/help.html'), name='help'),
 ]
 
 if 'debug_toolbar' in settings.EXTRA_APPS:
