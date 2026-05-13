@@ -1,7 +1,10 @@
+from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.project.models import Project
+from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 
 from django import forms
+from django.contrib.auth.models import User
 from django.core.validators import MinLengthValidator
 from django.core.validators import RegexValidator
 
@@ -9,6 +12,28 @@ from django.core.validators import RegexValidator
 # =============================================================================
 # BRC: SAVIO
 # =============================================================================
+
+
+class SavioProjectAllocationRequestSearchForm(forms.Form):
+    pi = forms.ModelChoiceField(
+        queryset=User.objects.filter(
+            pk__in=SavioProjectAllocationRequest.objects.values('pi')
+        ).order_by('username'),
+        label='PI',
+        required=False,
+    )
+    requester = forms.ModelChoiceField(
+        queryset=User.objects.filter(
+            pk__in=SavioProjectAllocationRequest.objects.values('requester')
+        ).order_by('username'),
+        label='Requester',
+        required=False,
+    )
+    allocation_period = forms.ModelChoiceField(
+        queryset=AllocationPeriod.objects.order_by('start_date'),
+        label='Allocation Period',
+        required=False,
+    )
 
 
 class SavioProjectReviewSetupForm(forms.Form):

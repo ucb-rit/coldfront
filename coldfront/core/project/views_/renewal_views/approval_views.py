@@ -1,8 +1,9 @@
 from coldfront.core.allocation.models import AllocationRenewalRequest
-from coldfront.core.allocation.utils import annotate_queryset_with_allocation_period_not_started_bool
 from coldfront.core.allocation.utils import calculate_service_units_to_allocate
 from coldfront.core.project.forms import ReviewDenyForm
 from coldfront.core.project.forms import ReviewStatusForm
+from coldfront.core.project.forms_.renewal_forms.approval_forms import AllocationRenewalRequestSearchForm
+from coldfront.core.utils.mixins.views import ListFilterMixin
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalApprovalRunner
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalDenialRunner
@@ -42,24 +43,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class AllocationRenewalRequestListView(LoginRequiredMixin, TemplateView):
+class AllocationRenewalRequestListView(LoginRequiredMixin, ListFilterMixin,
+                                       TemplateView):
     template_name = 'project/project_renewal/project_renewal_request_list.html'
     completed = False
 
     def get_queryset(self):
-        order_by = self.request.GET.get('order_by')
-        if order_by:
-            direction = self.request.GET.get('direction')
-            if direction == 'asc':
-                direction = ''
-            else:
-                direction = '-'
-            order_by = direction + order_by
-        else:
-            order_by = '-request_time'
-
-        return annotate_queryset_with_allocation_period_not_started_bool(
-            AllocationRenewalRequest.objects.order_by(order_by))
+        return AllocationRenewalRequest.objects.order_by(
+            self.get_order_by(default='-request_time'))
 
     def get_context_data(self, **kwargs):
         """Include either pending or completed requests. If the user is
@@ -67,19 +58,47 @@ class AllocationRenewalRequestListView(LoginRequiredMixin, TemplateView):
         for which the user is a requester or PI."""
         context = super().get_context_data(**kwargs)
 
-        args, kwargs = [], {}
+        filter_args, filter_kwargs = [], {}
 
         request_list = self.get_queryset()
         user = self.request.user
         permission = 'allocation.view_allocationrenewalrequest'
         if not (user.is_superuser or user.has_perm(permission)):
-            args.append(Q(requester=user) | Q(pi=user))
+            filter_args.append(Q(requester=user) | Q(pi=user))
         if self.completed:
-            status__name__in = ['Approved', 'Complete', 'Denied']
+            filter_kwargs['status__name__in'] = ['Approved', 'Complete', 'Denied']
         else:
-            status__name__in = ['Under Review']
-        kwargs['status__name__in'] = status__name__in
-        context['renewal_request_list'] = request_list.filter(*args, **kwargs)
+            filter_kwargs['status__name__in'] = ['Under Review']
+        request_list = request_list.filter(*filter_args, **filter_kwargs)
+
+        search_form = AllocationRenewalRequestSearchForm(self.request.GET)
+        if search_form.is_valid():
+            data = search_form.cleaned_data
+            if data.get('project'):
+                request_list = request_list.filter(
+                    post_project=data['project'])
+            if data.get('pi'):
+                request_list = request_list.filter(
+                    pi=data['pi'])
+            if data.get('requester'):
+                request_list = request_list.filter(
+                    requester=data['requester'])
+            if data.get('allocation_period'):
+                request_list = request_list.filter(
+                    allocation_period=data['allocation_period'])
+
+        filter_parameters = self.build_filter_parameters(
+            search_form.cleaned_data if search_form.is_valid() else {})
+        order_by = self.request.GET.get('order_by', 'request_time')
+        direction = self.request.GET.get('direction', 'des')
+        context['filter_parameters'] = filter_parameters
+        context['filter_parameters_with_order_by'] = (
+            filter_parameters + f'order_by={order_by}&direction={direction}&')
+        context['expand_accordion'] = 'show' if filter_parameters else ''
+        context['renewal_search_form'] = search_form
+
+        page_obj = self.paginate(request_list, context)
+        context['renewal_request_list'] = page_obj.object_list
         context['request_filter'] = (
             'completed' if self.completed else 'pending')
 

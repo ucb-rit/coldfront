@@ -29,11 +29,49 @@
   {% endif %}
 </p>
 
+<div class="mb-3" id="accordion">
+  <div class="card">
+    <div class="card-header">
+      <a id="expand_button" role="button" class="card-link" data-toggle="collapse" href="#collapseOne">
+        <i class="fas fa-filter" aria-hidden="true"></i> Search
+        <i id="plus_minus" class="fas {{ expand_accordion|get_icon }} float-right"></i>
+      </a>
+    </div>
+    <div id="collapseOne" class="collapse {{ expand_accordion }}" data-parent="#accordion">
+      <div class="card-body">
+        <form id="filter_form" method="GET" action="" autocomplete="off">
+          {{ savio_search_form|crispy }}
+          <input type="submit" class="btn btn-primary" value="Search">
+          <button id="form_reset_button" type="button" class="btn btn-secondary">Reset</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% if savio_project_request_list %}
 <div class="table-responsive">
   {% with queryset=savio_project_request_list %}
     {% include 'project/project_request/savio/project_request_list_table.html' %}
   {% endwith %}
+</div>
+{% if is_paginated %} Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+<ul class="pagination float-right mr-3">
+  {% if page_obj.has_previous %}
+  <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ filter_parameters_with_order_by }}">Previous</a></li>
+  {% else %}
+  <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+  {% endif %}
+  {% if page_obj.has_next %}
+  <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ filter_parameters_with_order_by }}">Next</a></li>
+  {% else %}
+  <li class="page-item disabled"><a class="page-link" href="#">Next</a></li>
+  {% endif %}
+</ul>
+{% endif %}
+{% elif expand_accordion == 'show' %}
+<div class="alert alert-info">
+  No search results!
 </div>
 {% else %}
 <div class="alert alert-info">
@@ -41,15 +79,20 @@
 </div>
 {% endif %}
 
+{% include 'common/selectize.html' %}
 <script>
   $("#navbar-main > ul > li.active").removeClass("active");
   $("#navbar-admin").addClass("active");
   $("#navbar-project-new-project-requests").addClass("active");
 
   $(document).ready(function(){
-      $('[data-toggle="popover"]').popover();
+    $('[data-toggle="popover"]').popover();
+    $('select').selectize({ create: false, sortField: 'text' });
+    $('#form_reset_button').on('click', function() {
+      $('#filter_form')[0].reset();
+      $('#filter_form').submit();
+    });
   });
-
 </script>
 
 {% endblock %}
