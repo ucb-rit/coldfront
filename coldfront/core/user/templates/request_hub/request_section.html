@@ -63,7 +63,7 @@
             </div>
           </div>
         {% endwith %}
-        {% if request_obj.button_path %}
+        {% if admin_staff %}
           <div class="card-body">
             <!-- TODO: Compute the URL in the view itself instead of exposing button_path, button_arg1, button_arg2 and using this if-else. -->
             {% if request_obj.button_arg1 and request_obj.button_arg2 %}
