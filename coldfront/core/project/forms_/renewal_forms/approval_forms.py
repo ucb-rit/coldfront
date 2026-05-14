@@ -21,13 +21,6 @@ class AllocationRenewalRequestSearchForm(forms.Form):
         label='PI',
         required=False,
     )
-    requester = forms.ModelChoiceField(
-        queryset=User.objects.filter(
-            pk__in=AllocationRenewalRequest.objects.values('requester')
-        ).order_by('username'),
-        label='Requester',
-        required=False,
-    )
     allocation_period = forms.ModelChoiceField(
         queryset=AllocationPeriod.objects.order_by('start_date'),
         label='Allocation Period',
