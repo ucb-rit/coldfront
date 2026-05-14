@@ -649,11 +649,14 @@ def send_project_request_ready_for_processing_email(request):
     template_name = (
         'email/project_request/admins_project_request_ready_for_processing.txt')
 
-    project_url = project_detail_url(request.project)
+    domain = settings.CENTER_BASE_URL
+    view = reverse('new-project-request-detail', kwargs={'pk': request.pk})
+    review_url = urljoin(domain, view)
+
     context = {
         'pooling': pooling,
         'project_name': request.project.name,
-        'review_url': project_url,
+        'review_url': review_url,
     }
 
     sender = settings.EMAIL_SENDER
