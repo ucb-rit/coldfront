@@ -66,6 +66,14 @@ def assert_user_serialization(user, result, fields, profile_fields):
         if field == 'profile':
             assert_user_profile_serialization(
                 user.userprofile, result[field], profile_fields)
+        elif field == 'last_login':
+            field_value = getattr(user, field)
+            if field_value is None:
+                expected = str(field_value)
+            else:
+                expected = field_value.isoformat().replace('+00:00', 'Z')
+            actual = str(result[field])
+            assert expected == actual
         else:
             field_value = getattr(user, field)
             expected = str(field_value)

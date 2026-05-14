@@ -55,7 +55,7 @@
                 </li>
                 {% endif %}
 
-                <li><a id="navbar-project-new-project-requests" class="dropdown-item navbar-align-badges" href="{% url 'new-project-pending-request-list' %}">
+                <li><a id="navbar-project-new-project-requests" class="dropdown-item navbar-align-badges" href="{% url 'new-project-request-list' %}">
                   New Project Requests <span class="badge badge-warning">{{ savio_project_req_count }}</span>
                 </a></li>
                 {% flag_enabled 'BRC_ONLY' as brc_only %}
@@ -70,7 +70,7 @@
                 <li><a id="navbar-project-removal-requests" class="dropdown-item navbar-align-badges" href="{% url 'project-removal-request-list' %}">
                   Project Removal Requests <span class="badge badge-warning">{{ project_removal_req_count }}</span>
                 </a></li>
-                <li><a id="navbar-pi-allocation-renewal-requests" class="dropdown-item navbar-align-badges" href="{% url 'pi-allocation-renewal-pending-request-list' %}">
+                <li><a id="navbar-pi-allocation-renewal-requests" class="dropdown-item navbar-align-badges" href="{% url 'pi-allocation-renewal-request-list' %}">
                   Project Renewal Requests <span class="badge badge-warning">{{ project_renewal_req_count }}</span>
                 </a></li>
                 {% if secure_dirs_requestable %}

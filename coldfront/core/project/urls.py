@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.urls import path
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView, TemplateView
 
 from flags.urls import flagged_paths
 
@@ -69,13 +69,18 @@ urlpatterns += [
              condition_dict=new_project_request_views.SavioProjectRequestWizard.condition_dict(),
          ),
          name='new-project-request'),
+    path('new-project-request-list/',
+         new_project_approval_views.SavioProjectRequestListView.as_view(),
+         name='new-project-request-list'),
+    # TODO: Remove these redirects once all internal references have been
+    # updated to use 'new-project-request-list' with a ?status= parameter.
     path('new-project-pending-request-list/',
-         new_project_approval_views.SavioProjectRequestListView.as_view(
-             completed=False),
+         RedirectView.as_view(
+             url='/project/new-project-request-list/?status=pending'),
          name='new-project-pending-request-list'),
     path('new-project-completed-request-list/',
-         new_project_approval_views.SavioProjectRequestListView.as_view(
-             completed=True),
+         RedirectView.as_view(
+             url='/project/new-project-request-list/?status=completed'),
          name='new-project-completed-request-list'),
     path('new-project-request/<int:pk>/',
          new_project_approval_views.SavioProjectRequestDetailView.as_view(),
@@ -190,13 +195,18 @@ urlpatterns += [
              condition_dict=renewal_request_views.AllocationRenewalRequestView.condition_dict(),
          ),
          name='renew-pi-allocation'),
+    path('pi-allocation-renewal-request-list/',
+         renewal_approval_views.AllocationRenewalRequestListView.as_view(),
+         name='pi-allocation-renewal-request-list'),
+    # TODO: Remove these redirects once all internal references have been
+    # updated to use 'pi-allocation-renewal-request-list' with a ?status= parameter.
     path('pi-allocation-renewal-pending-request-list/',
-         renewal_approval_views.AllocationRenewalRequestListView.as_view(
-             completed=False),
+         RedirectView.as_view(
+             url='/project/pi-allocation-renewal-request-list/?status=pending'),
          name='pi-allocation-renewal-pending-request-list'),
     path('pi-allocation-renewal-completed-request-list/',
-         renewal_approval_views.AllocationRenewalRequestListView.as_view(
-             completed=True),
+         RedirectView.as_view(
+             url='/project/pi-allocation-renewal-request-list/?status=completed'),
          name='pi-allocation-renewal-completed-request-list'),
     path('pi-allocation-renewal-request-detail/<int:pk>/',
          renewal_approval_views.AllocationRenewalRequestDetailView.as_view(),

@@ -2,6 +2,7 @@ from coldfront.core.project.models import Project
 from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
 
 from django import forms
+from django.contrib.auth.models import User
 from django.core.validators import MinLengthValidator
 from django.core.validators import RegexValidator
 
@@ -9,6 +10,29 @@ from django.core.validators import RegexValidator
 # =============================================================================
 # BRC: SAVIO
 # =============================================================================
+
+
+class SavioProjectAllocationRequestSearchForm(forms.Form):
+    project = forms.ModelChoiceField(
+        queryset=Project.objects.none(),
+        label='Project',
+        required=False,
+    )
+    pi = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        label='PI',
+        required=False,
+    )
+
+    def __init__(self, *args, request_queryset=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if request_queryset is not None:
+            self.fields['project'].queryset = Project.objects.filter(
+                pk__in=request_queryset.values('project')
+            ).order_by('name')
+            self.fields['pi'].queryset = User.objects.filter(
+                pk__in=request_queryset.values('pi')
+            ).order_by('username')
 
 
 class SavioProjectReviewSetupForm(forms.Form):

@@ -67,5 +67,5 @@ class TestUserViewSetList:
         response = api_client.get(URL, {'username': user0.username})
         assert response.status_code == HTTPStatus.OK
         result = response.json()['results'][0]
-        for field in ('username', 'first_name', 'last_name', 'email'):
+        for field in ('username', 'first_name', 'last_name', 'email', 'last_login'):
             assert field in result
