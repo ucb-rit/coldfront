@@ -4,6 +4,7 @@ from coldfront.core.project.forms import ReviewDenyForm
 from coldfront.core.project.forms import ReviewStatusForm
 from coldfront.core.project.forms_.renewal_forms.approval_forms import AllocationRenewalRequestSearchForm
 from coldfront.core.utils.mixins.views import ListFilterMixin
+from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalApprovalRunner
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalDenialRunner
@@ -22,6 +23,7 @@ from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.db import transaction
@@ -46,16 +48,22 @@ logger = logging.getLogger(__name__)
 class AllocationRenewalRequestListView(LoginRequiredMixin, ListFilterMixin,
                                        TemplateView):
     template_name = 'project/project_renewal/project_renewal_request_list.html'
-    completed = False
+
+    PENDING_STATUSES = ['Under Review']
+    COMPLETED_STATUSES = ['Approved', 'Complete', 'Denied']
 
     def get_queryset(self):
-        return AllocationRenewalRequest.objects.order_by(
-            self.get_order_by(default='-request_time'))
+        return AllocationRenewalRequest.objects.select_related(
+            'pi', 'post_project', 'status', 'allocation_period',
+        ).order_by(self.get_order_by(default='-request_time'))
 
     def get_context_data(self, **kwargs):
-        """Include either pending or completed requests. If the user is
-        a superuser, show all such requests. Otherwise, show only those
-        for which the user is a requester or PI."""
+        """Include pending, completed, or all requests depending on the
+        status GET parameter. Superusers and users with the
+        view_allocationrenewalrequest permission (e.g. staff) see all
+        requests and have access to the search form. All other users see only
+        requests for which they are the requester or PI, with search
+        hidden."""
         context = super().get_context_data(**kwargs)
 
         filter_args, filter_kwargs = [], {}
@@ -65,42 +73,47 @@ class AllocationRenewalRequestListView(LoginRequiredMixin, ListFilterMixin,
         permission = 'allocation.view_allocationrenewalrequest'
         if not (user.is_superuser or user.has_perm(permission)):
             filter_args.append(Q(requester=user) | Q(pi=user))
-        if self.completed:
-            filter_kwargs['status__name__in'] = ['Approved', 'Complete', 'Denied']
-        else:
-            filter_kwargs['status__name__in'] = ['Under Review']
+
+        status = self.request.GET.get('status', 'pending')
+        if status == 'pending':
+            filter_kwargs['status__name__in'] = self.PENDING_STATUSES
+        elif status == 'completed':
+            filter_kwargs['status__name__in'] = self.COMPLETED_STATUSES
         request_list = request_list.filter(*filter_args, **filter_kwargs)
 
-        search_form = AllocationRenewalRequestSearchForm(self.request.GET)
-        if search_form.is_valid():
-            data = search_form.cleaned_data
-            if data.get('project'):
-                request_list = request_list.filter(
-                    post_project=data['project'])
-            if data.get('pi'):
-                request_list = request_list.filter(
-                    pi=data['pi'])
-            if data.get('requester'):
-                request_list = request_list.filter(
-                    requester=data['requester'])
-            if data.get('allocation_period'):
-                request_list = request_list.filter(
-                    allocation_period=data['allocation_period'])
+        show_search = user.is_superuser or user.has_perm(permission)
+        context['show_search'] = show_search
 
-        filter_parameters = self.build_filter_parameters(
-            search_form.cleaned_data if search_form.is_valid() else {})
+        form_filter_parameters = ''
+        if show_search:
+            search_form = AllocationRenewalRequestSearchForm(self.request.GET)
+            if search_form.is_valid():
+                data = search_form.cleaned_data
+                if data.get('project'):
+                    request_list = request_list.filter(post_project=data['project'])
+                if data.get('pi'):
+                    request_list = request_list.filter(pi=data['pi'])
+                if data.get('allocation_period'):
+                    request_list = request_list.filter(
+                        allocation_period=data['allocation_period'])
+            form_filter_parameters = self.build_filter_parameters(
+                search_form.cleaned_data if search_form.is_valid() else {})
+            context['renewal_search_form'] = search_form
+            context['expand_accordion'] = 'show' if form_filter_parameters else ''
+        else:
+            context['expand_accordion'] = ''
+
+        filter_parameters = form_filter_parameters + f'status={status}&'
         order_by = self.request.GET.get('order_by', 'request_time')
         direction = self.request.GET.get('direction', 'des')
         context['filter_parameters'] = filter_parameters
         context['filter_parameters_with_order_by'] = (
             filter_parameters + f'order_by={order_by}&direction={direction}&')
-        context['expand_accordion'] = 'show' if filter_parameters else ''
-        context['renewal_search_form'] = search_form
+        context['form_filter_parameters'] = form_filter_parameters
+        context['status'] = status
 
         page_obj = self.paginate(request_list, context)
         context['renewal_request_list'] = page_obj.object_list
-        context['request_filter'] = (
-            'completed' if self.completed else 'pending')
 
         return context
 
