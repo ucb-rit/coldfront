@@ -315,7 +315,7 @@ class RequestHubView(LoginRequiredMixin,
         savio_proj_request_object.table = \
             'project/project_request/savio/project_request_list_table.html'
         savio_proj_request_object.button_path = \
-            'new-project-pending-request-list'
+            'new-project-request-list'
         savio_proj_request_object.button_text = \
             'Go To New Project Requests Main Page'
         savio_proj_request_object.id = 'new_project_request_section'
@@ -449,7 +449,7 @@ class RequestHubView(LoginRequiredMixin,
         proj_renewal_request_object.table = \
             'project/project_renewal/project_renewal_request_list_table.html'
         proj_renewal_request_object.button_path = \
-            'pi-allocation-renewal-pending-request-list'
+            'pi-allocation-renewal-request-list'
         proj_renewal_request_object.button_text = \
             'Go To Project Renewal Requests Main Page'
         proj_renewal_request_object.id = 'project_renewal_request_section'

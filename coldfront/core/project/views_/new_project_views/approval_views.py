@@ -1,13 +1,14 @@
 from coldfront.core.allocation.models import AllocationRenewalRequest
-from coldfront.core.allocation.utils import annotate_queryset_with_allocation_period_not_started_bool
 from coldfront.core.allocation.utils import calculate_service_units_to_allocate
 from coldfront.core.project.forms import MemorandumSignedForm
 from coldfront.core.project.forms import ReviewDenyForm
 from coldfront.core.project.forms import ReviewStatusForm
 from coldfront.core.project.forms_.new_project_forms.request_forms import NewProjectExtraFieldsFormFactory
 from coldfront.core.project.forms_.new_project_forms.request_forms import SavioProjectSurveyForm
+from coldfront.core.project.forms_.new_project_forms.approval_forms import SavioProjectAllocationRequestSearchForm
 from coldfront.core.project.forms_.new_project_forms.approval_forms import SavioProjectReviewSetupForm
 from coldfront.core.project.forms_.new_project_forms.approval_forms import VectorProjectReviewSetupForm
+from coldfront.core.project.models import Project
 from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.project.models import VectorProjectAllocationRequest
@@ -31,6 +32,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.db import transaction
@@ -43,6 +45,7 @@ from django.views import View
 from django.views.generic import DetailView
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
+from coldfront.core.utils.mixins.views import ListFilterMixin
 from coldfront.core.utils.views.mou_views import MOURequestNotifyPIViewMixIn
 from flags.state import flag_enabled
 
@@ -55,51 +58,73 @@ import logging
 # =============================================================================
 
 
-class SavioProjectRequestListView(LoginRequiredMixin, TemplateView):
+class SavioProjectRequestListView(LoginRequiredMixin, ListFilterMixin,
+                                   TemplateView):
     template_name = 'project/project_request/savio/project_request_list.html'
-    # Show completed requests if True; else, show pending requests.
-    completed = False
+
+    PENDING_STATUSES = ['Under Review', 'Approved - Processing']
+    COMPLETED_STATUSES = ['Approved - Complete', 'Approved - Scheduled', 'Denied']
 
     def get_queryset(self):
-        order_by = self.request.GET.get('order_by')
-        if order_by:
-            direction = self.request.GET.get('direction')
-            if direction == 'asc':
-                direction = ''
-            else:
-                direction = '-'
-            order_by = direction + order_by
-        else:
-            order_by = '-request_time'
-
-        return annotate_queryset_with_allocation_period_not_started_bool(
-            SavioProjectAllocationRequest.objects.select_related(
-                'pi', 'project', 'status', 'computing_allowance',
-                'allocation_period', 'requester',
-            ).order_by(order_by))
+        return SavioProjectAllocationRequest.objects.select_related(
+            'pi', 'project', 'status', 'computing_allowance',
+            'allocation_period', 'requester',
+        ).order_by(self.get_order_by(default='-request_time'))
 
     def get_context_data(self, **kwargs):
-        """Include either pending or completed requests. If the user is
-        a superuser, show all such requests. Otherwise, show only those
-        for which the user is a requester or PI."""
+        """Include pending, completed, or all requests depending on the
+        status GET parameter. Superusers and users with the
+        view_savioprojectallocationrequest permission (e.g. staff) see all
+        requests and have access to the search form. All other users see only
+        requests for which they are the requester or PI, with search
+        hidden."""
         context = super().get_context_data(**kwargs)
-        args, kwargs = [], {}
+        filter_args, filter_kwargs = [], {}
 
         request_list = self.get_queryset()
         user = self.request.user
         permission = 'project.view_savioprojectallocationrequest'
         if not (user.is_superuser or user.has_perm(permission)):
-            args.append(Q(requester=user) | Q(pi=user))
-        if self.completed:
-            status__name__in = [
-                'Approved - Complete', 'Approved - Scheduled', 'Denied']
+            filter_args.append(Q(requester=user) | Q(pi=user))
+
+        status = self.request.GET.get('status', 'pending')
+        if status == 'pending':
+            filter_kwargs['status__name__in'] = self.PENDING_STATUSES
+        elif status == 'completed':
+            filter_kwargs['status__name__in'] = self.COMPLETED_STATUSES
+        request_list = request_list.filter(*filter_args, **filter_kwargs)
+
+        show_search = user.is_superuser or user.has_perm(permission)
+        context['show_search'] = show_search
+
+        form_filter_parameters = ''
+        if show_search:
+            search_form = SavioProjectAllocationRequestSearchForm(
+                self.request.GET, request_queryset=request_list)
+            if search_form.is_valid():
+                data = search_form.cleaned_data
+                if data.get('project'):
+                    request_list = request_list.filter(project=data['project'])
+                if data.get('pi'):
+                    request_list = request_list.filter(pi=data['pi'])
+            form_filter_parameters = self.build_filter_parameters(
+                search_form.cleaned_data if search_form.is_valid() else {})
+            context['savio_search_form'] = search_form
+            context['expand_accordion'] = 'show' if form_filter_parameters else ''
         else:
-            status__name__in = ['Under Review', 'Approved - Processing']
-        kwargs['status__name__in'] = status__name__in
-        context['savio_project_request_list'] = request_list.filter(
-            *args, **kwargs)
-        context['request_filter'] = (
-            'completed' if self.completed else 'pending')
+            context['expand_accordion'] = ''
+
+        filter_parameters = form_filter_parameters + f'status={status}&'
+        order_by = self.request.GET.get('order_by', 'request_time')
+        direction = self.request.GET.get('direction', 'des')
+        context['filter_parameters'] = filter_parameters
+        context['filter_parameters_with_order_by'] = (
+            filter_parameters + f'order_by={order_by}&direction={direction}&')
+        context['form_filter_parameters'] = form_filter_parameters
+        context['status'] = status
+
+        page_obj = self.paginate(request_list, context)
+        context['savio_project_request_list'] = page_obj.object_list
 
         return context
 

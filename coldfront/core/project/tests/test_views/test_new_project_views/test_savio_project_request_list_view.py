@@ -2,6 +2,7 @@ from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.tests.utils import create_project_and_request
 from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
 from coldfront.core.utils.tests.test_base import TestBase
+from django.contrib.auth.models import Permission
 from django.contrib.auth.models import User
 from django.urls import reverse
 
@@ -9,8 +10,8 @@ from django.urls import reverse
 class TestViewMixin(object):
     """A mixin for testing SavioProjectRequestListView."""
 
-    completed_url = reverse('new-project-completed-request-list')
-    pending_url = reverse('new-project-pending-request-list')
+    completed_url = reverse('new-project-request-list') + '?status=completed'
+    pending_url = reverse('new-project-request-list') + '?status=pending'
     url = None
 
     def setUp(self):
@@ -95,6 +96,60 @@ class TestViewMixin(object):
         self.assertNotContains(response, self.project_a.name)
         self.assertNotContains(response, self.project_b.name)
         self.assertContains(response, self.project_c.name)
+
+    def test_search_form_visibility(self):
+        """Test that the search form is visible to superusers and users
+        with the view permission (e.g. staff), but hidden from regular
+        users."""
+        self.assertTrue(self.user.is_superuser)
+        self.client.login(username=self.user.username, password=self.password)
+        response = self.client.get(self.url)
+        self.assertIs(response.context['show_search'], True)
+        self.assertContains(response, 'id="filter_form"')
+
+        # A user with the view permission also sees the search form.
+        perm = Permission.objects.get(
+            codename='view_savioprojectallocationrequest')
+        self.user_a.user_permissions.add(perm)
+        self.client.login(username=self.user_a.username, password=self.password)
+        response = self.client.get(self.url)
+        self.assertIs(response.context['show_search'], True)
+        self.assertContains(response, 'id="filter_form"')
+        self.user_a.user_permissions.remove(perm)
+
+        self.assertFalse(self.user_b.is_superuser)
+        self.client.login(username=self.user_b.username, password=self.password)
+        response = self.client.get(self.url)
+        self.assertIs(response.context['show_search'], False)
+        self.assertNotContains(response, 'id="filter_form"')
+
+    def test_superuser_can_filter_requests(self):
+        """Test that superusers can filter requests by project and by PI."""
+        self.assertTrue(self.user.is_superuser)
+        self.client.login(username=self.user.username, password=self.password)
+
+        # Filter by project.
+        url = self.url + f'&project={self.project_a.pk}'
+        response = self.client.get(url)
+        request_list = list(response.context['savio_project_request_list'])
+        self.assertEqual(len(request_list), 1)
+        self.assertEqual(request_list[0].project, self.project_a)
+
+        # Filter by PI.
+        url = self.url + f'&pi={self.user_b.pk}'
+        response = self.client.get(url)
+        request_list = list(response.context['savio_project_request_list'])
+        self.assertEqual(len(request_list), 1)
+        self.assertEqual(request_list[0].pi, self.user_b)
+
+    def test_search_params_ignored_for_non_superusers(self):
+        """Test that search query parameters are ignored for non-superusers,
+        preventing them from viewing requests they are not associated with."""
+        self.assertFalse(self.user_a.is_superuser)
+        self.client.login(username=self.user_a.username, password=self.password)
+        url = self.url + f'&project={self.project_b.pk}'
+        response = self.client.get(url)
+        self.assertNotContains(response, self.project_b.name)
 
 
 class TestSavioProjectRequestCompletedListView(TestViewMixin, TestBase):

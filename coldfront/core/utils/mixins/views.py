@@ -2,11 +2,70 @@ import re
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db.models import Model, QuerySet
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 
 from coldfront.core.project.models import Project
+
+
+class ListFilterMixin:
+    """Mixin for list views with server-side sorting, filtering, and pagination.
+
+    Centralizes the three pieces of boilerplate duplicated across every
+    request-queue list view: sort-param parsing, filter_parameters string
+    building, and manual Paginator application.
+    """
+
+    paginate_by = 25
+
+    def get_order_by(self, default='-id'):
+        """Return the queryset order_by string derived from GET params."""
+        order_by = self.request.GET.get('order_by')
+        if order_by:
+            direction = '' if self.request.GET.get('direction') == 'asc' else '-'
+            return direction + order_by
+        return default
+
+    def build_filter_parameters(self, data):
+        """Build a ``key=value&`` query string from a dict of filter values.
+
+        Empty/falsy values are omitted. Model instances (from
+        ``ModelChoiceField``) are serialized as their PK. QuerySets (from
+        ``ModelMultipleChoiceField``) emit one ``key=pk`` pair per element.
+        """
+        result = ''
+        for k, v in data.items():
+            if not v and v != 0:
+                continue
+            if isinstance(v, Model):
+                result += f'{k}={v.pk}&'
+            elif isinstance(v, QuerySet):
+                for ele in v:
+                    result += f'{k}={ele.pk}&'
+            else:
+                result += f'{k}={v}&'
+        return result
+
+    def paginate(self, queryset, context):
+        """Apply pagination to *queryset* and populate *context*.
+
+        Sets ``page_obj`` and ``is_paginated`` on the context dict and
+        returns the current ``Page`` object.
+        """
+        paginator = Paginator(queryset, self.paginate_by)
+        page = self.request.GET.get('page')
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+        context['page_obj'] = page_obj
+        context['is_paginated'] = paginator.num_pages > 1
+        return page_obj
 
 
 class SnakeCaseTemplateNameMixin:

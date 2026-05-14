@@ -5,31 +5,51 @@
 
 
 {% block title %}
-Project Renewal {{ request_filter|title }} Requests %}
+Project Renewal {{ status|title }} Requests
 {% endblock %}
 
 
 {% block content %}
-<h1>{{ request_filter|title }} Project Renewal Requests</h1>
+<h1>{{ status|title }} Project Renewal Requests</h1>
 <hr>
 
-<p>
-  {% if request_filter == 'completed' %}
-    View completed requests for allocation renewals under projects (including
-    approved requests scheduled for processing). You may also view pending
-    requests
-    <a href="{% url 'pi-allocation-renewal-pending-request-list' %}">
-      <span class="accessibility-link-text">Pending Requests</span>
-      here</a>.
-  {% else %}
-    View pending requests for allocation renewals under projects. You may also
-    view completed requests (including approved requests scheduled for
-    processing)
-    <a href="{% url 'pi-allocation-renewal-completed-request-list' %}">
-      <span class="accessibility-link-text">Completed Requests</span>
-      here</a>.
-  {% endif %}
-</p>
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'pending' %}active{% endif %}"
+       href="?status=pending&{{ form_filter_parameters }}">Pending</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'completed' %}active{% endif %}"
+       href="?status=completed&{{ form_filter_parameters }}">Completed</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'all' %}active{% endif %}"
+       href="?status=all&{{ form_filter_parameters }}">All</a>
+  </li>
+</ul>
+
+{% if show_search %}
+<div class="mb-3" id="accordion">
+  <div class="card">
+    <div class="card-header">
+      <a id="expand_button" role="button" class="card-link" data-toggle="collapse" href="#collapseOne">
+        <i class="fas fa-filter" aria-hidden="true"></i> Search
+        <i id="plus_minus" class="fas {{ expand_accordion|get_icon }} float-right"></i>
+      </a>
+    </div>
+    <div id="collapseOne" class="collapse {{ expand_accordion }}" data-parent="#accordion">
+      <div class="card-body">
+        <form id="filter_form" method="GET" action="" autocomplete="off">
+          <input type="hidden" name="status" value="{{ status }}">
+          {{ renewal_search_form|crispy }}
+          <input type="submit" class="btn btn-primary" value="Search">
+          <button id="form_reset_button" type="button" class="btn btn-secondary">Reset</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 {% if renewal_request_list %}
 <div class="table-responsive">
@@ -37,20 +57,43 @@ Project Renewal {{ request_filter|title }} Requests %}
     {% include 'project/project_renewal/project_renewal_request_list_table.html' %}
   {% endwith %}
 </div>
+{% if is_paginated %} Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+<ul class="pagination float-right mr-3">
+  {% if page_obj.has_previous %}
+  <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ filter_parameters_with_order_by }}">Previous</a></li>
+  {% else %}
+  <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+  {% endif %}
+  {% if page_obj.has_next %}
+  <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ filter_parameters_with_order_by }}">Next</a></li>
+  {% else %}
+  <li class="page-item disabled"><a class="page-link" href="#">Next</a></li>
+  {% endif %}
+</ul>
+{% endif %}
+{% elif expand_accordion == 'show' %}
+<div class="alert alert-info">
+  No search results!
+</div>
 {% else %}
 <div class="alert alert-info">
-  No {{ request_filter }} renewal requests!
+  No {{ status }} renewal requests!
 </div>
 {% endif %}
 
+{% include 'common/selectize.html' %}
 <script>
   $("#navbar-main > ul > li.active").removeClass("active");
   $("#navbar-admin").addClass("active");
 
   $(document).ready(function(){
-      $('[data-toggle="popover"]').popover();
+    $('[data-toggle="popover"]').popover();
+    $('select').selectize({ create: false, sortField: 'text' });
+    $('#form_reset_button').on('click', function() {
+      $('#filter_form')[0].reset();
+      $('#filter_form').submit();
+    });
   });
-
 </script>
 
 {% endblock %}

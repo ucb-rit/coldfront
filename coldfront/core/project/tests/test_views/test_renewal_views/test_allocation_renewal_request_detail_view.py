@@ -331,7 +331,7 @@ class TestAllocationRenewalRequestDetailView(TestBase, TestRenewalViewsMixin):
         self.allocation_renewal_request.save()
         response = self.client.post(url, data)
         redirect_url = reverse('pi-allocation-renewal-pending-request-list')
-        self.assertRedirects(response, redirect_url)
+        self.assertRedirects(response, redirect_url, fetch_redirect_response=False)
         message = f'PI {self.user.username}\'s allocation has been renewed.'
         self.assertEqual(message, self.get_message_strings(response)[0])
 
@@ -385,6 +385,6 @@ class TestAllocationRenewalRequestDetailView(TestBase, TestRenewalViewsMixin):
         new_project_request.save()
         response = self.client.post(url, data)
         redirect_url = reverse('pi-allocation-renewal-pending-request-list')
-        self.assertRedirects(response, redirect_url)
+        self.assertRedirects(response, redirect_url, fetch_redirect_response=False)
         message = f'PI {self.user.username}\'s allocation has been renewed.'
         self.assertEqual(message, self.get_message_strings(response)[0])

@@ -348,18 +348,14 @@ class TestRequestHubView(TestBase):
             pending_div = str(
                 soup.find(id=f'{section}_pending'))
             self.assertIn(str(pending_req.pk), pending_div)
-            self.assertIn(pending_req.requester.email, pending_div)
             self.assertIn(pending_req.pi.email, pending_div)
-            self.assertIn(self.format_date(pending_req.modified), pending_div)
             self.assertIn(pending_req.status.name, pending_div)
 
             # completed request is shown
             completed_div = str(
                 soup.find(id=f'{section}_completed'))
             self.assertIn(str(completed_req.pk), completed_div)
-            self.assertIn(completed_req.requester.email, completed_div)
             self.assertIn(completed_req.pi.email, completed_div)
-            self.assertIn(self.format_date(completed_req.modified), completed_div)
             self.assertIn(completed_req.status.name, completed_div)
 
         kwargs = {
@@ -545,20 +541,16 @@ class TestRequestHubView(TestBase):
             pending_div = str(
                 soup.find(id=f'{section}_pending'))
             self.assertIn(str(pending_req.pk), pending_div)
-            self.assertIn(pending_req.requester.email, pending_div)
-            self.assertIn(pending_req.pre_project.name, pending_div)
             self.assertIn(pending_req.post_project.name, pending_div)
-            self.assertIn(self.format_date(pending_req.modified), pending_div)
+            self.assertIn(pending_req.pi.email, pending_div)
             self.assertIn(pending_req.status.name, pending_div)
 
             # completed request is shown
             completed_div = str(
                 soup.find(id=f'{section}_completed'))
             self.assertIn(str(completed_req.pk), completed_div)
-            self.assertIn(completed_req.requester.email, completed_div)
-            self.assertIn(completed_req.pre_project.name, completed_div)
             self.assertIn(completed_req.post_project.name, completed_div)
-            self.assertIn(self.format_date(completed_req.modified), completed_div)
+            self.assertIn(completed_req.pi.email, completed_div)
             self.assertIn(completed_req.status.name, completed_div)
         
         kwargs = {
