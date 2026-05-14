@@ -9,7 +9,8 @@ from http import HTTPStatus
 """A test suite for the /users/ endpoints, divided by method."""
 
 SERIALIZER_FIELDS = (
-    'id', 'username', 'first_name', 'last_name', 'email', 'profile')
+    'id', 'username', 'first_name', 'last_name', 'email', 'last_login',
+    'profile')
 PROFILE_SERIALIZER_FIELDS = (
     'id', 'user', 'is_pi', 'middle_name', 'cluster_uid',
     'access_agreement_signed_date')
