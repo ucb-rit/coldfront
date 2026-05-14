@@ -99,7 +99,8 @@ class SavioProjectRequestListView(LoginRequiredMixin, ListFilterMixin,
 
         form_filter_parameters = ''
         if show_search:
-            search_form = SavioProjectAllocationRequestSearchForm(self.request.GET)
+            search_form = SavioProjectAllocationRequestSearchForm(
+                self.request.GET, request_queryset=request_list)
             if search_form.is_valid():
                 data = search_form.cleaned_data
                 if data.get('project'):
