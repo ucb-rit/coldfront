@@ -9,6 +9,7 @@ build
 *.swp
 env/
 venv/
+.venv/
 static_root/
 db.sqlite3
 local_data/
