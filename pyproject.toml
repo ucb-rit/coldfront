@@ -3,7 +3,7 @@
 ################################################################################
 
 [tool.pytest.ini_options]
-addopts = "--continue-on-collection-errors --tb=short --durations=30"
+addopts = "--continue-on-collection-errors --tb=short --durations=30 --timeout=30"
 markers = [
     "acceptance: Marks tests as acceptance tests",
     "component: Mark tests as component tests",

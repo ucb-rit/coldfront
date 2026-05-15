@@ -56,14 +56,14 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/venv
-        key: ${{ runner.os }}-python-313-packages-${{ hashFiles('requirements.txt') }}
+        key: ${{ runner.os }}-python-313-packages-${{ hashFiles('requirements.txt', 'requirements-test.txt') }}
 
     - if: ${{ steps.cache-python.outputs.cache-hit != 'true' }} # If a cache is not found
       name: Install Python packages
       run: |
         python3.13 -m venv ~/venv
         source ~/venv/bin/activate
-        pip install -r requirements.txt
+        pip install -r requirements.txt -r requirements-test.txt
 
     - name: Create settings files from samples and other directories needed for testing
       run: |
@@ -121,6 +121,7 @@ jobs:
         source ~/venv/bin/activate
         coverage html
         coverage xml -o coverage-combined.xml
+        coverage report --fail-under=50
 
     - name: Post coverage comment on PR
       uses: py-cov-action/python-coverage-comment-action@v3
