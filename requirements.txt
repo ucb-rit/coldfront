@@ -48,6 +48,7 @@ pylint==3.3.7
 pylint-django==2.6.1
 pyparsing==3.2.3
 pytest==9.0.3
+pytest-cov==6.1.0
 pytest-django==4.11.1
 python-dateutil==2.9.0.post0
 python-memcached==1.62

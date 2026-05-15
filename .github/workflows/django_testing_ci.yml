@@ -17,6 +17,10 @@ jobs:
 
     runs-on: ubuntu-22.04
 
+    permissions:
+      contents: read
+      pull-requests: write  # required to post coverage comment
+
     services:
       postgres: # Set up a database container with the following specifications
         image: postgres:15.2-alpine3.17
@@ -89,19 +93,34 @@ jobs:
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest coldfront/ -m unit --durations=30
+        pytest coldfront/ -m unit --cov=coldfront --cov-report=xml:coverage-unit.xml
 
     - name: Run pytest component tests
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest coldfront/ -m component --durations=30
+        pytest coldfront/ -m component --cov=coldfront --cov-append --cov-report=xml:coverage-component.xml --cov-report=html --cov-fail-under=25
 
     # - name: Run pytest acceptance tests
     #   run: |
     #     source ~/venv/bin/activate
     #     export django_secret_key=`openssl rand -base64 64`
     #     pytest -m acceptance
+
+    - name: Post coverage comment on PR
+      uses: py-cov-action/python-coverage-comment-action@v3
+      with:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-reports
+        path: |
+          coverage-*.xml
+          htmlcov/
+        retention-days: 7
+      if: always()
 
     - name: Run Tests
       run: |
