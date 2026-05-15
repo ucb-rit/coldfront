@@ -3,7 +3,7 @@
 ################################################################################
 
 [tool.pytest.ini_options]
-addopts = "--continue-on-collection-errors"
+addopts = "--continue-on-collection-errors --tb=short --durations=30"
 markers = [
     "acceptance: Marks tests as acceptance tests",
     "component: Mark tests as component tests",
@@ -20,3 +20,22 @@ testpaths = [
 ]
 # pytest-django
 DJANGO_SETTINGS_MODULE = "coldfront.config.settings"
+
+################################################################################
+# coverage.py
+################################################################################
+
+[tool.coverage.run]
+source = ["coldfront"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "coldfront/config/*",
+    "*/.venv/*",
+    "*/conftest.py",
+]
+branch = true
+
+[tool.coverage.report]
+skip_empty = true
+show_missing = true

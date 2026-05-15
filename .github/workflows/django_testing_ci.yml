@@ -89,19 +89,26 @@ jobs:
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest coldfront/ -m unit --durations=30
+        pytest coldfront/ -m unit --cov=coldfront --cov-report=xml:coverage-unit.xml
 
     - name: Run pytest component tests
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest coldfront/ -m component --durations=30
+        pytest coldfront/ -m component --cov=coldfront --cov-append --cov-report=xml:coverage-component.xml
 
     # - name: Run pytest acceptance tests
     #   run: |
     #     source ~/venv/bin/activate
     #     export django_secret_key=`openssl rand -base64 64`
     #     pytest -m acceptance
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-reports
+        path: coverage-*.xml
+      if: always()
 
     - name: Run Tests
       run: |
