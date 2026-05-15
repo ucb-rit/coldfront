@@ -11,6 +11,7 @@ from coldfront.core.billing.models import BillingActivity
 from coldfront.core.billing.models import BillingProject
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.tests.test_base import enable_deployment
+from coldfront.core.utils.tests.test_base import LRCTestBase
 from coldfront.core.utils.tests.test_base import TestBase
 
 
@@ -56,7 +57,7 @@ class TestBRCProjectAddUsersView(TestProjectAddUsersViewMixin, TestBase):
     # TODO
 
 
-class TestLRCProjectAddUsersView(TestProjectAddUsersViewMixin, TestBase):
+class TestLRCProjectAddUsersView(TestProjectAddUsersViewMixin, LRCTestBase):
     """A class for testing ProjectAddUsersView on the LRC deployment."""
 
     @enable_deployment('LRC')

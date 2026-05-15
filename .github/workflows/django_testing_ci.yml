@@ -89,13 +89,13 @@ jobs:
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest coldfront/ -m unit
+        pytest coldfront/ -m unit --durations=30
 
     - name: Run pytest component tests
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest coldfront/ -m component
+        pytest coldfront/ -m component --durations=30
 
     # - name: Run pytest acceptance tests
     #   run: |
@@ -108,4 +108,6 @@ jobs:
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
         python manage.py migrate
-        python manage.py test
+        python manage.py test \
+          --timing \
+          --testrunner=coldfront.tests.timing_runner.TimingTestRunner
