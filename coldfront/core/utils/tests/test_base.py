@@ -42,10 +42,26 @@ class BaseTestMixin(object):
     # A password for convenient reference.
     password = 'password'
 
+    @classmethod
+    def setUpClass(cls):
+        """Set up database objects required by all tests in the class.
+
+        Runs call_setup_commands() once per class (for each deployment) rather
+        than once per test method, which is the primary driver of test suite
+        runtime.
+        """
+        super().setUpClass()
+        for deployment_name in ('BRC', 'LRC'):
+            deployer = enable_deployment(deployment_name)
+            deployer.enable()
+            try:
+                cls.call_setup_commands()
+            finally:
+                deployer.disable()
+
     def setUp(self):
-        """Set up test data."""
+        """Set up per-test state."""
         get_computing_allowance_interface.cache_clear()
-        self.call_setup_commands()
         self.client = Client()
 
     def tearDown(self):
@@ -91,7 +107,18 @@ class BaseTestMixin(object):
         # TODO: Implement a long-term solution that enables testing of multiple
         # TODO: types of deployments.
         # enable_flag('BRC_ONLY', create_boolean_condition=True)
-        enable_flag('SERVICE_UNITS_PURCHASABLE', create_boolean_condition=True)
+
+        # Use a savepoint so that a duplicate-key error (when this method is
+        # called more than once per class, e.g. once per deployment in
+        # setUpClass) doesn't corrupt the outer transaction.
+        from django.db import transaction as db_transaction
+        try:
+            with db_transaction.atomic():
+                enable_flag('SERVICE_UNITS_PURCHASABLE', create_boolean_condition=True)
+        except Exception:
+            # Flag DB record already exists; enable_flag already set it in
+            # memory before the save failed, so no further action is needed.
+            pass
 
         out, err = StringIO(), StringIO()
         commands = [
@@ -196,7 +223,15 @@ class TestBase(BaseTestMixin, TestCase):
 class TransactionTestBase(BaseTestMixin, TransactionTestCase):
     """A base class for testing the application, with real database
     transactions."""
-    pass
+
+    def setUp(self):
+        """Re-run setup commands each test method.
+
+        TransactionTestCase flushes the database between test methods, so
+        call_setup_commands() cannot be deferred to setUpClass alone.
+        """
+        super().setUp()
+        self.call_setup_commands()
 
 
 class enable_deployment(TestContextDecorator):
