@@ -14,10 +14,10 @@ from coldfront.core.project.utils_.renewal_utils import get_current_allowance_ye
 from coldfront.core.resource.utils import get_primary_compute_resource
 from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 from coldfront.core.utils.tests.test_base import enable_deployment
-from coldfront.core.utils.tests.test_base import TestBase
+from coldfront.core.utils.tests.test_base import LRCTestBase
 
 
-class TestBillingBase(TestBase):
+class TestBillingBase(LRCTestBase):
     """A base class for testing Billing-related functionality."""
 
     @enable_deployment('LRC')

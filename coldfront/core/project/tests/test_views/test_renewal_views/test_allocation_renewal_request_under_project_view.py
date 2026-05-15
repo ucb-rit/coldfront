@@ -19,6 +19,7 @@ from coldfront.core.project.utils_.renewal_utils import get_current_allowance_ye
 from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.tests.test_base import enable_deployment
+from coldfront.core.utils.tests.test_base import LRCTestBase
 from coldfront.core.utils.tests.test_base import TestBase
 
 
@@ -156,7 +157,7 @@ class TestBRCAllocationRenewalRequestUnderProjectView(TestAllocationRenewalReque
 
 
 class TestLRCAllocationRenewalRequestUnderProjectView(TestAllocationRenewalRequestUnderProjectViewMixin,
-                                                      TestBase):
+                                                      LRCTestBase):
     """A class for testing AllocationRenewalRequestUnderProjectView on
     the LRC deployment."""
 
