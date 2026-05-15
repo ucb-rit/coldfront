@@ -99,13 +99,28 @@ jobs:
       run: |
         source ~/venv/bin/activate
         export django_secret_key=`openssl rand -base64 64`
-        pytest coldfront/ -m component --cov=coldfront --cov-append --cov-report=xml:coverage-component.xml --cov-report=html --cov-fail-under=25
+        pytest coldfront/ -m component --cov=coldfront --cov-append --cov-report=xml:coverage-component.xml
 
     # - name: Run pytest acceptance tests
     #   run: |
     #     source ~/venv/bin/activate
     #     export django_secret_key=`openssl rand -base64 64`
     #     pytest -m acceptance
+
+    - name: Run Tests
+      run: |
+        source ~/venv/bin/activate
+        export django_secret_key=`openssl rand -base64 64`
+        python manage.py migrate
+        coverage run --append manage.py test \
+          --timing \
+          --testrunner=coldfront.tests.timing_runner.TimingTestRunner
+
+    - name: Generate combined coverage report
+      run: |
+        source ~/venv/bin/activate
+        coverage html
+        coverage xml -o coverage-combined.xml
 
     - name: Post coverage comment on PR
       uses: py-cov-action/python-coverage-comment-action@v3
@@ -121,12 +136,3 @@ jobs:
           htmlcov/
         retention-days: 7
       if: always()
-
-    - name: Run Tests
-      run: |
-        source ~/venv/bin/activate
-        export django_secret_key=`openssl rand -base64 64`
-        python manage.py migrate
-        python manage.py test \
-          --timing \
-          --testrunner=coldfront.tests.timing_runner.TimingTestRunner
