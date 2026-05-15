@@ -121,6 +121,7 @@ jobs:
         source ~/venv/bin/activate
         coverage html
         coverage xml -o coverage-combined.xml
+        coverage report --fail-under=50
 
     - name: Post coverage comment on PR
       uses: py-cov-action/python-coverage-comment-action@v3
