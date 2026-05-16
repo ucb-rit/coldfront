@@ -12,17 +12,35 @@ on:
                 # reopened, or updated with a new commit.
     branches: [ "master", "develop" ]
 
-jobs:
-  build:
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+jobs:
+
+  # ─── Coverage strategy ───────────────────────────────────────────────────────
+  #
+  # Each test job writes its coverage data to a unique coverage-<shard> file,
+  # then uploads it as an artifact.  The `report` job downloads all four files,
+  # runs `coverage combine`, and generates the combined HTML + XML report.
+  #
+  # Shared setup (checkout, Python, venv, settings) lives in the composite
+  # action at .github/actions/coldfront-setup.  Each job still declares its
+  # own Postgres service because services cannot be defined in composite actions.
+  #
+  # Coverage is written to the default .coverage file (no --data-file flag),
+  # then renamed to coverage-<shard> (no leading dot) immediately after the run.
+  # Each job runs on an isolated runner so there is no cross-job collision.
+  #
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  test-pytest:
     runs-on: ubuntu-22.04
 
     permissions:
       contents: read
-      pull-requests: write  # required to post coverage comment
 
     services:
-      postgres: # Set up a database container with the following specifications
+      postgres:
         image: postgres:15.2-alpine3.17
         env:
           POSTGRES_DB: cf_brc_db
@@ -30,110 +48,243 @@ jobs:
           POSTGRES_PORT: 5432
           POSTGRES_USER: test
         ports:
-        - 5432:5432
-        options: >- # Actions run continues when database health is asserted
+          - 5432:5432
+        options: >-
           --health-cmd pg_isready
           --health-interval 2s
           --health-timeout 3s
           --health-retries 15
 
-    steps: # Steps to run to set up testing
-    - name: Checkout the current commit
-      uses: actions/checkout@v3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/coldfront-setup
 
-    - name: Set up Python 3.13
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.13"
+      - name: Run pytest unit tests
+        run: |
+          source ~/venv/bin/activate
+          export django_secret_key=`openssl rand -base64 64`
+          coverage run -m pytest coldfront/ -m unit
 
-    - name: Cache and/or Install apache2-dev needed for testing suite
-      uses: awalsh128/cache-apt-pkgs-action@latest
-      with:
-          packages: apache2-dev
+      - name: Run pytest component tests
+        run: |
+          source ~/venv/bin/activate
+          export django_secret_key=`openssl rand -base64 64`
+          coverage run --append -m pytest coldfront/ -m component
 
-    - name: Cache Python packages # Use a cached installation of Python packages
-      id: cache-python
-      uses: actions/cache@v3
-      with:
-        path: ~/venv
-        key: ${{ runner.os }}-python-313-packages-${{ hashFiles('requirements.txt', 'requirements-test.txt') }}
+      - name: Rename coverage data
+        if: always()
+        run: mv .coverage coverage-pytest || true
 
-    - if: ${{ steps.cache-python.outputs.cache-hit != 'true' }} # If a cache is not found
-      name: Install Python packages
-      run: |
-        python3.13 -m venv ~/venv
-        source ~/venv/bin/activate
-        pip install -r requirements.txt -r requirements-test.txt
+      - name: Upload pytest coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-pytest
+          path: coverage-pytest
+        if: always()
 
-    - name: Create settings files from samples and other directories needed for testing
-      run: |
-        # Get setting configuration from samples
-        cp coldfront/config/local_strings.py.sample coldfront/config/local_strings.py
-        cp coldfront/config/local_settings.py.sample coldfront/config/local_settings.py
+  # ─── Django: core.project ────────────────────────────────────────────────────
+  # ~293 test methods — roughly one-third of the full Django suite.
 
-        # Create/override YML configuration files needed to generate .env.
-        cp bootstrap/ansible/main.copyme bootstrap/development/docker/config/main.yml
-        cp bootstrap/ci/config/ci_overrides.yml bootstrap/development/docker/config/overrides.yml
-        echo "{}" > bootstrap/development/docker/config/cilogon.yml
-        echo "{}" > bootstrap/development/docker/config/secrets.yml
+  test-django-project:
+    runs-on: ubuntu-22.04
 
-        # Generate .env.
-        pip install Jinja2 PyYAML
-        python bootstrap/development/docker/scripts/generate_django_env_file.py BRC 8000 \
-          --template-dir bootstrap/ansible \
-          --config-dir bootstrap/development/docker/config > coldfront/config/.env
+    permissions:
+      contents: read
 
-        # Create MOU directories
-        sudo mkdir -p "/media/New Project Request MOUs/"
-        sudo mkdir "/media/Service Units Purchase Request MOUs/"
-        sudo mkdir "/media/Secure Directory Request MOUs/"
-        sudo chmod -R 777 "/media/"
+    services:
+      postgres:
+        image: postgres:15.2-alpine3.17
+        env:
+          POSTGRES_DB: cf_brc_db
+          POSTGRES_PASSWORD: test
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
 
-    - name: Run pytest unit tests
-      run: |
-        source ~/venv/bin/activate
-        export django_secret_key=`openssl rand -base64 64`
-        pytest coldfront/ -m unit --cov=coldfront --cov-report=xml:coverage-unit.xml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/coldfront-setup
 
-    - name: Run pytest component tests
-      run: |
-        source ~/venv/bin/activate
-        export django_secret_key=`openssl rand -base64 64`
-        pytest coldfront/ -m component --cov=coldfront --cov-append --cov-report=xml:coverage-component.xml
+      - name: Run Django tests (core.project)
+        run: |
+          source ~/venv/bin/activate
+          export django_secret_key=`openssl rand -base64 64`
+          python manage.py migrate
+          coverage run manage.py test \
+            --timing \
+            --testrunner=coldfront.tests.timing_runner.TimingTestRunner \
+            coldfront.core.project
 
-    # - name: Run pytest acceptance tests
-    #   run: |
-    #     source ~/venv/bin/activate
-    #     export django_secret_key=`openssl rand -base64 64`
-    #     pytest -m acceptance
+      - name: Rename coverage data
+        if: always()
+        run: mv .coverage coverage-django-project || true
 
-    - name: Run Tests
-      run: |
-        source ~/venv/bin/activate
-        export django_secret_key=`openssl rand -base64 64`
-        python manage.py migrate
-        coverage run --append manage.py test \
-          --timing \
-          --testrunner=coldfront.tests.timing_runner.TimingTestRunner
+      - name: Upload Django project coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-django-project
+          path: coverage-django-project
+        if: always()
 
-    - name: Generate combined coverage report
-      run: |
-        source ~/venv/bin/activate
-        coverage html
-        coverage xml -o coverage-combined.xml
-        coverage report --fail-under=50
+  # ─── Django: api.* ───────────────────────────────────────────────────────────
+  # ~229 test methods across allocation, billing, project, statistics, user apps.
 
-    - name: Post coverage comment on PR
-      uses: py-cov-action/python-coverage-comment-action@v3
-      with:
-        GITHUB_TOKEN: ${{ github.token }}
+  test-django-api:
+    runs-on: ubuntu-22.04
 
-    - name: Upload coverage reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-reports
-        path: |
-          coverage-*.xml
-          htmlcov/
-        retention-days: 7
-      if: always()
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:15.2-alpine3.17
+        env:
+          POSTGRES_DB: cf_brc_db
+          POSTGRES_PASSWORD: test
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/coldfront-setup
+
+      - name: Run Django tests (api)
+        run: |
+          source ~/venv/bin/activate
+          export django_secret_key=`openssl rand -base64 64`
+          python manage.py migrate
+          coverage run manage.py test \
+            --timing \
+            --testrunner=coldfront.tests.timing_runner.TimingTestRunner \
+            coldfront.api
+
+      - name: Rename coverage data
+        if: always()
+        run: mv .coverage coverage-django-api || true
+
+      - name: Upload Django API coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-django-api
+          path: coverage-django-api
+        if: always()
+
+  # ─── Django: remaining core.* + plugins.* ────────────────────────────────────
+  # ~284 test methods: core.allocation, billing, user, utils, statistics,
+  # account, socialaccount, research_output, publication, and plugins.
+
+  test-django-core:
+    runs-on: ubuntu-22.04
+
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:15.2-alpine3.17
+        env:
+          POSTGRES_DB: cf_brc_db
+          POSTGRES_PASSWORD: test
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/coldfront-setup
+
+      - name: Run Django tests (core except project, plugins)
+        run: |
+          source ~/venv/bin/activate
+          export django_secret_key=`openssl rand -base64 64`
+          python manage.py migrate
+          coverage run manage.py test \
+            --timing \
+            --testrunner=coldfront.tests.timing_runner.TimingTestRunner \
+            coldfront.core.account \
+            coldfront.core.allocation \
+            coldfront.core.billing \
+            coldfront.core.publication \
+            coldfront.core.research_output \
+            coldfront.core.socialaccount \
+            coldfront.core.statistics \
+            coldfront.core.user \
+            coldfront.core.utils \
+            coldfront.plugins
+
+      - name: Rename coverage data
+        if: always()
+        run: mv .coverage coverage-django-core || true
+
+      - name: Upload Django core coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-django-core
+          path: coverage-django-core
+        if: always()
+
+  # ─── Report ──────────────────────────────────────────────────────────────────
+  # Runs after all four test jobs (even if one fails) to combine coverage data,
+  # post the PR comment, and upload the combined report artifact.
+
+  report:
+    needs: [test-pytest, test-django-project, test-django-api, test-django-core]
+    if: always()
+    runs-on: ubuntu-22.04
+
+    permissions:
+      contents: read
+      pull-requests: write  # required to post coverage comment
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/coldfront-setup
+
+      - name: Download all coverage data
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-data-*
+          merge-multiple: true
+          path: coverage-data
+
+      - name: Generate combined coverage report
+        run: |
+          source ~/venv/bin/activate
+          coverage combine coverage-data/coverage-*
+          coverage html
+          coverage xml -o coverage-combined.xml
+          coverage report --fail-under=50
+
+      - name: Post coverage comment on PR
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            coverage-*.xml
+            htmlcov/
+          retention-days: 7
+        if: always()
