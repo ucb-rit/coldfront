@@ -20,7 +20,7 @@ jobs:
   # ─── Coverage strategy ───────────────────────────────────────────────────────
   #
   # Each test job writes its coverage data to a unique coverage-<shard> file,
-  # then uploads it as an artifact.  The `report` job downloads all four files,
+  # then uploads it as an artifact.  The `report` job downloads all five files,
   # runs `coverage combine`, and generates the combined HTML + XML report.
   #
   # Shared setup (checkout, Python, venv, settings) lives in the composite
@@ -82,10 +82,10 @@ jobs:
           path: coverage-pytest
         if: always()
 
-  # ─── Django: core.project ────────────────────────────────────────────────────
-  # ~293 test methods — roughly one-third of the full Django suite.
+  # ─── Django: core.project views ──────────────────────────────────────────────
+  # ~143 test methods — view tests only.
 
-  test-django-project:
+  test-django-project-views:
     runs-on: ubuntu-22.04
 
     permissions:
@@ -111,7 +111,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/coldfront-setup
 
-      - name: Run Django tests (core.project)
+      - name: Run Django tests (core.project - views)
         run: |
           source ~/venv/bin/activate
           export django_secret_key=`openssl rand -base64 64`
@@ -119,17 +119,69 @@ jobs:
           coverage run manage.py test \
             --timing \
             --testrunner=coldfront.tests.timing_runner.TimingTestRunner \
-            coldfront.core.project
+            coldfront.core.project.tests.test_views
 
       - name: Rename coverage data
         if: always()
-        run: mv .coverage coverage-django-project || true
+        run: mv .coverage coverage-django-project-views || true
 
-      - name: Upload Django project coverage data
+      - name: Upload Django project views coverage data
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-data-django-project
-          path: coverage-django-project
+          name: coverage-data-django-project-views
+          path: coverage-django-project-views
+        if: always()
+
+  # ─── Django: core.project non-views ──────────────────────────────────────────
+  # ~151 test methods — commands, forms, and utils.
+
+  test-django-project-other:
+    runs-on: ubuntu-22.04
+
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:15.2-alpine3.17
+        env:
+          POSTGRES_DB: cf_brc_db
+          POSTGRES_PASSWORD: test
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/coldfront-setup
+
+      - name: Run Django tests (core.project - commands, forms, utils)
+        run: |
+          source ~/venv/bin/activate
+          export django_secret_key=`openssl rand -base64 64`
+          python manage.py migrate
+          coverage run manage.py test \
+            --timing \
+            --testrunner=coldfront.tests.timing_runner.TimingTestRunner \
+            coldfront.core.project.tests.test_commands \
+            coldfront.core.project.tests.test_forms \
+            coldfront.core.project.tests.test_utils
+
+      - name: Rename coverage data
+        if: always()
+        run: mv .coverage coverage-django-project-other || true
+
+      - name: Upload Django project other coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-django-project-other
+          path: coverage-django-project-other
         if: always()
 
   # ─── Django: api.* ───────────────────────────────────────────────────────────
@@ -243,11 +295,11 @@ jobs:
         if: always()
 
   # ─── Report ──────────────────────────────────────────────────────────────────
-  # Runs after all four test jobs (even if one fails) to combine coverage data,
+  # Runs after all five test jobs (even if one fails) to combine coverage data,
   # post the PR comment, and upload the combined report artifact.
 
   report:
-    needs: [test-pytest, test-django-project, test-django-api, test-django-core]
+    needs: [test-pytest, test-django-project-views, test-django-project-other, test-django-api, test-django-core]
     if: always()
     runs-on: ubuntu-22.04
 
