@@ -1,0 +1,66 @@
+# Composite action: shared test environment setup
+#
+# Handles Python, apt packages, venv cache/install, and settings file
+# generation.  Each step that runs shell commands must declare `shell: bash`
+# explicitly -- composite actions have no inherited default.
+#
+# NOTE: The calling job must run actions/checkout@v4 BEFORE this action.
+# GitHub resolves the local action path before any steps execute, so the
+# repo must already be checked out.
+#
+# Usage:
+#   steps:
+#     - uses: actions/checkout@v4
+#     - uses: ./.github/actions/coldfront-setup
+
+name: 'Coldfront Test Setup'
+description: >
+  Installs Python dependencies (with caching) and generates the settings/env
+  files needed by the test suite. Caller must run actions/checkout first.
+
+runs:
+  using: composite
+
+  steps:
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+
+    - name: Cache and/or Install apache2-dev needed for testing suite
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: apache2-dev
+
+    - name: Cache Python packages
+      id: cache-python
+      uses: actions/cache@v4
+      with:
+        path: ~/venv
+        key: ${{ runner.os }}-python-313-packages-${{ hashFiles('requirements.txt', 'requirements-test.txt') }}
+
+    - name: Install Python packages
+      if: steps.cache-python.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        python3.13 -m venv ~/venv
+        source ~/venv/bin/activate
+        pip install -r requirements.txt -r requirements-test.txt
+
+    - name: Create settings files from samples and other directories needed for testing
+      shell: bash
+      run: |
+        cp coldfront/config/local_strings.py.sample coldfront/config/local_strings.py
+        cp coldfront/config/local_settings.py.sample coldfront/config/local_settings.py
+        cp bootstrap/ansible/main.copyme bootstrap/development/docker/config/main.yml
+        cp bootstrap/ci/config/ci_overrides.yml bootstrap/development/docker/config/overrides.yml
+        echo "{}" > bootstrap/development/docker/config/cilogon.yml
+        echo "{}" > bootstrap/development/docker/config/secrets.yml
+        pip install Jinja2 PyYAML
+        python bootstrap/development/docker/scripts/generate_django_env_file.py BRC 8000 \
+          --template-dir bootstrap/ansible \
+          --config-dir bootstrap/development/docker/config > coldfront/config/.env
+        sudo mkdir -p "/media/New Project Request MOUs/"
+        sudo mkdir "/media/Service Units Purchase Request MOUs/"
+        sudo mkdir "/media/Secure Directory Request MOUs/"
+        sudo chmod -R 777 "/media/"
