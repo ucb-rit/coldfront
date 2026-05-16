@@ -156,15 +156,15 @@ class TestProjectsRenew(TestProjectsBase):
         """Test that the request would be successful but the dry run
         ensures that the project is not updated."""
         project = Project.objects.get(name=self.project_name)
-        self.assertEqual(project.status, 
+        self.assertEqual(project.status,
                          ProjectStatusChoice.objects.get(name='Inactive'))
-        output, error = self._command.renew(
-            self.project_name, self.current_ica_period, self.user.username,
-            self.user.username, dry_run=True)
-        
-        self.assertFalse(error)
 
-        self.assertIn('Would renew', output)
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self._command.renew(
+                self.project_name, self.current_ica_period, self.user.username,
+                self.user.username, dry_run=True)
+        self.assertTrue(any('Would renew' in r.message for r in cm.records))
+
         self.service_units_attribute.refresh_from_db()
         self.assertEqual(
             Decimal(self.service_units_attribute.value),
