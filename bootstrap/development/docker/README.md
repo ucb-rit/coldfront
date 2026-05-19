@@ -65,6 +65,7 @@ Note that these steps must be run from the root directory of the repo.
    Notes:
      - Some services (e.g., `web`) are expected to be failing at this point.
      - If the `IMAGE_TAG` environment variable is set, Docker Compose will use images with the specified tag.
+     - To persist the project name across sessions (required for non-BRC deployments), create a gitignored `local.mk` in the repo root: `echo "PROJECT := lrc-dev" > local.mk`.
 
 7. Run Django scripts to set up the database and perform other tasks.
 
