@@ -7,8 +7,6 @@ logrotate_entry_name: cf_mylrc
 wsgi_conf_file_name: cf_mylrc_wsgi.conf
 wsgi_conf_log_prefix: cf_lrc
 
-flag_basic_auth_enabled: False
-flag_sso_enabled: True
 flag_link_login_enabled: False
 flag_brc_enabled: False
 flag_lrc_enabled: True

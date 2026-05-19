@@ -1,4 +1,4 @@
-db_name: cf_brc_db 
+db_name: cf_brc_db
 
 log_path: /var/log/user_portals/cf_mybrc
 portal_log_file: cf_mybrc_portal.log
@@ -7,9 +7,6 @@ logrotate_entry_name: cf_mybrc
 wsgi_conf_file_name: cf_mybrc_wsgi.conf
 wsgi_conf_log_prefix: cf_brc
 
-flag_basic_auth_enabled: False
-flag_sso_enabled: True
-flag_link_login_enabled: True
 flag_brc_enabled: True
 flag_lrc_enabled: False
 flag_next_period_renewal_requestable_month: 5

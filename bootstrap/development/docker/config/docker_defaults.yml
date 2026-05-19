@@ -22,3 +22,8 @@ admin_email: developer@localhost
 allocation_period_audit_email_admin_list: ['developer@localhost']
 
 renewal_survey_backend: 'permissive'
+
+flag_basic_auth_enabled: False
+flag_dev_auth_enabled: True
+flag_sso_enabled: False
+flag_link_login_enabled: False
