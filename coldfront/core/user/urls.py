@@ -103,6 +103,13 @@ if 'coldfront.plugins.departments' in settings.INSTALLED_APPS:
             include('coldfront.plugins.departments.urls')))
 
 
+with flagged_paths('DEV_AUTH_ENABLED') as f_path:
+    urlpatterns += [
+        f_path('dev_login/',
+               user_views.DevLoginView.as_view(),
+               name='dev-login'),
+    ]
+
 with flagged_paths('SSO_ENABLED') as f_path:
     urlpatterns += [
         f_path('sso_login/',

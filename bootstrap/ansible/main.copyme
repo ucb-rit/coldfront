@@ -175,6 +175,9 @@ cilogon_app_secret: ""
 
 # TODO: For LRC, disable link login.
 flag_basic_auth_enabled: False
+# Whether to enable dev-only passwordless login. Must not be
+# enabled in production.
+flag_dev_auth_enabled: False
 flag_sso_enabled: True
 flag_link_login_enabled: True
 

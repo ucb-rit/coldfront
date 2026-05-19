@@ -305,6 +305,13 @@ FLAGS = {
                 'DJANGO_FLAGS__BASIC_AUTH_ENABLED_VALUE', default=False),
         },
     ],
+    'DEV_AUTH_ENABLED': [
+        {
+            'condition': 'boolean',
+            'value': env.bool(
+                'DJANGO_FLAGS__DEV_AUTH_ENABLED_VALUE', default=False),
+        },
+    ],
     'BRC_ONLY': [
         {
             'condition': 'boolean',
@@ -392,16 +399,22 @@ FLAGS = {
 if not (FLAGS['BRC_ONLY'][0]['value'] ^ FLAGS['LRC_ONLY'][0]['value']):
     raise ImproperlyConfigured(
         'Exactly one of BRC_ONLY, LRC_ONLY should be enabled.')
-if not (
-        FLAGS['BASIC_AUTH_ENABLED'][0]['value'] ^
-        FLAGS['SSO_ENABLED'][0]['value']):
+if sum([
+        FLAGS['BASIC_AUTH_ENABLED'][0]['value'],
+        FLAGS['SSO_ENABLED'][0]['value'],
+        FLAGS['DEV_AUTH_ENABLED'][0]['value'],
+]) != 1:
     raise ImproperlyConfigured(
-        'Exactly one of BASIC_AUTH_ENABLED, SSO_ENABLED should be enabled.')
+        'Exactly one of BASIC_AUTH_ENABLED, SSO_ENABLED, '
+        'DEV_AUTH_ENABLED must be enabled.')
 if (not FLAGS['SSO_ENABLED'][0]['value'] and
         FLAGS['LINK_LOGIN_ENABLED'][0]['value']):
     raise ImproperlyConfigured(
         'LINK_LOGIN_ENABLED should only be enabled when SSO_ENABLED is '
         'enabled.')
+if FLAGS['DEV_AUTH_ENABLED'][0]['value'] and not DEBUG:
+    raise ImproperlyConfigured(
+        'DEV_AUTH_ENABLED must not be enabled when DEBUG is False.')
 
 #------------------------------------------------------------------------------
 # Plugin: departments
