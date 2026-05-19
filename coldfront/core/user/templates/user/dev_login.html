@@ -1,0 +1,66 @@
+{% extends "common/base.html" %}
+
+{% block title %}Dev Login{% endblock %}
+
+{% block head %}
+{{ block.super }}
+{% include "common/selectize.html" %}
+{% endblock %}
+
+{% block content %}
+
+<h1>Dev Login</h1>
+
+<div class="alert alert-warning" role="alert">
+  <strong>Development mode only.</strong> This login page bypasses
+  authentication. It is not available in production.
+</div>
+
+<div class="row mt-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Log in as</h5>
+        <form method="post">
+          {% csrf_token %}
+          {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+          {% endif %}
+          <div class="form-group">
+            <select name="user_id" id="dev-user-select"
+                    class="form-control">
+              <option value=""></option>
+              {% for user in users %}
+                <option value="{{ user.pk }}">
+                  {{ user.username }}
+                  {% if user.get_full_name %}
+                    — {{ user.get_full_name }}
+                  {% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+            Log In
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+  $("#navbar-main > ul > li.active").removeClass("active");
+  $("#navbar-home").addClass("active");
+  $("#dev-user-select").selectize({
+    create: false,
+    sortField: 'text',
+    placeholder: 'Type to search users\u2026'
+  });
+</script>
+{% endblock %}
