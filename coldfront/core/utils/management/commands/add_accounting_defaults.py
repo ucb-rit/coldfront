@@ -37,6 +37,7 @@ class Command(BaseCommand):
                 ('ALSACC Compute', 'ALSACC cluster compute access'),
                 ('BALDUR Compute', 'BALDUR cluster compute access'),
                 ('CATAMOUNT Compute', 'CATAMOUNT cluster compute access'),
+                ('CATSCAN Compute', 'CATSCAN cluster compute access'),
                 ('COSMIC Compute', 'COSMIC cluster compute access'),
                 ('CUMULUS Compute', 'CUMULUS cluster compute access'),
                 ('DIRAC1 Compute', 'DIRAC1 cluster compute access'),
