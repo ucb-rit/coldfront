@@ -4,6 +4,7 @@
 
 # Database and service hosts for CI environment (running on localhost)
 db_host: localhost
+email_backend: django.core.mail.backends.dummy.EmailBackend
 email_host: localhost
 redis_host: localhost
 

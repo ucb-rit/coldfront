@@ -1,8 +1,10 @@
 debug: True
 
 db_host: db-postgres
+email_backend: django.core.mail.backends.smtp.EmailBackend
 email_host: email-server
 email_port: 1025
+email_use_tls: false
 redis_host: kv
 
 stream_logs_to_stdout: true
