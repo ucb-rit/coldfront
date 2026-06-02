@@ -446,11 +446,11 @@ sentry_dsn: ""
 # git_prefix: /var/www/coldfront_app
 
 # # Host settings.
-# hostname: scgup-dev.lbl.gov
-# host_ip: 131.243.130.236
+# hostname:
+# host_ip:
 # extra_allowed_hosts: []
-# app_port: 8000
-# full_host_path: http://scgup-dev.lbl.gov:8000
+# app_port:
+# full_host_path:
 
 # # SSL settings.
 # ssl_enabled: false
@@ -467,11 +467,19 @@ sentry_dsn: ""
 # debug_toolbar_ips: ['127.0.0.1']
 
 # # Email settings.
+# email_backend: django.core.mail.backends.dummy.EmailBackend
 # email_host: localhost
 # email_port: 25
+# email_use_tls: false
+# # Optional: set for authenticated SMTP.
+# email_host_user:
+# email_host_password:
 # # TODO: Set these addresses to yours.
-# from_email: brc-hpc-help@berkeley.edu
-# admin_email: brc-hpcs@berkeley.edu
+# # TODO: For LRC, use mylrc@lbl.gov.
+# from_email: brc-mybrc@berkeley.edu
+# admin_email: brc-mybrc@berkeley.edu
+# # TODO: For LRC, use scienceithelp@lbl.gov.
+# email_ticket_system_address: brc-hpc-help@berkeley.edu
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
@@ -522,11 +530,21 @@ sentry_dsn: ""
 # debug_toolbar_ips: ['127.0.0.1']
 
 # # Email settings.
-# email_host: localhost
-# email_port: 25
+# email_backend: django.core.mail.backends.smtp.EmailBackend
+# # For LRC: Use smtp-relay.gmail.com.
+# email_host: smtp.gmail.com
+# email_port: 587
+# email_use_tls: true
+# # Optional: set for authenticated SMTP.
+# # TODO: For LRC, leave these blank.
+# email_host_user: brc-mybrc@berkeley.edu
+# email_host_password:
 # # TODO: Set these addresses to yours.
-# from_email: brc-hpc-help@berkeley.edu
-# admin_email: brc-hpcs@berkeley.edu
+# # TODO: For LRC, use mylrc@lbl.gov.
+# from_email: brc-mybrc@berkeley.edu
+# admin_email: brc-mybrc@berkeley.edu
+# # TODO: For LRC, use scienceithelp@lbl.gov.
+# email_ticket_system_address: brc-hpc-help@berkeley.edu
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
@@ -577,10 +595,16 @@ sentry_dsn: ""
 # debug_toolbar_ips: ['127.0.0.1', '10.0.2.2']  # 10.0.2.2 is the vagrant host.
 
 # # Email settings.
+# email_backend: django.core.mail.backends.smtp.EmailBackend
 # email_host: localhost
 # email_port: 1025
+# email_use_tls: false
+# # Optional: set for authenticated SMTP.
+# email_host_user:
+# email_host_password:
 # from_email: placeholder@dev.dev
 # admin_email: placeholder@dev.dev
+# email_ticket_system_address: help@localhost
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
