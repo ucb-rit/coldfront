@@ -54,6 +54,7 @@ Note that these steps must be run from the root directory of the repo.
 
    Notes:
      - `docker-compose.yml` looks for a `.env` file in the same directory it resides in. This script creates `.env` there.
+     - The MailHog web UI port is derived from the web port (e.g., 8880 → 8025, 8881 → 8026). Access it at `http://localhost:MAILHOG_PORT`.
      - There is an optional third argument that configures whether the application expects `env_settings.py` or a legacy pre-generated Python settings file. By default, `env_settings.py` is used, but this can be overridden by providing `false` as a third argument. (Eventually, this will be removed.)
 
 6. Start the application stack. The default project name is `brc-dev`; override with `PROJECT=lrc-dev` for an LRC instance or a second parallel stack.

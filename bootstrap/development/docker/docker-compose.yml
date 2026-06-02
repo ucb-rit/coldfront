@@ -27,8 +27,7 @@ services:
   email-server:
     image: mailhog/mailhog
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "${MAILHOG_PORT:-8025}:8025"
 
   db-postgres-shell:
     image: coldfront-db-postgres-shell:${IMAGE_TAG:-latest}
