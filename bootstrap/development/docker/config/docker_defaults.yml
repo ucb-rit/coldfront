@@ -21,6 +21,7 @@ extra_allowed_hosts:
 
 from_email: developer@localhost
 admin_email: developer@localhost
+email_ticket_system_address: help@localhost
 allocation_period_audit_email_admin_list: ['developer@localhost']
 
 renewal_survey_backend: 'permissive'

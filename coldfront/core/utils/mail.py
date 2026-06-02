@@ -14,6 +14,8 @@ if EMAIL_ENABLED:
     EMAIL_SUBJECT_PREFIX = import_from_settings('EMAIL_SUBJECT_PREFIX')
     EMAIL_DEVELOPMENT_EMAIL_LIST = import_from_settings(
         'EMAIL_DEVELOPMENT_EMAIL_LIST')
+    EMAIL_TICKET_SYSTEM_ADDRESS = import_from_settings(
+        'EMAIL_TICKET_SYSTEM_ADDRESS', '')
 
 
 def send_email(subject, body, sender, receiver_list, cc=[], html_body=''):
@@ -40,13 +42,16 @@ def send_email(subject, body, sender, receiver_list, cc=[], html_body=''):
     if cc and settings.DEBUG:
         cc = EMAIL_DEVELOPMENT_EMAIL_LIST
 
+    reply_to = [EMAIL_TICKET_SYSTEM_ADDRESS] if EMAIL_TICKET_SYSTEM_ADDRESS else []
+
     try:
         email = EmailMultiAlternatives(
             subject,
             body,
             sender,
             receiver_list,
-            cc=cc)
+            cc=cc,
+            reply_to=reply_to)
         if html_body:
             email.attach_alternative(html_body, "text/html")
         email.send(fail_silently=False)

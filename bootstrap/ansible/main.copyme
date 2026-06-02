@@ -475,9 +475,11 @@ sentry_dsn: ""
 # email_host_user:
 # email_host_password:
 # # TODO: Set these addresses to yours.
-# TODO: For LRC, use mylrc@lbl.gov.
+# # TODO: For LRC, use mylrc@lbl.gov.
 # from_email: brc-mybrc@berkeley.edu
 # admin_email: brc-mybrc@berkeley.edu
+# # TODO: For LRC, use scienceithelp@lbl.gov.
+# email_ticket_system_address: brc-hpc-help@berkeley.edu
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
@@ -529,18 +531,20 @@ sentry_dsn: ""
 
 # # Email settings.
 # email_backend: django.core.mail.backends.smtp.EmailBackend
-# For LRC: Use smtp-relay.gmail.com.
+# # For LRC: Use smtp-relay.gmail.com.
 # email_host: smtp.gmail.com
 # email_port: 587
 # email_use_tls: true
 # # Optional: set for authenticated SMTP.
-# TODO: For LRC, leave these blank.
+# # TODO: For LRC, leave these blank.
 # email_host_user: brc-mybrc@berkeley.edu
 # email_host_password:
 # # TODO: Set these addresses to yours.
-# TODO: For LRC, use mylrc@lbl.gov.
+# # TODO: For LRC, use mylrc@lbl.gov.
 # from_email: brc-mybrc@berkeley.edu
 # admin_email: brc-mybrc@berkeley.edu
+# # TODO: For LRC, use scienceithelp@lbl.gov.
+# email_ticket_system_address: brc-hpc-help@berkeley.edu
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
@@ -600,6 +604,7 @@ sentry_dsn: ""
 # email_host_password:
 # from_email: placeholder@dev.dev
 # admin_email: placeholder@dev.dev
+# email_ticket_system_address: help@localhost
 # # TODO: For LRC, use the substring 'MyLRC'.
 # email_subject_prefix: '[MyBRC-User-Portal]'
 
