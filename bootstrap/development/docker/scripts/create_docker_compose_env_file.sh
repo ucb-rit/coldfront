@@ -22,5 +22,8 @@ else
     DB_NAME="cf_lrc_db"
 fi
 
+MAILHOG_PORT=$((8025 + PORT - 8880))
+
 echo "DB_NAME=$DB_NAME" > $ENV_FILE_PATH
 echo "WEB_PORT=$PORT" >> $ENV_FILE_PATH
+echo "MAILHOG_PORT=$MAILHOG_PORT" >> $ENV_FILE_PATH
