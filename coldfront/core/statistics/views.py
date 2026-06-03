@@ -4,8 +4,8 @@ import logging
 
 from decimal import Decimal
 from django.contrib import messages
+from django.db.models import Sum
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.http import StreamingHttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -31,24 +31,27 @@ class SlurmJobListView(LoginRequiredMixin,
     paginate_by = 30
     context_object_name = 'job_list'
 
+    _FILTER_FIELDS = (
+        'status', 'jobslurmid', 'project_name', 'username',
+        'partition', 'submitdate_after', 'submitdate_before',
+    )
+
     def get_queryset(self):
         order_by = self.request.GET.get('order_by')
         if order_by:
             direction = self.request.GET.get('direction')
-            if direction == 'asc':
-                direction = ''
-            else:
-                direction = '-'
+            direction = '' if direction == 'asc' else '-'
             order_by = direction + order_by
         else:
             order_by = '-submitdate'
 
-        is_pi = ProjectUser.objects.filter(
+        self._is_pi = ProjectUser.objects.filter(
             role__name__in=['Manager', 'Principal Investigator'],
             user=self.request.user).exists()
-        job_search_form = JobSearchForm(self.request.GET,
-                                        user=self.request.user,
-                                        is_pi=is_pi)
+        job_search_form = JobSearchForm(
+            self.request.GET,
+            user=self.request.user,
+            is_pi=self._is_pi)
 
         if job_search_form.is_valid():
             job_filters = job_search_form.cleaned_data
@@ -58,12 +61,21 @@ class SlurmJobListView(LoginRequiredMixin,
 
             show_all_jobs = job_filters.get('show_all_jobs', False)
 
-            job_accessibility_manager = JobAccessibilityManager()
-            accessible_jobs = \
-                job_accessibility_manager.get_jobs_accessible_to_user(
-                    self.request.user, include_global=show_all_jobs)
-
-            job_list = job_query_filtering(accessible_jobs, job_filters)
+            if show_all_jobs and not any(
+                    job_filters.get(f) for f in self._FILTER_FIELDS):
+                messages.warning(
+                    self.request,
+                    'Please provide at least one search filter '
+                    'when viewing all jobs.')
+                job_list = Job.objects.none()
+            else:
+                job_accessibility_manager = JobAccessibilityManager()
+                accessible_jobs = (
+                    job_accessibility_manager.get_jobs_accessible_to_user(
+                        self.request.user,
+                        include_global=show_all_jobs))
+                job_list = job_query_filtering(
+                    accessible_jobs, job_filters)
 
         else:
             job_list = Job.objects.none()
@@ -72,17 +84,17 @@ class SlurmJobListView(LoginRequiredMixin,
                 messages.warning(self.request,
                                  strip_tags(job_search_form.errors[error]))
 
-        return job_list.order_by(order_by)
+        return job_list.select_related(
+            'userid', 'accountid').order_by(order_by)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        is_pi = ProjectUser.objects.filter(
-            role__name__in=['Manager', 'Principal Investigator'],
-            user=self.request.user).exists()
-        job_search_form = JobSearchForm(self.request.GET,
-                                        user=self.request.user,
-                                        is_pi=is_pi)
+        is_pi = getattr(self, '_is_pi', False)
+        job_search_form = JobSearchForm(
+            self.request.GET,
+            user=self.request.user,
+            is_pi=is_pi)
 
         if job_search_form.is_valid():
             context['job_search_form'] = job_search_form
@@ -95,7 +107,6 @@ class SlurmJobListView(LoginRequiredMixin,
                             filter_parameters += '{}={}&'.format(key, ele)
                     else:
                         filter_parameters += '{}={}&'.format(key, value)
-            context['job_search_form'] = job_search_form
         else:
             filter_parameters = None
             context['job_search_form'] = JobSearchForm()
@@ -103,56 +114,32 @@ class SlurmJobListView(LoginRequiredMixin,
         order_by = self.request.GET.get('order_by')
         if order_by:
             direction = self.request.GET.get('direction')
-            filter_parameters_with_order_by = filter_parameters + \
-                                              'order_by=%s&direction=%s&' % \
-                                              (order_by, direction)
+            filter_parameters_with_order_by = (
+                filter_parameters
+                + 'order_by=%s&direction=%s&' % (order_by, direction))
         else:
             filter_parameters_with_order_by = filter_parameters
 
         context['expand_accordion'] = 'show'
-
         context['filter_parameters'] = filter_parameters
-        context['filter_parameters_with_order_by'] = filter_parameters_with_order_by
+        context['filter_parameters_with_order_by'] = (
+            filter_parameters_with_order_by)
 
-        job_list = context['job_list']
-        paginator = Paginator(job_list, self.paginate_by)
+        context['status_danger_list'] = [
+            'NODE_FAIL', 'CANCELLED', 'FAILED',
+            'OUT_OF_MEMORY', 'TIMEOUT']
+        context['status_warning_list'] = ['PREEMPTED', 'REQUEUED']
 
-        page = self.request.GET.get('page')
+        context['can_view_all_jobs'] = (
+            self.request.user.is_superuser
+            or self.request.user.has_perm('statistics.view_job'))
+        context['show_username'] = (
+            context['can_view_all_jobs'] or is_pi)
 
-        try:
-            job_list = paginator.page(page)
-        except PageNotAnInteger:
-            job_list = paginator.page(1)
-        except EmptyPage:
-            job_list = paginator.page(paginator.num_pages)
-
-        context['inline_fields'] = ['submitdate', 'submit_modifier',
-                                    'startdate', 'start_modifier',
-                                    'enddate', 'end_modifier']
-
-        context['status_danger_list'] = ['NODE_FAIL',
-                                         'CANCELLED',
-                                         'FAILED',
-                                         'OUT_OF_MEMORY',
-                                         'TIMEOUT']
-
-        context['status_warning_list'] = ['PREEMPTED',
-                                          'REQUEUED']
-
-        context['can_view_all_jobs'] = \
-            self.request.user.is_superuser or \
-            self.request.user.has_perm('statistics.view_job')
-
-        context['show_username'] = (self.request.user.is_superuser or self.request.user.has_perm('statistics.view_job')) or is_pi
-
-        if self.object_list.count() > 100000:
-            context['total_service_units'] = 'Too many jobs to calculate'
-        else:
-            total_service_units = Decimal('0.00')
-            for job in self.object_list.iterator():
-                total_service_units += job.amount
-            context['total_service_units'] = \
-                total_service_units.quantize(Decimal('0.01'))
+        total_service_units = self.object_list.aggregate(
+            total=Sum('amount'))['total'] or Decimal('0.00')
+        context['total_service_units'] = (
+            total_service_units.quantize(Decimal('0.01')))
 
         return context
 
