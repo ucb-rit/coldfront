@@ -89,8 +89,13 @@ class JobSearchForm(forms.Form):
                     name__in=active_projects)
 
                 if is_pi:
+                    managed_projects = ProjectUser.objects.filter(
+                        user=user,
+                        role__name__in=['Manager', 'Principal Investigator'],
+                        status__name__in=['Active', 'Pending - Remove'],
+                    ).values_list('project', flat=True)
                     pi_project_users = ProjectUser.objects.filter(
-                        project__in=project_queryset,
+                        project__in=managed_projects,
                         status__name='Active',
                     ).values_list('user', flat=True)
                     user_queryset = User.objects.filter(

@@ -11,6 +11,7 @@ from coldfront.core.project.models import *
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.tests.test_base import TestBase
+from coldfront.core.statistics.forms import JobSearchForm
 from coldfront.core.statistics.models import Job
 
 
@@ -317,6 +318,32 @@ class TestSlurmJobListView(TestJobBase):
             self.pi, url + '?show_all_jobs=on')
         self.assertContains(response, self.job1.jobslurmid)
         self.assertNotContains(response, self.job2.jobslurmid)
+
+    def test_pi_username_dropdown_scoped_to_managed_projects(self):
+        """Test that the username dropdown for a PI/Manager only includes
+        users from projects they manage, not from projects where they are
+        only a regular member."""
+        # user3 is only a regular member of project3. manager manages
+        # project1 but is only a regular member of project3.
+        user3 = User.objects.create(
+            username='user3', email='user3@email.com')
+        ProjectUser.objects.create(
+            user=user3,
+            project=self.project3,
+            role=ProjectUserRoleChoice.objects.get(name='User'),
+            status=self.active_project_user_status)
+
+        form = JobSearchForm(user=self.manager, is_pi=True)
+        username_choices = [
+            choice[0]
+            for choice in form.fields['username'].widget.choices]
+
+        # Users from project1 (managed by manager) should appear
+        self.assertIn(self.user1.username, username_choices)
+        self.assertIn(self.pi.username, username_choices)
+        # user3 is only in project3 where manager is a regular member,
+        # not PI/Manager — must not appear in the dropdown
+        self.assertNotIn(user3.username, username_choices)
 
     def test_saves_filters_in_session(self):
         """Testing if cleaned form data is saved in session"""
