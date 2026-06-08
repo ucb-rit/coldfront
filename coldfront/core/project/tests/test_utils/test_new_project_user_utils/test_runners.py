@@ -37,6 +37,7 @@ from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAl
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
 from coldfront.core.utils.tests.test_base import enable_deployment
+from coldfront.core.utils.tests.test_base import LRCTestBase
 from coldfront.core.utils.tests.test_base import TestBase
 
 
@@ -58,6 +59,30 @@ class TestNewProjectUserRunner(TestBase):
 
 class TestRunnerBase(TestBase):
     """A base class for testing NewProjectUserRunner classes."""
+
+    def setUp(self):
+        """Set up test data."""
+        super().setUp()
+        self.create_test_user()
+        self.sign_user_access_agreement(self.user)
+
+        computing_allowance_interface = ComputingAllowanceInterface()
+        computing_allowance = self.get_predominant_computing_allowance()
+        prefix = computing_allowance_interface.code_from_name(
+            computing_allowance.name)
+
+        # Create a Project with a computing allowance, along with an 'Active'
+        # ProjectUser.
+        self.project = self.create_active_project_with_pi(
+            f'{prefix}_project', self.user)
+        accounting_allocation_objects = create_project_allocation(
+            self.project, Decimal('0.00'))
+        self.allocation = accounting_allocation_objects.allocation
+        self.project_user = self.project.projectuser_set.get(user=self.user)
+
+
+class LRCTestRunnerBase(LRCTestBase):
+    """A base class for testing LRC NewProjectUserRunner classes."""
 
     def setUp(self):
         """Set up test data."""
@@ -558,7 +583,7 @@ class TestBRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
         },
     }
 )
-class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
+class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
     """A class for testing LRCNewProjectUserRunner."""
 
     @enable_deployment('LRC')

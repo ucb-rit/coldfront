@@ -133,7 +133,7 @@ class TestSUBase(TestBase):
 
         alloc_attr_hist_reason = \
             allocation_objects.allocation_attribute.history. \
-                latest('id').history_change_reason
+                latest('history_id').history_change_reason
         self.assertEqual(alloc_attr_hist_reason, reason)
 
         for project_user in project.projectuser_set.all():
@@ -145,5 +145,5 @@ class TestSUBase(TestBase):
 
             alloc_attr_hist_reason = \
                 allocation_user_obj.allocation_user_attribute.history.latest(
-                    'id').history_change_reason
+                    'history_id').history_change_reason
             self.assertEqual(alloc_attr_hist_reason, reason)

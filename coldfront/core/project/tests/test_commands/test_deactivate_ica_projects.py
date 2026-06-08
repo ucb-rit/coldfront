@@ -11,7 +11,8 @@ from coldfront.core.allocation.models import AllocationAttributeUsage, \
 from coldfront.core.project.models import Project, ProjectStatusChoice, \
     ProjectUserStatusChoice, ProjectUserRoleChoice, ProjectUser
 from coldfront.core.allocation.utils import get_project_compute_allocation
-from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.common import display_time_zone_current_date, \
+    utc_now_offset_aware
 from coldfront.core.project.tests.test_commands.test_service_units_base import TestSUBase
 
 
@@ -76,7 +77,7 @@ class TestDeactivateICAProjects(TestSUBase):
         """Tests that the project and allocation were correctly updated"""
         self.assertEqual(project.status.name, 'Inactive')
         self.assertEqual(allocation.status.name, 'Expired')
-        self.assertTrue(pre_time.date() <= allocation.start_date <= post_time.date())
+        self.assertEqual(allocation.start_date, display_time_zone_current_date())
         self.assertTrue(allocation.end_date is None)
 
     def usage_values_updated(self, project, updated_value):
@@ -101,34 +102,32 @@ class TestDeactivateICAProjects(TestSUBase):
 
     def test_dry_run_no_expired_projects(self):
         """Testing a dry run in which no ICA projects are expired"""
-        output, error = self.call_command('deactivate_ica_projects',
-                                          '--dry_run',
-                                          '--send_emails')
-        self.assertIn(output, '')
-        self.assertEqual(error, '')
+        with self.assertNoLogs('coldfront.commands', level='INFO'):
+            self.call_command('deactivate_ica_projects',
+                              '--dry_run',
+                              '--send_emails')
 
     def test_dry_run_with_expired_projects(self):
         """Testing a dry run in which an ICA project is expired"""
         self.create_expired_project('ic_project0')
 
-        output, error = self.call_command('deactivate_ica_projects',
-                                          '--dry_run',
-                                          '--send_emails')
-
         project = Project.objects.get(name='ic_project0')
         allocation = get_project_compute_allocation(project)
 
-        # Messages that should be output to stdout during a dry run
+        # Messages that should be logged during a dry run
         messages = [
             (f'Would deactivate Project {project.name} ({project.pk}), update '
              f'Allocation {allocation.pk}, and update Service Units from '
              f'1000.00 to 0.00.'),
             'Would send a notification email to 1 user.',
         ]
-        for message in messages:
-            self.assertIn(message, output)
 
-        self.assertEqual(error, '')
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command('deactivate_ica_projects',
+                              '--dry_run',
+                              '--send_emails')
+        for message in messages:
+            self.assertTrue(any(message in r.message for r in cm.records))
 
     def test_creates_and_updates_objects(self):
         """Testing deactivate_ica_projects WITHOUT send_emails flag"""
@@ -144,16 +143,13 @@ class TestDeactivateICAProjects(TestSUBase):
         self.allocation_values_test(project, '1000.00', '500.00')
 
         # run command
-        output, error = self.call_command('deactivate_ica_projects')
-
-        messages = [
-            (f'Deactivated Project {project.name} ({project.pk}), updated '
-             f'Allocation {allocation.pk}, and updated Service Units from '
-             f'1000.00 to 0.00.'),
-        ]
-        for message in messages:
-            self.assertIn(message, output)
-        self.assertEqual(error, '')
+        message = (
+            f'Deactivated Project {project.name} ({project.pk}), updated '
+            f'Allocation {allocation.pk}, and updated Service Units from '
+            f'1000.00 to 0.00.')
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command('deactivate_ica_projects')
+        self.assertTrue(any(message in r.message for r in cm.records))
 
         post_time = utc_now_offset_aware()
         project.refresh_from_db()
@@ -190,19 +186,15 @@ class TestDeactivateICAProjects(TestSUBase):
         allocation = get_project_compute_allocation(project)
         old_end_date = allocation.end_date
 
-        # run command
-        output, error = self.call_command('deactivate_ica_projects',
-                                          '--send_emails')
-
         recipients = project.managers_and_pis_emails()
         num_recipients = len(recipients)
         assert num_recipients == 1
 
-        # Testing that the correct text is output to stdout
+        # run command
         message = f'Sent a notification email to {num_recipients} user.'
-
-        self.assertIn(message, output)
-        self.assertEqual(error, '')
+        with self.assertLogs('coldfront.commands', level='INFO') as cm:
+            self.call_command('deactivate_ica_projects', '--send_emails')
+        self.assertTrue(any(message in r.message for r in cm.records))
 
         # Testing that the correct number of emails were sent
         self.assertEqual(len(mail.outbox), num_recipients)

@@ -5,11 +5,11 @@ Note that these steps must be run from the root directory of the repo.
 1. Build Docker images.
 
    ```bash
-   sh bootstrap/development/docker/scripts/build_images.sh
+   make build
    ```
 
    Notes:
-      - An optional argument may be specified to build the images with a specific tag. This may be useful for testing updated images (e.g., from different branches) without overriding existing images.
+      - An optional tag may be specified to avoid overriding existing images (e.g., when testing images from a different branch): `make build TAG=my-tag`.
 
 2. Retrieve a `cilogon.yml` file containing CILogon credentials that will be provided for you. Place it in the Docker configuration directory.
 
@@ -54,36 +54,33 @@ Note that these steps must be run from the root directory of the repo.
 
    Notes:
      - `docker-compose.yml` looks for a `.env` file in the same directory it resides in. This script creates `.env` there.
+     - The MailHog web UI port is derived from the web port (e.g., 8880 → 8025, 8881 → 8026). Access it at `http://localhost:MAILHOG_PORT`.
      - There is an optional third argument that configures whether the application expects `env_settings.py` or a legacy pre-generated Python settings file. By default, `env_settings.py` is used, but this can be overridden by providing `false` as a third argument. (Eventually, this will be removed.)
 
-6. Start the application stack. Specify a unique Docker [project name](https://docs.docker.com/compose/project-name/) so that resources are placed within a Docker namespace. Examples: "brc-dev", "lrc-dev".
+6. Start the application stack. The default project name is `brc-dev`; override with `PROJECT=lrc-dev` for an LRC instance or a second parallel stack.
 
    ```bash
-   export DOCKER_PROJECT_NAME=brc-dev
-   docker compose \
-       -f bootstrap/development/docker/docker-compose.yml \
-       -p $DOCKER_PROJECT_NAME \
-       up
+   make up
    ```
 
    Notes:
      - Some services (e.g., `web`) are expected to be failing at this point.
      - If the `IMAGE_TAG` environment variable is set, Docker Compose will use images with the specified tag.
+     - To persist the project name across sessions (required for non-BRC deployments), create a gitignored `local.mk` in the repo root: `echo "PROJECT := lrc-dev" > local.mk`.
 
-7. Run Django scripts to set up the database and perform other tasks. You must provide the name of your Docker project.
+7. Run Django scripts to set up the database and perform other tasks.
 
    ```bash
-   sh bootstrap/development/docker/scripts/docker_run_django_scripts.sh $DOCKER_PROJECT_NAME
+   make setup
    ```
 
    Notes:
      - This step may be run multiple times.
 
-8. Retrieve a PostgreSQL database dump file that will be provided for you. Place it in the root directory of the repo. Load it into your instance. You must provide the name of your Docker project.
+8. Retrieve a PostgreSQL database dump file that will be provided for you. Place it in the root directory of the repo. Load it into your instance.
 
    ```bash
-   export RELATIVE_CONTAINER_DUMP_FILE_PATH=YYYY_MM_DD-HH-MM.dump
-   sh bootstrap/development/docker/scripts/docker_load_database_backup.sh $DOCKER_PROJECT_NAME $RELATIVE_CONTAINER_DUMP_FILE_PATH
+   make load-db DUMP=YYYY_MM_DD-HH-MM.dump
    ```
 
    Notes:
@@ -100,7 +97,7 @@ Note that these steps must be run from the root directory of the repo.
     - Enter into the application shell container:
 
          ```bash
-         docker compose -p $DOCKER_PROJECT_NAME exec app-shell bash
+         make shell
          ```
 
     - From within the container, start a Django shell:

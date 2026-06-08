@@ -147,7 +147,7 @@ class TestJobBase(TestBase):
             user.save()
 
         # create test jobs
-        self.current_time = datetime.datetime.now(tz=timezone.utc)
+        self.current_time = datetime.datetime.now(tz=datetime.timezone.utc)
 
         self.job1 = Job.objects.create(jobslurmid='12345',
                                        submitdate=self.current_time - datetime.timedelta(days=5),
@@ -249,7 +249,8 @@ class TestSlurmJobListView(TestJobBase):
             self.assertNotContains(response, 'Viewing all jobs.')
             self.assertNotContains(response, 'Viewing your jobs and the jobs')
 
-            response = self.get_response(user, url + '?show_all_jobs=on')
+            response = self.get_response(
+                user, url + '?show_all_jobs=on&status=COMPLETING')
             self.assertContains(response, self.job1.jobslurmid)
             self.assertContains(response, self.job2.jobslurmid)
             self.assertContains(response, 'Show All Jobs')
@@ -268,8 +269,13 @@ class TestSlurmJobListView(TestJobBase):
         response = self.get_response(self.user1, url)
         self.assertNotContains(response, 'Export Job List to CSV')
 
-        response = self.get_response(self.staff, url)
+        response = self.get_response(self.pi, url)
         self.assertNotContains(response, 'Export Job List to CSV')
+
+        # staff and admin have can_view_all_jobs (via statistics.view_job
+        # permission or is_superuser) and should see the export button
+        response = self.get_response(self.staff, url)
+        self.assertContains(response, 'Export Job List to CSV')
 
         response = self.get_response(self.admin, url)
         self.assertContains(response, 'Export Job List to CSV')
@@ -284,12 +290,33 @@ class TestSlurmJobListView(TestJobBase):
         self.assertNotContains(response, 'Previous')
 
         for i in range(1000):
-            Job.objects.create(jobslurmid=i)
+            Job.objects.create(jobslurmid=i, jobstatus='RUNNING')
 
-        response = self.get_response(self.admin, url)
+        filtered_url = reverse('slurm-job-list') + '?show_all_jobs=on&status=RUNNING'
+        response = self.get_response(self.admin, filtered_url)
         self.assertContains(response, 'Page 1 of 34')
         self.assertContains(response, 'Next')
         self.assertContains(response, 'Previous')
+
+    def test_show_all_jobs_ineffective_for_non_admins(self):
+        """Test that non-admin users cannot use show_all_jobs to see
+        jobs outside their scope."""
+        url = reverse('slurm-job-list')
+
+        # Regular user with no jobs - show_all_jobs param is ignored by the
+        # form (field is popped), so include_global stays False
+        response = self.get_response(
+            self.user2, url + '?show_all_jobs=on')
+        self.assertNotContains(response, self.job1.jobslurmid)
+        self.assertNotContains(response, self.job2.jobslurmid)
+
+        # PI of project1 - show_all_jobs is similarly ignored; PI sees only
+        # jobs from projects they manage (job1 in project1, not job2 in
+        # project2)
+        response = self.get_response(
+            self.pi, url + '?show_all_jobs=on')
+        self.assertContains(response, self.job1.jobslurmid)
+        self.assertNotContains(response, self.job2.jobslurmid)
 
     def test_saves_filters_in_session(self):
         """Testing if cleaned form data is saved in session"""
@@ -305,7 +332,8 @@ class TestSlurmJobListView(TestJobBase):
         """Test different status colors"""
 
         def helper_test_status_colors(status_list, status_type):
-            url = reverse('slurm-job-list') + '?show_all_jobs=on'
+            url = (reverse('slurm-job-list')
+                   + '?show_all_jobs=on&jobslurmid=' + self.job1.jobslurmid)
             for status in status_list:
                 self.job1.jobstatus = status
                 self.job1.save()
@@ -355,48 +383,6 @@ class TestSlurmJobListView(TestJobBase):
         self.assertContains(response, self.job2.jobslurmid)
         self.assertNotContains(response, job3.jobslurmid)
 
-    def test_search_form_validation_errors(self):
-        """Testing error messages raised from JobSearchForm validation"""
-
-        def test_error_message(tag, throw_error, date=True):
-            url = reverse('slurm-job-list') + '?show_all_jobs=on' + tag
-            response = self.get_response(self.admin, url)
-
-            if throw_error:
-                if date:
-                    self.assertContains(response,
-                                        'When filtering on a date, you must '
-                                        'select both a modifier and a date.')
-                else:
-                    self.assertContains(response,
-                                        'When filtering on Service Units, '
-                                        'you must select both a modifier and '
-                                        'an amount.')
-            else:
-                self.assertNotContains(response,
-                                       'When filtering on Service Units, '
-                                       'you must select both a modifier and '
-                                       'an amount.')
-                self.assertNotContains(response,
-                                       'When filtering on a date, you must '
-                                       'select both a modifier and a date.')
-
-        test_error_message('&submit_modifier=Before', True)
-        test_error_message('&start_modifier=Before', True)
-        test_error_message('&end_modifier=Before', True)
-        test_error_message('&submitdate=01%2F05%2F2022', True)
-        test_error_message('&startdate=01%2F05%2F2022', True)
-        test_error_message('&enddate=01%2F05%2F2022', True)
-        test_error_message('&end_modifier=Before&enddate=01%2F05%2F2022', False)
-
-        test_error_message(
-            '&end_modifier=Before&enddate=01%2F05%2F2022&start_modifier=Before',
-            True)
-
-        test_error_message('&amount=100', True, False)
-        test_error_message('&amount_modifier=leq', True, False)
-
-        test_error_message('&amount=100&amount_modifier=leq', False, False)
 
 
 class TestSlurmJobDetailView(TestJobBase):
@@ -633,12 +619,8 @@ class TestExportJobListView(TestJobBase):
                                            'project_name': '',
                                            'username': '',
                                            'partition': '',
-                                           'submitdate': None,
-                                           'submit_modifier': '',
-                                           'startdate': None,
-                                           'start_modifier': '',
-                                           'enddate': None,
-                                           'end_modifier': '',
+                                           'submitdate_after': None,
+                                           'submitdate_before': None,
                                            'show_all_jobs': True}
         session.save()
 
@@ -673,12 +655,8 @@ class TestExportJobListView(TestJobBase):
                                            'project_name': '',
                                            'username': '',
                                            'partition': 'test_partition1',
-                                           'submitdate': None,
-                                           'submit_modifier': '',
-                                           'startdate': None,
-                                           'start_modifier': '',
-                                           'enddate': None,
-                                           'end_modifier': '',
+                                           'submitdate_after': None,
+                                           'submitdate_before': None,
                                            'show_all_jobs': True}
         session.save()
 

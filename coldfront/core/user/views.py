@@ -1,6 +1,7 @@
 import logging
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
@@ -585,9 +586,9 @@ class CustomPasswordChangeView(PasswordChangeView):
 
 
 class UserLoginView(View):
-    """Redirect to the Basic Auth. login view or the SSO login view
-    based on enabled flags, retaining any provided next URL. If the user
-    is authenticated, redirect to the next URL or the home page."""
+    """Redirect to the appropriate login view based on enabled flags,
+    retaining any provided next URL. If the user is authenticated,
+    redirect to the next URL or the home page."""
 
     def dispatch(self, request, *args, **kwargs):
         next_url = request.GET.get('next')
@@ -595,13 +596,9 @@ class UserLoginView(View):
         if request.user.is_authenticated:
             return redirect(next_url or reverse('home'))
 
-        basic_auth_enabled = flag_enabled('BASIC_AUTH_ENABLED')
-        sso_enabled = flag_enabled('SSO_ENABLED')
-        if not basic_auth_enabled ^ sso_enabled:
-            raise ImproperlyConfigured(
-                'One of the following flags must be enabled: '
-                'BASIC_AUTH_ENABLED, SSO_ENABLED.')
-        if basic_auth_enabled:
+        if flag_enabled('DEV_AUTH_ENABLED'):
+            redirect_url = reverse('dev-login')
+        elif flag_enabled('BASIC_AUTH_ENABLED'):
             redirect_url = reverse('basic-auth-login')
         else:
             redirect_url = reverse('sso-login')
@@ -637,6 +634,33 @@ class SSOLoginView(TemplateView):
             raise ImproperlyConfigured(
                 'One of the following flags must be enabled: BRC_ONLY, '
                 'LRC_ONLY.')
+
+
+class DevLoginView(View):
+    """Dev-only login view. Lists all active users and logs in the
+    selected one without a password. Only reachable when
+    DEV_AUTH_ENABLED is set."""
+
+    template_name = 'user/dev_login.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect(
+                request.GET.get('next') or reverse('home'))
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        users = get_user_model().objects.filter(
+            is_active=True).order_by('username')
+        return render(
+            request, self.template_name,
+            {'users': users, 'next': request.GET.get('next', '')})
+
+    def post(self, request, *args, **kwargs):
+        user = get_user_model().objects.get(pk=request.POST['user_id'])
+        login(request, user,
+              backend='django.contrib.auth.backends.AllowAllUsersModelBackend')
+        return redirect(request.POST.get('next') or reverse('home'))
 
 
 class UserRegistrationView(CreateView):

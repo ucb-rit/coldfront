@@ -49,13 +49,13 @@ FROM coldfront-os AS coldfront-app-base
 
 WORKDIR /var/www/coldfront_app/coldfront
 
-COPY requirements.txt .
+COPY requirements.txt requirements-test.txt ./
 
 RUN python3 -m venv /var/www/coldfront_app/venv
 
 RUN /var/www/coldfront_app/venv/bin/pip install --upgrade pip wheel && \
     /var/www/coldfront_app/venv/bin/pip install setuptools && \
-    /var/www/coldfront_app/venv/bin/pip install -r requirements.txt
+    /var/www/coldfront_app/venv/bin/pip install -r requirements.txt -r requirements-test.txt
 
 ENV PATH="/var/www/coldfront_app/venv/bin:$PATH"
 

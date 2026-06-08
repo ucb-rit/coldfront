@@ -40,8 +40,21 @@ CENTER_BASE_URL = env('COLDFRONT__CENTER_BASE_URL', default='')
 CENTER_HELP_URL = CENTER_BASE_URL + '/help'
 CENTER_PROJECT_RENEWAL_HELP_URL = CENTER_BASE_URL + '/help'
 
+EMAIL_BACKEND = env(
+    'DJANGO__EMAIL_BACKEND',
+    default='django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = env('DJANGO__EMAIL_HOST')
+_email_host_user = env('DJANGO__EMAIL_HOST_USER', default=None)
+_email_host_password = env('DJANGO__EMAIL_HOST_PASSWORD', default=None)
+if (_email_host_user is None) != (_email_host_password is None):
+    raise ImproperlyConfigured(
+        'DJANGO__EMAIL_HOST_USER and DJANGO__EMAIL_HOST_PASSWORD must '
+        'both be set or both be unset.')
+if _email_host_user is not None:
+    EMAIL_HOST_USER = _email_host_user
+    EMAIL_HOST_PASSWORD = _email_host_password
 EMAIL_PORT = env.int('DJANGO__EMAIL_PORT')
+EMAIL_USE_TLS = env.bool('DJANGO__EMAIL_USE_TLS', default=False)
 EMAIL_SUBJECT_PREFIX = env('DJANGO__EMAIL_SUBJECT_PREFIX')
 # A list of admin email addresses to be notified about new requests and other
 # events.
@@ -67,6 +80,7 @@ EMAIL_OPT_OUT_INSTRUCTION_URL = CENTER_BASE_URL + '/optout'
 EMAIL_SIGNATURE = env('COLDFRONT__EMAIL_SIGNATURE').replace('\\n', '\n')
 
 EMAIL_FROM = env('HPCS__EMAIL_FROM')
+# TODO: EMAIL_ADMIN is not in use. It can be removed.
 EMAIL_ADMIN = env('HPCS__EMAIL_ADMIN')
 DEFAULT_FROM_EMAIL = EMAIL_FROM
 
@@ -305,6 +319,13 @@ FLAGS = {
                 'DJANGO_FLAGS__BASIC_AUTH_ENABLED_VALUE', default=False),
         },
     ],
+    'DEV_AUTH_ENABLED': [
+        {
+            'condition': 'boolean',
+            'value': env.bool(
+                'DJANGO_FLAGS__DEV_AUTH_ENABLED_VALUE', default=False),
+        },
+    ],
     'BRC_ONLY': [
         {
             'condition': 'boolean',
@@ -392,16 +413,22 @@ FLAGS = {
 if not (FLAGS['BRC_ONLY'][0]['value'] ^ FLAGS['LRC_ONLY'][0]['value']):
     raise ImproperlyConfigured(
         'Exactly one of BRC_ONLY, LRC_ONLY should be enabled.')
-if not (
-        FLAGS['BASIC_AUTH_ENABLED'][0]['value'] ^
-        FLAGS['SSO_ENABLED'][0]['value']):
+if sum([
+        FLAGS['BASIC_AUTH_ENABLED'][0]['value'],
+        FLAGS['SSO_ENABLED'][0]['value'],
+        FLAGS['DEV_AUTH_ENABLED'][0]['value'],
+]) != 1:
     raise ImproperlyConfigured(
-        'Exactly one of BASIC_AUTH_ENABLED, SSO_ENABLED should be enabled.')
+        'Exactly one of BASIC_AUTH_ENABLED, SSO_ENABLED, '
+        'DEV_AUTH_ENABLED must be enabled.')
 if (not FLAGS['SSO_ENABLED'][0]['value'] and
         FLAGS['LINK_LOGIN_ENABLED'][0]['value']):
     raise ImproperlyConfigured(
         'LINK_LOGIN_ENABLED should only be enabled when SSO_ENABLED is '
         'enabled.')
+if FLAGS['DEV_AUTH_ENABLED'][0]['value'] and not DEBUG:
+    raise ImproperlyConfigured(
+        'DEV_AUTH_ENABLED must not be enabled when DEBUG is False.')
 
 #------------------------------------------------------------------------------
 # Plugin: departments

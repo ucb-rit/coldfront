@@ -42,10 +42,29 @@ class BaseTestMixin(object):
     # A password for convenient reference.
     password = 'password'
 
+    # The deployment whose setup commands are run for this base class.
+    # Subclasses (e.g. LRCTestBase) override this to run a different
+    # deployment's setup commands.
+    _deployment_name = 'BRC'
+
+    @classmethod
+    def setUpClass(cls):
+        """Set up database objects required by all tests in the class.
+
+        Runs call_setup_commands() once per class rather than once per test
+        method, which is the primary driver of test suite runtime.
+        """
+        super().setUpClass()
+        deployer = enable_deployment(cls._deployment_name)
+        deployer.enable()
+        try:
+            cls.call_setup_commands()
+        finally:
+            deployer.disable()
+
     def setUp(self):
-        """Set up test data."""
+        """Set up per-test state."""
         get_computing_allowance_interface.cache_clear()
-        self.call_setup_commands()
         self.client = Client()
 
     def tearDown(self):
@@ -87,10 +106,6 @@ class BaseTestMixin(object):
     def call_setup_commands():
         """Call the management commands that load required database
         objects."""
-        # Run the setup commands with the BRC_ONLY flag enabled.
-        # TODO: Implement a long-term solution that enables testing of multiple
-        # TODO: types of deployments.
-        # enable_flag('BRC_ONLY', create_boolean_condition=True)
         enable_flag('SERVICE_UNITS_PURCHASABLE', create_boolean_condition=True)
 
         out, err = StringIO(), StringIO()
@@ -189,14 +204,41 @@ class BaseTestMixin(object):
 
 
 class TestBase(BaseTestMixin, TestCase):
-    """A base class for testing the application."""
+    """A base class for testing BRC-deployment functionality."""
     pass
+
+
+class LRCTestBase(BaseTestMixin, TestCase):
+    """A base class for testing LRC-deployment functionality."""
+    _deployment_name = 'LRC'
 
 
 class TransactionTestBase(BaseTestMixin, TransactionTestCase):
     """A base class for testing the application, with real database
     transactions."""
-    pass
+
+    @classmethod
+    def setUpClass(cls):
+        # TransactionTestCase does not wrap setUpClass in a transaction, so
+        # data created here would be committed and then conflict with setUp's
+        # call_setup_commands() before the first test. Skip
+        # BaseTestMixin.setUpClass entirely; setUp() handles setup for every
+        # test method instead.
+        super(BaseTestMixin, cls).setUpClass()
+
+    def setUp(self):
+        """Re-run setup commands each test method.
+
+        TransactionTestCase flushes the database between test methods, so
+        call_setup_commands() cannot be deferred to setUpClass alone.
+        """
+        super().setUp()
+        deployer = enable_deployment(self._deployment_name)
+        deployer.enable()
+        try:
+            self.call_setup_commands()
+        finally:
+            deployer.disable()
 
 
 class enable_deployment(TestContextDecorator):

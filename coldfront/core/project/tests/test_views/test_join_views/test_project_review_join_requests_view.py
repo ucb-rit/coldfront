@@ -12,6 +12,7 @@ from coldfront.core.billing.models import BillingProject
 from coldfront.core.project.models import ProjectUser, ProjectUserJoinRequest
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.tests.test_base import enable_deployment
+from coldfront.core.utils.tests.test_base import LRCTestBase
 from coldfront.core.utils.tests.test_base import TestBase
 
 
@@ -125,7 +126,7 @@ class TestBRCProjectReviewJoinRequestsView(TestViewMixin, TestBase):
         self.assertIsNone(user_profile.billing_activity)
 
 
-class TestLRCProjectReviewJoinRequestsView(TestViewMixin, TestBase):
+class TestLRCProjectReviewJoinRequestsView(TestViewMixin, LRCTestBase):
     """A class for testing ProjectReviewJoinRequestsView on the LRC
     deployment."""
 

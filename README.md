@@ -14,7 +14,17 @@ The portal is implemented on top of a fork of [ColdFront](https://coldfront.read
    git config core.fileMode false
    ```
 
-2. Select one of the following options for setting up a development environment.
+2. Install host development tools and register the pre-commit hooks.
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements-dev.txt
+   pre-commit install                        # hooks on staged files
+   pre-commit install --hook-type commit-msg # hooks on commit messages
+   ```
+
+3. Select one of the following options for setting up a development environment.
 
    - [Docker](bootstrap/development/docker/README.md) (Recommended)
    - [Vagrant VM on VirtualBox](bootstrap/development/docs/vagrant-vm-README.md)
