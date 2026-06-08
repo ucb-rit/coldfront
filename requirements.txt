@@ -16,7 +16,7 @@ django-formtools==2.5.1
 django-googledrive-storage==1.6.0
 django-maintenance-mode==0.22.0
 django-model-utils==5.0.0
-django-phonenumber-field==8.1.0
+django-phonenumber-field==8.4.0
 django-picklefield==3.4.0
 django-prometheus==2.4.1
 django-q2==1.8.0
