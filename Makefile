@@ -7,7 +7,7 @@ PROJECT ?= brc-dev
 COMPOSE_FILE = bootstrap/development/docker/docker-compose.yml
 COMPOSE      = docker compose -f $(COMPOSE_FILE) -p $(PROJECT)
 
-.PHONY: up up-d down restart logs shell db-shell setup build load-db help
+.PHONY: up up-d down restart logs shell db-shell setup build load-db check help
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -42,3 +42,6 @@ build: ## Build Docker images  (optional: make build TAG=my-tag)
 
 load-db: ## Load a DB dump  (usage: make load-db DUMP=YYYY_MM_DD-HH-MM.dump)
 	sh bootstrap/development/docker/scripts/docker_load_database_backup.sh $(PROJECT) $(DUMP)
+
+check: ## Run pre-commit hooks on all files
+	pre-commit run --all-files
