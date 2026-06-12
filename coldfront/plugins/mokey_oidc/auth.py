@@ -80,7 +80,7 @@ class OIDCMokeyAuthenticationBackend(OIDCAuthenticationBackend):
 
         groups = claims.get('groups', '')
         group_list = groups.split(';')
-        
+
         if len(ALLOWED_GROUPS) > 0:
             for g in ALLOWED_GROUPS:
                 if g not in group_list:
@@ -90,5 +90,5 @@ class OIDCMokeyAuthenticationBackend(OIDCAuthenticationBackend):
             for g in DENY_GROUPS:
                 if g in group_list:
                     return False
-    
+
         return verified and True

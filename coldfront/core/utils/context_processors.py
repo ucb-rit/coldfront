@@ -88,7 +88,7 @@ def primary_cluster_name(request):
 
 def request_alert_counts(request):
     if request.user.is_superuser or request.user.is_staff:
-        context = {   
+        context = {
             'cluster_account_req_count':
                 ClusterAccessRequest.objects.filter(
                     status__name__in=['Pending - Add', 'Processing']).count(),

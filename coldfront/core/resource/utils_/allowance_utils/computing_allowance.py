@@ -45,7 +45,7 @@ class ComputingAllowance(object):
             allowance_names.append(LRCAllowances.LR)
             allowance_names.append(LRCAllowances.RECHARGE)
         return self._name in allowance_names
-    
+
     def is_condo(self):
         """Return whether the allowance is a condo allocation."""
         allowance_names = []

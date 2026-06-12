@@ -79,7 +79,7 @@ class AllocationAdditionRequestDetailView(LoginRequiredMixin,
                 kwargs={'pk': self.request_obj.pk})
         ])
         is_notified = notified['status'] == 'Complete'
-        
+
         memorandum_signed = self.request_obj.state['memorandum_signed']
         checklist.append([
             ('Confirm that the Memorandum of Understanding has been signed '

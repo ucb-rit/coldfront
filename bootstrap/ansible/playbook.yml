@@ -687,7 +687,7 @@
           yum:
             name: vim
             state: present
-        
+
         - name: Register user home directory
           user:
             name: "{{ djangooperator }}"
@@ -831,7 +831,7 @@
               group: "{{ djangooperator }}"
               mode: 0600
             become_user: "{{ djangooperator }}"
-          
+
           - name: Add id_mou_generator to ssh config
             blockinfile:
               path: "{{ user.home }}/.ssh/config"

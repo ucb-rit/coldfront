@@ -1095,8 +1095,8 @@ class TestSecureDirManageUsersCompleteStatusView(TestSecureDirBase):
 
             expected_message = (
                 f'Secure directory user '
-                f'{"addition" if action == "add" else "removal"}' 
-                f' request has unexpected status ' 
+                f'{"addition" if action == "add" else "removal"}'
+                f' request has unexpected status '
                 f'"{request.status.name}."')
 
             self.assertEqual(len(messages), 1)

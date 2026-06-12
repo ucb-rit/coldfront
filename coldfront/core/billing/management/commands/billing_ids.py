@@ -110,9 +110,9 @@ class Command(BaseCommand):
         parser = parsers.add_parser(
             'validate', help=(
                 'Check whether one or more billing IDs are valid.'))
-        
+
         parser.add_argument(
-            'billing_ids', 
+            'billing_ids',
             help=('A space-separated list of billing IDs.'),
             nargs='+',
             type=str)
@@ -275,7 +275,7 @@ class Command(BaseCommand):
             user = self._get_user_or_error(options['username'])
             self._handle_set_user_account(
                 user, billing_activity, dry_run=dry_run)
-            
+
     def _handle_validate(self, *args, **options):
         """Handle the 'validate' subcommand."""
         for full_id in options['billing_ids']:

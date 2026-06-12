@@ -67,7 +67,7 @@ class Command(BaseCommand):
                     print(f'Added empty "{field}" to extra_fields for {request}')
         if save and not dry_run:
             request.save()
-    
+
     def handle(self, *args, **options):
         if options['all'] or not any((options['state'], options['extra_fields'])):
             options['state'] = True

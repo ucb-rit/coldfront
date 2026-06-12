@@ -53,7 +53,7 @@ def xdmod_fetch_total_cpu_hours(start, end, account, resources=None):
     try:
         error = r.json()
         # XXX fix me. Here we assume any json response is bad as we're
-        # expecting xml but XDMoD should just return json always. 
+        # expecting xml but XDMoD should just return json always.
         raise XdmodNotFoundError('Got json response but expected XML: {}'.format(error))
     except json.decoder.JSONDecodeError as e:
         pass
@@ -97,7 +97,7 @@ def xdmod_fetch_cloud_core_time(start, end, project, resources=None):
     try:
         error = r.json()
         # XXX fix me. Here we assume any json response is bad as we're
-        # expecting xml but XDMoD should just return json always. 
+        # expecting xml but XDMoD should just return json always.
         raise XdmodNotFoundError('Got json response but expected XML: {}'.format(error))
     except json.decoder.JSONDecodeError as e:
         pass

@@ -10,7 +10,7 @@ class PermissiveRenewalSurveyBackend(BaseRenewalSurveyBackend):
         """Always report that a survey has been completed."""
         return True
 
-    def get_renewal_survey_response(self, allocation_period_name, project_name, 
+    def get_renewal_survey_response(self, allocation_period_name, project_name,
                                     pi_username):
         """Return an empty list of responses."""
         return []

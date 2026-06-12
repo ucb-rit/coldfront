@@ -491,7 +491,7 @@ class TestProjectRemovalRequestListView(TestBase):
                             completed_removal_request.requester.username)
 
         self.client.logout()
-    
+
     def test_removing_users(self):
         """Test that removing multiple users works and doesn't error."""
 
@@ -530,10 +530,10 @@ class TestProjectRemovalRequestListView(TestBase):
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
-        
+
         # Check if the request was processed
         self.assertRedirects(response, reverse('project-detail', kwargs={'pk': self.project1.pk}))
-        
+
         # Check that 2 users are no longer listed on the project page
         url = reverse('project-detail', kwargs={'pk': self.project1.pk})
         response = self.client.get(url)

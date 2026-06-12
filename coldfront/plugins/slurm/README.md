@@ -41,7 +41,7 @@ file:
         'coldfront.plugins.slurm',
     ]
     SLURM_NOOP = False
-    SLURM_SACCTMGR_PATH = '/usr/bin/sacctmgr' 
+    SLURM_SACCTMGR_PATH = '/usr/bin/sacctmgr'
 ```
 
 To generate Slurm association data from ColdFront run the following command:

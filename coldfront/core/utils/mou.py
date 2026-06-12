@@ -69,7 +69,7 @@ class DynamicFieldFile(FieldFile):
         if backend == 'file_system':
             # Files are written to the concatenation of MEDIA_ROOT and the path
             # designated by upload_to in the model field.
-            
+
             return FileSystemStorage()
         elif backend == 'google_drive':
             from gdstorage.storage import GoogleDriveStorage

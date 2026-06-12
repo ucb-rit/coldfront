@@ -1,4 +1,4 @@
-{% extends "common/base.html" %} 
+{% extends "common/base.html" %}
 {% load crispy_forms_tags %}
 {% load static %}
 
@@ -47,11 +47,11 @@ Add Users to Project
 </div>
 
 
-{% endblock %} 
+{% endblock %}
 
 
 
-{% block javascript %} 
+{% block javascript %}
   {{ block.super }}
   <script>
     $("#navbar-main > ul > li.active").removeClass("active");
@@ -82,9 +82,9 @@ Add Users to Project
     $.ajax({
         url : "/project/" + pk + "/add-users-search-results/", // the endpoint
         type : "POST", // http method
-        data : { 
-          q : q, 
-          search_by : search_by, 
+        data : {
+          q : q,
+          search_by : search_by,
           csrfmiddlewaretoken: "{{ csrf_token }}"
         }, // data sent with the post request
         // handle a successful response
@@ -111,13 +111,10 @@ Add Users to Project
 $(document).ready(function(){
   $('#search_results').hide();
   $('#selected_users').hide();
-  $('[data-toggle="popover"]').popover(); 
+  $('[data-toggle="popover"]').popover();
 });
 </script>
 
 
 
 {% endblock %}
-
-
-

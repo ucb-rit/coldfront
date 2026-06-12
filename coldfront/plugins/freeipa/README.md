@@ -13,7 +13,7 @@ projects and allocations.
 
 A command line tool is also provided with this app that allows an administrator
 to check the consistency between ColdFront and FreeIPA and optionally sync any
-discrepancies. 
+discrepancies.
 
 ## Design
 
@@ -72,7 +72,7 @@ file:
     FREEIPA_NOOP = False
     FREEIPA_ENABLE_SIGNALS = False
     FREEIPA_KTNAME = '/path/to/user.keytab'
-    FREEIPA_GROUP_ATTRIBUTE_NAME = 'freeipa_group' 
+    FREEIPA_GROUP_ATTRIBUTE_NAME = 'freeipa_group'
     FREEIPA_SERVER = 'freeipa.localhost.localdomain'
     FREEIPA_USER_SEARCH_BASE = 'cn=users,cn=accounts,dc=example,dc=edu'
     ADDITIONAL_USER_SEARCH_CLASSES = ['coldfront.plugin.freeipa.search.LDAPUserSearch',]

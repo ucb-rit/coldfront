@@ -67,7 +67,7 @@ class BillingIDValidationForm(BillingIDValidityMixin, forms.Form):
         self.validate_billing_id(
             billing_id, ignore_invalid=not self.enforce_validity)
         return billing_id
-    
+
 class BillingIDValidateManyForm(forms.Form):
     billing_ids = forms.CharField(
         help_text=mark_safe('Example:<br />123456-789<br />987654-321'),
@@ -76,7 +76,7 @@ class BillingIDValidateManyForm(forms.Form):
         widget=forms.Textarea(
             attrs={'placeholder': 'Put each Project ID on its own line.'}
         ))
-    
+
     def clean(self):
         cleaned_data = super().clean()
         return cleaned_data

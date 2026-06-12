@@ -24,7 +24,7 @@ class TestProjectJoinView(TestBase):
         return reverse('project-join', kwargs={'pk': pk})
 
     def test_new_archived_inactive_projects_not_joinable(self):
-        """Test that Projects with the 'Inactive', 'Archived', or 'New' status 
+        """Test that Projects with the 'Inactive', 'Archived', or 'New' status
         cannot be joined."""
         statuses = ['Inactive', 'Archived', 'New']
         for status in statuses:

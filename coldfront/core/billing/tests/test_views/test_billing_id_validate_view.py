@@ -51,7 +51,7 @@ class TestBillingIDValidateView(TestBillingBase):
 
         self.user.is_superuser = True
         self.user.save()
-        
+
         malformed_billing_id = '12345-67'
         self.assertFalse(is_billing_id_well_formed(malformed_billing_id))
 
@@ -67,7 +67,7 @@ class TestBillingIDValidateView(TestBillingBase):
                         '\n' + valid_billing_id
         response = self.client.post(self.url, data={'billing_ids': billing_ids})
         messages = list(get_messages(response.wsgi_request))
-        
+
         self.assertEqual(len(messages), 1)
 
         self.assertIn(malformed_billing_id + ': Malformed', messages[0].message)

@@ -188,7 +188,7 @@ class AllocationPeriodReadinessAuditor(ABC):
 
         if not self._allocation_period:
             return CheckResult(False, message, html_message)
-        
+
         resource_attribute_type = ResourceAttributeType.objects.get(
             name='Service Units')
 

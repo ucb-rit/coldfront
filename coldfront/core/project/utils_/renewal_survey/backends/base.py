@@ -26,7 +26,7 @@ class BaseRenewalSurveyBackend(ABC):
         pass
 
     @abstractmethod
-    def get_renewal_survey_response(self, allocation_period_name, project_name, 
+    def get_renewal_survey_response(self, allocation_period_name, project_name,
                                     pi_username):
         """Return a list of (question, answer) tuples for the survey
         response from the given project and PI for the given allocation
@@ -47,7 +47,7 @@ class BaseRenewalSurveyBackend(ABC):
         pass
 
     @abstractmethod
-    def get_renewal_survey_url(self, allocation_period_name, pi, project_name, 
+    def get_renewal_survey_url(self, allocation_period_name, pi, project_name,
                                requester):
         """Return a unique link to the survey to be filled out by the
         given requesting user on behalf of the given project and PI for

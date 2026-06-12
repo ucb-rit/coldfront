@@ -1011,9 +1011,9 @@ class TestNewProjectSurveyResponses(TestBase):
         self.assertEqual(err.read(), '')
 
 class TestRenewalSurveyResponses(TestBase):
-    """ Test class to test export data subcommand renewal_survey_responses 
+    """ Test class to test export data subcommand renewal_survey_responses
     runs correctly """
-    
+
     @enable_deployment('BRC')
     def setUp(self):
         super().setUp()
@@ -1023,42 +1023,42 @@ class TestRenewalSurveyResponses(TestBase):
 
         allocation_period = AllocationPeriod.objects.get(
             name__exact='Allowance Year 2024 - 2025')
-        
+
         for index in range(5):
-            
+
             renewal_survey = {
-                'brc_feedback': 'N/A', 
-                'mybrc_comments': '', 
-                'do_you_use_mybrc': 'no', 
-                'classes_being_taught': f'sample answer {index}', 
-                'colleague_suggestions': 'N/A', 
-                'grants_supported_by_brc': 'Grant #1 etc. etc.\r\nGrant #2 etc. etc.', 
-                'which_brc_services_used': ['savio_hpc', 'srdc'], 
-                'indicate_topic_interests': ['have_visited_rdmp_website', 
-                                'have_had_rdmp_event_or_consultation', 
-                                'want_to_learn_security_and_have_rdm_consult'], 
-                'brc_recommendation_rating': '6', 
-                'publications_supported_by_brc': 'N/A', 
-                'which_open_ondemand_apps_used': ['desktop', 'matlab', 
-                                        'jupyter_notebook', 'vscode_server'], 
-                'recruitment_or_retention_cases': 'N/A', 
-                'brc_recommendation_rating_reason': 'Easy to use', 
-                'how_important_to_research_is_brc': '5', 
-                'training_session_other_topics_of_interest': 'None', 
-                'how_brc_helped_bootstrap_computational_methods': 'N/A', 
-                'training_session_usefulness_of_basic_savio_cluster': '4', 
-                'training_session_usefulness_of_singularity_on_savio': '4', 
-                'training_session_usefulness_of_advanced_savio_cluster': '2', 
-                'training_session_usefulness_of_analytic_envs_on_demand': '5', 
+                'brc_feedback': 'N/A',
+                'mybrc_comments': '',
+                'do_you_use_mybrc': 'no',
+                'classes_being_taught': f'sample answer {index}',
+                'colleague_suggestions': 'N/A',
+                'grants_supported_by_brc': 'Grant #1 etc. etc.\r\nGrant #2 etc. etc.',
+                'which_brc_services_used': ['savio_hpc', 'srdc'],
+                'indicate_topic_interests': ['have_visited_rdmp_website',
+                                'have_had_rdmp_event_or_consultation',
+                                'want_to_learn_security_and_have_rdm_consult'],
+                'brc_recommendation_rating': '6',
+                'publications_supported_by_brc': 'N/A',
+                'which_open_ondemand_apps_used': ['desktop', 'matlab',
+                                        'jupyter_notebook', 'vscode_server'],
+                'recruitment_or_retention_cases': 'N/A',
+                'brc_recommendation_rating_reason': 'Easy to use',
+                'how_important_to_research_is_brc': '5',
+                'training_session_other_topics_of_interest': 'None',
+                'how_brc_helped_bootstrap_computational_methods': 'N/A',
+                'training_session_usefulness_of_basic_savio_cluster': '4',
+                'training_session_usefulness_of_singularity_on_savio': '4',
+                'training_session_usefulness_of_advanced_savio_cluster': '2',
+                'training_session_usefulness_of_analytic_envs_on_demand': '5',
                 'training_session_usefulness_of_computational_platforms_training': '3'}
-            
+
             active_project_status = ProjectStatusChoice.objects.get(name='Active')
-            
+
             project_prefix = 'fc_' if index % 2 else 'pc_'
             project = Project.objects.create(
                 name=f'{project_prefix}test_project{index}',
                 status=active_project_status)
-            
+
             requester = User.objects.create(
                 email=f'requester{index}@email.com',
                 first_name='Requester',
@@ -1079,15 +1079,15 @@ class TestRenewalSurveyResponses(TestBase):
                 allocation_period=allocation_period,
                 status=AllocationRenewalRequestStatusChoice.objects.get(
                     name='Under Review'),
-                renewal_survey_answers = renewal_survey, 
+                renewal_survey_answers = renewal_survey,
                 pre_project=project,
                 post_project=project,
                 request_time=allocation_period_start_utc - datetime.timedelta(days=1))
-            
+
             fixtures.append(fixture)
             if index % 2:
                 filtered_fixtures.append(fixture)
-        
+
         fixtures = list(sorted(
             fixtures, key=lambda x: x.pre_project.name, reverse=True))
         filtered_fixtures = list(sorted(
@@ -1099,8 +1099,8 @@ class TestRenewalSurveyResponses(TestBase):
     def test_get_renewal_survey_responses_json(self):
         out, err = StringIO(''), StringIO('')
         call_command('export_data', 'renewal_survey_responses',
-                     '--format=json', 
-                     '--allocation_period=Allowance Year 2024 - 2025', 
+                     '--format=json',
+                     '--allocation_period=Allowance Year 2024 - 2025',
                      stdout=out, stderr=err)
         sys.stdout = sys.__stdout__
 
@@ -1110,7 +1110,7 @@ class TestRenewalSurveyResponses(TestBase):
             project_name = item.pop('project_name')
             fixture = self.fixtures[index]
             self.assertEqual(project_name, fixture.pre_project.name)
-            self.assertEqual(item['renewal_survey_responses'], 
+            self.assertEqual(item['renewal_survey_responses'],
                     self.swap_form_answer_id_for_text(
                         fixture.renewal_survey_answers))
         err.seek(0)
@@ -1120,8 +1120,8 @@ class TestRenewalSurveyResponses(TestBase):
     def test_get_renewal_survey_responses_csv(self):
         out, err = StringIO(''), StringIO('')
         call_command('export_data', 'renewal_survey_responses',
-                     '--format=csv', 
-                     '--allocation_period=Allowance Year 2024 - 2025', 
+                     '--format=csv',
+                     '--allocation_period=Allowance Year 2024 - 2025',
                      stdout=out, stderr=err)
         sys.stdout = sys.__stdout__
 
@@ -1149,8 +1149,8 @@ class TestRenewalSurveyResponses(TestBase):
     def test_get_renewal_survey_responses_allowance_type(self):
         out, err = StringIO(''), StringIO('')
         call_command('export_data', 'renewal_survey_responses',
-                     '--format=json', 
-                     '--allocation_period=Allowance Year 2024 - 2025', 
+                     '--format=json',
+                     '--allocation_period=Allowance Year 2024 - 2025',
                      '--allowance_type=fc_', stdout=out, stderr=err)
         sys.stdout = sys.__stdout__
 
@@ -1160,7 +1160,7 @@ class TestRenewalSurveyResponses(TestBase):
             project_name = item.pop('project_name')
             fixture = self.filtered_fixtures[index]
             self.assertEqual(project_name, fixture.pre_project.name)
-            self.assertEqual(item['renewal_survey_responses'], 
+            self.assertEqual(item['renewal_survey_responses'],
                 self.swap_form_answer_id_for_text(
                     fixture.renewal_survey_answers))
 
@@ -1182,8 +1182,8 @@ class TestRenewalSurveyResponses(TestBase):
         multiple_choice_fields = {}
         form = DeprecatedProjectRenewalSurveyForm()
         for k, v in form.fields.items():
-            # Only ChoiceField or MultipleChoiceField 
-            # (in this specific survey form) have choices 
+            # Only ChoiceField or MultipleChoiceField
+            # (in this specific survey form) have choices
             if (isinstance(v, (forms.MultipleChoiceField, forms.ChoiceField))):
                 multiple_choice_fields[k] = {
                     _k: _v for _k, _v in form.fields[k].choices}
@@ -1194,7 +1194,7 @@ class TestRenewalSurveyResponses(TestBase):
                     # Multiple choice, array
                     survey[question] = [sub_map.get(i,i) for i in answer]
                 elif answer != '':
-                    # Single choice replacement 
+                    # Single choice replacement
                     survey[question] = sub_map[answer]
         # Change keys of survey (question IDs) to be the human-readable text
         for id, text in form.fields.items():

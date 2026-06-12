@@ -15,7 +15,7 @@ class TestProjectAddUsersSearchView(TestBase):
         self.create_test_user()
         self.sign_user_access_agreement(self.user)
         self.client.login(username=self.user.username, password=self.password)
-    
+
     def test_error_raised_for_non_active_project(self):
         """TODO"""
         statuses = ['Active', 'Inactive', 'Archived', 'New']
@@ -25,12 +25,12 @@ class TestProjectAddUsersSearchView(TestBase):
             status_obj = ProjectStatusChoice.objects.get(name=status)
             projects.append(Project.objects.create(
                 name=name, title=name, status=status_obj))
-        
+
         for i in range(1, len(projects)):
-            url = reverse('project-add-users-search', 
+            url = reverse('project-add-users-search',
                           kwargs={'pk': projects[i].pk})
             response = self.client.get(url)
             messages = list(get_messages(response.wsgi_request))
             self.assertEqual(len(messages), i)
-            self.assertEqual(str(messages[i - 1]), 
+            self.assertEqual(str(messages[i - 1]),
                 f'You cannot add users to a project with status {statuses[i]}')

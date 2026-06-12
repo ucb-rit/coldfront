@@ -134,7 +134,7 @@ class Command(BaseCommand):
         each of the AllocationPeriods, passing to it the given args.
         Optionally schedule the audits to run at a specified time, else
         immediately.
-        
+
             - The audit for a period P is only scheduled if an audit
               for P is not already scheduled. Return whether an audit
               was scheduled.

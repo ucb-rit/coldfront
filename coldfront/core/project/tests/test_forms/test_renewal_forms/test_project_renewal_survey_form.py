@@ -22,18 +22,18 @@ class TestProjectRenewalSurveyForm(TestBase):
         computing_allowance = self.get_predominant_computing_allowance()
         self._project_prefix = computing_allowance_interface.code_from_name(
             computing_allowance.name)
-        
+
         self.allocation_period = get_current_allowance_year_period()
 
         self.pi_role = ProjectUserRoleChoice.objects.get(
             name='Principal Investigator')
         self.active_project_user_status = ProjectUserStatusChoice.objects.get(
             name='Active')
-        
+
     def test_is_renewal_survey_completed_returns_false(self):
-        """ Test that when is_renewal_survey_completed returns False, the 
+        """ Test that when is_renewal_survey_completed returns False, the
             correct  ValidationError is raised. """
-        
+
         # With the dummy backend, is_renewal_survey_completed returns whether
         # the PI username is less than 5 characters. This username is thus
         # greater than 5 characters.
@@ -55,7 +55,7 @@ class TestProjectRenewalSurveyForm(TestBase):
             role=self.pi_role,
             status=self.active_project_user_status,
             user=user)
-        
+
         form=ProjectRenewalSurveyForm(
             project_name=project_name,
             pi_username=user.username,
@@ -65,13 +65,13 @@ class TestProjectRenewalSurveyForm(TestBase):
 
         self.assertFalse(form.is_valid())
         self.assertIn(
-            f'No response for {user.username} and {project_name} detected', 
+            f'No response for {user.username} and {project_name} detected',
             str(form.errors))
-    
+
     def test_is_renewal_survey_completed_returns_true(self):
         """ Test that when is_renewal_survey_completed returns True, the form
             is valid. """
-        
+
         # With the dummy backend, is_renewal_survey_completed returns whether
         # the PI username is less than 5 characters. This username is thus
         # less than 5 characters.
@@ -93,7 +93,7 @@ class TestProjectRenewalSurveyForm(TestBase):
             role=self.pi_role,
             status=self.active_project_user_status,
             user=user)
-        
+
         form=ProjectRenewalSurveyForm(
             project_name=project_name,
             pi_username=user.username,
@@ -104,7 +104,7 @@ class TestProjectRenewalSurveyForm(TestBase):
         self.assertTrue(form.is_valid())
 
 class DummyRenewalSurveyBackend(BaseRenewalSurveyBackend):
-    """A backend similar to PermissiveRenewalSurveyBackend except 
+    """A backend similar to PermissiveRenewalSurveyBackend except
     is_renewal_survey_completed returns True/False based on pi_username."""
 
     def is_renewal_survey_completed(self, allocation_period_name, project_name,
@@ -112,7 +112,7 @@ class DummyRenewalSurveyBackend(BaseRenewalSurveyBackend):
         """Return whether the pi_username is less than 5 characters long."""
         return len(pi_username) < 5
 
-    def get_renewal_survey_response(self, allocation_period_name, project_name, 
+    def get_renewal_survey_response(self, allocation_period_name, project_name,
                                     pi_username):
         """Return an empty list of responses."""
         return []

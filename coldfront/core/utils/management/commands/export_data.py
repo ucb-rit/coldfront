@@ -157,7 +157,7 @@ class Command(BaseCommand):
                                                 help='Dump responses for Projects with given prefix',
                                                 type=str, required=False, default='',
                                                 choices=self.allowance_prefixes)
-        
+
         renewal_survey_responses_subparser = subparsers.add_parser('renewal_survey_responses',
                                                            help='Export survey responses for project renewals')
         renewal_survey_responses_subparser.add_argument('--format', help='Format to dump renewal survey responses in',
@@ -548,12 +548,12 @@ class Command(BaseCommand):
             self.to_json(surveys,
                          output=kwargs.get('stdout', stdout),
                          error=kwargs.get('stderr', stderr))
-    
+
     def handle_renewal_survey_responses(self, *args, **kwargs):
         def _swap_form_answer_id_for_text(_survey, _multiple_choice_fields):
             '''
             Takes a survey, a dict mapping survey question IDs to answer IDs.
-            Uses multiple_choice_fields to swap answer IDs for answer text, then 
+            Uses multiple_choice_fields to swap answer IDs for answer text, then
             question IDs for question text.
             Returns the modified survey.
 
@@ -569,7 +569,7 @@ class Command(BaseCommand):
                         # Multiple choice, array
                         _survey[question] = [sub_map.get(i,i) for i in answer]
                     elif answer != "":
-                        # Single choice replacement 
+                        # Single choice replacement
                         _survey[question] = sub_map[answer]
             # Change keys of survey (question IDs) to be the human-readable text
             for id, text in form.fields.items():
@@ -584,7 +584,7 @@ class Command(BaseCommand):
         if allowance_type:
             allocation_requests = allocation_requests.filter(
                 post_project__name__istartswith=allowance_type)
-            
+
         if allocation_period:
              allocation_requests = allocation_requests.filter(
                  allocation_period__name=allocation_period)
@@ -593,7 +593,7 @@ class Command(BaseCommand):
         _surveys = [i for i in _surveys if i != {}]
         if len(_surveys) == 0:
             raise Exception("There are no valid renewal requests in the specified allocation period.")
-        
+
         if {} in _surveys:
             raise Exception("This allocation period does not have an associated survey.")
         surveys = []
@@ -601,7 +601,7 @@ class Command(BaseCommand):
         multiple_choice_fields = {}
         form = DeprecatedProjectRenewalSurveyForm()
         for k, v in form.fields.items():
-            # Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices 
+            # Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices
             if (isinstance(v, forms.MultipleChoiceField)) or (isinstance(v, forms.ChoiceField)):
                 multiple_choice_fields[k] = {_k: _v for _k, _v in form.fields[k].choices}
 

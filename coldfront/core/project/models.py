@@ -639,5 +639,3 @@ class ProjectUserRemovalRequest(TimeStampedModel):
     request_time = models.DateTimeField(auto_now_add=True)
     completion_time = models.DateTimeField(null=True)
     status = models.ForeignKey(ProjectUserRemovalRequestStatusChoice, on_delete=models.CASCADE, null=True)
-
-

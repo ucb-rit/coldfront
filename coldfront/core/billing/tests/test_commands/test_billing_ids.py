@@ -424,7 +424,7 @@ class BillingIdsCommand(object):
         args = ['create', billing_id]
         self._add_flags_to_args(args, **flags)
         return self.call_subcommand(*args)
-    
+
     def validate(self, billing_ids, **flags):
         """Call the 'validate' subcommand with the given billing IDs, and
         flag values."""
