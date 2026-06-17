@@ -247,10 +247,12 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
         with self.assertRaises(CommandError):
             _run_command()
 
+    @patch(f'{_HANDLE_TARGET}.get_primary_compute_resource_name',
+           return_value='Savio Compute')
     @patch(f'{_HANDLE_TARGET}.get_accounting_allocation_objects')
     @patch(f'{_HANDLE_TARGET}.Project')
     def test_no_active_allocation_raises_command_error(
-        self, mock_project, mock_get_accounting
+        self, mock_project, mock_get_accounting, mock_resource_name
     ):
         mock_get_accounting.side_effect = ObjectDoesNotExist
         with self.assertRaises(CommandError):
