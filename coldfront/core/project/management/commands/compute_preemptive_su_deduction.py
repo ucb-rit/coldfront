@@ -130,10 +130,10 @@ class Command(BaseCommand):
         except Project.DoesNotExist:
             raise CommandError(f'Project "{project_name}" does not exist.')
 
-        resource_name = get_primary_compute_resource_name()
         try:
             accounting_allocation_objects = get_accounting_allocation_objects(project)
         except ObjectDoesNotExist:
+            resource_name = get_primary_compute_resource_name()
             raise CommandError(
                 f'Project "{project_name}" has no active allocation to '
                 f'"{resource_name}".'
