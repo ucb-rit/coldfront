@@ -58,8 +58,10 @@ urlpatterns += [
 
 # New Project Requests
 urlpatterns += [
+    # TODO: Once all callers link directly to 'project-request-landing',
+    # remove this redirect and ProjectRequestView.
     path('project-request/',
-         new_project_request_views.ProjectRequestView.as_view(),
+         RedirectView.as_view(pattern_name='project-request-landing'),
          name='project-request'),
     path('project-request-landing/',
          new_project_request_views.NewProjectRequestLandingView.as_view(),
@@ -124,16 +126,6 @@ urlpatterns += [
 # New Project Requests for Vector (BRC-exclusive)
 with flagged_paths('BRC_ONLY') as f_path:
     urlpatterns += [
-        f_path('project-request-vector-landing/',
-               TemplateView.as_view(
-                   template_name=(
-                       'project/project_request/vector/request/'
-                       'project_request_landing.html')
-               ),
-               name='project-request-vector-landing'),
-        f_path('vector-project-request/',
-               new_project_request_views.VectorProjectRequestView.as_view(),
-               name='vector-project-request'),
         f_path('vector-project-pending-request-list/',
                new_project_approval_views.VectorProjectRequestListView.as_view(
                    completed=False),
