@@ -63,4 +63,3 @@ def needs_host(user):
     """Return whether the given User needs a host user."""
     assert isinstance(user, User)
     return not bool(user.userprofile.host_user)
-

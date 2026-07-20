@@ -165,7 +165,7 @@ class Command(BaseCommand):
             return lst
 
         return []
-                    
+
     def _diff_qos(self, account_name, cluster_name, user_a, user_b):
         logger.debug("diff qos: cluster=%s account=%s uid=%s a=%s b=%s", cluster_name, account_name, user_a.name, user_a.spec_list(), user_b.spec_list())
 
@@ -184,7 +184,7 @@ class Command(BaseCommand):
 
         diff = specs_set_a.difference(specs_set_b)
         logger.debug("diff qos: cluster=%s account=%s uid=%s a=%s b=%s diff=%s", cluster_name, account_name, user_a.name, specs_set_a, specs_set_b, diff)
-            
+
         if len(diff) > 0:
             self.remove_qos(user_a.name, account_name, cluster_name, 'QOS-='+','.join([x for x in list(diff)]))
 

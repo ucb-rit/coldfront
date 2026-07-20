@@ -105,7 +105,7 @@ class TestClusterAccessRequestCompleteRunner(TestClusterAccessRunnersBase):
             ClusterAccessRequestStatusChoice.objects.get(name='Complete')
         self.request_obj.completion_time = utc_now_offset_aware()
         self.request_obj.save()
-        
+
         self.runner = ClusterAccessRequestCompleteRunner(self.request_obj)
 
         self.new_username = 'new_username'
@@ -334,7 +334,7 @@ class TestClusterAccessRequestDenialRunner(TestClusterAccessRunnersBase):
             ClusterAccessRequestStatusChoice.objects.get(name='Denied')
         self.request_obj.completion_time = utc_now_offset_aware()
         self.request_obj.save()
-        
+
         self.runner = ClusterAccessRequestDenialRunner(self.request_obj)
 
     def _assert_emails_sent(self):

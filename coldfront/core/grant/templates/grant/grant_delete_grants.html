@@ -1,4 +1,4 @@
-{% extends "common/base.html" %} 
+{% extends "common/base.html" %}
 {% load crispy_forms_tags %}
 {% load static %}
 
@@ -14,7 +14,7 @@ Delete Grants from Project
 {% if formset %}
 <div class="card border-light">
   <div class="card-body">
-  
+
     <form action="{% url 'grant-delete-grants' project.pk %}" method="post">
       {% csrf_token %}
       <div class="table-responsive">
@@ -50,8 +50,8 @@ Delete Grants from Project
     </form>
   </div>
 </div>
-{% else %} 
-  <a class="btn btn-secondary mb-3" href="{% url 'project-detail' project.pk %}" role="button"><i class="fas fa-long-arrow-left" aria-hidden="true"></i> Back to project</a> 
+{% else %}
+  <a class="btn btn-secondary mb-3" href="{% url 'project-detail' project.pk %}" role="button"><i class="fas fa-long-arrow-left" aria-hidden="true"></i> Back to project</a>
   <div class="alert alert-info">
     No grants to delete!
   </div>
@@ -71,5 +71,4 @@ $("input[name^='grantform-']").click(function (ele) {
 
 </script>
 
-{% endblock %} 
-
+{% endblock %}

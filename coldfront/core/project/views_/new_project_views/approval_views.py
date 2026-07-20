@@ -319,7 +319,7 @@ class SavioProjectRequestEditExtraFieldsView(LoginRequiredMixin,
         messages.error(self.request, message)
         return self.render_to_response(
             self.get_context_data(form=form))
-                                      
+
 class SavioProjectRequestNotifyPIView(MOURequestNotifyPIViewMixIn,
                                     SavioProjectRequestEditExtraFieldsView):
     def email_pi(self):

@@ -25,12 +25,14 @@ Project Request
     <a class="btn btn-primary" href="{% url 'project-request-landing' %}" role="button">
       {{ PRIMARY_CLUSTER_NAME }}
     </a>
+    {% comment %}Vector cluster retired — new requests are no longer accepted.
     {% flag_enabled 'BRC_ONLY' as brc_only %}
     {% if brc_only %}
     <a class="btn btn-primary" href="{% url 'project-request-vector-landing' %}" role="button">
       Vector
     </a>
     {% endif %}
+    {% endcomment %}
   </div>
 </div>
 

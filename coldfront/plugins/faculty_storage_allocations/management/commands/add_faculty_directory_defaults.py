@@ -12,7 +12,7 @@ from coldfront.core.resource.models import ResourceType
 from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequestStatusChoice
 
 
-"""An admin command that creates objects for storing 
+"""An admin command that creates objects for storing
 relevant cluster directories."""
 
 

@@ -270,7 +270,7 @@ class SecureDirRequestDetailView(LoginRequiredMixin,
                 'secure-dir-request-review-rdm-consultation', kwargs={'pk': pk})
         ])
         rdm_consulted = rdm['status'] == 'Approved'
-        
+
         notified = state['notified']
         task_text = (
             'Confirm or edit directory details, and enable/notify the PI to '

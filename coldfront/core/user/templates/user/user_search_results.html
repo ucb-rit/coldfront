@@ -2,7 +2,7 @@
 {% if matches %}
 
 {% if number_of_usernames_found %}
-<strong>Found {{number_of_usernames_found}} of {{number_of_usernames_searched}} usernames searched.</strong> 
+<strong>Found {{number_of_usernames_found}} of {{number_of_usernames_searched}} usernames searched.</strong>
 {% endif %}
 {% if usernames_not_found %} The missing username{{usernames_not_found|length|pluralize}} {{usernames_not_found|length|pluralize:"is, are"}}: {{ usernames_not_found|join:", " }}. {% endif %}
 

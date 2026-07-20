@@ -91,7 +91,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
 
         return zip(questions, response)
 
-    def get_renewal_survey_url(self, allocation_period_name, pi, project_name, 
+    def get_renewal_survey_url(self, allocation_period_name, pi, project_name,
                                requester):
         """Return a pre-filled link to the Google Form for the period,
         wherein the following are pre-filled:

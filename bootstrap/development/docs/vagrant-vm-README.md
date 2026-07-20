@@ -33,7 +33,7 @@ The application may be installed within a Vagrant VM that is running on Scientif
 8. In `main.yml`, uncomment everything under the dev_settings section,
 and customize the following variables with your own values.
     ```
-    django_secret_key: secret_key_from_previous_step 
+    django_secret_key: secret_key_from_previous_step
     chmod_tasks: true # Can be false when a Windows FS is mounted
     db_admin_passwd: root
     redis_passwd: root

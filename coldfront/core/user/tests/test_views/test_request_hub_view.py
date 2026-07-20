@@ -552,7 +552,7 @@ class TestRequestHubView(TestBase):
             self.assertIn(completed_req.post_project.name, completed_div)
             self.assertIn(completed_req.pi.email, completed_div)
             self.assertIn(completed_req.status.name, completed_div)
-        
+
         kwargs = {
             'pi': self.pi,
             'requester': self.user0,

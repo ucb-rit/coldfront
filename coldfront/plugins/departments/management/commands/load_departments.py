@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         add_argparse_dry_run_argument(parser)
-    
+
     def log(self, message, dry_run):
         if not dry_run:
             self.logger.info(message)

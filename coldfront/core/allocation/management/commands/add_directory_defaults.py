@@ -11,7 +11,7 @@ from django.core.management.base import BaseCommand
 import os
 import logging
 
-"""An admin command that creates objects for storing 
+"""An admin command that creates objects for storing
 relevant cluster directories."""
 
 

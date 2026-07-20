@@ -12,10 +12,10 @@ from coldfront.core.project.models import (Project, ProjectAdminComment,
                                             ProjectUserRoleChoice,
                                             ProjectUserStatusChoice,
                                             SavioProjectAllocationRequest,
-                                            ProjectUserJoinRequest, 
-                                            ProjectAllocationRequestStatusChoice, 
-                                            VectorProjectAllocationRequest, 
-                                            ProjectUserRemovalRequestStatusChoice, 
+                                            ProjectUserJoinRequest,
+                                            ProjectAllocationRequestStatusChoice,
+                                            VectorProjectAllocationRequest,
+                                            ProjectUserRemovalRequestStatusChoice,
                                             ProjectUserRemovalRequest, )
 
 admin.site.register(ProjectUserJoinRequest)

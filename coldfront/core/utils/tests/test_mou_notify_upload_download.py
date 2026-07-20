@@ -42,7 +42,7 @@ class MOUTestBase(TestBase):
         self.other_user.save()
         self.sign_user_access_agreement(self.user)
         self.client.login(username=self.user.username, password=self.password)
-        
+
         self.admin_user = User.objects.create(
             email='admin@email.com',
             first_name='Admin',
@@ -71,7 +71,7 @@ class MOUTestBase(TestBase):
     @staticmethod
     def download_mou_url(pk, request_type):
         return reverse(f'{request_type}-request-download-mou', kwargs={'pk': pk, 'request_type': request_type})
-    
+
     def _test_download_upload_download(self, request_type, expected_recipients):
         """Test MOU download, upload, and download again. Verify email is sent
         to expected recipients during upload."""
@@ -123,7 +123,7 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
             resource_attribute_type=ResourceAttributeType.objects.get(name='Service Units'),
             resource=computing_allowance,
             value=Decimal(100000)).save()
-            
+
         self.project, self.request = self.create_project_and_request(
             'ic_testproject',
             computing_allowance,
@@ -166,7 +166,7 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
             extra_fields=savio_project_request_ica_extra_fields_schema()
             )
         return project, project_request
-    
+
     @staticmethod
     def eligibility_url(pk):
         return reverse(f'new-project-request-review-eligibility', kwargs={'pk': pk})
@@ -174,11 +174,11 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
     @staticmethod
     def readiness_url(pk):
         return reverse(f'new-project-request-review-readiness', kwargs={'pk': pk})
-    
+
     @staticmethod
     def edit_extra_fields_url(pk):
         return reverse(f'new-project-request-edit-extra-fields', kwargs={'pk': pk})
-        
+
     @enable_deployment('BRC')
     @override_settings(EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
         'new_project_requests': {

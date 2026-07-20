@@ -102,7 +102,7 @@ class SecureDirPISelectionForm(forms.Form):
 
 class SecureDirDataDescriptionForm(forms.Form):
     department = forms.CharField(
-        label=('Specify the full name of the department that this directory ' 
+        label=('Specify the full name of the department that this directory '
             'will belong to (e.g "Dept. of Chemistry", "Dept. of Economics").'),
         validators=[MinLengthValidator(5)],
         required=True,
@@ -236,7 +236,7 @@ class SecureDirRDMConsultationReviewForm(forms.Form):
 class SecureDirRequestEditDepartmentForm(forms.Form):
 
     department = forms.CharField(
-        label=('Specify the full name of the department that this directory ' 
+        label=('Specify the full name of the department that this directory '
             'will belong to (e.g "Dept. of Chemistry", "Dept. of Economics").'),
         validators=[MinLengthValidator(5)],
         required=True,

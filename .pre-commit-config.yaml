@@ -5,9 +5,15 @@ repos:
     rev: v3.2.0
     hooks:
     -   id: trailing-whitespace
+        exclude: '\.tsv$'
     -   id: end-of-file-fixer
     -   id: check-yaml
     -   id: check-added-large-files
+    -   id: check-ast
+    -   id: check-merge-conflict
+    -   id: debug-statements
+    -   id: check-toml
+    -   id: check-json
 -   repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.4.0
     hooks:

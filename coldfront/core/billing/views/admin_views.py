@@ -313,7 +313,7 @@ class BillingIDUsagesSearchView(LoginRequiredMixin, UserPassesTestMixin,
         context['next_url_parameter'] = urlencode({'next': next_url})
 
         return context
-    
+
 class BillingIDValidateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
 
     form_class = BillingIDValidateManyForm
@@ -340,7 +340,7 @@ class BillingIDValidateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
                     append_str = "Malformed"
                     exists_malformed_or_invalid = True
 
-                validation_results += f'{full_id}: {append_str}<br />' 
+                validation_results += f'{full_id}: {append_str}<br />'
         if exists_malformed_or_invalid:
             messages.error(self.request, mark_safe(validation_results))
         else:

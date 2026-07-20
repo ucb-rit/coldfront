@@ -245,7 +245,7 @@ class ProjectRenewalSurveyForm(forms.Form):
 
 
 class DeprecatedProjectRenewalSurveyForm(forms.Form):
-    
+
     def __init__(self, *args, **kwargs):
         disable_fields = kwargs.pop('disable_fields', False)
         super().__init__(*args, **kwargs)
@@ -274,7 +274,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                     ('aeod', (
                         'Analytic Environments on Demand')),
                     ('cloud_consulting', (
-                        'Cloud consulting (e.g., Amazon, Google, Microsoft, ' 
+                        'Cloud consulting (e.g., Amazon, Google, Microsoft, '
                         'XSEDE, UCB\'s Cloud Working Group)')),
                     ('other', (
                         'Other BRC consulting (e.g. assessing the '
@@ -287,7 +287,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                  ' used? (Check all that apply.)',
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
-            
+
         self.fields['publications_supported_by_brc'] = forms.CharField(
                 label='2. Please list any publications (including papers, books, '
                 'dissertations, theses, and public presentations) that you '
@@ -307,7 +307,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                 'Please write \'N/A\' if this does not apply.',
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
-            
+
         self.fields['recruitment_or_retention_cases'] = forms.CharField(
                 label='4. Please list any recruitment or retention cases you '
                 'are aware of in which the availability of the Savio '
@@ -322,7 +322,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                 'Please write \'N/A\' if this does not apply.',
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
-            
+
         self.fields['classes_being_taught'] = forms.CharField(
                 label='5. Please list any classes (course number and semester) '
                 'for which you were/will be an instructor, and that were or '
@@ -366,12 +366,12 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                     'Computing to others?'),
                 required=True,
                 widget=forms.RadioSelect())
-            
+
         self.fields['brc_recommendation_rating_reason'] = forms.CharField(
                 label='6a. What is the reason for your rating above?',
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
-            
+
         self.fields['how_brc_helped_bootstrap_computational_methods'] = forms.CharField(
                 label='7. If you are new to computational methods '
                 '(broadly, or in a specific application), please '
@@ -380,7 +380,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                 'methods to your research. Please write \'N/A\' if this does not apply.',
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
-            
+
         self.fields['how_important_to_research_is_brc'] = forms.ChoiceField(
                 choices=(
                     ('1', (
@@ -401,7 +401,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                     'Program to your research?'),
                 required=True,
                 widget=forms.RadioSelect())
-            
+
         self.fields['do_you_use_mybrc'] = forms.ChoiceField(
                 choices=(
                     ('yes', (
@@ -414,12 +414,12 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                     'MyBRC?'),
                 required=True,
                 widget=forms.RadioSelect())
-            
+
         self.fields['mybrc_comments'] = forms.CharField(
                 label=('9a.If yes, what feedback do you have for MyBRC?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
-            
+
         self.fields['which_open_ondemand_apps_used'] = forms.MultipleChoiceField(
                 choices=(
                     ('desktop', (
@@ -440,14 +440,14 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                     'application(s) do you use? (Check all that apply.)'),
                 required=True,
                 widget=forms.CheckboxSelectMultiple())
-            
+
         self.fields['brc_feedback'] = forms.CharField(
                 label=(
                     '11. How could the Berkeley Research Computing '
                     'Program be more useful to your research or teaching?'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 2}))
-            
+
         self.fields['colleague_suggestions'] = forms.CharField(
                 label=(
                     '12. Please suggest colleagues who might benefit from the '
@@ -457,7 +457,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                     'most helpful.'),
                 required=False,
                 widget=forms.Textarea(attrs={'rows': 3}))
-            
+
         self.fields['indicate_topic_interests'] = forms.MultipleChoiceField(
                 choices=(
                     ('have_visited_rdmp_website', (
@@ -513,7 +513,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                     'or faculty compute allowance, system capabilities)')),
                 required=False,
                 widget=forms.RadioSelect())
-            
+
         self.fields['training_session_usefulness_of_basic_savio_cluster'] = forms.ChoiceField(
                 choices=(
                     ('1', (
@@ -533,7 +533,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                     'capabilities)'),
                 required=False,
                 widget=forms.RadioSelect())
-            
+
         self.fields['training_session_usefulness_of_advanced_savio_cluster'] = forms.ChoiceField(
                 choices=(
                     ('1', (
@@ -554,7 +554,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                     'below)'),
                 required=False,
                 widget=forms.RadioSelect())
-            
+
         self.fields['training_session_usefulness_of_singularity_on_savio'] = forms.ChoiceField(
                 choices=(
                     ('1', (
@@ -573,7 +573,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                     'containers packaged for Savio deployment)'),
                 required=False,
                 widget=forms.RadioSelect())
-            
+
         self.fields['training_session_usefulness_of_analytic_envs_on_demand'] = forms.ChoiceField(
                 choices=(
                     ('1', (
@@ -610,7 +610,7 @@ class DeprecatedProjectRenewalSurveyForm(forms.Form):
                 label='Question 2',
                 required=True,
                 widget=forms.Textarea(attrs={'rows': 3}))
-        
+
         self.fields['question_3'] = forms.MultipleChoiceField(
             choices=(
                 ('1', (

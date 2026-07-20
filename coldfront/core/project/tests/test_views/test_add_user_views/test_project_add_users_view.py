@@ -20,7 +20,7 @@ class TestProjectAddUsersView(TestBase):
 
     def test_error_raised_for_non_active_project(self):
         """Test that an error and error message appear when trying to add users
-        to 'Archived', 'New', or 'Inactive' Projects and doesn't appear for 
+        to 'Archived', 'New', or 'Inactive' Projects and doesn't appear for
         'Active' Projects"""
         statuses = ['Active', 'Inactive', 'Archived', 'New']
         projects = []
@@ -29,7 +29,7 @@ class TestProjectAddUsersView(TestBase):
             status_obj = ProjectStatusChoice.objects.get(name=status)
             projects.append(Project.objects.create(
                 name=name, title=name, status=status_obj))
-        
+
         # Check that for the active project there is no error message.
         url = reverse('project-add-users', kwargs={'pk': projects[0].pk})
         response = self.client.get(url)
@@ -41,6 +41,5 @@ class TestProjectAddUsersView(TestBase):
             response = self.client.get(url)
             messages = list(get_messages(response.wsgi_request))
             self.assertEqual(len(messages), i)
-            self.assertEqual(str(messages[i - 1]), 
+            self.assertEqual(str(messages[i - 1]),
                 f'You cannot add users to a project with status {statuses[i]}')
-

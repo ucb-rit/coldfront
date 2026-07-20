@@ -85,7 +85,7 @@ def slurm_block_account(cluster, account, noop=False):
 
 def slurm_check_assoc(user, cluster, account):
     cmd = SLURM_CMD_CHECK_ASSOCIATION.format(shlex.quote(user), shlex.quote(cluster), shlex.quote(account))
-    output = _run_slurm_cmd(cmd, noop=False) 
+    output = _run_slurm_cmd(cmd, noop=False)
 
     with StringIO(output.decode("UTF-8")) as fh:
         reader = csv.DictReader(fh, delimiter='|')

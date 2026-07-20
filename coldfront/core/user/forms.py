@@ -148,7 +148,7 @@ class UserLoginForm(AuthenticationForm):
     def clean_username(self):
         cleaned_data = super().clean()
         return cleaned_data.get('username').lower()
- 
+
     def confirm_login_allowed(self, user):
         if not user.is_active:
             send_account_activation_email(user)

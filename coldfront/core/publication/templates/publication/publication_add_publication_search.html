@@ -1,4 +1,4 @@
-{% extends "common/base.html" %} 
+{% extends "common/base.html" %}
 {% load crispy_forms_tags %}
 {% load static %}
 
@@ -37,11 +37,11 @@ Add Publication to Project
 </div>
 
 
-{% endblock %} 
+{% endblock %}
 
 
 
-{% block javascript %} 
+{% block javascript %}
   {{ block.super }}
 
 
@@ -56,13 +56,13 @@ Add Publication to Project
   function create_post() {
 
     search_id = $('#id_search_id').val().trim();
-  
+
     var pk = "{{ project.pk }}"
     $.ajax({
         url : "/publication/publication-search-result/" + pk +"/", // the endpoint
         type : "POST", // http method
         data : {
-          search_id : search_id, 
+          search_id : search_id,
           csrfmiddlewaretoken: "{{ csrf_token }}"
         }, // data sent with the post request
         // handle a successful response
@@ -83,13 +83,10 @@ Add Publication to Project
 };
 
 $(document).ready(function(){
-  $('[data-toggle="popover"]').popover(); 
+  $('[data-toggle="popover"]').popover();
 });
 </script>
 
 
 
 {% endblock %}
-
-
-

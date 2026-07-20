@@ -81,7 +81,7 @@ def generate_user_su_pie_data(usage_data):
         "type": 'pie',
     }
     for username, data in usage_data:
-        label = "%s: %.2f" % (username, float(data)) 
+        label = "%s: %.2f" % (username, float(data))
         if data != '0.00':
             pie_data['columns'].append([label, data])
     return pie_data

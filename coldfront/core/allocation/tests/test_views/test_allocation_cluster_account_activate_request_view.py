@@ -29,18 +29,18 @@ class TestAllocationClusterAccountActivateRequestView(TestClusterAccessRunnersBa
         self.user0.set_password(self.password)
         self.user0.is_superuser = True
         self.user0.save()
-        
+
         self.user0.userprofile.cluster_uid = None
         self.user0.userprofile.save()
-        
+
         self.client.login(username=self.user0.username, password=self.password)
         self.request_obj.status = \
             ClusterAccessRequestStatusChoice.objects.get(name='Processing')
         self.request_obj.save()
-        
+
         self.new_username = 'new_username'
         self.cluster_uid = '1234'
-        
+
         self.data = {
             'username': self.new_username,
             'cluster_uid': self.cluster_uid

@@ -55,7 +55,7 @@ class TestClusterAccessRequestsBase(TestAllocationBase):
                 kwargs['status'] = status_choices.get(name='Complete')
             else:
                 kwargs['status'] = status_choices.get(name='Denied')
-                
+
             request = ClusterAccessRequest.objects.create(**kwargs)
             setattr(self, f'request{i}', request)
 
@@ -346,7 +346,7 @@ class TestUpdatePatchClusterAccessRequests(TestClusterAccessRequestsBase):
 
         assert_cluster_access_request_serialization(
             self.request0, json, SERIALIZER_FIELDS)
-        
+
         self._assert_complete_emails_sent()
 
     def test_valid_data_denied(self):
@@ -384,7 +384,7 @@ class TestUpdatePatchClusterAccessRequests(TestClusterAccessRequestsBase):
         response = self.client.patch(url, data)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         json = response.json()
-        
+
         self.request0.refresh_from_db()
         assert_cluster_access_request_serialization(
             self.request0, json, SERIALIZER_FIELDS)
@@ -397,7 +397,7 @@ class TestUpdatePatchClusterAccessRequests(TestClusterAccessRequestsBase):
         """Test that updating an object with invalid PATCH data
         fails."""
         self._assert_pre_state()
-        
+
         url = self.pk_url(BASE_URL, self.request0.pk)
         data = {
             'completion_time': 'Invalid',
@@ -534,7 +534,7 @@ class TestUpdatePatchClusterAccessRequests(TestClusterAccessRequestsBase):
             'cluster_uid': self.cluster_uid
         }
         with patch.object(
-                ClusterAccessRequestCompleteRunner, 
+                ClusterAccessRequestCompleteRunner,
                 'run',
                 raise_exception):
             response = self.client.patch(url, data)

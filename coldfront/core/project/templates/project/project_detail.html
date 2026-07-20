@@ -71,11 +71,11 @@ Project Detail
       {% if project.status.name != 'Archived' %}
           {% if is_allowed_to_update_project %}
               {% if project.status.name == 'Active' %}
-                <a 
-                  class="btn btn-success" 
-                  href="{% url 'project-add-users-search' project.pk %}" 
+                <a
+                  class="btn btn-success"
+                  href="{% url 'project-add-users-search' project.pk %}"
                   role="button">
-                    <i class="fas fa-user-plus" aria-hidden="true"></i> 
+                    <i class="fas fa-user-plus" aria-hidden="true"></i>
                   Add Users
                 </a>
               {% else %}

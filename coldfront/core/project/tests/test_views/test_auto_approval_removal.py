@@ -80,7 +80,7 @@ class TestBase(AllTestsBase):
         computing_allowance = self.get_predominant_computing_allowance()
         project_name_prefix = computing_allowance_interface.code_from_name(
             computing_allowance.name)
-        
+
         self.project1 = Project.objects.create(
             name=f'{project_name_prefix}_project1', status=active_project_status)
         create_project_allocation(self.project1, Decimal('0.00'))
@@ -280,4 +280,3 @@ class TestProjectUpdateView(TestBase):
         self.project1.refresh_from_db()
         self.assertEqual(self.project1.title, form_data['title'])
         self.assertEqual(self.project1.description, form_data['description'])
-

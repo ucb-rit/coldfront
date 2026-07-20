@@ -27,7 +27,7 @@
     ```
     coverage run manage.py test <path.to.tests>
     ```
-- `<path.to.tests>` takes the normal form of calling Django tests. For example, 
+- `<path.to.tests>` takes the normal form of calling Django tests. For example,
 to run the tests located in `coldfront/core/statistics/tests`, run the following command:
     ```
     coverage run manage.py test coldfront.core.statistics.tests
@@ -38,7 +38,7 @@ to run the tests located in `coldfront/core/statistics/tests`, run the following
 only measure code in the statistics directory.
     ```
     coverage run --omit=*/migrations/* --source=coldfront/core/statistics/ manage.py test coldfront.core.statistics.tests
-    ``` 
+    ```
 - After successfully running, a database file `.coverage` is generated that contains the run results.
 - To view the results in the command line, run:
     ```
