@@ -341,7 +341,7 @@ class TestGoogleSheetsDataSourceBackendUnit:
                 assert backend._header_row_index == mock_config["header_row_index"]
 
                 mock_json_load.assert_called_once()
-            mock_file.assert_called_once_with(mock_config_file_path, "r")
+            mock_file.assert_called_once_with(mock_config_file_path)
 
     @pytest.mark.parametrize(
         "kwarg",
