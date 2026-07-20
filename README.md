@@ -118,6 +118,7 @@
 | coldfront/core/project/forms\_/renewal\_forms/request\_forms.py                                             |      152 |       13 |       28 |        5 |     88% |72-\>99, 166, 172, 232-239, 254-255, 262-263, 603-614 |
 | coldfront/core/project/management/commands/add\_default\_project\_choices.py                                |       19 |        0 |       12 |        0 |    100% |           |
 | coldfront/core/project/management/commands/add\_service\_units\_to\_project.py                              |       62 |        0 |        8 |        0 |    100% |           |
+| coldfront/core/project/management/commands/compute\_preemptive\_su\_deduction.py                            |      126 |       13 |       28 |        5 |     86% |217-223, 271-\>269, 278-284, 311-318, 320-326 |
 | coldfront/core/project/management/commands/deactivate\_ica\_projects.py                                     |       60 |        3 |       10 |        0 |     96% |   116-118 |
 | coldfront/core/project/management/commands/pending\_join\_request\_reminder.py                              |       56 |        6 |       12 |        2 |     88% |43-\>34, 84-86, 97-\>88, 126-128 |
 | coldfront/core/project/management/commands/projects.py                                                      |      223 |       72 |       36 |        3 |     63% |64, 65-\>exit, 143-189, 193-218, 308-310, 326-384, 439-440, 478 |
@@ -127,7 +128,7 @@
 | coldfront/core/project/models.py                                                                            |      281 |       40 |       42 |        7 |     83% |60, 64, 83-90, 106, 118, 128, 239, 248, 255, 283, 328-329, 342, 501, 517-526, 556, 587-605, 623 |
 | coldfront/core/project/signals.py                                                                           |       38 |       15 |        0 |        0 |     61% |31-34, 39-46, 60-68 |
 | coldfront/core/project/templatetags/iso8601\_to\_datetime.py                                                |       11 |        0 |        2 |        0 |    100% |           |
-| coldfront/core/project/urls.py                                                                              |       34 |        0 |        2 |        1 |     97% | 292-\>306 |
+| coldfront/core/project/urls.py                                                                              |       34 |        0 |        2 |        1 |     97% | 284-\>298 |
 | coldfront/core/project/utils.py                                                                             |      114 |       12 |       20 |        7 |     86% |58, 74-\>78, 91, 122, 138-\>142, 153, 197-\>200, 236-243 |
 | coldfront/core/project/utils\_/addition\_utils.py                                                           |      118 |        7 |        6 |        1 |     94% |48, 54, 173-175, 220-221 |
 | coldfront/core/project/utils\_/email\_utils.py                                                              |        7 |        1 |        2 |        1 |     78% |        24 |
@@ -340,7 +341,7 @@
 | coldfront/plugins/xdmod/apps.py                                                                             |        3 |        3 |        0 |        0 |      0% |       1-5 |
 | coldfront/plugins/xdmod/management/commands/xdmod\_usage.py                                                 |      150 |      150 |       72 |        0 |      0% |     1-281 |
 | coldfront/plugins/xdmod/utils.py                                                                            |       84 |       84 |       12 |        0 |      0% |     1-120 |
-| **TOTAL**                                                                                                   | **26721** | **10925** | **6118** |  **592** | **56%** |           |
+| **TOTAL**                                                                                                   | **26847** | **10938** | **6146** |  **597** | **56%** |           |
 
 89 empty files skipped.
 

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_e4facdee48e83842_import_grants_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.3">coverage.py v7.14.3</a>,
-            created at 2026-07-20 12:18 +0000
+            created at 2026-07-20 16:14 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -637,7 +637,7 @@
     <p class="run"><span class="n"><a id="t553" href="#t553">553</a></span><span class="t">        <span class="key">def</span> <span class="nam">_swap_form_answer_id_for_text</span><span class="op">(</span><span class="nam">_survey</span><span class="op">,</span> <span class="nam">_multiple_choice_fields</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t554" href="#t554">554</a></span><span class="t">            <span class="str">'''</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t555" href="#t555">555</a></span><span class="t"><span class="str">            Takes a survey, a dict mapping survey question IDs to answer IDs.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t556" href="#t556">556</a></span><span class="t"><span class="str">            Uses multiple_choice_fields to swap answer IDs for answer text, then </span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t556" href="#t556">556</a></span><span class="t"><span class="str">            Uses multiple_choice_fields to swap answer IDs for answer text, then</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t557" href="#t557">557</a></span><span class="t"><span class="str">            question IDs for question text.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t558" href="#t558">558</a></span><span class="t"><span class="str">            Returns the modified survey.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t559" href="#t559">559</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -653,7 +653,7 @@
     <p class="pln"><span class="n"><a id="t569" href="#t569">569</a></span><span class="t">                        <span class="com"># Multiple choice, array</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t570" href="#t570">570</a></span><span class="t">                        <span class="nam">_survey</span><span class="op">[</span><span class="nam">question</span><span class="op">]</span> <span class="op">=</span> <span class="op">[</span><span class="nam">sub_map</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="nam">i</span><span class="op">,</span><span class="nam">i</span><span class="op">)</span> <span class="key">for</span> <span class="nam">i</span> <span class="key">in</span> <span class="nam">answer</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="par run show_par"><span class="n"><a id="t571" href="#t571">571</a></span><span class="t">                    <span class="key">elif</span> <span class="nam">answer</span> <span class="op">!=</span> <span class="str">""</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">571&#x202F;&#x219B;&#x202F;565</span><span class="annotate long">line 571 didn't jump to line 565 because the condition on line 571 was always true</span></span></p>
-    <p class="pln"><span class="n"><a id="t572" href="#t572">572</a></span><span class="t">                        <span class="com"># Single choice replacement </span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t572" href="#t572">572</a></span><span class="t">                        <span class="com"># Single choice replacement</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t573" href="#t573">573</a></span><span class="t">                        <span class="nam">_survey</span><span class="op">[</span><span class="nam">question</span><span class="op">]</span> <span class="op">=</span> <span class="nam">sub_map</span><span class="op">[</span><span class="nam">answer</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t574" href="#t574">574</a></span><span class="t">            <span class="com"># Change keys of survey (question IDs) to be the human-readable text</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t575" href="#t575">575</a></span><span class="t">            <span class="key">for</span> <span class="nam">id</span><span class="op">,</span> <span class="nam">text</span> <span class="key">in</span> <span class="nam">form</span><span class="op">.</span><span class="nam">fields</span><span class="op">.</span><span class="nam">items</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -685,7 +685,7 @@
     <p class="run"><span class="n"><a id="t601" href="#t601">601</a></span><span class="t">        <span class="nam">multiple_choice_fields</span> <span class="op">=</span> <span class="op">{</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t602" href="#t602">602</a></span><span class="t">        <span class="nam">form</span> <span class="op">=</span> <span class="nam">DeprecatedProjectRenewalSurveyForm</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t603" href="#t603">603</a></span><span class="t">        <span class="key">for</span> <span class="nam">k</span><span class="op">,</span> <span class="nam">v</span> <span class="key">in</span> <span class="nam">form</span><span class="op">.</span><span class="nam">fields</span><span class="op">.</span><span class="nam">items</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t604" href="#t604">604</a></span><span class="t">            <span class="com"># Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices </span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t604" href="#t604">604</a></span><span class="t">            <span class="com"># Only ChoiceField or MultipleChoiceField (in this specific survey form) have choices</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t605" href="#t605">605</a></span><span class="t">            <span class="key">if</span> <span class="op">(</span><span class="nam">isinstance</span><span class="op">(</span><span class="nam">v</span><span class="op">,</span> <span class="nam">forms</span><span class="op">.</span><span class="nam">MultipleChoiceField</span><span class="op">)</span><span class="op">)</span> <span class="key">or</span> <span class="op">(</span><span class="nam">isinstance</span><span class="op">(</span><span class="nam">v</span><span class="op">,</span> <span class="nam">forms</span><span class="op">.</span><span class="nam">ChoiceField</span><span class="op">)</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t606" href="#t606">606</a></span><span class="t">                <span class="nam">multiple_choice_fields</span><span class="op">[</span><span class="nam">k</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span><span class="nam">_k</span><span class="op">:</span> <span class="nam">_v</span> <span class="key">for</span> <span class="nam">_k</span><span class="op">,</span> <span class="nam">_v</span> <span class="key">in</span> <span class="nam">form</span><span class="op">.</span><span class="nam">fields</span><span class="op">[</span><span class="nam">k</span><span class="op">]</span><span class="op">.</span><span class="nam">choices</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t607" href="#t607">607</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -801,7 +801,7 @@
             <a class="nav" href="z_e4facdee48e83842_import_grants_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.3">coverage.py v7.14.3</a>,
-            created at 2026-07-20 12:18 +0000
+            created at 2026-07-20 16:14 +0000
         </p>
     </div>
 </footer>
