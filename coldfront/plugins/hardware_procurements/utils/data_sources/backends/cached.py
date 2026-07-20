@@ -1,7 +1,7 @@
-from coldfront.core.account.utils.queries import look_up_user_by_email
-
 from django.core.cache import cache
 from django.utils.module_loading import import_string
+
+from coldfront.core.account.utils.queries import look_up_user_by_email
 
 from .base import BaseDataSourceBackend
 
@@ -11,8 +11,9 @@ class CachedDataSourceBackend(BaseDataSourceBackend):
     data from the given underlying data source backend, if needed, in
     the Django cache, and serves it from the cache."""
 
-    def __init__(self, cache_key=None, cached_data_source=None,
-                 cached_data_source_options=None):
+    def __init__(
+        self, cache_key=None, cached_data_source=None, cached_data_source_options=None
+    ):
 
         # TODO: Validate?
         assert isinstance(cache_key, str)
@@ -35,23 +36,23 @@ class CachedDataSourceBackend(BaseDataSourceBackend):
 
     def fetch_hardware_procurements(self, user_data=None, status=None):
         if user_data is None:
-            hardware_procurement_generator = \
+            hardware_procurement_generator = (
                 self._cache_manager.get_cached_procurements()
+            )
         else:
-            hardware_procurement_generator = \
-                self._cache_manager.get_cached_procurements_for_user(
-                    user_data)
+            hardware_procurement_generator = (
+                self._cache_manager.get_cached_procurements_for_user(user_data)
+            )
         for hardware_procurement in hardware_procurement_generator:
             if status is not None:
-                if hardware_procurement['status'] != status:
+                if hardware_procurement["status"] != status:
                     continue
             yield hardware_procurement
 
     def populate_cache_if_needed(self):
         """If the cache is not populated, fetch data using the
         underlying backend, and populate it."""
-        hardware_procurement_generator = \
-            self._backend.fetch_hardware_procurements()
+        hardware_procurement_generator = self._backend.fetch_hardware_procurements()
         if not self._cache_manager.is_cache_populated():
             self._cache_manager.populate_cache(hardware_procurement_generator)
 
@@ -118,8 +119,7 @@ class HardwareProcurementsCacheManager(object):
         seen_procurement_ids = set()
 
         for _, user_procurements in procurements_by_user_id.items():
-            for procurement_id, hardware_procurement in \
-                    user_procurements.items():
+            for procurement_id, hardware_procurement in user_procurements.items():
                 if procurement_id in seen_procurement_ids:
                     continue
                 seen_procurement_ids.add(procurement_id)
@@ -130,7 +130,7 @@ class HardwareProcurementsCacheManager(object):
         associated with the user represented by the given
         UserInfoDict."""
         assert self.is_cache_populated()
-        user_id = user_data['id']
+        user_id = user_data["id"]
         if user_id in cache.get(self._cache_key):
             user_procurements = cache.get(self._cache_key)[user_id]
             for _, hardware_procurement in user_procurements.items():
@@ -150,13 +150,11 @@ class HardwareProcurementsCacheManager(object):
         procurements_by_user_id = {}
         for hardware_procurement in hardware_procurement_generator:
             procurement_id = hardware_procurement.get_id()
-            associated_user_ids = self._lookup_associated_user_ids(
-                hardware_procurement)
+            associated_user_ids = self._lookup_associated_user_ids(hardware_procurement)
             for user_id in associated_user_ids:
                 if user_id not in procurements_by_user_id:
                     procurements_by_user_id[user_id] = {}
-                procurements_by_user_id[user_id][procurement_id] = \
-                    hardware_procurement
+                procurements_by_user_id[user_id][procurement_id] = hardware_procurement
         cache.set(self._cache_key, procurements_by_user_id)
 
     def is_cache_populated(self):
@@ -170,7 +168,7 @@ class HardwareProcurementsCacheManager(object):
         return the nonexistent user ID. Return a list of unique IDs."""
         pi_users = []
         try:
-            pi_emails = hardware_procurement['pi_emails']
+            pi_emails = hardware_procurement["pi_emails"]
             for pi_email in pi_emails:
                 pi_user = look_up_user_by_email(pi_email)
                 if pi_user is not None:
@@ -180,7 +178,7 @@ class HardwareProcurementsCacheManager(object):
 
         poc_users = []
         try:
-            poc_emails = hardware_procurement['poc_emails']
+            poc_emails = hardware_procurement["poc_emails"]
             for poc_email in poc_emails:
                 poc_user = look_up_user_by_email(poc_email)
                 if poc_user is not None:

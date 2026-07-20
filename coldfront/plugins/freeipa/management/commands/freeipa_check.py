@@ -1,35 +1,44 @@
 import logging
 import os
 import sys
-import dbus
 
+import dbus
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 from ipalib import api
 from ipalib.errors import NotFound
 
 from coldfront.core.allocation.models import Allocation, AllocationUser
-from coldfront.plugins.freeipa.utils import (CLIENT_KTNAME, FREEIPA_NOOP,
-                                             UNIX_GROUP_ATTRIBUTE_NAME,
-                                             AlreadyMemberError,
-                                             NotMemberError,
-                                             check_ipa_group_error)
+from coldfront.plugins.freeipa.utils import (
+    CLIENT_KTNAME,
+    FREEIPA_NOOP,
+    UNIX_GROUP_ATTRIBUTE_NAME,
+    AlreadyMemberError,
+    NotMemberError,
+    check_ipa_group_error,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Sync groups in FreeIPA'
+    help = "Sync groups in FreeIPA"
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "-s", "--sync", help="Sync changes to/from FreeIPA", action="store_true")
+            "-s", "--sync", help="Sync changes to/from FreeIPA", action="store_true"
+        )
         parser.add_argument("-u", "--username", help="Check specific username")
         parser.add_argument("-g", "--group", help="Check specific group")
         parser.add_argument(
-            "-n", "--noop", help="Print commands only. Do not run any commands.", action="store_true")
+            "-n",
+            "--noop",
+            help="Print commands only. Do not run any commands.",
+            action="store_true",
+        )
         parser.add_argument(
-            "-x", "--header", help="Include header in output", action="store_true")
+            "-x", "--header", help="Include header in output", action="store_true"
+        )
 
     def write(self, data):
         try:
@@ -40,8 +49,8 @@ class Command(BaseCommand):
             sys.exit(1)
 
     def check_ipa_error(self, res):
-        if not res or 'result' not in res:
-            raise ValueError('Missing FreeIPA result')
+        if not res or "result" not in res:
+            raise ValueError("Missing FreeIPA result")
 
     def add_group(self, user, group, status):
         if self.sync and not self.noop:
@@ -49,50 +58,53 @@ class Command(BaseCommand):
                 res = api.Command.group_add_member(group, user=[user.username])
                 check_ipa_group_error(res)
             except AlreadyMemberError as e:
-                logger.warn("User %s is already a member of group %s",
-                            user.username, group)
+                logger.warn(
+                    "User %s is already a member of group %s", user.username, group
+                )
             except Exception as e:
-                logger.error("Failed adding user %s to group %s: %s",
-                             user.username, group, e)
+                logger.error(
+                    "Failed adding user %s to group %s: %s", user.username, group, e
+                )
             else:
-                logger.info("Added user %s to group %s successfully",
-                            user.username, group)
+                logger.info(
+                    "Added user %s to group %s successfully", user.username, group
+                )
 
         row = [
             user.username,
             group,
-            '',
+            "",
             status,
-            'Active' if user.is_active else 'Inactive',
+            "Active" if user.is_active else "Inactive",
         ]
 
-        self.write('\t'.join(row))
+        self.write("\t".join(row))
 
     def remove_group(self, user, group, status):
         if self.sync and not self.noop:
             try:
-                res = api.Command.group_remove_member(
-                    group, user=[user.username])
+                res = api.Command.group_remove_member(group, user=[user.username])
                 check_ipa_group_error(res)
             except NotMemberError as e:
-                logger.warn("User %s is not a member of group %s",
-                            user.username, group)
+                logger.warn("User %s is not a member of group %s", user.username, group)
             except Exception as e:
                 logger.error(
-                    "Failed removing user %s from group %s: %s", user.username, group, e)
+                    "Failed removing user %s from group %s: %s", user.username, group, e
+                )
             else:
                 logger.info(
-                    "Removed user %s from group %s successfully", user.username, group)
+                    "Removed user %s from group %s successfully", user.username, group
+                )
 
         row = [
             user.username,
-            '',
+            "",
             group,
             status,
-            'Active' if user.is_active else 'Inactive',
+            "Active" if user.is_active else "Inactive",
         ]
 
-        self.write('\t'.join(row))
+        self.write("\t".join(row))
 
     def sync_user_status(self, user, active=False):
         if not self.sync:
@@ -105,51 +117,62 @@ class Command(BaseCommand):
             user.is_active = active
             user.save()
         except Exception as e:
-            logger.error('Failed to update user status: %s - %s',
-                         user.username, e)
+            logger.error("Failed to update user status: %s - %s", user.username, e)
 
     def check_user_freeipa(self, user, active_groups, removed_groups):
-        logger.info("Checking FreeIPA user=%s active_groups=%s removed_groups=%s", user.username, active_groups, removed_groups)
+        logger.info(
+            "Checking FreeIPA user=%s active_groups=%s removed_groups=%s",
+            user.username,
+            active_groups,
+            removed_groups,
+        )
 
         freeipa_groups = []
-        freeipa_status = 'Unknown'
+        freeipa_status = "Unknown"
         try:
             result = self.ifp.GetUserGroups(user.username)
             logger.debug(result)
             freeipa_groups = [str(x) for x in result]
 
             result = self.ifp.GetUserAttr(user.username, ["nsaccountlock"])
-            if 'nsAccountLock' in result and str(result['nsAccountLock'][0]) == 'TRUE':
-                freeipa_status = 'Disabled'
+            if "nsAccountLock" in result and str(result["nsAccountLock"][0]) == "TRUE":
+                freeipa_status = "Disabled"
             else:
-                freeipa_status = 'Enabled'
+                freeipa_status = "Enabled"
         except dbus.exceptions.DBusException as e:
-            if 'No such user' in str(e):
+            if "No such user" in str(e):
                 logger.warn("User %s not found in FreeIPA", user.username)
-                freeipa_status = 'NotFound'
+                freeipa_status = "NotFound"
             else:
-                logger.error("dbus error failed to find user %s in FreeIPA: %s", user.username, e)
+                logger.error(
+                    "dbus error failed to find user %s in FreeIPA: %s", user.username, e
+                )
             return
 
-        if freeipa_status == 'Disabled' and user.is_active:
+        if freeipa_status == "Disabled" and user.is_active:
             logger.warn(
-                'User is active in coldfront but disabled in FreeIPA: %s', user.username)
+                "User is active in coldfront but disabled in FreeIPA: %s", user.username
+            )
             self.sync_user_status(user, active=False)
-        elif freeipa_status == 'Enabled' and not user.is_active:
+        elif freeipa_status == "Enabled" and not user.is_active:
             logger.warn(
-                'User is not active in coldfront but enabled in FreeIPA: %s', user.username)
+                "User is not active in coldfront but enabled in FreeIPA: %s",
+                user.username,
+            )
             self.sync_user_status(user, active=True)
 
         for g in active_groups:
             if g not in freeipa_groups:
                 logger.warn(
-                    'User %s should be added to freeipa group: %s', user.username, g)
+                    "User %s should be added to freeipa group: %s", user.username, g
+                )
                 self.add_group(user, g, freeipa_status)
 
         for g in removed_groups:
             if g in freeipa_groups:
                 logger.warn(
-                    'User %s should be removed from freeipa group: %s', user.username, g)
+                    "User %s should be removed from freeipa group: %s", user.username, g
+                )
                 self.remove_group(user, g, freeipa_status)
 
     def process_user(self, user):
@@ -158,23 +181,26 @@ class Command(BaseCommand):
 
         user_allocations = AllocationUser.objects.filter(
             user=user,
-            allocation__allocationattribute__allocation_attribute_type__name=UNIX_GROUP_ATTRIBUTE_NAME
+            allocation__allocationattribute__allocation_attribute_type__name=UNIX_GROUP_ATTRIBUTE_NAME,
         )
 
         active_groups = []
         for ua in user_allocations:
-            if ua.status.name == 'Active' and ua.allocation.status.name == 'Active':
+            if ua.status.name == "Active" and ua.allocation.status.name == "Active":
                 for g in ua.allocation.get_attribute_list(UNIX_GROUP_ATTRIBUTE_NAME):
                     if g not in active_groups:
                         active_groups.append(g)
 
         removed_groups = []
         for ua in user_allocations:
-            if ua.status.name == 'Active' and ua.allocation.status.name == 'Active':
+            if ua.status.name == "Active" and ua.allocation.status.name == "Active":
                 continue
 
             # XXX Skip new or renewal allocations??
-            if ua.allocation.status.name == 'New' or ua.allocation.status.name == 'Renewal Requested':
+            if (
+                ua.allocation.status.name == "New"
+                or ua.allocation.status.name == "Renewal Requested"
+            ):
                 continue
 
             for g in ua.allocation.get_attribute_list(UNIX_GROUP_ATTRIBUTE_NAME):
@@ -197,8 +223,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         os.environ["KRB5_CLIENT_KTNAME"] = CLIENT_KTNAME
 
-        verbosity = int(options['verbosity'])
-        root_logger = logging.getLogger('')
+        verbosity = int(options["verbosity"])
+        root_logger = logging.getLogger("")
         if verbosity == 0:
             root_logger.setLevel(logging.ERROR)
         elif verbosity == 2:
@@ -209,42 +235,45 @@ class Command(BaseCommand):
             root_logger.setLevel(logging.WARN)
 
         self.noop = FREEIPA_NOOP
-        if options['noop']:
+        if options["noop"]:
             self.noop = True
             logger.warn("NOOP enabled")
 
         self.sync = False
-        if options['sync']:
+        if options["sync"]:
             self.sync = True
             logger.warn("Syncing FreeIPA with ColdFront")
 
         header = [
-            'username',
-            'add_missing_freeipa_group_membership',
-            'remove_existing_freeipa_group_membership',
-            'freeipa_status',
-            'coldfront_status',
+            "username",
+            "add_missing_freeipa_group_membership",
+            "remove_existing_freeipa_group_membership",
+            "freeipa_status",
+            "coldfront_status",
         ]
 
-        if options['header']:
-            self.write('\t'.join(header))
+        if options["header"]:
+            self.write("\t".join(header))
 
         bus = dbus.SystemBus()
-        infopipe_obj = bus.get_object("org.freedesktop.sssd.infopipe", "/org/freedesktop/sssd/infopipe")
-        self.ifp = dbus.Interface(infopipe_obj, dbus_interface='org.freedesktop.sssd.infopipe')
+        infopipe_obj = bus.get_object(
+            "org.freedesktop.sssd.infopipe", "/org/freedesktop/sssd/infopipe"
+        )
+        self.ifp = dbus.Interface(
+            infopipe_obj, dbus_interface="org.freedesktop.sssd.infopipe"
+        )
 
         users = User.objects.filter(is_active=True)
         logger.info("Processing %s active users", len(users))
 
-        self.filter_user = ''
-        self.filter_group = ''
-        if options['username']:
-            logger.info("Filtering output by username: %s",
-                        options['username'])
-            self.filter_user = options['username']
-        if options['group']:
-            logger.info("Filtering output by group: %s", options['group'])
-            self.filter_group = options['group']
+        self.filter_user = ""
+        self.filter_group = ""
+        if options["username"]:
+            logger.info("Filtering output by username: %s", options["username"])
+            self.filter_user = options["username"]
+        if options["group"]:
+            logger.info("Filtering output by group: %s", options["group"])
+            self.filter_group = options["group"]
 
         for user in users:
             self.process_user(user)

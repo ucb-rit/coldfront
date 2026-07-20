@@ -1,9 +1,10 @@
 """Unit tests for API view logic."""
 
-import pytest
 from unittest.mock import Mock, patch
-from rest_framework.test import APIRequestFactory, force_authenticate
+
+import pytest
 from rest_framework import status
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from coldfront.plugins.faculty_storage_allocations.api.views import (
     claim_next_fsa_request,
@@ -19,7 +20,7 @@ class TestClaimNextRequestView:
         """Test endpoint requires authentication."""
         # Setup
         factory = APIRequestFactory()
-        request = factory.post('/api/faculty-storage-allocation-requests/claim/')
+        request = factory.post("/api/faculty-storage-allocation-requests/claim/")
 
         # Execute - unauthenticated request
         response = claim_next_fsa_request(request)
@@ -27,14 +28,16 @@ class TestClaimNextRequestView:
         # Assert - should require authentication (401 Unauthorized)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    @patch('django.db.transaction.atomic')
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequestService')
+    @patch("django.db.transaction.atomic")
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequestService"
+    )
     def test_view_calls_service_claim_method(self, mock_service, mock_atomic):
         """Test view delegates to RequestService.claim_next_request()."""
         # Setup
         factory = APIRequestFactory()
-        request = factory.post('/api/faculty-storage-allocation-requests/claim/')
+        request = factory.post("/api/faculty-storage-allocation-requests/claim/")
 
         # Authenticate request
         mock_user = Mock()
@@ -50,28 +53,32 @@ class TestClaimNextRequestView:
         mock_request.id = 1
         mock_request.approved_amount_gb = 1000
         mock_request.approval_time = None
-        mock_request.project.name = 'fc_test'
-        mock_request.status.name = 'Approved - Processing'
-        mock_request.state = {'setup': {'directory_name': 'fc_test_dir'}}
+        mock_request.project.name = "fc_test"
+        mock_request.status.name = "Approved - Processing"
+        mock_request.state = {"setup": {"directory_name": "fc_test_dir"}}
         mock_service.claim_next_request.return_value = mock_request
 
         # Execute
-        with patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-                   'FSARequestNextSerializer'):
+        with patch(
+            "coldfront.plugins.faculty_storage_allocations.api.views."
+            "FSARequestNextSerializer"
+        ):
             response = claim_next_fsa_request(request)
 
         # Assert - service method was called
         mock_service.claim_next_request.assert_called_once()
         assert response.status_code == status.HTTP_200_OK
 
-    @patch('django.db.transaction.atomic')
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequestService')
+    @patch("django.db.transaction.atomic")
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequestService"
+    )
     def test_view_returns_204_if_no_requests(self, mock_service, mock_atomic):
         """Test view returns 204 when no requests available."""
         # Setup
         factory = APIRequestFactory()
-        request = factory.post('/api/faculty-storage-allocation-requests/claim/')
+        request = factory.post("/api/faculty-storage-allocation-requests/claim/")
 
         # Authenticate request
         mock_user = Mock()
@@ -90,20 +97,24 @@ class TestClaimNextRequestView:
 
         # Assert - should return 204 No Content
         assert response.status_code == status.HTTP_204_NO_CONTENT
-        assert 'No FSA requests available' in response.data['detail']
+        assert "No FSA requests available" in response.data["detail"]
 
-    @patch('django.db.transaction.atomic')
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequestService')
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FSARequestNextSerializer')
+    @patch("django.db.transaction.atomic")
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequestService"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FSARequestNextSerializer"
+    )
     def test_view_serializes_claimed_request(
         self, mock_serializer_class, mock_service, mock_atomic
     ):
         """Test view serializes the claimed request."""
         # Setup
         factory = APIRequestFactory()
-        request = factory.post('/api/faculty-storage-allocation-requests/claim/')
+        request = factory.post("/api/faculty-storage-allocation-requests/claim/")
 
         # Authenticate request
         mock_user = Mock()
@@ -121,10 +132,10 @@ class TestClaimNextRequestView:
         # Mock serializer
         mock_serializer = Mock()
         mock_serializer.data = {
-            'id': 1,
-            'project_name': 'fc_test',
-            'directory_path': '/global/scratch/projects/fc/fc_test',
-            'set_size_gb': 1000,
+            "id": 1,
+            "project_name": "fc_test",
+            "directory_path": "/global/scratch/projects/fc/fc_test",
+            "set_size_gb": 1000,
         }
         mock_serializer_class.return_value = mock_serializer
 
@@ -146,8 +157,8 @@ class TestCompleteRequestView:
         # Setup
         factory = APIRequestFactory()
         request = factory.patch(
-            '/api/faculty-storage-allocation-requests/1/complete/',
-            {'directory_name': 'fc_test_dir'}
+            "/api/faculty-storage-allocation-requests/1/complete/",
+            {"directory_name": "fc_test_dir"},
         )
 
         # Execute - unauthenticated request
@@ -156,16 +167,18 @@ class TestCompleteRequestView:
         # Assert - should require authentication (401 Unauthorized)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequest')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequest"
+    )
     def test_view_returns_404_if_request_not_found(self, mock_model):
         """Test view returns 404 if request doesn't exist."""
         # Setup
         factory = APIRequestFactory()
         request = factory.patch(
-            '/api/faculty-storage-allocation-requests/999/complete/',
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            "/api/faculty-storage-allocation-requests/999/complete/",
+            {"directory_name": "fc_test_dir"},
+            format="json",
         )
 
         # Authenticate request
@@ -173,7 +186,7 @@ class TestCompleteRequestView:
         force_authenticate(request, user=mock_user)
 
         # Mock DoesNotExist exception
-        mock_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
+        mock_model.DoesNotExist = type("DoesNotExist", (Exception,), {})
         mock_model.objects.get.side_effect = mock_model.DoesNotExist
 
         # Execute
@@ -181,19 +194,19 @@ class TestCompleteRequestView:
 
         # Assert
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert 'not found' in response.data['detail'].lower()
+        assert "not found" in response.data["detail"].lower()
 
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequest')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequest"
+    )
     def test_view_validates_request_payload(self, mock_model):
         """Test view validates completion payload."""
         # Setup
         factory = APIRequestFactory()
         # Empty payload - missing directory_name
         request = factory.patch(
-            '/api/faculty-storage-allocation-requests/1/complete/',
-            {},
-            format='json'
+            "/api/faculty-storage-allocation-requests/1/complete/", {}, format="json"
         )
 
         # Authenticate request
@@ -203,7 +216,7 @@ class TestCompleteRequestView:
         # Mock request object
         mock_fsa_request = Mock()
         mock_status = Mock()
-        mock_status.name = 'Approved - Processing'
+        mock_status.name = "Approved - Processing"
         mock_fsa_request.status = mock_status
         mock_model.objects.get.return_value = mock_fsa_request
 
@@ -212,13 +225,17 @@ class TestCompleteRequestView:
 
         # Assert - should return 400 for invalid payload
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert 'directory_name' in response.data
+        assert "directory_name" in response.data
 
-    @patch('django.db.transaction.atomic')
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequestService')
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequest')
+    @patch("django.db.transaction.atomic")
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequestService"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequest"
+    )
     def test_view_calls_service_complete_method(
         self, mock_model, mock_service, mock_atomic
     ):
@@ -226,9 +243,9 @@ class TestCompleteRequestView:
         # Setup
         factory = APIRequestFactory()
         request = factory.patch(
-            '/api/faculty-storage-allocation-requests/1/complete/',
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            "/api/faculty-storage-allocation-requests/1/complete/",
+            {"directory_name": "fc_test_dir"},
+            format="json",
         )
 
         # Authenticate request
@@ -243,9 +260,9 @@ class TestCompleteRequestView:
         # Mock request object
         mock_fsa_request = Mock()
         mock_status = Mock()
-        mock_status.name = 'Approved - Processing'
+        mock_status.name = "Approved - Processing"
         mock_fsa_request.status = mock_status
-        mock_fsa_request.project.name = 'fc_test'
+        mock_fsa_request.project.name = "fc_test"
         mock_model.objects.get.return_value = mock_fsa_request
 
         # Execute
@@ -253,22 +270,22 @@ class TestCompleteRequestView:
 
         # Assert - service method was called
         mock_service.complete_request.assert_called_once_with(
-            mock_fsa_request,
-            'fc_test_dir',
-            email_strategy=None
+            mock_fsa_request, "fc_test_dir", email_strategy=None
         )
         assert response.status_code == status.HTTP_200_OK
 
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequest')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequest"
+    )
     def test_view_returns_error_if_request_not_processing(self, mock_model):
         """Test view returns error if request not in 'Processing' status."""
         # Setup
         factory = APIRequestFactory()
         request = factory.patch(
-            '/api/faculty-storage-allocation-requests/1/complete/',
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            "/api/faculty-storage-allocation-requests/1/complete/",
+            {"directory_name": "fc_test_dir"},
+            format="json",
         )
 
         # Authenticate request
@@ -278,7 +295,7 @@ class TestCompleteRequestView:
         # Mock request with wrong status
         mock_fsa_request = Mock()
         mock_status = Mock()
-        mock_status.name = 'Approved - Queued'  # Wrong status
+        mock_status.name = "Approved - Queued"  # Wrong status
         mock_fsa_request.status = mock_status
         mock_model.objects.get.return_value = mock_fsa_request
 
@@ -287,20 +304,24 @@ class TestCompleteRequestView:
 
         # Assert
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert 'Approved - Processing' in response.data['detail']
+        assert "Approved - Processing" in response.data["detail"]
 
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequestService')
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequest')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequestService"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequest"
+    )
     def test_view_handles_service_errors(self, mock_model, mock_service):
         """Test view handles errors from service layer."""
         # Setup
         factory = APIRequestFactory()
         request = factory.patch(
-            '/api/faculty-storage-allocation-requests/1/complete/',
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            "/api/faculty-storage-allocation-requests/1/complete/",
+            {"directory_name": "fc_test_dir"},
+            format="json",
         )
 
         # Authenticate request
@@ -310,37 +331,37 @@ class TestCompleteRequestView:
         # Mock request object
         mock_fsa_request = Mock()
         mock_status = Mock()
-        mock_status.name = 'Approved - Processing'
+        mock_status.name = "Approved - Processing"
         mock_fsa_request.status = mock_status
-        mock_fsa_request.project.name = 'fc_test'
+        mock_fsa_request.project.name = "fc_test"
         mock_model.objects.get.return_value = mock_fsa_request
 
         # Mock service raising exception
-        mock_service.complete_request.side_effect = Exception(
-            'Database error'
-        )
+        mock_service.complete_request.side_effect = Exception("Database error")
 
         # Execute
         response = complete_fsa_request(request, pk=1)
 
         # Assert - should return 500
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert 'Error completing request' in response.data['detail']
+        assert "Error completing request" in response.data["detail"]
 
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequestService')
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequest')
-    def test_view_validates_empty_directory_name(
-        self, mock_model, mock_service
-    ):
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequestService"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequest"
+    )
+    def test_view_validates_empty_directory_name(self, mock_model, mock_service):
         """Test view rejects empty directory_name."""
         # Setup
         factory = APIRequestFactory()
         request = factory.patch(
-            '/api/faculty-storage-allocation-requests/1/complete/',
-            {'directory_name': ''},  # Empty string
-            format='json'
+            "/api/faculty-storage-allocation-requests/1/complete/",
+            {"directory_name": ""},  # Empty string
+            format="json",
         )
 
         # Authenticate request
@@ -350,7 +371,7 @@ class TestCompleteRequestView:
         # Mock request object
         mock_fsa_request = Mock()
         mock_status = Mock()
-        mock_status.name = 'Approved - Processing'
+        mock_status.name = "Approved - Processing"
         mock_fsa_request.status = mock_status
         mock_model.objects.get.return_value = mock_fsa_request
 
@@ -362,11 +383,15 @@ class TestCompleteRequestView:
         # Service should not be called with invalid data
         mock_service.complete_request.assert_not_called()
 
-    @patch('django.db.transaction.atomic')
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequestService')
-    @patch('coldfront.plugins.faculty_storage_allocations.api.views.'
-           'FacultyStorageAllocationRequest')
+    @patch("django.db.transaction.atomic")
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequestService"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.api.views."
+        "FacultyStorageAllocationRequest"
+    )
     def test_view_strips_whitespace_from_directory_name(
         self, mock_model, mock_service, mock_atomic
     ):
@@ -374,9 +399,9 @@ class TestCompleteRequestView:
         # Setup
         factory = APIRequestFactory()
         request = factory.patch(
-            '/api/faculty-storage-allocation-requests/1/complete/',
-            {'directory_name': '  fc_test_dir  '},  # With whitespace
-            format='json'
+            "/api/faculty-storage-allocation-requests/1/complete/",
+            {"directory_name": "  fc_test_dir  "},  # With whitespace
+            format="json",
         )
 
         # Authenticate request
@@ -391,9 +416,9 @@ class TestCompleteRequestView:
         # Mock request object
         mock_fsa_request = Mock()
         mock_status = Mock()
-        mock_status.name = 'Approved - Processing'
+        mock_status.name = "Approved - Processing"
         mock_fsa_request.status = mock_status
-        mock_fsa_request.project.name = 'fc_test'
+        mock_fsa_request.project.name = "fc_test"
         mock_model.objects.get.return_value = mock_fsa_request
 
         # Execute
@@ -402,7 +427,7 @@ class TestCompleteRequestView:
         # Assert - should call service with stripped value
         mock_service.complete_request.assert_called_once_with(
             mock_fsa_request,
-            'fc_test_dir',  # Stripped
-            email_strategy=None
+            "fc_test_dir",  # Stripped
+            email_strategy=None,
         )
         assert response.status_code == status.HTTP_200_OK

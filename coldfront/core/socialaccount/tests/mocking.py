@@ -1,7 +1,7 @@
 import json
-import requests
 from unittest.mock import Mock
 
+import requests
 
 # Note: This is a copy of django-allauth's `tests/mocking.py`. The contents were
 # previously included in the package, under `allauth.tests`, but were moved out.

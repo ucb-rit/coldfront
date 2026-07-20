@@ -22,15 +22,14 @@ class Publication(TimeStampedModel):
     unique_id = models.CharField(max_length=255, null=True, blank=True)
     source = models.ForeignKey(PublicationSource, on_delete=models.CASCADE)
     STATUS_CHOICES = (
-        ('Active', 'Active'),
-        ('Archived', 'Archived'),
+        ("Active", "Active"),
+        ("Archived", "Archived"),
     )
-    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='Active')
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="Active")
     history = HistoricalRecords()
 
-
     class Meta:
-        unique_together = ('project', 'unique_id')
+        unique_together = ("project", "unique_id")
 
     def __str__(self):
         return self.title

@@ -1,15 +1,15 @@
-from coldfront.core.billing.models import BillingActivity
 from django.contrib.auth.models import User
-from django.core.validators import EmailValidator
-from django.core.validators import MinLengthValidator
-from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
+from django.core.validators import EmailValidator, MinLengthValidator, RegexValidator
 from django.db import models
 from django.db.models import Q
-from django.core.exceptions import ValidationError
 from django.utils import timezone
 from model_utils.models import TimeStampedModel
 from rest_framework.authtoken.models import Token
 from simple_history.models import HistoricalRecords
+
+from coldfront.core.billing.models import BillingActivity
+
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -21,45 +21,46 @@ class UserProfile(models.Model):
         max_length=10,
         validators=[
             MinLengthValidator(3),
-            RegexValidator(
-                regex=r'^[0-9]+$', message='Cluster UID must be numeric.')
+            RegexValidator(regex=r"^[0-9]+$", message="Cluster UID must be numeric."),
         ],
         blank=True,
-        null=True
+        null=True,
     )
 
     access_agreement_signed_date = models.DateTimeField(blank=True, null=True)
     upgrade_request = models.DateTimeField(blank=True, null=True)
 
     billing_activity = models.ForeignKey(
-        BillingActivity, blank=True, null=True, on_delete=models.SET_NULL)
+        BillingActivity, blank=True, null=True, on_delete=models.SET_NULL
+    )
 
     host_user = models.ForeignKey(
-        User, related_name='host_user', blank=True, null=True,
-        on_delete=models.SET_NULL)
+        User, related_name="host_user", blank=True, null=True, on_delete=models.SET_NULL
+    )
 
     history = HistoricalRecords()
 
+
 class EmailAddress(models.Model):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='emailaddress_user')
+        User, on_delete=models.CASCADE, related_name="emailaddress_user"
+    )
     email = models.EmailField(
-        'email address',
+        "email address",
         unique=True,
-        validators=[
-            EmailValidator()
-        ],
+        validators=[EmailValidator()],
         error_messages={
-            'unique': 'A user with that email address already exists.',
-        }
+            "unique": "A user with that email address already exists.",
+        },
     )
     is_verified = models.BooleanField(default=False)
     is_primary = models.BooleanField(
-        default=False, help_text='Change is_primary status in list display.')
+        default=False, help_text="Change is_primary status in list display."
+    )
 
     class Meta:
-        verbose_name = 'Email Address'
-        verbose_name_plural = 'Email Addresses'
+        verbose_name = "Email Address"
+        verbose_name_plural = "Email Addresses"
 
     def save(self, *args, **kwargs):
         self.email = self.email.lower()
@@ -75,14 +76,16 @@ class EmailAddress(models.Model):
                 if EmailAddress.objects.filter(f).exists():
                     # Raise an error if a different address is already primary.
                     raise ValidationError(
-                        'User already has a primary email address. Manually '
-                        'unset the primary email before setting a new primary '
-                        'email.')
+                        "User already has a primary email address. Manually "
+                        "unset the primary email before setting a new primary "
+                        "email."
+                    )
                 else:
                     # Non-verified addresses should not be set to primary.
                     if not self.is_verified:
                         raise ValidationError(
-                            'Only verified emails may be set to primary.')
+                            "Only verified emails may be set to primary."
+                        )
                     self.user.email = self.email
                     self.user.save()
             else:
@@ -101,7 +104,7 @@ class ExpiringToken(Token):
     expiration = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        verbose_name = 'Expiring Token'
+        verbose_name = "Expiring Token"
 
 
 class IdentityLinkingRequestStatusChoice(TimeStampedModel):
@@ -110,8 +113,8 @@ class IdentityLinkingRequestStatusChoice(TimeStampedModel):
 
 class IdentityLinkingRequest(TimeStampedModel):
     requester = models.ForeignKey(User, on_delete=models.CASCADE)
-    request_time = models.DateTimeField(
-        null=True, blank=True, default=timezone.now)
+    request_time = models.DateTimeField(null=True, blank=True, default=timezone.now)
     completion_time = models.DateTimeField(null=True, blank=True)
     status = models.ForeignKey(
-        IdentityLinkingRequestStatusChoice, on_delete=models.CASCADE)
+        IdentityLinkingRequestStatusChoice, on_delete=models.CASCADE
+    )

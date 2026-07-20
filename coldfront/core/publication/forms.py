@@ -12,12 +12,13 @@ class PublicationAddForm(forms.Form):
 
 
 class PublicationSearchForm(forms.Form):
-    search_id = forms.CharField(
-        label='Search ID', widget=forms.Textarea, required=True)
+    search_id = forms.CharField(label="Search ID", widget=forms.Textarea, required=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['search_id'].help_text = '<br/>Enter ID such as DOI or Bibliographic Code to search.'
+        self.fields[
+            "search_id"
+        ].help_text = "<br/>Enter ID such as DOI or Bibliographic Code to search."
 
 
 class PublicationResultForm(forms.Form):
@@ -37,7 +38,7 @@ class PublicationDeleteForm(forms.Form):
 
 
 class PublicationExportForm(forms.Form):
-        title = forms.CharField(max_length=255, disabled=True)
-        year = forms.CharField(max_length=30, disabled=True)
-        unique_id = forms.CharField(max_length=255, disabled=True)
-        selected = forms.BooleanField(initial=False, required=False)
+    title = forms.CharField(max_length=255, disabled=True)
+    year = forms.CharField(max_length=30, disabled=True)
+    unique_id = forms.CharField(max_length=255, disabled=True)
+    selected = forms.BooleanField(initial=False, required=False)

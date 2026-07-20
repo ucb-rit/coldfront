@@ -1,7 +1,6 @@
-from django.contrib.auth.models import User
 from django.contrib.admin.utils import NestedObjects
-from django.db import DEFAULT_DB_ALIAS
-from django.db import transaction
+from django.contrib.auth.models import User
+from django.db import DEFAULT_DB_ALIAS, transaction
 
 from coldfront.core.allocation.utils import has_cluster_access
 from coldfront.core.user.models import EmailAddress as OldEmailAddress
@@ -96,8 +95,8 @@ class UserMergeRunner(object):
             src, dst = user_1, user_2
         else:
             raise NotImplementedError(
-                'Both Users have cluster access. This case is not currently '
-                'handled.')
+                "Both Users have cluster access. This case is not currently handled."
+            )
         self._src_user = src
         self._dst_user = dst
         # Store the primary key of src_user, used to restore the object after
@@ -118,7 +117,6 @@ class UserMergeRunner(object):
         classes_to_ignore = self._classes_to_ignore()
 
         for obj in self._yield_nested_objects(objects[1]):
-
             if obj.__class__ in classes_to_ignore:
                 continue
 
@@ -130,16 +128,22 @@ class UserMergeRunner(object):
 
             try:
                 handler = class_handler_factory.get_handler(
-                    obj.__class__, self._src_user, self._dst_user, obj,
-                    reporting_strategies=self._reporting_strategies)
+                    obj.__class__,
+                    self._src_user,
+                    self._dst_user,
+                    obj,
+                    reporting_strategies=self._reporting_strategies,
+                )
                 handler.run()
             except ValueError:
                 raise UserMergeError(
-                    f'No handler for object with class {obj.__class__}.')
+                    f"No handler for object with class {obj.__class__}."
+                )
             except Exception as e:
                 raise UserMergeError(
-                    f'Failed to process object with class {obj.__class__} and '
-                    f'primary key {obj.pk}. Details:\n{e}')
+                    f"Failed to process object with class {obj.__class__} and "
+                    f"primary key {obj.pk}. Details:\n{e}"
+                )
 
     def _reset_users(self):
         """Reset user objects because the values of a model's fields
@@ -153,15 +157,13 @@ class UserMergeRunner(object):
     def _rollback(self):
         """Raise a UserMergeRollback exception to roll the enclosing
         transaction back."""
-        raise UserMergeRollback('Rolling back.')
+        raise UserMergeRollback("Rolling back.")
 
     def _select_users_for_update(self):
         """Block other threads from retrieving the users until the end
         of the transaction."""
-        self._src_user = User.objects.select_for_update().get(
-            pk=self._src_user.pk)
-        self._dst_user = User.objects.select_for_update().get(
-            pk=self._dst_user.pk)
+        self._src_user = User.objects.select_for_update().get(pk=self._src_user.pk)
+        self._dst_user = User.objects.select_for_update().get(pk=self._dst_user.pk)
 
     def _yield_nested_objects(self, objects):
         """Given a list that contains objects and lists of potentially-

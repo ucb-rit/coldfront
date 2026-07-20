@@ -2,8 +2,9 @@ import os
 
 from rest_framework import serializers
 
-from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequest
-
+from coldfront.plugins.faculty_storage_allocations.models import (
+    FacultyStorageAllocationRequest,
+)
 
 """Serializers for Faculty Storage Allocations API."""
 
@@ -14,27 +15,32 @@ class FSARequestNextSerializer(serializers.ModelSerializer):
     This includes all information needed for the agent to idempotently set
     the quota.
     """
+
     directory_path = serializers.SerializerMethodField()
     set_size_gb = serializers.SerializerMethodField()
-    requested_delta_gb = serializers.IntegerField(source='approved_amount_gb', read_only=True)
-    project_name = serializers.CharField(source='project.name', read_only=True)
+    requested_delta_gb = serializers.IntegerField(
+        source="approved_amount_gb", read_only=True
+    )
+    project_name = serializers.CharField(source="project.name", read_only=True)
 
     class Meta:
         model = FacultyStorageAllocationRequest
         fields = [
-            'id',
-            'project_name',
-            'directory_path',
-            'set_size_gb',
-            'requested_delta_gb',
-            'status',
-            'approval_time',
+            "id",
+            "project_name",
+            "directory_path",
+            "set_size_gb",
+            "requested_delta_gb",
+            "status",
+            "approval_time",
         ]
         read_only_fields = fields
 
     def get_directory_path(self, obj):
         """Get the full directory path from the resource attribute."""
-        from coldfront.plugins.faculty_storage_allocations.services import DirectoryService
+        from coldfront.plugins.faculty_storage_allocations.services import (
+            DirectoryService,
+        )
 
         # Use service to get the directory path (handles both pending and existing)
         return DirectoryService.get_directory_path_for_project(
@@ -46,7 +52,9 @@ class FSARequestNextSerializer(serializers.ModelSerializer):
 
         This is the idempotent quota value the agent should set.
         """
-        from coldfront.plugins.faculty_storage_allocations.services import DirectoryService
+        from coldfront.plugins.faculty_storage_allocations.services import (
+            DirectoryService,
+        )
 
         # Use service to get the directory name (handles both pending and existing)
         directory_name = DirectoryService.get_directory_name_for_project(
@@ -75,10 +83,11 @@ class FSARequestCompletionSerializer(serializers.Serializer):
     The agent must provide the directory_name it actually used when setting
     the quota. This ensures the state accurately reflects what was done.
     """
+
     directory_name = serializers.CharField(
         required=True,
         max_length=255,
-        help_text="The directory name used for the storage allocation"
+        help_text="The directory name used for the storage allocation",
     )
 
     def validate_directory_name(self, value):

@@ -1,65 +1,68 @@
+from abc import ABC, abstractmethod
 import logging
 import os
 import re
 
-from abc import ABC
-from abc import abstractmethod
-
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management.base import BaseCommand
-
 from flags.state import flag_enabled
 
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.project.utils_.renewal_survey import get_renewal_survey_response
-from coldfront.core.resource.models import Resource
-from coldfront.core.resource.models import ResourceAttributeType
-from coldfront.core.resource.models import TimedResourceAttribute
-from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
+from coldfront.core.resource.models import (
+    Resource,
+    ResourceAttributeType,
+    TimedResourceAttribute,
+)
+from coldfront.core.resource.utils_.allowance_utils.constants import (
+    BRCAllowances,
+    LRCAllowances,
+)
 from coldfront.core.utils.mail import send_email_template
 
-
-logger = logging.getLogger('coldfront.commands')
+logger = logging.getLogger("coldfront.commands")
 
 
 class Command(BaseCommand):
-
     help = (
-        'Perform a series of checks on an AllocationPeriod to ensure '
-        'that it is fully configured.')
+        "Perform a series of checks on an AllocationPeriod to ensure "
+        "that it is fully configured."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
-            'allocation_period_name',
-            help='The name of the AllocationPeriod to audit.',
-            type=str)
+            "allocation_period_name",
+            help="The name of the AllocationPeriod to audit.",
+            type=str,
+        )
         parser.add_argument(
-            '--email',
+            "--email",
             help=(
-                'A space-separated list of email addresses to send result '
-                'notifications to.'),
-            nargs='+',
-            type=str)
+                "A space-separated list of email addresses to send result "
+                "notifications to."
+            ),
+            nargs="+",
+            type=str,
+        )
 
     def handle(self, *args, **options):
-        allocation_period_name = options['allocation_period_name']
+        allocation_period_name = options["allocation_period_name"]
 
         auditor = None
-        if allocation_period_name.startswith('Allowance Year'):
-            auditor = YearlyAllocationPeriodReadinessAuditor(
-                allocation_period_name)
+        if allocation_period_name.startswith("Allowance Year"):
+            auditor = YearlyAllocationPeriodReadinessAuditor(allocation_period_name)
         else:
-            if flag_enabled('BRC_ONLY'):
-                if allocation_period_name.startswith(
-                        ('Spring', 'Summer', 'Fall')):
+            if flag_enabled("BRC_ONLY"):
+                if allocation_period_name.startswith(("Spring", "Summer", "Fall")):
                     auditor = InstructionalAllocationPeriodReadinessAuditor(
-                        allocation_period_name)
+                        allocation_period_name
+                    )
 
         if not auditor:
             raise ValueError(
-                f'Unexpected AllocationPeriod name {allocation_period_name}.')
+                f"Unexpected AllocationPeriod name {allocation_period_name}."
+            )
 
         auditor.run_checks()
         audit_successful = auditor.audit_successful()
@@ -68,51 +71,58 @@ class Command(BaseCommand):
         log_level = logging.INFO if audit_successful else logging.WARNING
         logger.log(
             log_level,
-            'AllocationPeriod audit completed',
+            "AllocationPeriod audit completed",
             extra={
-                'allocation_period_name': allocation_period_name,
-                'audit_successful': audit_successful,
-                'successful_checks': [
-                    c.message for c in check_results if c.success],
-                'failed_checks': [
-                    c.message for c in check_results if not c.success],
-            })
+                "allocation_period_name": allocation_period_name,
+                "audit_successful": audit_successful,
+                "successful_checks": [c.message for c in check_results if c.success],
+                "failed_checks": [c.message for c in check_results if not c.success],
+            },
+        )
 
-        emails = options.get('email', []) or []
+        emails = options.get("email", []) or []
         if emails:
             self._send_email(
-                allocation_period_name, audit_successful, check_results, emails)
+                allocation_period_name, audit_successful, check_results, emails
+            )
 
         if not audit_successful:
             raise AuditFailure(
-                'Audit of AllocationPeriod "{allocation_period_name}" failed.')
+                'Audit of AllocationPeriod "{allocation_period_name}" failed.'
+            )
 
-    def _send_email(self, allocation_period_name, audit_successful,
-                    check_results, emails):
+    def _send_email(
+        self, allocation_period_name, audit_successful, check_results, emails
+    ):
         """Send an email to the given set of email addresses, notifying
         them of the audit results."""
         subject_prefix = f'AllocationPeriod "{allocation_period_name}" Audit'
-        template_dir = 'email/audit_allocation_period'
+        template_dir = "email/audit_allocation_period"
         context = {
-            'allocation_period_name': allocation_period_name,
-            'check_results': check_results,
+            "allocation_period_name": allocation_period_name,
+            "check_results": check_results,
         }
         sender = settings.EMAIL_SENDER
         receiver_list = emails
 
         if audit_successful:
-            subject = f'{subject_prefix}: Success'
-            template_base_name = 'audit_success'
+            subject = f"{subject_prefix}: Success"
+            template_base_name = "audit_success"
         else:
-            subject = f'{subject_prefix}: Failure'
-            template_base_name = 'audit_failure'
+            subject = f"{subject_prefix}: Failure"
+            template_base_name = "audit_failure"
 
-        template_name = os.path.join(template_dir, f'{template_base_name}.txt')
-        html_template = os.path.join(template_dir, f'{template_base_name}.html')
+        template_name = os.path.join(template_dir, f"{template_base_name}.txt")
+        html_template = os.path.join(template_dir, f"{template_base_name}.html")
 
         send_email_template(
-            subject, template_name, context, sender, receiver_list,
-            html_template=html_template)
+            subject,
+            template_name,
+            context,
+            sender,
+            receiver_list,
+            html_template=html_template,
+        )
 
 
 class AuditFailure(Exception):
@@ -141,13 +151,13 @@ class AllocationPeriodReadinessAuditor(ABC):
 
     def audit_successful(self):
         if not self._check_results:
-            raise Exception('The audit has not been run yet.')
+            raise Exception("The audit has not been run yet.")
         return all(result.success for result in self._check_results)
 
     @property
     def check_results(self):
         if not self._check_results:
-            raise Exception('The audit has not been run yet.')
+            raise Exception("The audit has not been run yet.")
         return self._check_results
 
     def run_checks(self):
@@ -172,7 +182,8 @@ class AllocationPeriodReadinessAuditor(ABC):
         exists."""
         try:
             self._allocation_period = AllocationPeriod.objects.get(
-                name=self._allocation_period_name)
+                name=self._allocation_period_name
+            )
         except AllocationPeriod.DoesNotExist:
             success = False
         else:
@@ -190,7 +201,8 @@ class AllocationPeriodReadinessAuditor(ABC):
             return CheckResult(False, message, html_message)
 
         resource_attribute_type = ResourceAttributeType.objects.get(
-            name='Service Units')
+            name="Service Units"
+        )
 
         success = True
 
@@ -201,7 +213,8 @@ class AllocationPeriodReadinessAuditor(ABC):
                     resource_attribute_type=resource_attribute_type,
                     resource=resource,
                     start_date=self._allocation_period.start_date,
-                    end_date=self._allocation_period.end_date)
+                    end_date=self._allocation_period.end_date,
+                )
             except TimedResourceAttribute.DoesNotExist:
                 success = False
 
@@ -213,19 +226,21 @@ class AllocationPeriodReadinessAuditor(ABC):
         raise NotImplementedError
 
     def _get_exists_messages(self):
-        message = 'Create an AllocationPeriod.'
-        html_message = 'Create an <code>AllocationPeriod</code>.'
+        message = "Create an AllocationPeriod."
+        html_message = "Create an <code>AllocationPeriod</code>."
         return message, html_message
 
     def _get_service_units_defined_messages(self):
-        allowances = ', '.join(self._get_associated_allowances())
+        allowances = ", ".join(self._get_associated_allowances())
         message = (
-            f'Define service units to be allocated to each of the following '
-            f'allowances during the AllocationPeriod: {allowances}.')
+            f"Define service units to be allocated to each of the following "
+            f"allowances during the AllocationPeriod: {allowances}."
+        )
         html_message = (
-            f'Define service units to be allocated to each of the following '
-            f'allowances during the <code>AllocationPeriod</code>: '
-            f'{allowances}.')
+            f"Define service units to be allocated to each of the following "
+            f"allowances during the <code>AllocationPeriod</code>: "
+            f"{allowances}."
+        )
         return message, html_message
 
     @abstractmethod
@@ -244,28 +259,28 @@ class InstructionalAllocationPeriodReadinessAuditor(AllocationPeriodReadinessAud
     def _get_exists_messages(self):
         message, html_message = super()._get_exists_messages()
         url = self._get_url_to_ucb_academic_calendar_file()
-        message += f' Refer to the UCB Academic Calendar: {url}.'
-        html_message += (
-            f'Refer to the <a href="{url}">UCB Academic Calendar</a>.')
+        message += f" Refer to the UCB Academic Calendar: {url}."
+        html_message += f'Refer to the <a href="{url}">UCB Academic Calendar</a>.'
         return message, html_message
 
     def _get_url_to_ucb_academic_calendar_file(self):
         """Return a URL to a PDF listing the instructional period that
         the AllocationPeriod represents."""
         url_format = (
-            'https://registrar.berkeley.edu/wp-content/uploads/'
-            'UCB_AcademicCalendar_{0}-{1}.pdf')
+            "https://registrar.berkeley.edu/wp-content/uploads/"
+            "UCB_AcademicCalendar_{0}-{1}.pdf"
+        )
 
-        match = re.search(r'\b\d{4}\b', self._allocation_period_name)
+        match = re.search(r"\b\d{4}\b", self._allocation_period_name)
         if match:
             year = int(match.group())
 
-        if self._allocation_period_name.startswith('Fall'):
+        if self._allocation_period_name.startswith("Fall"):
             starting_year = year
-        elif self._allocation_period_name.startswith(('Spring', 'Summer')):
+        elif self._allocation_period_name.startswith(("Spring", "Summer")):
             starting_year = year - 1
 
-        ending_year_short = f'{(starting_year + 1) % 100:02}'
+        ending_year_short = f"{(starting_year + 1) % 100:02}"
 
         return url_format.format(str(starting_year), ending_year_short)
 
@@ -278,24 +293,26 @@ class YearlyAllocationPeriodReadinessAuditor(AllocationPeriodReadinessAuditor):
     allowance year is fully configured."""
 
     def _get_associated_allowances(self):
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             return [BRCAllowances.FCA, BRCAllowances.PCA]
-        elif flag_enabled('LRC_ONLY'):
+        elif flag_enabled("LRC_ONLY"):
             return [LRCAllowances.PCA]
         else:
             raise ImproperlyConfigured(
-                'Exactly one of BRC_ONLY, LRC_ONLY should be enabled.')
+                "Exactly one of BRC_ONLY, LRC_ONLY should be enabled."
+            )
 
     def _check_renewal_survey_configured(self):
         """Check whether the allowance renewal survey for the period is
         configured."""
         try:
-            project_name = 'audit_project_name'
-            pi_username = 'audit_pi_username'
+            project_name = "audit_project_name"
+            pi_username = "audit_pi_username"
             # If the survey is properly configured, a fetch of a survey response
             # should not raise an error.
             get_renewal_survey_response(
-                self._allocation_period_name, project_name, pi_username)
+                self._allocation_period_name, project_name, pi_username
+            )
         except Exception as e:
             success = False
         else:
@@ -305,7 +322,7 @@ class YearlyAllocationPeriodReadinessAuditor(AllocationPeriodReadinessAuditor):
         return CheckResult(success, message, html_message)
 
     def _get_renewal_survey_configured_messages(self):
-        message = 'Configure the renewal survey.'
+        message = "Configure the renewal survey."
         html_message = message
         return message, html_message
 

@@ -4,8 +4,12 @@ from django.conf import settings
 from django.test import override_settings
 from django.urls import reverse
 
-from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import (
+    ComputingAllowance,
+)
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    ComputingAllowanceInterface,
+)
 from coldfront.core.utils.tests.test_base import TestBase
 
 
@@ -23,29 +27,30 @@ class TestProjectRequestSavioLanding(TestBase):
     @staticmethod
     def view_url():
         """Return the URL for the landing view."""
-        return reverse('project-request-landing')
+        return reverse("project-request-landing")
 
     def test_next_allowance_year_alert_appears_conditionally(self):
         """Test that an alert, which notes that requests for the next
         allowance year are available, only appears when a particular
         feature flag is enabled."""
-        flag_name = 'ALLOCATION_RENEWAL_FOR_NEXT_PERIOD_REQUESTABLE'
+        flag_name = "ALLOCATION_RENEWAL_FOR_NEXT_PERIOD_REQUESTABLE"
 
         allowance_short_names = []
         computing_allowance_interface = ComputingAllowanceInterface()
         for allowance in computing_allowance_interface.allowances():
             if ComputingAllowance(allowance).is_yearly():
                 short_name = computing_allowance_interface.name_short_from_name(
-                    allowance.name)
-                allowance_short_names.append(f'{short_name}s')
+                    allowance.name
+                )
+                allowance_short_names.append(f"{short_name}s")
         allowance_short_names.sort()
 
         alert_text = (
-            f'The allowance year for {", ".join(allowance_short_names)} is '
-            f'ending soon')
+            f"The allowance year for {', '.join(allowance_short_names)} is ending soon"
+        )
 
         flags_enabled = deepcopy(settings.FLAGS)
-        flags_enabled[flag_name] = [{'condition': 'boolean', 'value': True}]
+        flags_enabled[flag_name] = [{"condition": "boolean", "value": True}]
         with override_settings(FLAGS=flags_enabled):
             url = self.view_url()
             response = self.client.get(url)

@@ -1,18 +1,25 @@
-from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
-from coldfront.core.project.models import SavioProjectAllocationRequest
-from coldfront.core.project.tests.test_utils.test_new_project_utils.utils import TestRunnerMixinBase
+from datetime import timedelta
+from decimal import Decimal
+
+from django.conf import settings
+from django.core import mail
+
+from coldfront.core.project.models import (
+    ProjectAllocationRequestStatusChoice,
+    SavioProjectAllocationRequest,
+)
+from coldfront.core.project.tests.test_utils.test_new_project_utils.utils import (
+    TestRunnerMixinBase,
+)
 from coldfront.core.project.utils_.new_project_utils import SavioProjectApprovalRunner
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    ComputingAllowanceInterface,
+)
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 from coldfront.core.utils.tests.test_base import TestBase
-
-from datetime import timedelta
-from decimal import Decimal
-from django.conf import settings
-from django.core import mail
 
 
 class TestSavioProjectApprovalRunner(TestRunnerMixinBase, TestBase):
@@ -27,8 +34,7 @@ class TestSavioProjectApprovalRunner(TestRunnerMixinBase, TestBase):
         interface = ComputingAllowanceInterface()
         self.request_obj = SavioProjectAllocationRequest.objects.create(
             requester=self.requester,
-            allocation_type=interface.name_short_from_name(
-                computing_allowance.name),
+            allocation_type=interface.name_short_from_name(computing_allowance.name),
             computing_allowance=computing_allowance,
             allocation_period=self.allocation_period,
             pi=self.pi,
@@ -36,8 +42,10 @@ class TestSavioProjectApprovalRunner(TestRunnerMixinBase, TestBase):
             pool=False,
             survey_answers={},
             status=ProjectAllocationRequestStatusChoice.objects.get(
-                name='Approved - Processing'),
-            request_time=utc_now_offset_aware() - timedelta(days=1))
+                name="Approved - Processing"
+            ),
+            request_time=utc_now_offset_aware() - timedelta(days=1),
+        )
 
     def test_runner_sends_emails_conditionally(self):
         """Test that the runner sends a notification email to the
@@ -49,45 +57,49 @@ class TestSavioProjectApprovalRunner(TestRunnerMixinBase, TestBase):
         pi = request.pi
 
         # If not requested, an email should not be sent.
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         runner = SavioProjectApprovalRunner(
-            self.request_obj, num_service_units,
-            email_strategy=DropEmailStrategy())
+            self.request_obj, num_service_units, email_strategy=DropEmailStrategy()
+        )
         runner.run()
 
         self.assertEqual(len(mail.outbox), 0)
 
         request.refresh_from_db()
         request.status = ProjectAllocationRequestStatusChoice.objects.get(
-            name='Approved - Processing')
+            name="Approved - Processing"
+        )
         request.approved_time = None
         request.save()
 
         # If requested (by default), an email should be sent.
-        runner = SavioProjectApprovalRunner(
-            self.request_obj, num_service_units)
+        runner = SavioProjectApprovalRunner(self.request_obj, num_service_units)
         runner.run()
 
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
 
         expected_subject = (
-            f'{settings.EMAIL_SUBJECT_PREFIX} New Project Request '
-            f'({project.name}) Approved')
+            f"{settings.EMAIL_SUBJECT_PREFIX} New Project Request "
+            f"({project.name}) Approved"
+        )
         self.assertEqual(expected_subject, email.subject)
 
         formatted_start_date = request.allocation_period.start_date.strftime(
-            '%b. %-d, %Y')
+            "%b. %-d, %Y"
+        )
         start_date_parts = formatted_start_date.split()
         expected_body_snippets = [
-            'request to create project',
-            (f'under Allocation Period "{request.allocation_period.name}" has '
-             f'been approved'),
-            f'processed on {start_date_parts[0][:3]}',
-            f'{start_date_parts[1]} {start_date_parts[2]}',
-            f'{num_service_units} will be added to the project',
-            'will gain the permission to manage the project',
-            f'/project/{project.pk}/',
+            "request to create project",
+            (
+                f'under Allocation Period "{request.allocation_period.name}" has '
+                f"been approved"
+            ),
+            f"processed on {start_date_parts[0][:3]}",
+            f"{start_date_parts[1]} {start_date_parts[2]}",
+            f"{num_service_units} will be added to the project",
+            "will gain the permission to manage the project",
+            f"/project/{project.pk}/",
         ]
         for expected_body_snippet in expected_body_snippets:
             self.assertIn(expected_body_snippet, email.body)
@@ -102,23 +114,23 @@ class TestSavioProjectApprovalRunner(TestRunnerMixinBase, TestBase):
         request.refresh_from_db()
         request.pool = True
         request.status = ProjectAllocationRequestStatusChoice.objects.get(
-            name='Approved - Processing')
+            name="Approved - Processing"
+        )
         request.approved_time = None
         request.save()
 
-        runner = SavioProjectApprovalRunner(
-            self.request_obj, num_service_units)
+        runner = SavioProjectApprovalRunner(self.request_obj, num_service_units)
         runner.run()
 
         self.assertEqual(len(mail.outbox), 2)
         email = mail.outbox[-1]
 
         expected_subject = (
-            f'{settings.EMAIL_SUBJECT_PREFIX} Pooled Project Request '
-            f'({project.name}) Approved')
+            f"{settings.EMAIL_SUBJECT_PREFIX} Pooled Project Request "
+            f"({project.name}) Approved"
+        )
         self.assertEqual(expected_subject, email.subject)
-        expected_body_snippets[0] = (
-            'request to pool your allocation with project')
+        expected_body_snippets[0] = "request to pool your allocation with project"
         for expected_body_snippet in expected_body_snippets:
             self.assertIn(expected_body_snippet, email.body)
         self.assertEqual(expected_from_email, email.from_email)
@@ -128,18 +140,17 @@ class TestSavioProjectApprovalRunner(TestRunnerMixinBase, TestBase):
         """Test that the runner sets the status of the request to
         'Approved - Scheduled' and its approval_time to the current
         time."""
-        self.assertEqual(self.request_obj.status.name, 'Approved - Processing')
+        self.assertEqual(self.request_obj.status.name, "Approved - Processing")
         self.assertFalse(self.request_obj.approval_time)
         pre_time = utc_now_offset_aware()
 
-        num_service_units = Decimal('0.00')
-        runner = SavioProjectApprovalRunner(
-            self.request_obj, num_service_units)
+        num_service_units = Decimal("0.00")
+        runner = SavioProjectApprovalRunner(self.request_obj, num_service_units)
         runner.run()
 
         post_time = utc_now_offset_aware()
         self.request_obj.refresh_from_db()
         approval_time = self.request_obj.approval_time
-        self.assertEqual(self.request_obj.status.name, 'Approved - Scheduled')
+        self.assertEqual(self.request_obj.status.name, "Approved - Scheduled")
         self.assertTrue(approval_time)
         self.assertTrue(pre_time <= approval_time <= post_time)

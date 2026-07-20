@@ -1,17 +1,12 @@
+from abc import ABC, abstractmethod
 import inspect
-
-from abc import ABC
-from abc import abstractmethod
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-
 from flags.state import flag_enabled
 
-from coldfront.core.allocation.models import AllocationUser
-from coldfront.core.allocation.models import AllocationUserStatusChoice
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserStatusChoice
+from coldfront.core.allocation.models import AllocationUser, AllocationUserStatusChoice
+from coldfront.core.project.models import ProjectUser, ProjectUserStatusChoice
 from coldfront.core.project.utils import higher_project_user_role
 
 
@@ -29,11 +24,11 @@ class ClassHandlerFactory(object):
     def _get_handler_class(klass):
         """Return the appropriate handler class for the given class. If
         none are applicable, raise a ValueError."""
-        handler_class_name = f'{klass.__name__}Handler'
+        handler_class_name = f"{klass.__name__}Handler"
         try:
             return globals()[handler_class_name]
         except KeyError:
-            raise ValueError(f'No handler for class {klass.__name__}.')
+            raise ValueError(f"No handler for class {klass.__name__}.")
 
 
 class ClassHandler(ABC):
@@ -81,14 +76,16 @@ class ClassHandler(ABC):
         occurred."""
         if not transferred:
             # The object was deleted.
-            message = (
-                f'{self._class_name}({self._src_obj.pk}): indirectly deleted')
+            message = f"{self._class_name}({self._src_obj.pk}): indirectly deleted"
             self._report_success_message(message)
         else:
             # The object was transferred to the destination user.
             self._record_update(
-                self._src_obj.pk, 'user (indirectly associated)',
-                self._src_user, self._dst_user)
+                self._src_obj.pk,
+                "user (indirectly associated)",
+                self._src_user,
+                self._dst_user,
+            )
 
     def _report_success_message(self, message):
         """Record a success message with the given text to each of the
@@ -100,9 +97,7 @@ class ClassHandler(ABC):
         """Record that the object of this class and with the given
         primary key had its attribute with the given name updated from
         pre_value to post_value."""
-        message = (
-            f'{self._class_name}({pk}).{attr_name}: {pre_value} --> '
-            f'{post_value}')
+        message = f"{self._class_name}({pk}).{attr_name}: {pre_value} --> {post_value}"
         self._report_success_message(message)
 
     def _run_special_handling(self):
@@ -128,92 +123,93 @@ class ClassHandler(ABC):
             self._set_attr_if_falsy(attr_name)
         self._dst_obj.save()
 
-    def _transfer_src_obj_to_dst_user(self, attr_name='user'):
+    def _transfer_src_obj_to_dst_user(self, attr_name="user"):
         """TODO"""
         setattr(self._src_obj, attr_name, self._dst_user)
         self._src_obj.save()
-        self._record_update(
-            self._src_obj.pk, attr_name, self._src_user, self._dst_user)
+        self._record_update(self._src_obj.pk, attr_name, self._src_user, self._dst_user)
 
 
 class UserProfileHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._dst_obj = self._dst_user.userprofile
 
     def _get_settable_if_falsy_attrs(self):
         return [
-            'is_pi',
+            "is_pi",
             # Only the destination user should have a cluster UID.
             # 'cluster_uid',
-            'access_agreement_signed_date',
-            'billing_activity',
+            "access_agreement_signed_date",
+            "billing_activity",
         ]
 
     def _run_special_handling(self):
-        if flag_enabled('LRC_ONLY'):
+        if flag_enabled("LRC_ONLY"):
             # TODO: Refactor shared logic between these methods.
             self._set_host_user()
             self._set_billing_activity()
 
     def _set_billing_activity(self):
-        attr_name = 'billing_activity'
+        attr_name = "billing_activity"
         src_activity = self._src_obj.billing_activity
         dst_activity = self._dst_obj.billing_activity
         if src_activity and dst_activity and src_activity != dst_activity:
             src_full_id = src_activity.full_id()
             dst_full_id = dst_activity.full_id()
             prompt = (
-                f'{self._class_name}({self._dst_obj.pk}).{attr_name}: Conflict '
-                f'requiring manual resolution. Type 1 or 2 to keep the '
-                f'corresponding value.\n'
-                f'1 - {src_full_id} (Source)\n'
-                f'2 - {dst_full_id} (Destination)\n')
+                f"{self._class_name}({self._dst_obj.pk}).{attr_name}: Conflict "
+                f"requiring manual resolution. Type 1 or 2 to keep the "
+                f"corresponding value.\n"
+                f"1 - {src_full_id} (Source)\n"
+                f"2 - {dst_full_id} (Destination)\n"
+            )
             choice = input(prompt)
-            if choice == '1':
+            if choice == "1":
                 self._dst_obj.billing_activity = src_activity
                 self._record_update(
-                    self._dst_obj.pk, attr_name, dst_full_id, src_full_id)
-            elif choice == '2':
+                    self._dst_obj.pk, attr_name, dst_full_id, src_full_id
+                )
+            elif choice == "2":
                 pass
             else:
-                raise ValueError('Invalid choice.')
+                raise ValueError("Invalid choice.")
         else:
             self._set_attr_if_falsy(attr_name)
 
     def _set_host_user(self):
-        attr_name = 'host_user'
+        attr_name = "host_user"
         src_host = self._src_obj.host_user
         dst_host = self._dst_obj.host_user
         if src_host and dst_host and src_host != dst_host:
             src_user_str = (
-                f'{src_host.username} ({src_host.pk}, {src_host.first_name} '
-                f'{src_host.last_name})')
+                f"{src_host.username} ({src_host.pk}, {src_host.first_name} "
+                f"{src_host.last_name})"
+            )
             dst_user_str = (
-                f'{dst_host.username} ({dst_host.pk}, {dst_host.first_name} '
-                f'{dst_host.last_name})')
+                f"{dst_host.username} ({dst_host.pk}, {dst_host.first_name} "
+                f"{dst_host.last_name})"
+            )
             prompt = (
-                f'{self._class_name}({self._dst_obj.pk}).{attr_name}: Conflict '
-                f'requiring manual resolution. Type 1 or 2 to keep the '
-                f'corresponding value.\n'
-                f'1 - {src_user_str} (Source)\n'
-                f'2 - {dst_user_str} (Destination)\n')
+                f"{self._class_name}({self._dst_obj.pk}).{attr_name}: Conflict "
+                f"requiring manual resolution. Type 1 or 2 to keep the "
+                f"corresponding value.\n"
+                f"1 - {src_user_str} (Source)\n"
+                f"2 - {dst_user_str} (Destination)\n"
+            )
             choice = input(prompt)
-            if choice == '1':
+            if choice == "1":
                 self._dst_obj.host_user = src_host
-                self._record_update(
-                    self._dst_obj.pk, attr_name, dst_host, src_host)
-            elif choice == '2':
+                self._record_update(self._dst_obj.pk, attr_name, dst_host, src_host)
+            elif choice == "2":
                 pass
             else:
-                raise ValueError('Invalid choice.')
+                raise ValueError("Invalid choice.")
         else:
             self._set_attr_if_falsy(attr_name)
 
 
 class SocialAccountHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -222,7 +218,6 @@ class SocialAccountHandler(ClassHandler):
 
 
 class EmailAddressHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -232,12 +227,12 @@ class EmailAddressHandler(ClassHandler):
 
 
 class AllocationUserHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
             self._dst_obj = AllocationUser.objects.get(
-                allocation=self._src_obj.allocation, user=self._dst_user)
+                allocation=self._src_obj.allocation, user=self._dst_user
+            )
         except ObjectDoesNotExist:
             self._dst_obj = None
 
@@ -248,7 +243,7 @@ class AllocationUserHandler(ClassHandler):
 
         assert allocation.resources.count() == 1
         resource = allocation.resources.first()
-        assert resource.name.endswith(' Compute')
+        assert resource.name.endswith(" Compute")
 
         if self._dst_obj:
             status_updated = self._update_status()
@@ -260,21 +255,23 @@ class AllocationUserHandler(ClassHandler):
     def _update_status(self):
         """Update the status of the destination if it is not "Active"
         but the source's is. Return whether an update occurred."""
-        active_allocation_user_status = \
-            AllocationUserStatusChoice.objects.get(name='Active')
+        active_allocation_user_status = AllocationUserStatusChoice.objects.get(
+            name="Active"
+        )
         dst_obj_status = self._dst_obj.status
-        if (dst_obj_status != active_allocation_user_status and
-                self._src_obj.status == active_allocation_user_status):
+        if (
+            dst_obj_status != active_allocation_user_status
+            and self._src_obj.status == active_allocation_user_status
+        ):
             self._dst_obj.status = self._src_obj.status
             self._record_update(
-                self._dst_obj.pk, 'status', dst_obj_status.name,
-                'Active')
+                self._dst_obj.pk, "status", dst_obj_status.name, "Active"
+            )
             return True
         return False
 
 
 class AllocationUserAttributeHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -284,19 +281,18 @@ class AllocationUserAttributeHandler(ClassHandler):
 
 
 class AllocationUserAttributeUsageHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def _run_special_handling(self):
         transferred = (
-            self._src_obj.allocation_user_attribute.allocation_user.user ==
-            self._dst_user)
+            self._src_obj.allocation_user_attribute.allocation_user.user
+            == self._dst_user
+        )
         self._handle_associated_object(transferred=transferred)
 
 
 class ClusterAccessRequestHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -306,12 +302,12 @@ class ClusterAccessRequestHandler(ClassHandler):
 
 
 class ProjectUserHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
             self._dst_obj = ProjectUser.objects.get(
-                project=self._src_obj.project, user=self._dst_user)
+                project=self._src_obj.project, user=self._dst_user
+            )
         except ObjectDoesNotExist:
             self._dst_obj = None
 
@@ -330,33 +326,32 @@ class ProjectUserHandler(ClassHandler):
         """Update the role of the destination if the source's is higher.
         Return whether an update occurred."""
         dst_obj_role = self._dst_obj.role
-        self._dst_obj.role = higher_project_user_role(
-            dst_obj_role, self._src_obj.role)
+        self._dst_obj.role = higher_project_user_role(dst_obj_role, self._src_obj.role)
         if self._dst_obj.role != dst_obj_role:
             self._record_update(
-                self._dst_obj.pk, 'role', dst_obj_role.name,
-                self._dst_obj.role.name)
+                self._dst_obj.pk, "role", dst_obj_role.name, self._dst_obj.role.name
+            )
             return True
         return False
 
     def _update_status(self):
         """Update the status of the destination if it is not "Active"
         but the source's is. Return whether an update occurred."""
-        active_project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Active')
+        active_project_user_status = ProjectUserStatusChoice.objects.get(name="Active")
         dst_obj_status = self._dst_obj.status
-        if (self._dst_obj.status != active_project_user_status and
-                self._src_obj.status == active_project_user_status):
+        if (
+            self._dst_obj.status != active_project_user_status
+            and self._src_obj.status == active_project_user_status
+        ):
             self._dst_obj.status = self._src_obj.status
             self._record_update(
-                self._dst_obj.pk, 'status', dst_obj_status.name,
-                'Active')
+                self._dst_obj.pk, "status", dst_obj_status.name, "Active"
+            )
             return True
         return False
 
 
 class ProjectUserJoinRequestHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -366,26 +361,25 @@ class ProjectUserJoinRequestHandler(ClassHandler):
 
 
 class SavioProjectAllocationRequestHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def _run_special_handling(self):
         if self._src_obj.requester == self._src_user:
-            self._transfer_src_obj_to_dst_user(attr_name='requester')
+            self._transfer_src_obj_to_dst_user(attr_name="requester")
         if self._src_obj.pi == self._src_user:
-            self._transfer_src_obj_to_dst_user(attr_name='pi')
+            self._transfer_src_obj_to_dst_user(attr_name="pi")
 
 
 class UserDepartmentHandler(ClassHandler):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from coldfront.plugins.departments.models import UserDepartment
+
         try:
             self._dst_obj = UserDepartment.objects.get(
-                user=self._dst_user,
-                department=self._src_obj.department)
+                user=self._dst_user, department=self._src_obj.department
+            )
         except ObjectDoesNotExist:
             self._dst_obj = None
 
@@ -402,10 +396,8 @@ class UserDepartmentHandler(ClassHandler):
         """If the destination UserDepartment is non-authoritative, but
         the source is, update the destination to be authoritative.
         Return whether an update occurred."""
-        if (not self._dst_obj.is_authoritative and
-                self._src_obj.is_authoritative):
+        if not self._dst_obj.is_authoritative and self._src_obj.is_authoritative:
             self._dst_obj.is_authoritative = self._src_obj.is_authoritative
-            self._record_update(
-                self._dst_obj.pk, 'is_authoritative', False, True)
+            self._record_update(self._dst_obj.pk, "is_authoritative", False, True)
             return True
         return False

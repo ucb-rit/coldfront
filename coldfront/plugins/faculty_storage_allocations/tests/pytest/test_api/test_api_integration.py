@@ -1,11 +1,12 @@
 """Component tests for API endpoints with database."""
 
-import pytest
 from datetime import timedelta
 from unittest.mock import patch
-from django.utils import timezone
+
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
+import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -29,15 +30,11 @@ def staff_user(db):
     from django.contrib.auth.models import Permission
 
     user = User.objects.create_user(
-        username='api_staff',
-        email='api_staff@test.com',
-        is_staff=True
+        username="api_staff", email="api_staff@test.com", is_staff=True
     )
 
     # Add permission to manage FSA requests
-    permission = Permission.objects.get(
-        codename='can_manage_fsa_requests'
-    )
+    permission = Permission.objects.get(codename="can_manage_fsa_requests")
     user.user_permissions.add(permission)
 
     return user
@@ -47,9 +44,7 @@ def staff_user(db):
 def regular_user(db):
     """Create a regular (non-staff) user for API testing."""
     return User.objects.create_user(
-        username='api_user',
-        email='api_user@test.com',
-        is_staff=False
+        username="api_user", email="api_user@test.com", is_staff=False
     )
 
 
@@ -78,7 +73,7 @@ def expired_token(staff_user):
 @pytest.fixture
 def authenticated_client(api_client, staff_token):
     """Return an APIClient with staff authentication."""
-    api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_token.key}')
+    api_client.credentials(HTTP_AUTHORIZATION=f"Token {staff_token.key}")
     return api_client
 
 
@@ -87,39 +82,43 @@ class TestClaimNextRequestAPIIntegration:
     """Integration tests for claim endpoint."""
 
     def test_claim_next_returns_oldest_queued_request(
-        self, authenticated_client, test_project, test_user, test_pi,
-        resource_faculty_storage_directory
+        self,
+        authenticated_client,
+        test_project,
+        test_user,
+        test_pi,
+        resource_faculty_storage_directory,
     ):
         """Test POST /api/faculty_storage_allocations/requests/next/claim/ returns oldest
         request."""
         # Setup - create 3 queued requests with different approval times
         request1 = create_fsa_request(
-            status='Approved - Queued',
+            status="Approved - Queued",
             project=test_project,
             requester=test_user,
             pi=test_pi,
-            approved_amount_gb=1000
+            approved_amount_gb=1000,
         )
         request1.approval_time = timezone.now() - timedelta(hours=2)
         request1.save()
 
         request2 = create_fsa_request(
-            status='Approved - Queued',
+            status="Approved - Queued",
             project=test_project,
             requester=test_user,
             pi=test_pi,
-            approved_amount_gb=1000
+            approved_amount_gb=1000,
         )
         request2.approval_time = timezone.now() - timedelta(hours=1)
         request2.save()
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = authenticated_client.post(url)
 
         # Assert - oldest request (request1) is returned
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['id'] == request1.id
+        assert response.data["id"] == request1.id
 
     def test_claim_next_updates_request_status_in_database(
         self, authenticated_client, test_project, test_user, test_pi
@@ -127,32 +126,30 @@ class TestClaimNextRequestAPIIntegration:
         """Test claiming updates request status to 'Processing' in DB."""
         # Setup
         request_obj = create_fsa_request(
-            status='Approved - Queued',
+            status="Approved - Queued",
             project=test_project,
             requester=test_user,
             pi=test_pi,
-            approved_amount_gb=1000
+            approved_amount_gb=1000,
         )
         request_obj.approval_time = timezone.now()
         request_obj.save()
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = authenticated_client.post(url)
 
         # Assert - status updated in database
         assert response.status_code == status.HTTP_200_OK
         request_obj.refresh_from_db()
-        assert request_obj.status.name == 'Approved - Processing'
+        assert request_obj.status.name == "Approved - Processing"
 
-    def test_claim_next_returns_204_when_queue_empty(
-        self, authenticated_client
-    ):
+    def test_claim_next_returns_204_when_queue_empty(self, authenticated_client):
         """Test endpoint returns 204 when no requests available."""
         # Setup - no queued requests
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = authenticated_client.post(url)
 
         # Assert
@@ -161,54 +158,67 @@ class TestClaimNextRequestAPIIntegration:
     def test_claim_next_requires_authentication(self, api_client, db):
         """Test endpoint requires authentication."""
         # Execute - no credentials
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = api_client.post(url)
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_claim_next_returns_serialized_request_data(
-        self, authenticated_client, test_project, test_user, test_pi,
-        resource_faculty_storage_directory
+        self,
+        authenticated_client,
+        test_project,
+        test_user,
+        test_pi,
+        resource_faculty_storage_directory,
     ):
         """Test endpoint returns complete request data in response."""
         # Setup
         request_obj = create_fsa_request(
-            status='Approved - Queued',
+            status="Approved - Queued",
             project=test_project,
             requester=test_user,
             pi=test_pi,
-            approved_amount_gb=500
+            approved_amount_gb=500,
         )
         request_obj.approval_time = timezone.now()
-        request_obj.state['setup']['directory_name'] = 'fc_test_dir'
+        request_obj.state["setup"]["directory_name"] = "fc_test_dir"
         request_obj.save()
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = authenticated_client.post(url)
 
         # Assert - check all expected fields
         assert response.status_code == status.HTTP_200_OK
-        assert 'id' in response.data
-        assert 'project_name' in response.data
-        assert 'directory_path' in response.data
-        assert 'set_size_gb' in response.data
-        assert 'requested_delta_gb' in response.data
-        assert response.data['requested_delta_gb'] == 500
+        assert "id" in response.data
+        assert "project_name" in response.data
+        assert "directory_path" in response.data
+        assert "set_size_gb" in response.data
+        assert "requested_delta_gb" in response.data
+        assert response.data["requested_delta_gb"] == 500
 
 
 @pytest.mark.component
 class TestCompleteRequestAPIIntegration:
     """Integration tests for complete endpoint."""
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.DirectoryService')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.FSARequestNotificationService')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "request_service.DirectoryService"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "request_service.FSARequestNotificationService"
+    )
     def test_complete_request_updates_database(
-        self, mock_notification, mock_directory_service,
-        authenticated_client, test_project, test_user, test_pi
+        self,
+        mock_notification,
+        mock_directory_service,
+        authenticated_client,
+        test_project,
+        test_user,
+        test_pi,
     ):
         """Test PATCH /api/faculty_storage_allocations/requests/{id}/complete/ updates DB."""
         # Setup mocks
@@ -220,34 +230,43 @@ class TestCompleteRequestAPIIntegration:
 
         # Create processing request
         request_obj = create_fsa_request(
-            status='Approved - Processing',
+            status="Approved - Processing",
             project=test_project,
             requester=test_user,
             pi=test_pi,
-            approved_amount_gb=1000
+            approved_amount_gb=1000,
         )
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-complete', kwargs={'pk': request_obj.id})
+        url = reverse(
+            "faculty-storage-allocation-request-complete", kwargs={"pk": request_obj.id}
+        )
         response = authenticated_client.patch(
-            url,
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            url, {"directory_name": "fc_test_dir"}, format="json"
         )
 
         # Assert
         assert response.status_code == status.HTTP_200_OK
         request_obj.refresh_from_db()
-        assert request_obj.status.name == 'Approved - Complete'
+        assert request_obj.status.name == "Approved - Complete"
         assert request_obj.completion_time is not None
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.DirectoryService')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'request_service.FSARequestNotificationService')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "request_service.DirectoryService"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "request_service.FSARequestNotificationService"
+    )
     def test_complete_request_sets_directory_name(
-        self, mock_notification, mock_directory_service,
-        authenticated_client, test_project, test_user, test_pi
+        self,
+        mock_notification,
+        mock_directory_service,
+        authenticated_client,
+        test_project,
+        test_user,
+        test_pi,
     ):
         """Test completion sets directory_name in request state."""
         # Setup mocks
@@ -259,26 +278,25 @@ class TestCompleteRequestAPIIntegration:
 
         # Create processing request
         request_obj = create_fsa_request(
-            status='Approved - Processing',
+            status="Approved - Processing",
             project=test_project,
             requester=test_user,
             pi=test_pi,
-            approved_amount_gb=1000
+            approved_amount_gb=1000,
         )
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-complete', kwargs={'pk': request_obj.id})
+        url = reverse(
+            "faculty-storage-allocation-request-complete", kwargs={"pk": request_obj.id}
+        )
         response = authenticated_client.patch(
-            url,
-            {'directory_name': 'fc_my_custom_dir'},
-            format='json'
+            url, {"directory_name": "fc_my_custom_dir"}, format="json"
         )
 
         # Assert
         assert response.status_code == status.HTTP_200_OK
         request_obj.refresh_from_db()
-        assert request_obj.state['setup']['directory_name'] == \
-            'fc_my_custom_dir'
+        assert request_obj.state["setup"]["directory_name"] == "fc_my_custom_dir"
 
     def test_complete_request_rejects_invalid_status(
         self, authenticated_client, test_project, test_user, test_pi
@@ -286,24 +304,24 @@ class TestCompleteRequestAPIIntegration:
         """Test cannot complete request not in 'Processing' status."""
         # Setup - request in wrong status
         request_obj = create_fsa_request(
-            status='Approved - Queued',  # Wrong status
+            status="Approved - Queued",  # Wrong status
             project=test_project,
             requester=test_user,
             pi=test_pi,
-            approved_amount_gb=1000
+            approved_amount_gb=1000,
         )
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-complete', kwargs={'pk': request_obj.id})
+        url = reverse(
+            "faculty-storage-allocation-request-complete", kwargs={"pk": request_obj.id}
+        )
         response = authenticated_client.patch(
-            url,
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            url, {"directory_name": "fc_test_dir"}, format="json"
         )
 
         # Assert
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert 'Approved - Processing' in response.data['detail']
+        assert "Approved - Processing" in response.data["detail"]
 
     def test_complete_request_validates_payload(
         self, authenticated_client, test_project, test_user, test_pi
@@ -311,31 +329,33 @@ class TestCompleteRequestAPIIntegration:
         """Test endpoint validates completion payload format."""
         # Setup
         request_obj = create_fsa_request(
-            status='Approved - Processing',
+            status="Approved - Processing",
             project=test_project,
             requester=test_user,
             pi=test_pi,
-            approved_amount_gb=1000
+            approved_amount_gb=1000,
         )
 
         # Execute - empty payload
-        url = reverse('faculty-storage-allocation-request-complete', kwargs={'pk': request_obj.id})
-        response = authenticated_client.patch(url, {}, format='json')
+        url = reverse(
+            "faculty-storage-allocation-request-complete", kwargs={"pk": request_obj.id}
+        )
+        response = authenticated_client.patch(url, {}, format="json")
 
         # Assert
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert 'directory_name' in response.data
+        assert "directory_name" in response.data
 
     def test_complete_request_returns_404_for_nonexistent_request(
         self, authenticated_client
     ):
         """Test endpoint returns 404 for non-existent request."""
         # Execute
-        url = reverse('faculty-storage-allocation-request-complete', kwargs={'pk': 99999})
+        url = reverse(
+            "faculty-storage-allocation-request-complete", kwargs={"pk": 99999}
+        )
         response = authenticated_client.patch(
-            url,
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            url, {"directory_name": "fc_test_dir"}, format="json"
         )
 
         # Assert
@@ -344,11 +364,9 @@ class TestCompleteRequestAPIIntegration:
     def test_complete_request_requires_authentication(self, api_client, db):
         """Test endpoint requires authentication."""
         # Execute - no credentials
-        url = reverse('faculty-storage-allocation-request-complete', kwargs={'pk': 1})
+        url = reverse("faculty-storage-allocation-request-complete", kwargs={"pk": 1})
         response = api_client.patch(
-            url,
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            url, {"directory_name": "fc_test_dir"}, format="json"
         )
 
         # Assert
@@ -362,44 +380,38 @@ class TestAPIAuthentication:
     def test_claim_endpoint_requires_valid_token(self, api_client, db):
         """Test claim endpoint rejects requests without valid token."""
         # No token
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = api_client.post(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
         # Invalid token
-        api_client.credentials(HTTP_AUTHORIZATION='Token invalid_token_key')
+        api_client.credentials(HTTP_AUTHORIZATION="Token invalid_token_key")
         response = api_client.post(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_complete_endpoint_requires_valid_token(self, api_client, db):
         """Test complete endpoint rejects requests without valid token."""
         # No token
-        url = reverse('faculty-storage-allocation-request-complete', kwargs={'pk': 1})
+        url = reverse("faculty-storage-allocation-request-complete", kwargs={"pk": 1})
         response = api_client.patch(
-            url,
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            url, {"directory_name": "fc_test_dir"}, format="json"
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
         # Invalid token
-        api_client.credentials(HTTP_AUTHORIZATION='Token invalid_token_key')
+        api_client.credentials(HTTP_AUTHORIZATION="Token invalid_token_key")
         response = api_client.patch(
-            url,
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            url, {"directory_name": "fc_test_dir"}, format="json"
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_expired_tokens_are_rejected(
-        self, api_client, expired_token
-    ):
+    def test_expired_tokens_are_rejected(self, api_client, expired_token):
         """Test expired tokens are not accepted."""
         # Setup - use expired token
-        api_client.credentials(HTTP_AUTHORIZATION=f'Token {expired_token.key}')
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {expired_token.key}")
 
         # Execute - try claim endpoint
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = api_client.post(url)
 
         # Assert - should be unauthorized
@@ -407,18 +419,16 @@ class TestAPIAuthentication:
         # If not enforced, this test may need adjustment
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_204_NO_CONTENT  # If token validation not enforced
+            status.HTTP_204_NO_CONTENT,  # If token validation not enforced
         ]
 
-    def test_valid_token_allows_access(
-        self, api_client, staff_token
-    ):
+    def test_valid_token_allows_access(self, api_client, staff_token):
         """Test valid token allows access to endpoints."""
         # Setup
-        api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_token.key}')
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {staff_token.key}")
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = api_client.post(url)
 
         # Assert - should not be unauthorized (may be 204 if no requests)
@@ -429,21 +439,19 @@ class TestAPIAuthentication:
 class TestAPIPermissions:
     """Test API permission enforcement."""
 
-    def test_superuser_can_access_claim_endpoint(
-        self, api_client, db
-    ):
+    def test_superuser_can_access_claim_endpoint(self, api_client, db):
         """Test superusers can access claim endpoint."""
         # Create superuser
         superuser = User.objects.create_superuser(
-            username='api_superuser',
-            email='api_superuser@test.com',
-            password='superpass'
+            username="api_superuser",
+            email="api_superuser@test.com",
+            password="superpass",
         )
         token = ExpiringToken.objects.create(user=superuser)
-        api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = api_client.post(url)
 
         # Should not be forbidden (may be 204 if no requests)
@@ -453,10 +461,10 @@ class TestAPIPermissions:
         self, api_client, staff_user, staff_token
     ):
         """Test users with can_manage permission can access claim endpoint."""
-        api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_token.key}')
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {staff_token.key}")
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = api_client.post(url)
 
         # Should not be forbidden (may be 204 if no requests)
@@ -466,30 +474,26 @@ class TestAPIPermissions:
         self, api_client, regular_token
     ):
         """Test regular users without permission are denied access."""
-        api_client.credentials(HTTP_AUTHORIZATION=f'Token {regular_token.key}')
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {regular_token.key}")
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = api_client.post(url)
 
         # Should be forbidden
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_staff_without_permission_denied_access(
-        self, api_client, db
-    ):
+    def test_staff_without_permission_denied_access(self, api_client, db):
         """Test staff users without manage permission are denied access."""
         # Create staff user WITHOUT the permission
         staff_no_perm = User.objects.create_user(
-            username='staff_no_perm',
-            email='staff_no_perm@test.com',
-            is_staff=True
+            username="staff_no_perm", email="staff_no_perm@test.com", is_staff=True
         )
         token = ExpiringToken.objects.create(user=staff_no_perm)
-        api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = api_client.post(url)
 
         # Should be forbidden
@@ -501,29 +505,27 @@ class TestAPIPermissions:
         """Test regular users cannot access complete endpoint."""
         # Create a processing request
         request_obj = create_fsa_request(
-            status='Approved - Processing',
+            status="Approved - Processing",
             project=test_project,
             requester=test_user,
             pi=test_pi,
-            approved_amount_gb=1000
+            approved_amount_gb=1000,
         )
 
-        api_client.credentials(HTTP_AUTHORIZATION=f'Token {regular_token.key}')
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {regular_token.key}")
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-complete', kwargs={'pk': request_obj.id})
+        url = reverse(
+            "faculty-storage-allocation-request-complete", kwargs={"pk": request_obj.id}
+        )
         response = api_client.patch(
-            url,
-            {'directory_name': 'fc_test_dir'},
-            format='json'
+            url, {"directory_name": "fc_test_dir"}, format="json"
         )
 
         # Should be forbidden
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_non_staff_user_with_permission_can_access(
-        self, api_client, db
-    ):
+    def test_non_staff_user_with_permission_can_access(self, api_client, db):
         """Test non-staff users with can_manage permission can access.
 
         This verifies that is_staff is not required - only the
@@ -533,20 +535,18 @@ class TestAPIPermissions:
 
         # Create NON-STAFF user with the permission
         non_staff_user = User.objects.create_user(
-            username='non_staff_admin',
-            email='non_staff_admin@test.com',
-            is_staff=False  # Explicitly not staff
+            username="non_staff_admin",
+            email="non_staff_admin@test.com",
+            is_staff=False,  # Explicitly not staff
         )
-        permission = Permission.objects.get(
-            codename='can_manage_fsa_requests'
-        )
+        permission = Permission.objects.get(codename="can_manage_fsa_requests")
         non_staff_user.user_permissions.add(permission)
 
         token = ExpiringToken.objects.create(user=non_staff_user)
-        api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         # Execute
-        url = reverse('faculty-storage-allocation-request-claim-next')
+        url = reverse("faculty-storage-allocation-request-claim-next")
         response = api_client.post(url)
 
         # Should not be forbidden (may be 204 if no requests)

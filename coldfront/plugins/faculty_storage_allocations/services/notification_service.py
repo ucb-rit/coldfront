@@ -3,9 +3,10 @@ from urllib.parse import urljoin
 from django.conf import settings as django_settings
 from django.urls import reverse
 
-from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
+from coldfront.core.utils.email.email_strategy import (
+    validate_email_strategy_or_get_default,
+)
 from coldfront.core.utils.mail import send_email_template
-
 from coldfront.plugins.faculty_storage_allocations.conf import settings
 
 
@@ -17,21 +18,23 @@ class FSARequestNotificationService:
         """Notify admins when a new request is created."""
         email_strategy = validate_email_strategy_or_get_default(email_strategy)
 
-        subject = (
-            f'New Faculty Storage Allocation Request - {request.project.name}')
-        template_name = 'faculty_storage_allocations/email/request_created.txt'
+        subject = f"New Faculty Storage Allocation Request - {request.project.name}"
+        template_name = "faculty_storage_allocations/email/request_created.txt"
         context = {
-            'project': request.project,
-            'requester': request.requester,
-            'pi': request.pi,
-            'amount_tb': request.requested_amount_gb // 1000,
-            'review_url': urljoin(
+            "project": request.project,
+            "requester": request.requester,
+            "pi": request.pi,
+            "amount_tb": request.requested_amount_gb // 1000,
+            "review_url": urljoin(
                 django_settings.CENTER_BASE_URL,
-                reverse('faculty-storage-allocation-request-detail', kwargs={'pk': request.pk})
+                reverse(
+                    "faculty-storage-allocation-request-detail",
+                    kwargs={"pk": request.pk},
+                ),
             ),
         }
         sender = django_settings.EMAIL_SENDER
-        receiver_list = _get_admin_notification_recipients('request_created')
+        receiver_list = _get_admin_notification_recipients("request_created")
 
         email_args = (subject, template_name, context, sender, receiver_list)
         email_strategy.process_email(send_email_template, *email_args)
@@ -42,19 +45,22 @@ class FSARequestNotificationService:
         email_strategy = validate_email_strategy_or_get_default(email_strategy)
 
         subject = (
-            f'Faculty Storage Allocation Request Approved - '
-            f'{request.project.name}')
-        template_name = 'faculty_storage_allocations/email/request_approved.txt'
+            f"Faculty Storage Allocation Request Approved - {request.project.name}"
+        )
+        template_name = "faculty_storage_allocations/email/request_approved.txt"
         context = {
-            'project': request.project,
-            'amount_tb': request.approved_amount_gb // 1000,
-            'review_url': urljoin(
+            "project": request.project,
+            "amount_tb": request.approved_amount_gb // 1000,
+            "review_url": urljoin(
                 django_settings.CENTER_BASE_URL,
-                reverse('faculty-storage-allocation-request-detail', kwargs={'pk': request.pk})
+                reverse(
+                    "faculty-storage-allocation-request-detail",
+                    kwargs={"pk": request.pk},
+                ),
             ),
         }
         sender = django_settings.EMAIL_SENDER
-        receiver_list = _get_admin_notification_recipients('request_approved')
+        receiver_list = _get_admin_notification_recipients("request_approved")
 
         email_args = (subject, template_name, context, sender, receiver_list)
         email_strategy.process_email(send_email_template, *email_args)
@@ -65,20 +71,20 @@ class FSARequestNotificationService:
         email_strategy = validate_email_strategy_or_get_default(email_strategy)
 
         subject = (
-            f'Faculty Storage Allocation Request Complete - '
-            f'{request.project.name}')
-        template_name = 'faculty_storage_allocations/email/request_completed.txt'
+            f"Faculty Storage Allocation Request Complete - {request.project.name}"
+        )
+        template_name = "faculty_storage_allocations/email/request_completed.txt"
         context = {
-            'center_name': django_settings.CENTER_NAME,
-            'project': request.project,
-            'amount_tb': request.approved_amount_gb // 1000,
-            'directory_path': directory_path,
-            'project_url': urljoin(
+            "center_name": django_settings.CENTER_NAME,
+            "project": request.project,
+            "amount_tb": request.approved_amount_gb // 1000,
+            "directory_path": directory_path,
+            "project_url": urljoin(
                 django_settings.CENTER_BASE_URL,
-                reverse('project-detail', kwargs={'pk': request.project.pk})
+                reverse("project-detail", kwargs={"pk": request.project.pk}),
             ),
-            'support_email': django_settings.CENTER_HELP_EMAIL,
-            'signature': django_settings.EMAIL_SIGNATURE,
+            "support_email": django_settings.CENTER_HELP_EMAIL,
+            "signature": django_settings.EMAIL_SIGNATURE,
         }
         sender = django_settings.EMAIL_SENDER
         receiver_list = list(set([request.requester.email, request.pi.email]))
@@ -93,18 +99,16 @@ class FSARequestNotificationService:
 
         reason = request.denial_reason()
 
-        subject = (
-            f'Faculty Storage Allocation Request Denied - '
-            f'{request.project.name}')
-        template_name = 'faculty_storage_allocations/email/request_denied.txt'
+        subject = f"Faculty Storage Allocation Request Denied - {request.project.name}"
+        template_name = "faculty_storage_allocations/email/request_denied.txt"
         context = {
-            'center_name': django_settings.CENTER_NAME,
-            'project': request.project,
-            'amount_tb': request.requested_amount_gb // 1000,
-            'reason_category': reason.category,
-            'reason_justification': reason.justification,
-            'support_email': django_settings.CENTER_HELP_EMAIL,
-            'signature': django_settings.EMAIL_SIGNATURE,
+            "center_name": django_settings.CENTER_NAME,
+            "project": request.project,
+            "amount_tb": request.requested_amount_gb // 1000,
+            "reason_category": reason.category,
+            "reason_justification": reason.justification,
+            "support_email": django_settings.CENTER_HELP_EMAIL,
+            "signature": django_settings.EMAIL_SIGNATURE,
         }
         sender = django_settings.EMAIL_SENDER
         receiver_list = list(set([request.requester.email, request.pi.email]))

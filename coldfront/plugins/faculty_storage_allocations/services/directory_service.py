@@ -2,15 +2,16 @@ import os
 
 from django.db import transaction
 
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.models import AllocationAttribute
-from coldfront.core.allocation.models import AllocationAttributeType
-from coldfront.core.allocation.models import AllocationStatusChoice
-from coldfront.core.allocation.models import AllocationUser
-from coldfront.core.allocation.models import AllocationUserStatusChoice
+from coldfront.core.allocation.models import (
+    Allocation,
+    AllocationAttribute,
+    AllocationAttributeType,
+    AllocationStatusChoice,
+    AllocationUser,
+    AllocationUserStatusChoice,
+)
 from coldfront.core.allocation.utils import get_or_create_active_allocation_user
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectUser
+from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.resource.models import Resource
 from coldfront.core.utils.common import display_time_zone_current_date
 
@@ -45,14 +46,16 @@ class DirectoryService:
         self.directory_name = directory_name
 
         self._faculty_storage_directory = Resource.objects.get(
-            name='Scratch Faculty Storage Directory')
+            name="Scratch Faculty Storage Directory"
+        )
 
         # Get base directory path
-        directory_path_attr = \
-            self._faculty_storage_directory.resourceattribute_set.get(
-                resource_attribute_type__name='path')
+        directory_path_attr = self._faculty_storage_directory.resourceattribute_set.get(
+            resource_attribute_type__name="path"
+        )
         self._directory_path = os.path.join(
-            directory_path_attr.value, self.directory_name)
+            directory_path_attr.value, self.directory_name
+        )
 
         # Cache for allocation (lazy-loaded)
         self._allocation = None
@@ -70,9 +73,11 @@ class DirectoryService:
             The base path (string) from the resource attribute
         """
         faculty_storage_resource = Resource.objects.get(
-            name='Scratch Faculty Storage Directory')
+            name="Scratch Faculty Storage Directory"
+        )
         base_path_attr = faculty_storage_resource.resourceattribute_set.get(
-            resource_attribute_type__name='path')
+            resource_attribute_type__name="path"
+        )
         return base_path_attr.value
 
     @staticmethod
@@ -100,7 +105,9 @@ class DirectoryService:
         """
         # First check if request has a proposed directory name in state
         if fsa_request:
-            directory_name = fsa_request.state.get('setup', {}).get('directory_name', '')
+            directory_name = fsa_request.state.get("setup", {}).get(
+                "directory_name", ""
+            )
             if directory_name:
                 return directory_name
             # For pending requests without setup state, use project name
@@ -108,11 +115,11 @@ class DirectoryService:
 
         # No fsa_request provided, check for existing allocation
         faculty_storage_resource = Resource.objects.get(
-            name='Scratch Faculty Storage Directory')
+            name="Scratch Faculty Storage Directory"
+        )
 
         allocations = Allocation.objects.filter(
-            project=project,
-            resources=faculty_storage_resource
+            project=project, resources=faculty_storage_resource
         )
 
         if not allocations.exists():
@@ -121,19 +128,20 @@ class DirectoryService:
 
         if allocations.count() > 1:
             raise ValueError(
-                f'Project {project.name} has multiple faculty storage '
-                f'allocations, which should not be possible'
+                f"Project {project.name} has multiple faculty storage "
+                f"allocations, which should not be possible"
             )
 
         allocation = allocations.first()
 
         # Extract directory name from the allocation's path attribute
         allocation_attribute_type = AllocationAttributeType.objects.get(
-            name='Cluster Directory Access')
+            name="Cluster Directory Access"
+        )
         try:
             path_attr = AllocationAttribute.objects.get(
                 allocation=allocation,
-                allocation_attribute_type=allocation_attribute_type
+                allocation_attribute_type=allocation_attribute_type,
             )
             # The path is like /global/scratch/my_project_dir
             # Extract just the directory name (last component)
@@ -193,7 +201,7 @@ class DirectoryService:
 
     def create_directory(self):
         """Create a directory idempotently for the given project."""
-        active_status = AllocationStatusChoice.objects.get(name='Active')
+        active_status = AllocationStatusChoice.objects.get(name="Active")
         allocation = self._get_allocation()
 
         current_date = display_time_zone_current_date()
@@ -202,16 +210,17 @@ class DirectoryService:
             # Doesn't exist, create it
             with transaction.atomic():
                 allocation = Allocation.objects.create(
-                    project=self.project,
-                    start_date=current_date,
-                    status=active_status)
+                    project=self.project, start_date=current_date, status=active_status
+                )
                 allocation.resources.add(self._faculty_storage_directory)
                 allocation_attribute_type = AllocationAttributeType.objects.get(
-                    name='Cluster Directory Access')
+                    name="Cluster Directory Access"
+                )
                 AllocationAttribute.objects.create(
                     allocation_attribute_type=allocation_attribute_type,
                     allocation=allocation,
-                    value=self._directory_path)
+                    value=self._directory_path,
+                )
                 # Cache the newly created allocation
                 self._allocation = allocation
         else:
@@ -230,7 +239,7 @@ class DirectoryService:
         return Allocation.objects.filter(
             project=self.project,
             resources=self._faculty_storage_directory,
-            allocationattribute__value=self._directory_path
+            allocationattribute__value=self._directory_path,
         ).exists()
 
     def set_directory_quota(self, amount_gb):
@@ -243,17 +252,18 @@ class DirectoryService:
         allocation = self._get_allocation()
         if allocation is None:
             raise ValueError(
-                'Cannot set quota: directory allocation does not exist. '
-                'Call create_directory() first.'
+                "Cannot set quota: directory allocation does not exist. "
+                "Call create_directory() first."
             )
 
         quota_attribute_type = AllocationAttributeType.objects.get(
-            name='Storage Quota (GB)')
+            name="Storage Quota (GB)"
+        )
 
         AllocationAttribute.objects.update_or_create(
             allocation_attribute_type=quota_attribute_type,
             allocation=allocation,
-            defaults={'value': str(amount_gb)}
+            defaults={"value": str(amount_gb)},
         )
 
     def add_to_directory_quota(self, additional_gb):
@@ -285,12 +295,12 @@ class DirectoryService:
             return 0
 
         quota_attribute_type = AllocationAttributeType.objects.get(
-            name='Storage Quota (GB)')
+            name="Storage Quota (GB)"
+        )
 
         try:
             quota_attr = AllocationAttribute.objects.get(
-                allocation_attribute_type=quota_attribute_type,
-                allocation=allocation
+                allocation_attribute_type=quota_attribute_type, allocation=allocation
             )
             return int(quota_attr.value)
         except AllocationAttribute.DoesNotExist:
@@ -312,9 +322,9 @@ class DirectoryService:
         allocation = self._get_allocation()
         if allocation is None:
             raise ValueError(
-                f'Cannot add user to directory: allocation does not exist '
-                f'for project {self.project.name} with directory name '
-                f'{self.directory_name}. Call create_directory() first.'
+                f"Cannot add user to directory: allocation does not exist "
+                f"for project {self.project.name} with directory name "
+                f"{self.directory_name}. Call create_directory() first."
             )
 
         return get_or_create_active_allocation_user(allocation, user)
@@ -335,21 +345,21 @@ class DirectoryService:
         allocation = self._get_allocation()
         if allocation is None:
             raise ValueError(
-                f'Cannot add users to directory: allocation does not exist '
-                f'for project {self.project.name} with directory name '
-                f'{self.directory_name}. Call create_directory() first.'
+                f"Cannot add users to directory: allocation does not exist "
+                f"for project {self.project.name} with directory name "
+                f"{self.directory_name}. Call create_directory() first."
             )
 
         active_project_users = ProjectUser.objects.filter(
-            project=self.project,
-            status__name='Active'
+            project=self.project, status__name="Active"
         )
 
         allocation_users = []
         with transaction.atomic():
             for project_user in active_project_users:
                 allocation_user = get_or_create_active_allocation_user(
-                    allocation, project_user.user)
+                    allocation, project_user.user
+                )
                 allocation_users.append(allocation_user)
 
         return allocation_users
@@ -371,9 +381,9 @@ class DirectoryService:
         allocation = self._get_allocation()
         if allocation is None:
             raise ValueError(
-                f'Cannot remove user from directory: allocation does not '
-                f'exist for project {self.project.name} with directory name '
-                f'{self.directory_name}.'
+                f"Cannot remove user from directory: allocation does not "
+                f"exist for project {self.project.name} with directory name "
+                f"{self.directory_name}."
             )
 
         try:
@@ -381,7 +391,7 @@ class DirectoryService:
         except AllocationUser.DoesNotExist:
             return None
 
-        removed_status = AllocationUserStatusChoice.objects.get(name='Removed')
+        removed_status = AllocationUserStatusChoice.objects.get(name="Removed")
         allocation_user.status = removed_status
         allocation_user.save()
         return allocation_user
@@ -401,7 +411,7 @@ class DirectoryService:
                 self._allocation = Allocation.objects.get(
                     project=self.project,
                     resources=self._faculty_storage_directory,
-                    allocationattribute__value=self._directory_path
+                    allocationattribute__value=self._directory_path,
                 )
             except Allocation.DoesNotExist:
                 self._allocation = None

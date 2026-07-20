@@ -6,6 +6,7 @@ used across multiple test modules. Not a test file itself.
 
 from datetime import datetime
 from unittest.mock import Mock
+
 from django.utils import timezone
 
 
@@ -43,7 +44,7 @@ class MockCache:
 class MockUser:
     """Mock Django User object for testing."""
 
-    def __init__(self, user_id, username='testuser', email='test@example.com'):
+    def __init__(self, user_id, username="testuser", email="test@example.com"):
         self.id = user_id
         self.username = username
         self.email = email
@@ -57,12 +58,12 @@ def assert_request_state_valid(request):
     Args:
         request: FacultyStorageAllocationRequest instance
     """
-    assert 'eligibility' in request.state
-    assert 'status' in request.state['eligibility']
-    assert 'timestamp' in request.state['eligibility']
+    assert "eligibility" in request.state
+    assert "status" in request.state["eligibility"]
+    assert "timestamp" in request.state["eligibility"]
 
-    assert 'setup' in request.state
-    assert 'intake_consistency' in request.state
+    assert "setup" in request.state
+    assert "intake_consistency" in request.state
 
 
 def create_test_request_data(**kwargs):
@@ -75,8 +76,8 @@ def create_test_request_data(**kwargs):
         dict: Test request data
     """
     defaults = {
-        'requested_amount_gb': 1000,
-        'justification': 'Test justification for FSA request',
+        "requested_amount_gb": 1000,
+        "justification": "Test justification for FSA request",
     }
     defaults.update(kwargs)
     return defaults
@@ -91,19 +92,20 @@ def assert_state_transition_valid(request, stage, expected_status):
         expected_status: str - Expected status value
     """
     assert stage in request.state
-    assert request.state[stage]['status'] == expected_status
+    assert request.state[stage]["status"] == expected_status
 
     # Timestamp should be set when status changes
-    if expected_status != 'Pending':
-        assert 'timestamp' in request.state[stage]
-        assert request.state[stage]['timestamp'] is not None
+    if expected_status != "Pending":
+        assert "timestamp" in request.state[stage]
+        assert request.state[stage]["timestamp"] is not None
 
 
 # ============================================================================
 # Factory Functions
 # ============================================================================
 
-def create_fsa_request(status='Under Review', **overrides):
+
+def create_fsa_request(status="Under Review", **overrides):
     """Factory for creating FSA requests with custom attributes.
 
     Args:
@@ -130,18 +132,19 @@ def create_fsa_request(status='Under Review', **overrides):
     )
 
     defaults = {
-        'requested_amount_gb': 1000,
-        'state': faculty_storage_allocation_request_state_schema(),
+        "requested_amount_gb": 1000,
+        "state": faculty_storage_allocation_request_state_schema(),
     }
     defaults.update(overrides)
 
     # Handle status separately to get or create the status choice
-    if 'status' not in defaults:
+    if "status" not in defaults:
         status_obj, _ = (
-            FacultyStorageAllocationRequestStatusChoice.objects
-            .get_or_create(name=status)
+            FacultyStorageAllocationRequestStatusChoice.objects.get_or_create(
+                name=status
+            )
         )
-        defaults['status'] = status_obj
+        defaults["status"] = status_obj
 
     return FacultyStorageAllocationRequest.objects.create(**defaults)
 
@@ -166,27 +169,25 @@ def create_allocation_with_storage(project, resource, quota_gb=1000):
     """
     from coldfront.core.allocation.models import (
         Allocation,
-        AllocationStatusChoice,
         AllocationAttribute,
         AllocationAttributeType,
+        AllocationStatusChoice,
     )
 
     allocation = Allocation.objects.create(
         project=project,
-        status=AllocationStatusChoice.objects.get_or_create(
-            name='Active'
-        )[0],
+        status=AllocationStatusChoice.objects.get_or_create(name="Active")[0],
     )
     allocation.resources.add(resource)
 
     # Add quota attribute
     quota_attr_type, _ = AllocationAttributeType.objects.get_or_create(
-        name='Storage Quota (GB)',
+        name="Storage Quota (GB)",
         defaults={
-            'is_required': True,
-            'is_unique': False,
-            'is_private': False,
-        }
+            "is_required": True,
+            "is_unique": False,
+            "is_private": False,
+        },
     )
     AllocationAttribute.objects.create(
         allocation=allocation,
@@ -197,8 +198,7 @@ def create_allocation_with_storage(project, resource, quota_gb=1000):
     return allocation
 
 
-def update_request_state(request, stage, status, justification='',
-                         directory_name=None):
+def update_request_state(request, stage, status, justification="", directory_name=None):
     """Update a FSA request's state field for a specific stage.
 
     Args:
@@ -222,22 +222,21 @@ def update_request_state(request, stage, status, justification='',
         request.save()
     """
     if stage not in request.state:
-        raise ValueError(f'Invalid stage: {stage}')
+        raise ValueError(f"Invalid stage: {stage}")
 
-    request.state[stage]['status'] = status
-    request.state[stage]['timestamp'] = timezone.now().isoformat()
+    request.state[stage]["status"] = status
+    request.state[stage]["timestamp"] = timezone.now().isoformat()
 
     if justification:
-        request.state[stage]['justification'] = justification
+        request.state[stage]["justification"] = justification
 
-    if directory_name and stage == 'setup':
-        request.state[stage]['directory_name'] = directory_name
+    if directory_name and stage == "setup":
+        request.state[stage]["directory_name"] = directory_name
 
     return request
 
 
-def assert_email_sent(mailoutbox, subject_contains, recipient,
-                      expected_count=1):
+def assert_email_sent(mailoutbox, subject_contains, recipient, expected_count=1):
     """Assert that an email was sent with expected properties.
 
     Args:
@@ -257,15 +256,15 @@ def assert_email_sent(mailoutbox, subject_contains, recipient,
         )
     """
     matching_emails = [
-        email for email in mailoutbox
-        if subject_contains.lower() in email.subject.lower()
-        and recipient in email.to
+        email
+        for email in mailoutbox
+        if subject_contains.lower() in email.subject.lower() and recipient in email.to
     ]
 
     assert len(matching_emails) == expected_count, (
-        f'Expected {expected_count} email(s) with subject containing '
+        f"Expected {expected_count} email(s) with subject containing "
         f'"{subject_contains}" to {recipient}, '
-        f'but found {len(matching_emails)}'
+        f"but found {len(matching_emails)}"
     )
 
 
@@ -282,6 +281,5 @@ def assert_request_has_allocations(request, expected_count=2):
     """
     allocations = request.project.allocation_set.all()
     assert allocations.count() == expected_count, (
-        f'Expected {expected_count} allocation(s), '
-        f'but found {allocations.count()}'
+        f"Expected {expected_count} allocation(s), but found {allocations.count()}"
     )

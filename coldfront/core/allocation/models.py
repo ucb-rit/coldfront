@@ -1,16 +1,15 @@
-import datetime
-import importlib
-import logging
 from ast import literal_eval
 from collections import namedtuple
+import datetime
 from decimal import Decimal
+import importlib
+import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.files.storage import FileSystemStorage
-from django.core.validators import MaxValueValidator
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.html import mark_safe
@@ -19,22 +18,21 @@ from model_utils.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
 from coldfront.core.billing.models import BillingActivity
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectUser
+from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.resource.models import Resource
-from coldfront.core.utils.common import import_from_settings
-from coldfront.core.utils.common import display_time_zone_current_date
-from coldfront.core.utils.mou import DynamicFileField
-from coldfront.core.utils.mou import upload_to_func
-
+from coldfront.core.utils.common import (
+    display_time_zone_current_date,
+    import_from_settings,
+)
+from coldfront.core.utils.mou import DynamicFileField, upload_to_func
 
 logger = logging.getLogger(__name__)
 
 
-ALLOCATION_FUNCS_ON_EXPIRE = import_from_settings(
-    'ALLOCATION_FUNCS_ON_EXPIRE', [])
+ALLOCATION_FUNCS_ON_EXPIRE = import_from_settings("ALLOCATION_FUNCS_ON_EXPIRE", [])
 SLURM_ACCOUNT_ATTRIBUTE_NAME = import_from_settings(
-    'SLURM_ACCOUNT_ATTRIBUTE_NAME', 'slurm_account_name')
+    "SLURM_ACCOUNT_ATTRIBUTE_NAME", "slurm_account_name"
+)
 
 
 class AllocationStatusChoice(TimeStampedModel):
@@ -44,15 +42,22 @@ class AllocationStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class Allocation(TimeStampedModel):
-    """ Allocation to a system Resource. """
-    project = models.ForeignKey(Project, on_delete=models.CASCADE,)
+    """Allocation to a system Resource."""
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+    )
     resources = models.ManyToManyField(Resource)
     status = models.ForeignKey(
-        AllocationStatusChoice, on_delete=models.CASCADE, verbose_name='Status')
+        AllocationStatusChoice, on_delete=models.CASCADE, verbose_name="Status"
+    )
     quantity = models.IntegerField(default=1)
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
@@ -62,45 +67,48 @@ class Allocation(TimeStampedModel):
     history = HistoricalRecords()
 
     class Meta:
-        ordering = ['end_date', ]
+        ordering = [
+            "end_date",
+        ]
 
         permissions = (
-            ('can_view_all_allocations', 'Can view all allocations'),
-            ('can_review_allocation_requests',
-             'Can review allocation requests'),
-            ('can_manage_invoice', 'Can manage invoice'),
-            ('can_review_cluster_account_requests',
-             'Can review cluster account requests'),
+            ("can_view_all_allocations", "Can view all allocations"),
+            ("can_review_allocation_requests", "Can review allocation requests"),
+            ("can_manage_invoice", "Can manage invoice"),
+            (
+                "can_review_cluster_account_requests",
+                "Can review cluster account requests",
+            ),
         )
 
     def clean(self):
-        if self.status.name == 'Expired':
+        if self.status.name == "Expired":
             if not self.end_date:
-                raise ValidationError('You have to set the end date.')
+                raise ValidationError("You have to set the end date.")
 
             if self.end_date > datetime.datetime.now().date():
-                raise ValidationError(
-                    'End date cannot be greater than today.')
+                raise ValidationError("End date cannot be greater than today.")
 
             if self.start_date > self.end_date:
-                raise ValidationError(
-                    'End date cannot be greater than start date.')
+                raise ValidationError("End date cannot be greater than start date.")
 
-        elif self.status.name == 'Active':
+        elif self.status.name == "Active":
             if not self.start_date:
-                raise ValidationError('You have to set the start date.')
+                raise ValidationError("You have to set the start date.")
 
             if not self.end_date:
-                raise ValidationError('You have to set the end date.')
+                raise ValidationError("You have to set the end date.")
 
             if self.start_date > self.end_date:
-                raise ValidationError(
-                    'Start date cannot be greater than the end date.')
+                raise ValidationError("Start date cannot be greater than the end date.")
 
     def save(self, *args, **kwargs):
         if self.pk:
             old_obj = Allocation.objects.get(pk=self.pk)
-            if old_obj.status.name != self.status.name and self.status.name == 'Expired':
+            if (
+                old_obj.status.name != self.status.name
+                and self.status.name == "Expired"
+            ):
                 for func_string in ALLOCATION_FUNCS_ON_EXPIRE:
                     func_to_run = import_string(func_string)
                     func_to_run(self.pk)
@@ -113,48 +121,63 @@ class Allocation(TimeStampedModel):
 
     @property
     def get_information(self):
-        html_string = ''
+        html_string = ""
         for attribute in self.allocationattribute_set.all():
+            if attribute.allocation_attribute_type.name in [
+                SLURM_ACCOUNT_ATTRIBUTE_NAME,
+            ]:
+                html_string += "%s: %s <br>" % (
+                    attribute.allocation_attribute_type.name,
+                    attribute.value,
+                )
 
-            if attribute.allocation_attribute_type.name in [SLURM_ACCOUNT_ATTRIBUTE_NAME, ]:
-                html_string += '%s: %s <br>' % (
-                    attribute.allocation_attribute_type.name, attribute.value)
+            if attribute.allocation_attribute_type.name == "Service Units":
+                from coldfront.core.allocation.utils_.accounting_utils.services import (
+                    ServiceUnitsUsageService,
+                )
 
-            if attribute.allocation_attribute_type.name == 'Service Units':
-                from coldfront.core.allocation.utils_.accounting_utils.services import ServiceUnitsUsageService
                 service = ServiceUnitsUsageService()
-                displayed_su_usage = service.get_usage_display(
-                    self.project, attribute)
-                html_string += f'Service Units: {displayed_su_usage} <br>'
+                displayed_su_usage = service.get_usage_display(self.project, attribute)
+                html_string += f"Service Units: {displayed_su_usage} <br>"
                 continue
 
-            if hasattr(attribute, 'allocationattributeusage'):
+            if hasattr(attribute, "allocationattributeusage"):
                 try:
-                    percent = round(float(attribute.allocationattributeusage.value) /
-                                    float(attribute.value) * 10000) / 100
+                    percent = (
+                        round(
+                            float(attribute.allocationattributeusage.value)
+                            / float(attribute.value)
+                            * 10000
+                        )
+                        / 100
+                    )
                 except ZeroDivisionError:
                     percent = 0
                 except ValueError:
-                    percent = 'Invalid Value'
-                    logger.error("Allocation attribute '%s' is not an int but has a usage",
-                                 attribute.allocation_attribute_type.name)
+                    percent = "Invalid Value"
+                    logger.error(
+                        "Allocation attribute '%s' is not an int but has a usage",
+                        attribute.allocation_attribute_type.name,
+                    )
 
-                string = '{}: {}/{} ({} %) <br>'.format(
+                string = "{}: {}/{} ({} %) <br>".format(
                     attribute.allocation_attribute_type.name,
                     attribute.allocationattributeusage.value,
                     attribute.value,
-                    percent
+                    percent,
                 )
                 html_string += string
 
-            if attribute.allocation_attribute_type.name == 'Cluster Directory Access':
-                html_string += 'Directory Name: {}'.format(attribute.value)
+            if attribute.allocation_attribute_type.name == "Cluster Directory Access":
+                html_string += "Directory Name: {}".format(attribute.value)
 
         return mark_safe(html_string)
 
     @property
     def get_resources_as_string(self):
-        return ', '.join([ele.name for ele in self.resources.all().order_by('-is_allocatable')])
+        return ", ".join(
+            [ele.name for ele in self.resources.all().order_by("-is_allocatable")]
+        )
 
     @property
     def get_parent_resource(self):
@@ -165,23 +188,26 @@ class Allocation(TimeStampedModel):
 
     def get_attribute(self, name):
         attr = self.allocationattribute_set.filter(
-            allocation_attribute_type__name=name).first()
+            allocation_attribute_type__name=name
+        ).first()
         if attr:
             return attr.value
         return None
 
     def set_usage(self, name, value):
         attr = self.allocationattribute_set.filter(
-            allocation_attribute_type__name=name).first()
+            allocation_attribute_type__name=name
+        ).first()
         if not attr:
             return
 
         if not attr.allocation_attribute_type.has_usage:
             return
 
-        if not AllocationAttributeUsage.objects.filter(allocation_attribute=attr).exists():
-            usage = AllocationAttributeUsage.objects.create(
-                allocation_attribute=attr)
+        if not AllocationAttributeUsage.objects.filter(
+            allocation_attribute=attr
+        ).exists():
+            usage = AllocationAttributeUsage.objects.create(allocation_attribute=attr)
         else:
             usage = attr.allocationattributeusage
 
@@ -190,7 +216,8 @@ class Allocation(TimeStampedModel):
 
     def get_attribute_list(self, name):
         attr = self.allocationattribute_set.filter(
-            allocation_attribute_type__name=name).all()
+            allocation_attribute_type__name=name
+        ).all()
         return [a.value for a in attr]
 
     def __str__(self):
@@ -217,18 +244,22 @@ class AllocationUserNote(TimeStampedModel):
 
 
 class AttributeType(TimeStampedModel):
-    """ AttributeType. """
+    """AttributeType."""
+
     name = models.CharField(max_length=64)
 
     def __str__(self):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class AllocationAttributeType(TimeStampedModel):
-    """ AllocationAttributeType. """
+    """AllocationAttributeType."""
+
     attribute_type = models.ForeignKey(AttributeType, on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
     has_usage = models.BooleanField(default=False)
@@ -238,43 +269,60 @@ class AllocationAttributeType(TimeStampedModel):
     history = HistoricalRecords()
 
     def __str__(self):
-        return '%s (%s)' % (self.name, self.attribute_type.name)
+        return "%s (%s)" % (self.name, self.attribute_type.name)
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class AllocationAttribute(TimeStampedModel):
-    """ AllocationAttribute. """
+    """AllocationAttribute."""
+
     allocation_attribute_type = models.ForeignKey(
-        AllocationAttributeType, on_delete=models.CASCADE)
+        AllocationAttributeType, on_delete=models.CASCADE
+    )
     allocation = models.ForeignKey(Allocation, on_delete=models.CASCADE)
     value = models.CharField(max_length=128)
     history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        if self.allocation_attribute_type.has_usage and not AllocationAttributeUsage.objects.filter(allocation_attribute=self).exists():
-            AllocationAttributeUsage.objects.create(
-                allocation_attribute=self)
+        if (
+            self.allocation_attribute_type.has_usage
+            and not AllocationAttributeUsage.objects.filter(
+                allocation_attribute=self
+            ).exists()
+        ):
+            AllocationAttributeUsage.objects.create(allocation_attribute=self)
 
     def clean(self):
-        if self.allocation_attribute_type.is_unique and self.allocation.allocationattribute_set.filter(allocation_attribute_type=self.allocation_attribute_type).exists():
-            raise ValidationError("'{}' attribute already exists for this allocation.".format(
-                self.allocation_attribute_type))
+        if (
+            self.allocation_attribute_type.is_unique
+            and self.allocation.allocationattribute_set.filter(
+                allocation_attribute_type=self.allocation_attribute_type
+            ).exists()
+        ):
+            raise ValidationError(
+                "'{}' attribute already exists for this allocation.".format(
+                    self.allocation_attribute_type
+                )
+            )
 
         expected_value_type = self.allocation_attribute_type.attribute_type.name.strip()
-        validate_allocation_attribute_value_type(
-            expected_value_type, self.value)
+        validate_allocation_attribute_value_type(expected_value_type, self.value)
 
     def __str__(self):
-        return '%s' % (self.allocation_attribute_type.name)
+        return "%s" % (self.allocation_attribute_type.name)
 
 
 class AllocationAttributeUsage(TimeStampedModel):
-    """ AllocationAttributeUsage. """
+    """AllocationAttributeUsage."""
+
     allocation_attribute = models.OneToOneField(
-        AllocationAttribute, on_delete=models.CASCADE, primary_key=True)
+        AllocationAttribute, on_delete=models.CASCADE, primary_key=True
+    )
     value = models.DecimalField(
         max_digits=settings.DECIMAL_MAX_DIGITS,
         decimal_places=settings.DECIMAL_MAX_PLACES,
@@ -282,11 +330,14 @@ class AllocationAttributeUsage(TimeStampedModel):
         validators=[
             MinValueValidator(settings.ALLOCATION_MIN),
             MaxValueValidator(settings.ALLOCATION_MAX),
-        ])
+        ],
+    )
     history = HistoricalRecords()
 
     def __str__(self):
-        return '{}: {}'.format(self.allocation_attribute.allocation_attribute_type.name, self.value)
+        return "{}: {}".format(
+            self.allocation_attribute.allocation_attribute_type.name, self.value
+        )
 
 
 class AllocationUserStatusChoice(TimeStampedModel):
@@ -296,23 +347,29 @@ class AllocationUserStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class AllocationUser(TimeStampedModel):
-    """ AllocationUser. """
+    """AllocationUser."""
+
     allocation = models.ForeignKey(Allocation, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    status = models.ForeignKey(AllocationUserStatusChoice, on_delete=models.CASCADE,
-                               verbose_name='Allocation User Status')
+    status = models.ForeignKey(
+        AllocationUserStatusChoice,
+        on_delete=models.CASCADE,
+        verbose_name="Allocation User Status",
+    )
     history = HistoricalRecords()
 
     def __str__(self):
-        return '%s (%s)' % (self.user, self.allocation.resources.first().name)
+        return "%s (%s)" % (self.user, self.allocation.resources.first().name)
 
     class Meta:
-        verbose_name_plural = 'Allocation User Status'
-        unique_together = ('user', 'allocation')
+        verbose_name_plural = "Allocation User Status"
+        unique_together = ("user", "allocation")
 
 
 class AllocationAccount(TimeStampedModel):
@@ -323,51 +380,57 @@ class AllocationAccount(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class AllocationUserAttribute(TimeStampedModel):
-    """ AllocationUserAttribute. """
+    """AllocationUserAttribute."""
+
     allocation_attribute_type = models.ForeignKey(
-        AllocationAttributeType, on_delete=models.CASCADE)
+        AllocationAttributeType, on_delete=models.CASCADE
+    )
     allocation = models.ForeignKey(Allocation, on_delete=models.CASCADE)
-    allocation_user = models.ForeignKey(
-        AllocationUser, on_delete=models.CASCADE)
+    allocation_user = models.ForeignKey(AllocationUser, on_delete=models.CASCADE)
     value = models.CharField(max_length=128)
     history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        if (self.allocation_attribute_type.has_usage and
-                not AllocationUserAttributeUsage.objects.filter(
-                    allocation_user_attribute=self).exists()):
-            AllocationUserAttributeUsage.objects.create(
-                allocation_user_attribute=self)
+        if (
+            self.allocation_attribute_type.has_usage
+            and not AllocationUserAttributeUsage.objects.filter(
+                allocation_user_attribute=self
+            ).exists()
+        ):
+            AllocationUserAttributeUsage.objects.create(allocation_user_attribute=self)
 
     def clean(self):
         if self.allocation_attribute_type.is_unique:
             kwargs = {
                 "allocation_attribute_type": self.allocation_attribute_type,
             }
-            if self.allocation.allocationuserattribute_set.filter(
-                    **kwargs).exists():
+            if self.allocation.allocationuserattribute_set.filter(**kwargs).exists():
                 raise ValidationError(
-                    ("'{}' attribute already exists for this "
-                     "allocation.").format(self.allocation_attribute_type))
+                    ("'{}' attribute already exists for this allocation.").format(
+                        self.allocation_attribute_type
+                    )
+                )
 
-        expected_value_type = \
-            self.allocation_attribute_type.attribute_type.name.strip()
-        validate_allocation_attribute_value_type(
-            expected_value_type, self.value)
+        expected_value_type = self.allocation_attribute_type.attribute_type.name.strip()
+        validate_allocation_attribute_value_type(expected_value_type, self.value)
 
     def __str__(self):
         return self.allocation_attribute_type.name
 
 
 class AllocationUserAttributeUsage(TimeStampedModel):
-    """ AllocationUserAttributeUsage. """
+    """AllocationUserAttributeUsage."""
+
     allocation_user_attribute = models.OneToOneField(
-        AllocationUserAttribute, on_delete=models.CASCADE, primary_key=True)
+        AllocationUserAttribute, on_delete=models.CASCADE, primary_key=True
+    )
     value = models.DecimalField(
         max_digits=settings.DECIMAL_MAX_DIGITS,
         decimal_places=settings.DECIMAL_MAX_PLACES,
@@ -375,40 +438,40 @@ class AllocationUserAttributeUsage(TimeStampedModel):
         validators=[
             MinValueValidator(settings.ALLOCATION_MIN),
             MaxValueValidator(settings.ALLOCATION_MAX),
-        ])
+        ],
+    )
     history = HistoricalRecords()
 
     def __str__(self):
-        return '{}: {}'.format(
-            self.allocation_user_attribute.allocation_attribute_type.name,
-            self.value)
+        return "{}: {}".format(
+            self.allocation_user_attribute.allocation_attribute_type.name, self.value
+        )
 
 
 def validate_allocation_attribute_value_type(expected_value_type, value):
     """Raise a ValidationError if the given value does not conform to
     the requirements of the expected value type."""
-    if (expected_value_type == 'Int' and
-            not isinstance(literal_eval(value), int)):
+    if expected_value_type == "Int" and not isinstance(literal_eval(value), int):
+        raise ValidationError('Invalid Value "%s". Value must be an integer.' % value)
+    elif expected_value_type == "Decimal" and not isinstance(
+        literal_eval(value), (Decimal, int, str)
+    ):
+        raise ValidationError('Invalid Value "%s". Value must be a decimal.' % value)
+    elif expected_value_type == "Float" and not isinstance(
+        literal_eval(value), (float, int)
+    ):
+        raise ValidationError('Invalid Value "%s". Value must be a float.' % value)
+    elif expected_value_type == "Yes/No" and value not in ["Yes", "No"]:
         raise ValidationError(
-            'Invalid Value "%s". Value must be an integer.' % value)
-    elif (expected_value_type == 'Decimal' and
-            not isinstance(literal_eval(value), (Decimal, int, str))):
-        raise ValidationError(
-            'Invalid Value "%s". Value must be a decimal.' % value)
-    elif (expected_value_type == 'Float' and
-          not isinstance(literal_eval(value), (float, int))):
-        raise ValidationError(
-            'Invalid Value "%s". Value must be a float.' % value)
-    elif expected_value_type == 'Yes/No' and value not in ['Yes', 'No']:
-        raise ValidationError(
-            'Invalid Value "%s". Allowed inputs are "Yes" or "No".' % value)
-    elif expected_value_type == 'Date':
+            'Invalid Value "%s". Allowed inputs are "Yes" or "No".' % value
+        )
+    elif expected_value_type == "Date":
         try:
-            datetime.datetime.strptime(value.strip(), '%Y-%m-%d')
+            datetime.datetime.strptime(value.strip(), "%Y-%m-%d")
         except ValueError:
             raise ValidationError(
-                ('Invalid Value "%s". Date must be in format '
-                 'YYYY-MM-DD') % value)
+                ('Invalid Value "%s". Date must be in format YYYY-MM-DD') % value
+            )
 
 
 class AllocationPeriod(TimeStampedModel):
@@ -419,13 +482,13 @@ class AllocationPeriod(TimeStampedModel):
     def assert_not_ended(self):
         """Raise an AssertionError if the AllocationPeriod has already
         ended as of the current date."""
-        message = f'AllocationPeriod already ended on {self.end_date}.'
+        message = f"AllocationPeriod already ended on {self.end_date}."
         assert display_time_zone_current_date() <= self.end_date, message
 
     def assert_started(self):
         """Raise an AssertionError if the AllocationPeriod has not
         started as of the current date."""
-        message = f'AllocationPeriod does not start until {self.start_date}.'
+        message = f"AllocationPeriod does not start until {self.start_date}."
         assert self.start_date <= display_time_zone_current_date(), message
 
     def __str__(self):
@@ -439,49 +502,61 @@ class AllocationRenewalRequestStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 def allocation_renewal_request_state_schema():
     """Return the schema for the AllocationRenewalRequest.state
     field."""
     return {
-        'eligibility': {
-            'status': 'Pending',
-            'justification': '',
-            'timestamp': '',
+        "eligibility": {
+            "status": "Pending",
+            "justification": "",
+            "timestamp": "",
         },
-        'other': {
-            'justification': '',
-            'timestamp': '',
-        }
+        "other": {
+            "justification": "",
+            "timestamp": "",
+        },
     }
 
 
 class AllocationRenewalRequest(TimeStampedModel):
     requester = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='allocation_renewal_requester')
+        User, on_delete=models.CASCADE, related_name="allocation_renewal_requester"
+    )
     pi = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='allocation_renewal_pi')
+        User, on_delete=models.CASCADE, related_name="allocation_renewal_pi"
+    )
     computing_allowance = models.ForeignKey(
-        'resource.Resource', blank=True, null=True, on_delete=models.SET_NULL,
-        related_name='renewal_computing_allowance')
-    allocation_period = models.ForeignKey(
-        AllocationPeriod, on_delete=models.CASCADE)
+        "resource.Resource",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="renewal_computing_allowance",
+    )
+    allocation_period = models.ForeignKey(AllocationPeriod, on_delete=models.CASCADE)
     status = models.ForeignKey(
-        AllocationRenewalRequestStatusChoice, on_delete=models.CASCADE)
+        AllocationRenewalRequestStatusChoice, on_delete=models.CASCADE
+    )
 
     pre_project = models.ForeignKey(
-        Project, on_delete=models.CASCADE,
-        related_name='allocation_renewal_pre_project')
+        Project, on_delete=models.CASCADE, related_name="allocation_renewal_pre_project"
+    )
     post_project = models.ForeignKey(
-        Project, on_delete=models.CASCADE,
-        related_name='allocation_renewal_post_project')
+        Project,
+        on_delete=models.CASCADE,
+        related_name="allocation_renewal_post_project",
+    )
     # Use quotation marks to avoid a circular import.
     new_project_request = models.OneToOneField(
-        'project.SavioProjectAllocationRequest',
-        null=True, blank=True, on_delete=models.CASCADE)
+        "project.SavioProjectAllocationRequest",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+    )
 
     num_service_units = models.DecimalField(
         max_digits=settings.DECIMAL_MAX_DIGITS,
@@ -490,9 +565,9 @@ class AllocationRenewalRequest(TimeStampedModel):
         validators=[
             MinValueValidator(settings.ALLOCATION_MIN),
             MaxValueValidator(settings.ALLOCATION_MAX),
-        ])
-    request_time = models.DateTimeField(
-        null=True, blank=True, default=timezone.now)
+        ],
+    )
+    request_time = models.DateTimeField(null=True, blank=True, default=timezone.now)
     approval_time = models.DateTimeField(null=True, blank=True)
     completion_time = models.DateTimeField(null=True, blank=True)
 
@@ -501,12 +576,12 @@ class AllocationRenewalRequest(TimeStampedModel):
     state = models.JSONField(default=allocation_renewal_request_state_schema)
     extra_fields = models.JSONField(default=dict)
 
-    UNPOOLED_TO_UNPOOLED = 'unpooled_to_unpooled'
-    UNPOOLED_TO_POOLED = 'unpooled_to_pooled'
-    POOLED_TO_POOLED_SAME = 'pooled_to_pooled_same'
-    POOLED_TO_POOLED_DIFFERENT = 'pooled_to_pooled_different'
-    POOLED_TO_UNPOOLED_OLD = 'pooled_to_unpooled_old'
-    POOLED_TO_UNPOOLED_NEW = 'pooled_to_unpooled_new'
+    UNPOOLED_TO_UNPOOLED = "unpooled_to_unpooled"
+    UNPOOLED_TO_POOLED = "unpooled_to_pooled"
+    POOLED_TO_POOLED_SAME = "pooled_to_pooled_same"
+    POOLED_TO_POOLED_DIFFERENT = "pooled_to_pooled_different"
+    POOLED_TO_UNPOOLED_OLD = "pooled_to_unpooled_old"
+    POOLED_TO_UNPOOLED_NEW = "pooled_to_unpooled_new"
 
     def get_pooling_preference_case(self):
         """Return a string denoting the pooling preference based on the
@@ -530,7 +605,7 @@ class AllocationRenewalRequest(TimeStampedModel):
             else:
                 if not is_pooled_pre:
                     if not is_pooled_post:
-                        raise ValueError('Unexpected case.')
+                        raise ValueError("Unexpected case.")
                     else:
                         return self.UNPOOLED_TO_POOLED
                 else:
@@ -542,7 +617,7 @@ class AllocationRenewalRequest(TimeStampedModel):
     def __str__(self):
         period = self.allocation_period.name
         pi = self.pi.username
-        return f'Renewal Request ({period}, {pi})'
+        return f"Renewal Request ({period}, {pi})"
 
 
 class AllocationAdditionRequestStatusChoice(TimeStampedModel):
@@ -554,25 +629,24 @@ class AllocationAdditionRequestStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 def allocation_addition_request_state_schema():
     """Return the schema for the AllocationAdditionRequest.state
     field."""
     return {
-        'notified': {
-            'status': 'Pending',
-            'timestamp': ''
+        "notified": {"status": "Pending", "timestamp": ""},
+        "memorandum_signed": {
+            "status": "Pending",
+            "timestamp": "",
         },
-        'memorandum_signed': {
-            'status': 'Pending',
-            'timestamp': '',
+        "other": {
+            "justification": "",
+            "timestamp": "",
         },
-        'other': {
-            'justification': '',
-            'timestamp': '',
-        }
     }
 
 
@@ -581,13 +655,14 @@ class AllocationAdditionRequest(TimeStampedModel):
     Project."""
 
     requester = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='allocation_addition_requester')
+        User, on_delete=models.CASCADE, related_name="allocation_addition_requester"
+    )
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE,
-        related_name='allocation_addition_project')
+        Project, on_delete=models.CASCADE, related_name="allocation_addition_project"
+    )
     status = models.ForeignKey(
-        AllocationAdditionRequestStatusChoice, on_delete=models.CASCADE)
+        AllocationAdditionRequestStatusChoice, on_delete=models.CASCADE
+    )
 
     num_service_units = models.DecimalField(
         max_digits=settings.DECIMAL_MAX_DIGITS,
@@ -596,9 +671,9 @@ class AllocationAdditionRequest(TimeStampedModel):
         validators=[
             MinValueValidator(settings.ALLOCATION_MIN),
             MaxValueValidator(settings.ALLOCATION_MAX),
-        ])
-    request_time = models.DateTimeField(
-        null=True, blank=True, default=timezone.now)
+        ],
+    )
+    request_time = models.DateTimeField(null=True, blank=True, default=timezone.now)
     completion_time = models.DateTimeField(null=True, blank=True)
 
     state = models.JSONField(default=allocation_addition_request_state_schema)
@@ -609,29 +684,27 @@ class AllocationAdditionRequest(TimeStampedModel):
     def __str__(self):
         project_name = self.project.name
         num_sus = self.num_service_units
-        return f'Addition Request ({project_name}, {num_sus})'
+        return f"Addition Request ({project_name}, {num_sus})"
 
     def denial_reason(self):
         """Return a namedtuple representing the reason why the request
         was denied, based on its 'state' field. Raise a ValueError if it
         doesn't have the 'Denied' status or if it has an unexpected
         state."""
-        if self.status.name != 'Denied':
-            raise ValueError(
-                f'The request has unexpected status {self.status.name}.')
+        if self.status.name != "Denied":
+            raise ValueError(f"The request has unexpected status {self.status.name}.")
         state = self.state
-        other = state['other']
-        if other['timestamp']:
-            category = 'Other'
-            justification = other['justification']
-            timestamp = other['timestamp']
+        other = state["other"]
+        if other["timestamp"]:
+            category = "Other"
+            justification = other["justification"]
+            timestamp = other["timestamp"]
         else:
-            raise ValueError('The request has an unexpected state.')
-        DenialReason = namedtuple(
-            'DenialReason', 'category justification timestamp')
+            raise ValueError("The request has an unexpected state.")
+        DenialReason = namedtuple("DenialReason", "category justification timestamp")
         return DenialReason(
-            category=category, justification=justification,
-            timestamp=timestamp)
+            category=category, justification=justification, timestamp=timestamp
+        )
 
     def latest_update_timestamp(self):
         """Return the latest timestamp stored in the request's 'state'
@@ -640,10 +713,9 @@ class AllocationAdditionRequest(TimeStampedModel):
         The expected values are ISO 8601 strings, or the empty string,
         so taking the maximum should provide the correct output."""
         state = self.state
-        max_timestamp = ''
+        max_timestamp = ""
         for field in state:
-            max_timestamp = max(
-                max_timestamp, state[field].get('timestamp', ''))
+            max_timestamp = max(max_timestamp, state[field].get("timestamp", ""))
         return max_timestamp
 
 
@@ -655,20 +727,22 @@ class SecureDirAddUserRequestStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class SecureDirAddUserRequest(TimeStampedModel):
     """A request to add a user to a secure directory"""
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE)
-    allocation = models.ForeignKey(
-        Allocation, on_delete=models.CASCADE)
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    allocation = models.ForeignKey(Allocation, on_delete=models.CASCADE)
     directory = models.CharField(max_length=200)
     request_time = models.DateTimeField(auto_now_add=True)
     completion_time = models.DateTimeField(null=True)
     status = models.ForeignKey(
-        SecureDirAddUserRequestStatusChoice, on_delete=models.CASCADE)
+        SecureDirAddUserRequestStatusChoice, on_delete=models.CASCADE
+    )
 
 
 class SecureDirRemoveUserRequestStatusChoice(TimeStampedModel):
@@ -679,70 +753,55 @@ class SecureDirRemoveUserRequestStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class SecureDirRemoveUserRequest(TimeStampedModel):
     """A request to add a user to a secure directory"""
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE)
-    allocation = models.ForeignKey(
-        Allocation, on_delete=models.CASCADE)
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    allocation = models.ForeignKey(Allocation, on_delete=models.CASCADE)
     directory = models.CharField(max_length=200)
     request_time = models.DateTimeField(auto_now_add=True)
     completion_time = models.DateTimeField(null=True)
     status = models.ForeignKey(
-        SecureDirRemoveUserRequestStatusChoice, on_delete=models.CASCADE)
+        SecureDirRemoveUserRequestStatusChoice, on_delete=models.CASCADE
+    )
 
 
 class SecureDirRequestStatusChoice(TimeStampedModel):
-
     name = models.CharField(max_length=64)
 
     def __str__(self):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 def secure_dir_request_state_schema():
     """Return the schema for the SecureDirRequest.state
     field."""
     return {
-        'rdm_consultation': {
-            'status': 'Pending',
-            'justification': '',
-            'timestamp': ''
-        },
-        'notified': {
-            'status': 'Pending',
-            'timestamp': ''
-        },
-        'mou': {
-            'status': 'Pending',
-            'justification': '',
-            'timestamp': ''
-        },
-        'setup': {
-            'status': 'Pending',
-            'justification': '',
-            'timestamp': ''
-        },
-        'other': {
-            'justification': '',
-            'timestamp': ''
-        }
+        "rdm_consultation": {"status": "Pending", "justification": "", "timestamp": ""},
+        "notified": {"status": "Pending", "timestamp": ""},
+        "mou": {"status": "Pending", "justification": "", "timestamp": ""},
+        "setup": {"status": "Pending", "justification": "", "timestamp": ""},
+        "other": {"justification": "", "timestamp": ""},
     }
 
 
 class SecureDirRequest(TimeStampedModel):
     requester = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='secure_dir_request_requester')
+        User, on_delete=models.CASCADE, related_name="secure_dir_request_requester"
+    )
     pi = models.ForeignKey(
-        User, null=True, on_delete=models.CASCADE,
-        related_name='secure_dir_request_pi')
+        User, null=True, on_delete=models.CASCADE, related_name="secure_dir_request_pi"
+    )
     directory_name = models.TextField()
     department = models.TextField(null=True)
     data_description = models.TextField()
@@ -750,8 +809,7 @@ class SecureDirRequest(TimeStampedModel):
     project = models.ForeignKey(Project, null=True, on_delete=models.CASCADE)
     status = models.ForeignKey(SecureDirRequestStatusChoice, on_delete=models.CASCADE)
 
-    request_time = models.DateTimeField(
-        null=True, blank=True, default=timezone.now)
+    request_time = models.DateTimeField(null=True, blank=True, default=timezone.now)
     completion_time = models.DateTimeField(null=True, blank=True)
 
     state = models.JSONField(default=secure_dir_request_state_schema)
@@ -759,47 +817,46 @@ class SecureDirRequest(TimeStampedModel):
     mou_file = DynamicFileField(upload_to=upload_to_func, null=True)
 
     def __str__(self):
-        return f'{self.directory_name} ({self.project.name})'
+        return f"{self.directory_name} ({self.project.name})"
 
     def denial_reason(self):
         """Return the reason why the request was denied, based on its
         'state' field."""
-        if self.status.name != 'Denied':
+        if self.status.name != "Denied":
             raise ValueError(
-                f'Provided request has unexpected status '
-                f'{self.status.name}.')
+                f"Provided request has unexpected status {self.status.name}."
+            )
 
         state = self.state
-        rdm_consultation = state['rdm_consultation']
-        mou = state['mou']
-        setup = state['setup']
-        other = state['other']
+        rdm_consultation = state["rdm_consultation"]
+        mou = state["mou"]
+        setup = state["setup"]
+        other = state["other"]
 
-        DenialReason = namedtuple(
-            'DenialReason', 'category justification timestamp')
+        DenialReason = namedtuple("DenialReason", "category justification timestamp")
 
-        if rdm_consultation['status'] == 'Denied':
-            category = 'RDM Consultation'
-            justification = rdm_consultation['justification']
-            timestamp = rdm_consultation['timestamp']
-        elif mou['status'] == 'Denied':
-            category = 'Memorandum of Understanding'
-            justification = mou['justification']
-            timestamp = mou['timestamp']
-        elif setup['status'] == 'Denied':
-            category = 'Cluster Setup'
-            justification = setup['justification']
-            timestamp = setup['timestamp']
-        elif other['timestamp']:
-            category = 'Other'
-            justification = other['justification']
-            timestamp = other['timestamp']
+        if rdm_consultation["status"] == "Denied":
+            category = "RDM Consultation"
+            justification = rdm_consultation["justification"]
+            timestamp = rdm_consultation["timestamp"]
+        elif mou["status"] == "Denied":
+            category = "Memorandum of Understanding"
+            justification = mou["justification"]
+            timestamp = mou["timestamp"]
+        elif setup["status"] == "Denied":
+            category = "Cluster Setup"
+            justification = setup["justification"]
+            timestamp = setup["timestamp"]
+        elif other["timestamp"]:
+            category = "Other"
+            justification = other["justification"]
+            timestamp = other["timestamp"]
         else:
-            raise ValueError('Provided request has an unexpected state.')
+            raise ValueError("Provided request has an unexpected state.")
 
-        return DenialReason(category=category,
-                            justification=justification,
-                            timestamp=timestamp)
+        return DenialReason(
+            category=category, justification=justification, timestamp=timestamp
+        )
 
     def latest_update_timestamp(self):
         """Return the latest timestamp stored in the request's 'state'
@@ -808,10 +865,9 @@ class SecureDirRequest(TimeStampedModel):
         The expected values are ISO 8601 strings, or the empty string,
         so taking the maximum should provide the correct output."""
         state = self.state
-        max_timestamp = ''
+        max_timestamp = ""
         for field in state:
-            max_timestamp = max(
-                max_timestamp, state[field].get('timestamp', ''))
+            max_timestamp = max(max_timestamp, state[field].get("timestamp", ""))
         return max_timestamp
 
 
@@ -822,17 +878,18 @@ class ClusterAccessRequestStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class ClusterAccessRequest(TimeStampedModel):
-    allocation_user = models.ForeignKey(
-        AllocationUser, on_delete=models.CASCADE)
+    allocation_user = models.ForeignKey(AllocationUser, on_delete=models.CASCADE)
     status = models.ForeignKey(
-        ClusterAccessRequestStatusChoice, on_delete=models.CASCADE)
+        ClusterAccessRequestStatusChoice, on_delete=models.CASCADE
+    )
 
-    request_time = models.DateTimeField(
-        null=True, blank=True, default=timezone.now)
+    request_time = models.DateTimeField(null=True, blank=True, default=timezone.now)
     completion_time = models.DateTimeField(null=True, blank=True)
 
     history = HistoricalRecords()

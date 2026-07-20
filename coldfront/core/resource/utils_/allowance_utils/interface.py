@@ -3,10 +3,12 @@ import functools
 from django.db.models import Prefetch
 
 from coldfront.core.allocation.models import AllocationPeriod
-from coldfront.core.resource.models import Resource
-from coldfront.core.resource.models import ResourceAttribute
-from coldfront.core.resource.models import ResourceType
-from coldfront.core.resource.models import TimedResourceAttribute
+from coldfront.core.resource.models import (
+    Resource,
+    ResourceAttribute,
+    ResourceType,
+    TimedResourceAttribute,
+)
 
 
 class ComputingAllowanceInterface(object):
@@ -15,17 +17,19 @@ class ComputingAllowanceInterface(object):
 
     def __init__(self):
         """Retrieve database objects and instantiate data structures."""
-        resource_type = ResourceType.objects.get(name='Computing Allowance')
+        resource_type = ResourceType.objects.get(name="Computing Allowance")
         allowances = Resource.objects.prefetch_related(
             Prefetch(
-                'resourceattribute_set',
+                "resourceattribute_set",
                 queryset=ResourceAttribute.objects.select_related(
-                    'resource_attribute_type'),
+                    "resource_attribute_type"
+                ),
             ),
             Prefetch(
-                'timedresourceattribute_set',
+                "timedresourceattribute_set",
                 queryset=TimedResourceAttribute.objects.select_related(
-                    'resource_attribute_type'),
+                    "resource_attribute_type"
+                ),
             ),
         ).filter(resource_type=resource_type)
 
@@ -50,29 +54,30 @@ class ComputingAllowanceInterface(object):
         for allowance in allowances:
             self._name_to_object[allowance.name] = allowance
             self._object_to_service_units[allowance] = {
-                'constant': None,
-                'timed': {},
+                "constant": None,
+                "timed": {},
             }
             for attribute in allowance.resourceattribute_set.all():
                 attribute_type_name = attribute.resource_attribute_type.name
-                if attribute_type_name == 'code':
+                if attribute_type_name == "code":
                     self._code_to_object[attribute.value] = allowance
                     self._object_to_code[allowance] = attribute.value
-                elif attribute_type_name == 'name_long':
+                elif attribute_type_name == "name_long":
                     self._object_to_name_long[allowance] = attribute.value
-                elif attribute_type_name == 'name_short':
+                elif attribute_type_name == "name_short":
                     self._name_short_to_object[attribute.value] = allowance
                     self._object_to_name_short[allowance] = attribute.value
-                elif attribute_type_name == 'Service Units':
-                    self._object_to_service_units[allowance]['constant'] = \
+                elif attribute_type_name == "Service Units":
+                    self._object_to_service_units[allowance]["constant"] = (
                         attribute.value
+                    )
             for timed_attribute in allowance.timedresourceattribute_set.all():
-                attribute_type_name = \
-                    timed_attribute.resource_attribute_type.name
+                attribute_type_name = timed_attribute.resource_attribute_type.name
                 key = (timed_attribute.start_date, timed_attribute.end_date)
-                if attribute_type_name == 'Service Units':
-                    self._object_to_service_units[allowance]['timed'][key] = \
+                if attribute_type_name == "Service Units":
+                    self._object_to_service_units[allowance]["timed"][key] = (
                         timed_attribute.value
+                    )
 
     def allowance_from_code(self, code):
         """Given a code, return the corresponding allowance (Resource
@@ -126,8 +131,7 @@ class ComputingAllowanceInterface(object):
         except KeyError as e:
             raise ComputingAllowanceInterfaceError(e)
 
-    def service_units_from_name(self, name, is_timed=False,
-                                allocation_period=None):
+    def service_units_from_name(self, name, is_timed=False, allocation_period=None):
         """Given a name, return the corresponding allowance's service
         units value. If is_timed is True (i.e., the value varies over
         time), return the value associated with the given
@@ -137,19 +141,21 @@ class ComputingAllowanceInterface(object):
         """
         try:
             service_units_data = self._object_to_service_units[
-                self._name_to_object[name]]
+                self._name_to_object[name]
+            ]
             if is_timed:
                 assert isinstance(allocation_period, AllocationPeriod)
                 key = (allocation_period.start_date, allocation_period.end_date)
-                return service_units_data['timed'][key]
+                return service_units_data["timed"][key]
             else:
-                return service_units_data['constant']
+                return service_units_data["constant"]
         except KeyError as e:
             raise ComputingAllowanceInterfaceError(e)
 
 
 class ComputingAllowanceInterfaceError(Exception):
     """An exception to be raised by the ComputingAllowanceInterface."""
+
     pass
 
 

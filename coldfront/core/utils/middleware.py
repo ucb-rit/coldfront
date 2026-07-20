@@ -1,6 +1,5 @@
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -17,8 +16,9 @@ class ExceptionMiddleware:
     @staticmethod
     def process_exception(request, exception):
         message = (
-            f'{request.user} encountered an uncaught exception at '
-            f'{request.path}. Details:')
+            f"{request.user} encountered an uncaught exception at "
+            f"{request.path}. Details:"
+        )
         logger.error(message)
         logger.exception(exception)
         return None

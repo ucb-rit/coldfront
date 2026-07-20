@@ -1,7 +1,8 @@
 """Fixtures specific to signal tests."""
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 
 @pytest.fixture

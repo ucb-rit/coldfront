@@ -3,11 +3,9 @@ from urllib.parse import urlencode
 from django.contrib.auth.models import User
 from django.urls import reverse
 
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectStatusChoice
+from coldfront.core.project.models import Project, ProjectStatusChoice
 from coldfront.core.user.models import UserProfile
-from coldfront.core.utils.tests.test_base import enable_deployment
-from coldfront.core.utils.tests.test_base import TestBase
+from coldfront.core.utils.tests.test_base import TestBase, enable_deployment
 
 
 class TestProjectJoinListView(TestBase):
@@ -24,33 +22,31 @@ class TestProjectJoinListView(TestBase):
     def project_join_list_url(**parameters):
         """Return the URL for listing Projects to join, including the
         given URL parameters."""
-        return f'{reverse("project-join-list")}?{urlencode(parameters)}'
+        return f"{reverse('project-join-list')}?{urlencode(parameters)}"
 
     def test_inactive_archived_new_projects_not_included(self):
         """Test that Projects with the 'Inactive', 'Archived', or 'New' status
         are not included in the list."""
-        statuses = ['Active', 'Inactive', 'Archived', 'New']
+        statuses = ["Active", "Inactive", "Archived", "New"]
         for status in statuses:
-            name = f'{status.lower()}_project'
+            name = f"{status.lower()}_project"
             status_obj = ProjectStatusChoice.objects.get(name=status)
-            Project.objects.create(
-                name=name, title=name, status=status_obj)
+            Project.objects.create(name=name, title=name, status=status_obj)
 
         url = self.project_join_list_url()
         response = self.client.get(url)
 
-        self.assertContains(response, f'{statuses[0].lower()}_project')
+        self.assertContains(response, f"{statuses[0].lower()}_project")
         for i in range(1, len(statuses)):
-            self.assertNotContains(response, f'{statuses[i].lower()}_project')
+            self.assertNotContains(response, f"{statuses[i].lower()}_project")
 
     def create_join_request(self, user, project, host_user=None):
         """Creates a join request for a certain project. Returns the response"""
 
-        url = reverse('project-join', kwargs={'pk': project.pk})
+        url = reverse("project-join", kwargs={"pk": project.pk})
         data = {
-            'reason': 'This is a test reason for joining the project '
-                      'with a host.',
-            'host_user': host_user.username if host_user else ''
+            "reason": "This is a test reason for joining the project with a host.",
+            "host_user": host_user.username if host_user else "",
         }
         self.client.login(username=user.username, password=self.password)
         response = self.client.post(url, data)
@@ -63,41 +59,39 @@ class TestProjectJoinListView(TestBase):
 
         # Create PI to set as host user.
         pi = User.objects.create(
-            email='pi@@lbl.gov',
-            first_name='PI',
-            last_name='User',
-            username='pi')
+            email="pi@@lbl.gov", first_name="PI", last_name="User", username="pi"
+        )
         pi.set_password(self.password)
         pi.save()
 
         # Create test project.
-        project0 = self.create_active_project_with_pi('project0', pi)
-        project1 = self.create_active_project_with_pi('project1', pi)
+        project0 = self.create_active_project_with_pi("project0", pi)
+        project1 = self.create_active_project_with_pi("project1", pi)
 
         url = self.project_join_list_url()
 
-        help_message = (
-            'not an LBL employee with a verified LBL email (@lbl.gov),')
+        help_message = "not an LBL employee with a verified LBL email (@lbl.gov),"
         host_user_form = (
             '<div id="div_id_host_user" class="form-group"> '
-            '<label for="id_host_user" class=" requiredField">')
+            '<label for="id_host_user" class=" requiredField">'
+        )
 
-        with enable_deployment('LRC'):
+        with enable_deployment("LRC"):
             # Help text and form should be available to non-LBL employees
             # with no host.
             response = self.client.get(url)
-            html = response.content.decode('utf-8')
+            html = response.content.decode("utf-8")
             self.assertIn(help_message, html)
             self.assertIn(host_user_form, html)
 
             # Help text and form are not available to LBL employees.
-            self.user.email = 'user@lbl.gov'
+            self.user.email = "user@lbl.gov"
             self.user.save()
             response = self.client.get(url)
-            html = response.content.decode('utf-8')
+            html = response.content.decode("utf-8")
             self.assertNotIn(help_message, html)
             self.assertNotIn(host_user_form, html)
-            self.user.email = 'user@email.com'
+            self.user.email = "user@email.com"
             self.user.save()
 
             # Help text and form not available if user already has host user.
@@ -105,7 +99,7 @@ class TestProjectJoinListView(TestBase):
             user_profile.host_user = pi
             user_profile.save()
             response = self.client.get(url)
-            html = response.content.decode('utf-8')
+            html = response.content.decode("utf-8")
             self.assertNotIn(help_message, html)
             self.assertNotIn(host_user_form, html)
             user_profile.host_user = None
@@ -116,16 +110,16 @@ class TestProjectJoinListView(TestBase):
             # Create join request.
             self.create_join_request(self.user, project0, host_user=pi)
             response = self.client.get(url)
-            html = response.content.decode('utf-8')
+            html = response.content.decode("utf-8")
             self.assertNotIn(help_message, html)
             self.assertNotIn(host_user_form, html)
             user_profile.host_user = None
             user_profile.save()
 
-        with enable_deployment('BRC'):
+        with enable_deployment("BRC"):
             # Help text and form not available if LRC_ONLY flag set to false.
             response = self.client.get(url)
-            html = response.content.decode('utf-8')
+            html = response.content.decode("utf-8")
             self.assertNotIn(help_message, html)
             self.assertNotIn(host_user_form, html)
 

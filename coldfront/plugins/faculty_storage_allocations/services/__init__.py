@@ -4,8 +4,8 @@ from .notification_service import FSARequestNotificationService
 from .request_service import FacultyStorageAllocationRequestService
 
 __all__ = [
-    'DirectoryService',
-    'FacultyStorageAllocationRequestService',
-    'FSARequestEligibilityService',
-    'FSARequestNotificationService',
+    "DirectoryService",
+    "FacultyStorageAllocationRequestService",
+    "FSARequestEligibilityService",
+    "FSARequestNotificationService",
 ]

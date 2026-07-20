@@ -1,11 +1,9 @@
 from django.conf import settings
-
 from lbl_project_activity_validator.backends import OracleBackend
 from lbl_project_activity_validator.project_activity import ProjectActivity
 from lbl_project_activity_validator.validator import ProjectActivityValidator
 
 from coldfront.core.billing.utils.validation.backends.base import BaseValidatorBackend
-
 
 """This module should only be imported if lbl_project_activity_validator
 is installed."""
@@ -18,7 +16,8 @@ class OracleValidatorBackend(BaseValidatorBackend):
     def __init__(self):
         db_settings = settings.ORACLE_BILLING_DB
         backend = OracleBackend(
-            db_settings['user'], db_settings['password'], db_settings['dsn'])
+            db_settings["user"], db_settings["password"], db_settings["dsn"]
+        )
         self._validator = ProjectActivityValidator(backend)
 
     def is_billing_id_valid(self, billing_id):

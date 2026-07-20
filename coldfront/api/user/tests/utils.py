@@ -2,20 +2,21 @@ from coldfront.core.billing.models import BillingActivity
 from coldfront.core.user.utils_.host_user_utils import lbl_email_address
 
 
-def assert_identity_linking_request_serialization(identity_linking_request,
-                                                  result, fields):
+def assert_identity_linking_request_serialization(
+    identity_linking_request, result, fields
+):
     """Assert that IdentityLinkingRequest serialization gives the
     expected result."""
     for field in fields:
         field_value = getattr(identity_linking_request, field)
-        if field == 'requester':
+        if field == "requester":
             expected = str(field_value.id)
-        elif field in ('request_time', 'completion_time'):
+        elif field in ("request_time", "completion_time"):
             if field_value is None:
                 expected = str(field_value)
             else:
-                expected = field_value.isoformat().replace('+00:00', 'Z')
-        elif field == 'status':
+                expected = field_value.isoformat().replace("+00:00", "Z")
+        elif field == "status":
             expected = field_value.name
         else:
             expected = str(field_value)
@@ -30,26 +31,28 @@ def assert_user_profile_serialization(user_profile, result, fields):
         try:
             field_value = getattr(user_profile, field)
         except AttributeError:
-            if field == 'host_user_lbl_email':
+            if field == "host_user_lbl_email":
                 expected = str(
                     lbl_email_address(user_profile.host_user)
-                    if user_profile.host_user else None)
+                    if user_profile.host_user
+                    else None
+                )
             else:
-                assert False, f'Unexpected method field: {field}'
+                assert False, f"Unexpected method field: {field}"
         else:
-            if field == 'user':
+            if field == "user":
                 expected = str(field_value.id)
-            elif field == 'access_agreement_signed_date':
+            elif field == "access_agreement_signed_date":
                 if field_value is None:
                     expected = str(field_value)
                 else:
-                    expected = field_value.isoformat().replace('+00:00', 'Z')
-            elif field == 'billing_activity':
+                    expected = field_value.isoformat().replace("+00:00", "Z")
+            elif field == "billing_activity":
                 if field_value is None:
                     expected = str(field_value)
                 else:
                     expected = field_value.full_id()
-            elif field == 'host_user':
+            elif field == "host_user":
                 if field_value is None:
                     expected = str(field_value)
                 else:
@@ -63,15 +66,16 @@ def assert_user_profile_serialization(user_profile, result, fields):
 def assert_user_serialization(user, result, fields, profile_fields):
     """Assert that User serialization gives the expected result."""
     for field in fields:
-        if field == 'profile':
+        if field == "profile":
             assert_user_profile_serialization(
-                user.userprofile, result[field], profile_fields)
-        elif field == 'last_login':
+                user.userprofile, result[field], profile_fields
+            )
+        elif field == "last_login":
             field_value = getattr(user, field)
             if field_value is None:
                 expected = str(field_value)
             else:
-                expected = field_value.isoformat().replace('+00:00', 'Z')
+                expected = field_value.isoformat().replace("+00:00", "Z")
             actual = str(result[field])
             assert expected == actual
         else:

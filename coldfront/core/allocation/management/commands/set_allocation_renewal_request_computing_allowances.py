@@ -3,17 +3,17 @@ import logging
 from django.core.management.base import BaseCommand
 
 from coldfront.core.allocation.models import AllocationRenewalRequest
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
 from coldfront.core.utils.common import add_argparse_dry_run_argument
-
 
 """An admin command that sets the computing allowances (Resources) for
 AllocationRenewalRequests."""
 
 
 class Command(BaseCommand):
-
-    help = 'Set computing allowances for AllocationRenewalRequests.'
+    help = "Set computing allowances for AllocationRenewalRequests."
 
     logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """Set the computing_allowance field for each request based on
         the project's name prefix."""
-        dry_run = options['dry_run']
+        dry_run = options["dry_run"]
         for request in AllocationRenewalRequest.objects.all():
             self.set_computing_allowance_for_request(request, dry_run=dry_run)
 
@@ -40,16 +40,17 @@ class Command(BaseCommand):
         code = request.post_project.name[:3]
         allowance = self.interface.allowance_from_code(code)
         message_template = (
-            f'{{0}} computing allowance for AllocationRenewalRequest '
-            f'{request.id} ({request.post_project}) to Resource '
-            f'{allowance.pk} ({allowance.name}), based on project prefix '
-            f'{code}.')
+            f"{{0}} computing allowance for AllocationRenewalRequest "
+            f"{request.id} ({request.post_project}) to Resource "
+            f"{allowance.pk} ({allowance.name}), based on project prefix "
+            f"{code}."
+        )
         if dry_run:
-            message = message_template.format('Would update')
+            message = message_template.format("Would update")
             self.stdout.write(self.style.WARNING(message))
         else:
             request.computing_allowance = allowance
             request.save()
-            message = message_template.format('Updated')
+            message = message_template.format("Updated")
             self.stdout.write(self.style.SUCCESS(message))
             self.logger.info(message)

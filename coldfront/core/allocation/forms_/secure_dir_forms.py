@@ -1,33 +1,36 @@
 from django import forms
 from django.core.validators import MinLengthValidator
 
-from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import is_secure_directory_name_suffix_available
-from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import SECURE_DIRECTORY_NAME_PREFIX
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserRoleChoice
-from coldfront.core.project.models import ProjectUserStatusChoice
+from coldfront.core.allocation.utils_.secure_dir_utils.new_directory import (
+    SECURE_DIRECTORY_NAME_PREFIX,
+    is_secure_directory_name_suffix_available,
+)
+from coldfront.core.project.models import (
+    ProjectUser,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
 
 
 class SecureDirNameField(forms.CharField):
-
     def __init__(self, *args, **kwargs):
-        self.exclude_request_pk = kwargs.pop('exclude_request_pk', None)
+        self.exclude_request_pk = kwargs.pop("exclude_request_pk", None)
         super().__init__(*args, **kwargs)
 
     def clean(self, directory_name):
         # If the user does not provide the prefix, prepend it.
         if not directory_name.startswith(SECURE_DIRECTORY_NAME_PREFIX):
-            directory_name = f'{SECURE_DIRECTORY_NAME_PREFIX}{directory_name}'
+            directory_name = f"{SECURE_DIRECTORY_NAME_PREFIX}{directory_name}"
         # If the directory name (sans the prefix) is not unique, raise an error.
         # Optionally exclude the request the name is associated with.
-        directory_name_suffix = directory_name[
-            len(SECURE_DIRECTORY_NAME_PREFIX):]
+        directory_name_suffix = directory_name[len(SECURE_DIRECTORY_NAME_PREFIX) :]
         if not is_secure_directory_name_suffix_available(
-                directory_name_suffix,
-                exclude_request_pk=self.exclude_request_pk):
+            directory_name_suffix, exclude_request_pk=self.exclude_request_pk
+        ):
             raise forms.ValidationError(
-                f'The directory name {directory_name} is already taken. Please '
-                f'choose another.')
+                f"The directory name {directory_name} is already taken. Please "
+                f"choose another."
+            )
         # Return the full, prefixed directory name.
         return directory_name
 
@@ -41,50 +44,52 @@ class SecureDirManageUsersForm(forms.Form):
 
 
 class SecureDirManageUsersSearchForm(forms.Form):
-    project_name = forms.CharField(label='Project Name',
-                                   max_length=100, required=False,
-                                   help_text='Name of associated project.')
-    directory_name = forms.CharField(label='Directory Name',
-                                     max_length=100, required=False,
-                                     help_text='Directory name on cluster.')
-    username = forms.CharField(
-        label='User Username', max_length=100, required=False)
-    email = forms.CharField(label='User Email', max_length=100, required=False)
+    project_name = forms.CharField(
+        label="Project Name",
+        max_length=100,
+        required=False,
+        help_text="Name of associated project.",
+    )
+    directory_name = forms.CharField(
+        label="Directory Name",
+        max_length=100,
+        required=False,
+        help_text="Directory name on cluster.",
+    )
+    username = forms.CharField(label="User Username", max_length=100, required=False)
+    email = forms.CharField(label="User Email", max_length=100, required=False)
     show_all_requests = forms.BooleanField(initial=True, required=False)
 
 
 class SecureDirManageUsersRequestUpdateStatusForm(forms.Form):
     STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Processing', 'Processing'),
+        ("Pending", "Pending"),
+        ("Processing", "Processing"),
     ]
 
     status = forms.ChoiceField(
-        label='Status', choices=STATUS_CHOICES, required=True,
-        widget=forms.Select())
+        label="Status", choices=STATUS_CHOICES, required=True, widget=forms.Select()
+    )
 
 
 class SecureDirManageUsersRequestCompletionForm(forms.Form):
-    STATUS_CHOICES = [
-        ('Processing', 'Processing'),
-        ('Complete', 'Complete')
-    ]
+    STATUS_CHOICES = [("Processing", "Processing"), ("Complete", "Complete")]
 
     status = forms.ChoiceField(
-        label='Status', choices=STATUS_CHOICES, required=True,
-        widget=forms.Select())
+        label="Status", choices=STATUS_CHOICES, required=True, widget=forms.Select()
+    )
 
 
 class SecureDirPISelectionForm(forms.Form):
-
     pi = forms.ModelChoiceField(
-        label='Principal Investigator',
+        label="Principal Investigator",
         queryset=ProjectUser.objects.none(),
         required=True,
-        widget=forms.Select())
+        widget=forms.Select(),
+    )
 
     def __init__(self, *args, **kwargs):
-        self._project_pk = kwargs.pop('project_pk', None)
+        self._project_pk = kwargs.pop("project_pk", None)
         super().__init__(*args, **kwargs)
 
         if not self._project_pk:
@@ -93,151 +98,167 @@ class SecureDirPISelectionForm(forms.Form):
 
     def _set_pi_queryset(self):
         """Set the 'pi' choices to active PIs on the project."""
-        pi_role = ProjectUserRoleChoice.objects.get(
-            name='Principal Investigator')
-        active_status = ProjectUserStatusChoice.objects.get(name='Active')
-        self.fields['pi'].queryset = ProjectUser.objects.filter(
-            project__pk=self._project_pk, role=pi_role, status=active_status)
+        pi_role = ProjectUserRoleChoice.objects.get(name="Principal Investigator")
+        active_status = ProjectUserStatusChoice.objects.get(name="Active")
+        self.fields["pi"].queryset = ProjectUser.objects.filter(
+            project__pk=self._project_pk, role=pi_role, status=active_status
+        )
 
 
 class SecureDirDataDescriptionForm(forms.Form):
     department = forms.CharField(
-        label=('Specify the full name of the department that this directory '
-            'will belong to (e.g "Dept. of Chemistry", "Dept. of Economics").'),
+        label=(
+            "Specify the full name of the department that this directory "
+            'will belong to (e.g "Dept. of Chemistry", "Dept. of Economics").'
+        ),
         validators=[MinLengthValidator(5)],
         required=True,
-        widget=forms.Textarea(attrs={'rows': 3}))
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
     data_description = forms.CharField(
-        label='Please explain the kind of P2/P3 data you are planning to '
-              'work with on Savio. Please include: (1) Dataset description '
-              '(2) Source of dataset (3) Security & Compliance requirements '
-              'for this dataset(s) (4) Number and sizes of files (5) '
-              'Anticipated duration of usage of datasets on Savio.',
+        label="Please explain the kind of P2/P3 data you are planning to "
+        "work with on Savio. Please include: (1) Dataset description "
+        "(2) Source of dataset (3) Security & Compliance requirements "
+        "for this dataset(s) (4) Number and sizes of files (5) "
+        "Anticipated duration of usage of datasets on Savio.",
         validators=[MinLengthValidator(20)],
         required=True,
-        widget=forms.Textarea(attrs={'rows': 3}))
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
     rdm_consultation = forms.BooleanField(
         initial=False,
-        label='Have you already talked with Research IT staff (and/or with '
-              'the Information Security and Policy team) about your data?',
-        required=False)
+        label="Have you already talked with Research IT staff (and/or with "
+        "the Information Security and Policy team) about your data?",
+        required=False,
+    )
 
 
 class SecureDirRDMConsultationForm(forms.Form):
     rdm_consultants = forms.CharField(
-        label='List the name(s) of the Research-IT or Information Security '
-              'and Policy (ISP) team member(s) with whom you have discussed '
-              'this data/project.',
+        label="List the name(s) of the Research-IT or Information Security "
+        "and Policy (ISP) team member(s) with whom you have discussed "
+        "this data/project.",
         validators=[MinLengthValidator(3)],
         required=True,
-        widget=forms.Textarea(attrs={'rows': 3}))
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
 
 class SecureDirDirectoryNamesForm(forms.Form):
-
     directory_name = SecureDirNameField(
         help_text=(
-            'Provide the name of the requested secure directory on the '
-            'cluster.'),
-        label='Subdirectory Name',
+            "Provide the name of the requested secure directory on the cluster."
+        ),
+        label="Subdirectory Name",
         required=True,
-        widget=forms.Textarea(attrs={'rows': 1}))
+        widget=forms.Textarea(attrs={"rows": 1}),
+    )
 
 
 class SecureDirSetupForm(forms.Form):
-
     status = forms.ChoiceField(
         choices=(
-            ('', 'Select one.'),
-            ('Pending', 'Pending'),
-            ('Completed', 'Completed'),
-            ('Denied', 'Denied'),
+            ("", "Select one."),
+            ("Pending", "Pending"),
+            ("Completed", "Completed"),
+            ("Denied", "Denied"),
         ),
         help_text='If you are unsure, leave the status as "Pending".',
-        label='Status',
-        required=True)
+        label="Status",
+        required=True,
+    )
 
     # Overridden in __init__.
     directory_name = forms.CharField()
 
     justification = forms.CharField(
         help_text=(
-            'Provide reasoning for your decision. This field is only required '
-            'for denials, since it will be included in the notification '
-            'email.'),
-        label='Justification',
+            "Provide reasoning for your decision. This field is only required "
+            "for denials, since it will be included in the notification "
+            "email."
+        ),
+        label="Justification",
         validators=[MinLengthValidator(10)],
         required=False,
-        widget=forms.Textarea(attrs={'rows': 3}))
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
     def __init__(self, *args, **kwargs):
-        self.request_pk = kwargs.pop('request_pk', None)
-        dir_name = kwargs.pop('dir_name', None)
+        self.request_pk = kwargs.pop("request_pk", None)
+        dir_name = kwargs.pop("dir_name", None)
         super().__init__(*args, **kwargs)
 
-        self.fields['directory_name'] = SecureDirNameField(
-            help_text='Edit the provided directory name if necessary.',
+        self.fields["directory_name"] = SecureDirNameField(
+            help_text="Edit the provided directory name if necessary.",
             initial=dir_name,
-            label='Subdirectory Name',
+            label="Subdirectory Name",
             required=False,
-            widget=forms.Textarea(attrs={'rows': 1}),
-            exclude_request_pk=self.request_pk)
+            widget=forms.Textarea(attrs={"rows": 1}),
+            exclude_request_pk=self.request_pk,
+        )
 
     def clean(self):
         cleaned_data = super().clean()
-        status = cleaned_data.get('status', 'Pending')
+        status = cleaned_data.get("status", "Pending")
 
         # Require justification for denials.
-        if status == 'Denied':
-            justification = cleaned_data.get('justification', '')
+        if status == "Denied":
+            justification = cleaned_data.get("justification", "")
             if not justification.strip():
                 raise forms.ValidationError(
-                    'Please provide a justification for your decision.')
+                    "Please provide a justification for your decision."
+                )
 
         return cleaned_data
 
 
 class SecureDirRDMConsultationReviewForm(forms.Form):
-
     status = forms.ChoiceField(
         choices=(
-            ('', 'Select one.'),
-            ('Pending', 'Pending'),
-            ('Approved', 'Approved'),
-            ('Denied', 'Denied'),
+            ("", "Select one."),
+            ("Pending", "Pending"),
+            ("Approved", "Approved"),
+            ("Denied", "Denied"),
         ),
         help_text='If you are unsure, leave the status as "Pending".',
-        label='Status',
-        required=True)
+        label="Status",
+        required=True,
+    )
 
     rdm_update = forms.CharField(
         help_text=(
-            'You may provide an optional update to the user provided RDM '
-            'consultation. Note that overwriting the user provided answer '
-            'is permanent.'),
-        label='Optional RDM Update',
+            "You may provide an optional update to the user provided RDM "
+            "consultation. Note that overwriting the user provided answer "
+            "is permanent."
+        ),
+        label="Optional RDM Update",
         validators=[MinLengthValidator(5)],
         required=False,
-        widget=forms.Textarea(attrs={'rows': 2}))
+        widget=forms.Textarea(attrs={"rows": 2}),
+    )
 
     justification = forms.CharField(
         help_text=(
-            'Provide reasoning for your decision. This field is only required '
-            'for denials, since it will be included in the notification '
-            'email.'),
-        label='Justification',
+            "Provide reasoning for your decision. This field is only required "
+            "for denials, since it will be included in the notification "
+            "email."
+        ),
+        label="Justification",
         validators=[MinLengthValidator(10)],
         required=False,
-        widget=forms.Textarea(attrs={'rows': 3}))
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
 
 class SecureDirRequestEditDepartmentForm(forms.Form):
-
     department = forms.CharField(
-        label=('Specify the full name of the department that this directory '
-            'will belong to (e.g "Dept. of Chemistry", "Dept. of Economics").'),
+        label=(
+            "Specify the full name of the department that this directory "
+            'will belong to (e.g "Dept. of Chemistry", "Dept. of Economics").'
+        ),
         validators=[MinLengthValidator(5)],
         required=True,
-        widget=forms.Textarea(attrs={'rows': 3}))
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )

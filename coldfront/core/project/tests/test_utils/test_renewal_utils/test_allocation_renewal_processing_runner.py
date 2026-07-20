@@ -1,43 +1,54 @@
-from coldfront.api.statistics.utils import create_user_project_allocation
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.models import AllocationAttributeType
-from coldfront.core.allocation.models import AllocationAttributeUsage
-from coldfront.core.allocation.models import AllocationPeriod
-from coldfront.core.allocation.models import AllocationRenewalRequest
-from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
-from coldfront.core.allocation.models import AllocationStatusChoice
-from coldfront.core.allocation.models import AllocationUser
-from coldfront.core.allocation.models import AllocationUserAttribute
-from coldfront.core.allocation.models import AllocationUserAttributeUsage
-from coldfront.core.allocation.models import AllocationUserStatusChoice
-from coldfront.core.allocation.models import ClusterAccessRequest
-from coldfront.core.allocation.utils import get_project_compute_allocation
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectStatusChoice
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserRoleChoice
-from coldfront.core.project.models import ProjectUserStatusChoice
-from coldfront.core.project.tests.test_utils.test_renewal_utils.utils import TestRunnerMixinBase
-from coldfront.core.project.utils_.new_project_utils import SavioProjectProcessingRunner
-from coldfront.core.project.utils_.renewal_utils import AllocationRenewalProcessingRunner
-from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
-from coldfront.core.project.utils_.renewal_utils import get_next_allowance_year_period
-from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
-from coldfront.core.statistics.models import ProjectTransaction
-from coldfront.core.statistics.models import ProjectUserTransaction
-from coldfront.core.user.models import UserProfile
-from coldfront.core.utils.common import display_time_zone_current_date
-from coldfront.core.utils.common import utc_now_offset_aware
 from datetime import timedelta
 from decimal import Decimal
+
 from django.conf import settings
 from django.core import mail
-from django.test import override_settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
+from coldfront.api.statistics.utils import create_user_project_allocation
+from coldfront.core.allocation.models import (
+    Allocation,
+    AllocationAttributeType,
+    AllocationAttributeUsage,
+    AllocationPeriod,
+    AllocationRenewalRequest,
+    AllocationRenewalRequestStatusChoice,
+    AllocationStatusChoice,
+    AllocationUser,
+    AllocationUserAttribute,
+    AllocationUserAttributeUsage,
+    AllocationUserStatusChoice,
+    ClusterAccessRequest,
+)
+from coldfront.core.allocation.utils import get_project_compute_allocation
+from coldfront.core.project.models import (
+    Project,
+    ProjectStatusChoice,
+    ProjectUser,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
+from coldfront.core.project.tests.test_utils.test_renewal_utils.utils import (
+    TestRunnerMixinBase,
+)
+from coldfront.core.project.utils_.new_project_utils import SavioProjectProcessingRunner
+from coldfront.core.project.utils_.renewal_utils import (
+    AllocationRenewalProcessingRunner,
+    get_current_allowance_year_period,
+    get_next_allowance_year_period,
+)
+from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    ComputingAllowanceInterface,
+)
+from coldfront.core.statistics.models import ProjectTransaction, ProjectUserTransaction
+from coldfront.core.user.models import UserProfile
+from coldfront.core.utils.common import (
+    display_time_zone_current_date,
+    utc_now_offset_aware,
+)
 
-TEST_PRIMARY_CLUSTER_NAME = 'Savio'
+TEST_PRIMARY_CLUSTER_NAME = "Savio"
 
 
 class TestRunnerMixin(TestRunnerMixinBase):
@@ -55,16 +66,20 @@ class TestRunnerMixin(TestRunnerMixinBase):
 
         # Delete all such attributes.
         allocation_attribute_type = AllocationAttributeType.objects.get(
-            name='Cluster Account Status')
+            name="Cluster Account Status"
+        )
         AllocationUserAttribute.objects.filter(
-            allocation_attribute_type=allocation_attribute_type).delete()
+            allocation_attribute_type=allocation_attribute_type
+        ).delete()
 
         removed_project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Removed')
-        ProjectUser.objects.filter(
-            project=project).update(status=removed_project_user_status)
+            name="Removed"
+        )
+        ProjectUser.objects.filter(project=project).update(
+            status=removed_project_user_status
+        )
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -73,22 +88,22 @@ class TestRunnerMixin(TestRunnerMixinBase):
         allocation.refresh_from_db()
         queryset = allocation.allocationuser_set.all()
         for allocation_user in queryset:
-            expected_num_attributes = int(
-                allocation_user.user == self.requester)
+            expected_num_attributes = int(allocation_user.user == self.requester)
             attributes = allocation_user.allocationuserattribute_set.filter(
-                allocation_attribute_type=allocation_attribute_type)
+                allocation_attribute_type=allocation_attribute_type
+            )
             self.assertEqual(expected_num_attributes, attributes.count())
             if expected_num_attributes:
-                self.assertEqual(attributes.first().value, 'Pending - Add')
+                self.assertEqual(attributes.first().value, "Pending - Add")
 
             cluster_access_requests = ClusterAccessRequest.objects.filter(
-                allocation_user=allocation_user)
-            self.assertEqual(
-                expected_num_attributes, cluster_access_requests.count())
+                allocation_user=allocation_user
+            )
+            self.assertEqual(expected_num_attributes, cluster_access_requests.count())
             if expected_num_attributes:
                 self.assertEqual(
-                    cluster_access_requests.first().status.name,
-                    'Pending - Add')
+                    cluster_access_requests.first().status.name, "Pending - Add"
+                )
 
     def test_cluster_access_requests_not_updated_if_project_user_active(self):
         """Test that the runner does not update existent
@@ -104,24 +119,27 @@ class TestRunnerMixin(TestRunnerMixinBase):
         # Only the requester should have one cluster access request. Set its
         # status to 'Active'.
         allocation_attribute_type = AllocationAttributeType.objects.get(
-            name='Cluster Account Status')
-        active_user_project_status = ProjectUserStatusChoice.objects.get(
-            name='Active')
+            name="Cluster Account Status"
+        )
+        active_user_project_status = ProjectUserStatusChoice.objects.get(name="Active")
         queryset = allocation.allocationuser_set.all()
         for allocation_user in queryset:
-            expected_num_attributes = int(
-                allocation_user.user == self.requester)
+            expected_num_attributes = int(allocation_user.user == self.requester)
             attributes = allocation_user.allocationuserattribute_set.filter(
-                allocation_attribute_type=allocation_attribute_type)
+                allocation_attribute_type=allocation_attribute_type
+            )
             self.assertEqual(expected_num_attributes, attributes.count())
             if expected_num_attributes:
                 self.assertTrue(
                     ProjectUser.objects.filter(
-                        project=project, user=allocation_user.user,
-                        status=active_user_project_status).exists())
-                attributes.update(value='Denied')
+                        project=project,
+                        user=allocation_user.user,
+                        status=active_user_project_status,
+                    ).exists()
+                )
+                attributes.update(value="Denied")
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -130,13 +148,13 @@ class TestRunnerMixin(TestRunnerMixinBase):
         allocation.refresh_from_db()
         queryset = allocation.allocationuser_set.all()
         for allocation_user in queryset:
-            expected_num_attributes = int(
-                allocation_user.user == self.requester)
+            expected_num_attributes = int(allocation_user.user == self.requester)
             attributes = allocation_user.allocationuserattribute_set.filter(
-                allocation_attribute_type=allocation_attribute_type)
+                allocation_attribute_type=allocation_attribute_type
+            )
             self.assertEqual(expected_num_attributes, attributes.count())
             if expected_num_attributes:
-                self.assertEqual(attributes.first().value, 'Denied')
+                self.assertEqual(attributes.first().value, "Denied")
 
         # No ClusterAccessRequests should have been created.
         self.assertEqual(ClusterAccessRequest.objects.count(), 0)
@@ -154,23 +172,25 @@ class TestRunnerMixin(TestRunnerMixinBase):
         # Only the requester should have one cluster access request. Set its
         # associated ProjectUser's status to 'Removed'.
         allocation_attribute_type = AllocationAttributeType.objects.get(
-            name='Cluster Account Status')
+            name="Cluster Account Status"
+        )
         removed_project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Removed')
+            name="Removed"
+        )
         queryset = allocation.allocationuser_set.all()
         for allocation_user in queryset:
-            expected_num_attributes = int(
-                allocation_user.user == self.requester)
+            expected_num_attributes = int(allocation_user.user == self.requester)
             attributes = allocation_user.allocationuserattribute_set.filter(
-                allocation_attribute_type=allocation_attribute_type)
+                allocation_attribute_type=allocation_attribute_type
+            )
             self.assertEqual(expected_num_attributes, attributes.count())
             if expected_num_attributes:
                 ProjectUser.objects.filter(
-                    project=project, user=allocation_user.user).update(
-                        status=removed_project_user_status)
-                attributes.update(value='Denied')
+                    project=project, user=allocation_user.user
+                ).update(status=removed_project_user_status)
+                attributes.update(value="Denied")
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -179,64 +199,65 @@ class TestRunnerMixin(TestRunnerMixinBase):
         allocation.refresh_from_db()
         queryset = allocation.allocationuser_set.all()
         for allocation_user in queryset:
-            expected_num_attributes = int(
-                allocation_user.user == self.requester)
+            expected_num_attributes = int(allocation_user.user == self.requester)
             attributes = allocation_user.allocationuserattribute_set.filter(
-                allocation_attribute_type=allocation_attribute_type)
+                allocation_attribute_type=allocation_attribute_type
+            )
             self.assertEqual(expected_num_attributes, attributes.count())
             if expected_num_attributes:
-                self.assertEqual(attributes.first().value, 'Pending - Add')
+                self.assertEqual(attributes.first().value, "Pending - Add")
 
             cluster_access_requests = ClusterAccessRequest.objects.filter(
-                allocation_user=allocation_user)
-            self.assertEqual(
-                expected_num_attributes, cluster_access_requests.count())
+                allocation_user=allocation_user
+            )
+            self.assertEqual(expected_num_attributes, cluster_access_requests.count())
             if expected_num_attributes:
                 self.assertEqual(
-                    cluster_access_requests.first().status.name,
-                    'Pending - Add')
+                    cluster_access_requests.first().status.name, "Pending - Add"
+                )
 
     def test_num_service_units_validated(self):
         """Test that the provided number of service units must be valid,
         or an exception will be raised."""
         invalid_values = [
-            '0.00',
-            settings.ALLOCATION_MIN - Decimal('0.01'),
-            settings.ALLOCATION_MAX + Decimal('0.01'),
-            Decimal('1.00000000000'),
-            Decimal('1.000'),
+            "0.00",
+            settings.ALLOCATION_MIN - Decimal("0.01"),
+            settings.ALLOCATION_MAX + Decimal("0.01"),
+            Decimal("1.00000000000"),
+            Decimal("1.000"),
         ]
         exceptions = [
-            TypeError(
-                f'Number of service units {invalid_values[0]} is not a '
-                f'Decimal.'),
+            TypeError(f"Number of service units {invalid_values[0]} is not a Decimal."),
             ValueError(
-                f'Number of service units {invalid_values[1]} is not in the '
-                f'acceptable range [{settings.ALLOCATION_MIN}, '
-                f'{settings.ALLOCATION_MAX}].'),
+                f"Number of service units {invalid_values[1]} is not in the "
+                f"acceptable range [{settings.ALLOCATION_MIN}, "
+                f"{settings.ALLOCATION_MAX}]."
+            ),
             ValueError(
-                f'Number of service units {invalid_values[2]} is not in the '
-                f'acceptable range [{settings.ALLOCATION_MIN}, '
-                f'{settings.ALLOCATION_MAX}].'),
+                f"Number of service units {invalid_values[2]} is not in the "
+                f"acceptable range [{settings.ALLOCATION_MIN}, "
+                f"{settings.ALLOCATION_MAX}]."
+            ),
             ValueError(
-                f'Number of service units {invalid_values[3]} has greater '
-                f'than {settings.DECIMAL_MAX_DIGITS} digits.'),
+                f"Number of service units {invalid_values[3]} has greater "
+                f"than {settings.DECIMAL_MAX_DIGITS} digits."
+            ),
             ValueError(
-                f'Number of service units {invalid_values[4]} has greater '
-                f'than {settings.DECIMAL_MAX_PLACES} decimal places.'),
+                f"Number of service units {invalid_values[4]} has greater "
+                f"than {settings.DECIMAL_MAX_PLACES} decimal places."
+            ),
         ]
         for i in range(len(invalid_values)):
             try:
-                AllocationRenewalProcessingRunner(
-                    self.request_obj, invalid_values[i])
+                AllocationRenewalProcessingRunner(self.request_obj, invalid_values[i])
             except (TypeError, ValueError) as e:
                 exception = exceptions[i]
                 self.assertEqual(type(e), type(exception))
                 self.assertEqual(str(e), str(exception))
             except Exception as e:
-                self.fail(f'An unexpected Exception {e} was raised.')
+                self.fail(f"An unexpected Exception {e} was raised.")
             else:
-                self.fail('A TypeError or ValueError should have been raised.')
+                self.fail("A TypeError or ValueError should have been raised.")
 
     def test_project_users_different_requester_pi(self):
         """Test that, when the requester and PI are different users, the
@@ -247,23 +268,20 @@ class TestRunnerMixin(TestRunnerMixinBase):
         requester = request.requester
         pi = request.pi
         # Delete the ProjectUsers on the Project in case they exist.
-        ProjectUser.objects.filter(
-            project=project, user__in=[requester, pi]).delete()
+        ProjectUser.objects.filter(project=project, user__in=[requester, pi]).delete()
         self.assertNotEqual(request.requester, request.pi)
 
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
-        active_status = ProjectUserStatusChoice.objects.get(name='Active')
-        roles = [(requester, 'Manager'), (pi, 'Principal Investigator')]
+        active_status = ProjectUserStatusChoice.objects.get(name="Active")
+        roles = [(requester, "Manager"), (pi, "Principal Investigator")]
         for user, role_name in roles:
             try:
-                project_user = ProjectUser.objects.get(
-                    project=project, user=user)
+                project_user = ProjectUser.objects.get(project=project, user=user)
             except ProjectUser.DoesNotExist:
-                self.fail(
-                    f'A ProjectUser should have been created for user {user}.')
+                self.fail(f"A ProjectUser should have been created for user {user}.")
             else:
                 self.assertEqual(project_user.status, active_status)
                 self.assertEqual(project_user.role.name, role_name)
@@ -277,35 +295,31 @@ class TestRunnerMixin(TestRunnerMixinBase):
         requester = request.requester
         pi = request.pi
         # Set both to be 'Removed' PIs before the runner is run.
-        removed_status = ProjectUserStatusChoice.objects.get(name='Removed')
-        pi_role = ProjectUserRoleChoice.objects.get(
-            name='Principal Investigator')
+        removed_status = ProjectUserStatusChoice.objects.get(name="Removed")
+        pi_role = ProjectUserRoleChoice.objects.get(name="Principal Investigator")
         for user in (requester, pi):
             try:
-                project_user = ProjectUser.objects.get(
-                    project=project, user=user)
+                project_user = ProjectUser.objects.get(project=project, user=user)
             except ProjectUser.DoesNotExist:
                 ProjectUser.objects.create(
-                    project=project, user=user, role=pi_role,
-                    status=removed_status)
+                    project=project, user=user, role=pi_role, status=removed_status
+                )
             else:
                 project_user.role = pi_role
                 project_user.status = removed_status
                 project_user.save()
 
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
-        active_status = ProjectUserStatusChoice.objects.get(name='Active')
+        active_status = ProjectUserStatusChoice.objects.get(name="Active")
         roles = [(requester, pi_role), (pi, pi_role)]
         for user, role in roles:
             try:
-                project_user = ProjectUser.objects.get(
-                    project=project, user=user)
+                project_user = ProjectUser.objects.get(project=project, user=user)
             except ProjectUser.DoesNotExist:
-                self.fail(
-                    f'A ProjectUser should have been created for user {user}.')
+                self.fail(f"A ProjectUser should have been created for user {user}.")
             else:
                 self.assertEqual(project_user.status, active_status)
                 self.assertEqual(project_user.role, role)
@@ -319,40 +333,37 @@ class TestRunnerMixin(TestRunnerMixinBase):
         requester = request.requester
         pi = request.pi
         # Delete the ProjectUsers on the Project in case they exist.
-        ProjectUser.objects.filter(
-            project=project, user__in=[requester, pi]).delete()
+        ProjectUser.objects.filter(project=project, user__in=[requester, pi]).delete()
         # Update the requester to be the PI as well.
         request.requester = pi
         request.save()
         self.assertEqual(request.requester, request.pi)
 
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
         project_users = ProjectUser.objects.filter(project=project, user=pi)
-        active_status = ProjectUserStatusChoice.objects.get(name='Active')
+        active_status = ProjectUserStatusChoice.objects.get(name="Active")
         project_user = project_users.first()
         self.assertEqual(project_user.status, active_status)
-        self.assertEqual(project_user.role.name, 'Principal Investigator')
+        self.assertEqual(project_user.role.name, "Principal Investigator")
 
     def test_request_allocation_period_not_ended_enforced(self):
         """Test that the provided AllocationRenewalRequest's
         AllocationPeriod must not have ended, or an exception will be
         raised."""
         allocation_period = AllocationPeriod.objects.filter(
-            name__startswith='Allowance Year',
-            end_date__lt=display_time_zone_current_date()).first()
+            name__startswith="Allowance Year",
+            end_date__lt=display_time_zone_current_date(),
+        ).first()
         self.request_obj.allocation_period = allocation_period
         self.request_obj.save()
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         try:
-            AllocationRenewalProcessingRunner(
-                self.request_obj, num_service_units)
+            AllocationRenewalProcessingRunner(self.request_obj, num_service_units)
         except AssertionError as e:
-            message = (
-                f'AllocationPeriod already ended on '
-                f'{allocation_period.end_date}.')
+            message = f"AllocationPeriod already ended on {allocation_period.end_date}."
             self.assertEqual(str(e), message)
 
     def test_request_allocation_period_started_enforced(self):
@@ -362,14 +373,13 @@ class TestRunnerMixin(TestRunnerMixinBase):
         allocation_period = get_next_allowance_year_period()
         self.request_obj.allocation_period = allocation_period
         self.request_obj.save()
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         try:
-            AllocationRenewalProcessingRunner(
-                self.request_obj, num_service_units)
+            AllocationRenewalProcessingRunner(self.request_obj, num_service_units)
         except AssertionError as e:
             message = (
-                f'AllocationPeriod does not start until '
-                f'{allocation_period.start_date}.')
+                f"AllocationPeriod does not start until {allocation_period.start_date}."
+            )
             self.assertEqual(str(e), message)
 
     def test_request_initial_approved_status_enforced(self):
@@ -377,23 +387,23 @@ class TestRunnerMixin(TestRunnerMixinBase):
         the 'Approved' state, or an exception will be raised."""
         statuses = AllocationRenewalRequestStatusChoice.objects.all()
         self.assertEqual(statuses.count(), 4)
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         for status in statuses:
             self.request_obj.status = status
             self.request_obj.save()
-            if status.name == 'Approved':
-                AllocationRenewalProcessingRunner(
-                    self.request_obj, num_service_units)
+            if status.name == "Approved":
+                AllocationRenewalProcessingRunner(self.request_obj, num_service_units)
             else:
                 try:
                     AllocationRenewalProcessingRunner(
-                        self.request_obj, num_service_units)
+                        self.request_obj, num_service_units
+                    )
                 except AssertionError as e:
-                    message = 'The request must have status \'Approved\'.'
+                    message = "The request must have status 'Approved'."
                     self.assertEqual(str(e), message)
                     continue
                 else:
-                    self.fail('An AssertionError should have been raised.')
+                    self.fail("An AssertionError should have been raised.")
 
     def test_runner_activates_allocation(self):
         """Test that runner sets the post_project's compute Allocation's
@@ -402,16 +412,15 @@ class TestRunnerMixin(TestRunnerMixinBase):
         project = request.post_project
         allocation = get_project_compute_allocation(project)
         # Set its status to 'New' before the runner is run.
-        allocation.status = AllocationStatusChoice.objects.get(name='New')
+        allocation.status = AllocationStatusChoice.objects.get(name="New")
         allocation.save()
 
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
         allocation.refresh_from_db()
-        expected_allocation_status = AllocationStatusChoice.objects.get(
-            name='Active')
+        expected_allocation_status = AllocationStatusChoice.objects.get(name="Active")
         self.assertEqual(expected_allocation_status, allocation.status)
 
     def test_runner_activates_project(self):
@@ -419,16 +428,15 @@ class TestRunnerMixin(TestRunnerMixinBase):
         'Active'."""
         project = self.request_obj.post_project
         # Set its status to 'New' before the runner is run.
-        project.status = ProjectStatusChoice.objects.get(name='New')
+        project.status = ProjectStatusChoice.objects.get(name="New")
         project.save()
 
-        num_service_units = Decimal('1000.00')
-        runner = AllocationRenewalProcessingRunner(
-            self.request_obj, num_service_units)
+        num_service_units = Decimal("1000.00")
+        runner = AllocationRenewalProcessingRunner(self.request_obj, num_service_units)
         runner.run()
 
         project.refresh_from_db()
-        self.assertEqual(project.status.name, 'Active')
+        self.assertEqual(project.status.name, "Active")
 
     def test_runner_creates_and_updates_project_and_allocation_users(self):
         """Test that the runner creates new ProjectUsers and updates
@@ -445,26 +453,25 @@ class TestRunnerMixin(TestRunnerMixinBase):
         try:
             a = queryset.get(user=request.requester)
         except AllocationUser.DoesNotExist:
-            self.fail('The requester should have an AllocationUser.')
+            self.fail("The requester should have an AllocationUser.")
         try:
             b = queryset.get(user=request.pi)
         except AllocationUser.DoesNotExist:
             b = None
         # Delete the requester's ProjectUser and AllocationUser to test that
         # it gets created.
-        ProjectUser.objects.filter(
-            project=project, user=request.requester).delete()
+        ProjectUser.objects.filter(project=project, user=request.requester).delete()
         a.delete()
         # Change the PI's AllocationUser's status if it exists to test that it
         # gets updated.
         if b:
-            ProjectUser.objects.filter(
-                project=project, user=request.pi).update(
-                    status=ProjectUserStatusChoice.objects.get(name='Removed'))
-            b.status = AllocationUserStatusChoice.objects.get(name='Removed')
+            ProjectUser.objects.filter(project=project, user=request.pi).update(
+                status=ProjectUserStatusChoice.objects.get(name="Removed")
+            )
+            b.status = AllocationUserStatusChoice.objects.get(name="Removed")
             b.save()
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -474,13 +481,13 @@ class TestRunnerMixin(TestRunnerMixinBase):
         try:
             a = queryset.get(user=request.requester)
         except AllocationUser.DoesNotExist:
-            self.fail('The requester should have an AllocationUser.')
+            self.fail("The requester should have an AllocationUser.")
         try:
             b = queryset.get(user=request.pi)
         except AllocationUser.DoesNotExist:
-            self.fail('The PI should have an AllocationUser.')
-        self.assertEqual(a.status.name, 'Active')
-        self.assertEqual(b.status.name, 'Active')
+            self.fail("The PI should have an AllocationUser.")
+        self.assertEqual(a.status.name, "Active")
+        self.assertEqual(b.status.name, "Active")
 
     def test_runner_creates_project_transaction(self):
         """Test that the runner creates a ProjectTransaction to record
@@ -491,7 +498,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
         old_count = ProjectTransaction.objects.filter(project=project).count()
         pre_time = utc_now_offset_aware()
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -499,9 +506,8 @@ class TestRunnerMixin(TestRunnerMixinBase):
         new_count = ProjectTransaction.objects.filter(project=project).count()
         self.assertEqual(old_count + 1, new_count)
 
-        transaction = ProjectTransaction.objects.latest('date_time')
-        new_allocation_value = \
-            self.project_service_units[project] + num_service_units
+        transaction = ProjectTransaction.objects.latest("date_time")
+        new_allocation_value = self.project_service_units[project] + num_service_units
         self.assertTrue(pre_time <= transaction.date_time <= post_time)
         self.assertEqual(transaction.project, project)
         self.assertEqual(transaction.allocation, new_allocation_value)
@@ -520,29 +526,25 @@ class TestRunnerMixin(TestRunnerMixinBase):
         AllocationUser.objects.filter(allocation=allocation).delete()
         for project_user in project_users:
             create_user_project_allocation(
-                project_user.user, project,
-                self.project_service_units[project])
+                project_user.user, project, self.project_service_units[project]
+            )
 
-        queryset = ProjectUserTransaction.objects.filter(
-            project_user__project=project)
+        queryset = ProjectUserTransaction.objects.filter(project_user__project=project)
         old_count = queryset.count()
         num_project_users = project_users.count()
         pre_time = utc_now_offset_aware()
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
         post_time = utc_now_offset_aware()
-        queryset = ProjectUserTransaction.objects.filter(
-            project_user__project=project)
+        queryset = ProjectUserTransaction.objects.filter(project_user__project=project)
         new_count = queryset.count()
         self.assertEqual(old_count + num_project_users, new_count)
 
-        transactions = queryset.filter(
-            date_time__gt=pre_time, date_time__lt=post_time)
-        new_allocation_value = \
-            self.project_service_units[project] + num_service_units
+        transactions = queryset.filter(date_time__gt=pre_time, date_time__lt=post_time)
+        new_allocation_value = self.project_service_units[project] + num_service_units
         for transaction in transactions:
             self.assertTrue(pre_time <= transaction.date_time <= post_time)
             self.assertEqual(transaction.project_user.project, project)
@@ -556,17 +558,20 @@ class TestRunnerMixin(TestRunnerMixinBase):
         project = request.post_project
         allocation = get_project_compute_allocation(project)
         allocation_attribute_type = AllocationAttributeType.objects.get(
-            name='Service Units')
+            name="Service Units"
+        )
 
         # Set the Project's overall usage to a non-zero value.
-        value = Decimal('100.00')
+        value = Decimal("100.00")
         project_usages = AllocationAttributeUsage.objects.filter(
-            allocation_attribute__allocation=allocation)
+            allocation_attribute__allocation=allocation
+        )
         self.assertEqual(project_usages.count(), 1)
         project_usage = project_usages.first()
         self.assertEqual(
             allocation_attribute_type,
-            project_usage.allocation_attribute.allocation_attribute_type)
+            project_usage.allocation_attribute.allocation_attribute_type,
+        )
         project_usage.value = value
         project_usage.save()
 
@@ -576,23 +581,25 @@ class TestRunnerMixin(TestRunnerMixinBase):
         AllocationUser.objects.filter(allocation=allocation).delete()
         for project_user in project_users:
             create_user_project_allocation(
-                project_user.user, project,
-                self.project_service_units[project])
+                project_user.user, project, self.project_service_units[project]
+            )
 
         # Set each ProjectUser's usage to a non-zero value.
         project_user_usages = AllocationUserAttributeUsage.objects.filter(
-            allocation_user_attribute__allocation=allocation)
+            allocation_user_attribute__allocation=allocation
+        )
         self.assertGreater(project_user_usages.count(), 0)
         project_user_usages_cache = []
         for usage in project_user_usages:
             self.assertEqual(
                 allocation_attribute_type,
-                usage.allocation_user_attribute.allocation_attribute_type)
+                usage.allocation_user_attribute.allocation_attribute_type,
+            )
             usage.value = value
             usage.save()
             project_user_usages_cache.append(usage)
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -611,21 +618,22 @@ class TestRunnerMixin(TestRunnerMixinBase):
         requester = request.requester
         pi = request.pi
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
 
-        expected_subject = (
-            f'{settings.EMAIL_SUBJECT_PREFIX} {str(request)} Processed')
+        expected_subject = f"{settings.EMAIL_SUBJECT_PREFIX} {str(request)} Processed"
         self.assertEqual(expected_subject, email.subject)
 
         expected_body_snippets = [
-            (f'{num_service_units} service units have been added to the '
-             f'project {project.name}.'),
-            f'/project/{project.pk}/',
+            (
+                f"{num_service_units} service units have been added to the "
+                f"project {project.name}."
+            ),
+            f"/project/{project.pk}/",
         ]
         for expected_body_snippet in expected_body_snippets:
             self.assertIn(expected_body_snippet, email.body)
@@ -645,13 +653,13 @@ class TestRunnerMixin(TestRunnerMixinBase):
         allocation = get_project_compute_allocation(project)
 
         # Deactivate the Project and nullify the dates.
-        project.status = ProjectStatusChoice.objects.get(name='Inactive')
+        project.status = ProjectStatusChoice.objects.get(name="Inactive")
         project.save()
         allocation.start_date = None
         allocation.end_date = None
         allocation.save()
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -674,7 +682,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
         allocation.end_date = end_date
         allocation.save()
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -691,7 +699,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
         pi_user_profile.is_pi = False
         pi_user_profile.save()
 
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -702,9 +710,9 @@ class TestRunnerMixin(TestRunnerMixinBase):
         """Test that the runner sets the provided number of service
         units in the request."""
         request = self.request_obj
-        self.assertEqual(request.num_service_units, Decimal('0.00'))
+        self.assertEqual(request.num_service_units, Decimal("0.00"))
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -714,19 +722,18 @@ class TestRunnerMixin(TestRunnerMixinBase):
     def test_runner_sets_status_and_completion_time(self):
         """Test that the runner sets the status of the request to
         'Complete' and its completion_time to the current time."""
-        self.assertEqual(self.request_obj.status.name, 'Approved')
+        self.assertEqual(self.request_obj.status.name, "Approved")
         self.assertFalse(self.request_obj.completion_time)
         pre_time = utc_now_offset_aware()
 
-        num_service_units = Decimal('0.00')
-        runner = AllocationRenewalProcessingRunner(
-            self.request_obj, num_service_units)
+        num_service_units = Decimal("0.00")
+        runner = AllocationRenewalProcessingRunner(self.request_obj, num_service_units)
         runner.run()
 
         post_time = utc_now_offset_aware()
         self.request_obj.refresh_from_db()
         completion_time = self.request_obj.completion_time
-        self.assertEqual(self.request_obj.status.name, 'Complete')
+        self.assertEqual(self.request_obj.status.name, "Complete")
         self.assertTrue(completion_time)
         self.assertTrue(pre_time <= completion_time <= post_time)
 
@@ -738,7 +745,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
         try:
             allocation = get_project_compute_allocation(project)
         except Allocation.DoesNotExist:
-            self.fail(f'Project {project.name} has no compute Allocation.')
+            self.fail(f"Project {project.name} has no compute Allocation.")
         allocation.delete()
         try:
             get_project_compute_allocation(project)
@@ -746,10 +753,10 @@ class TestRunnerMixin(TestRunnerMixinBase):
             pass
         else:
             self.fail(
-                f'Project {project.name}\'s compute Allocation should have '
-                f'been deleted.')
+                f"Project {project.name}'s compute Allocation should have been deleted."
+            )
 
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         try:
             runner.run()
@@ -757,8 +764,8 @@ class TestRunnerMixin(TestRunnerMixinBase):
             pass
         else:
             self.fail(
-                'The runner should have failed due to a nonexistent compute '
-                'Allocation.')
+                "The runner should have failed due to a nonexistent compute Allocation."
+            )
 
     def test_runner_updates_allocation_service_units(self):
         """Test that the runner updates the AllocationAttribute with
@@ -769,17 +776,15 @@ class TestRunnerMixin(TestRunnerMixinBase):
         allocation = get_project_compute_allocation(project)
 
         expected_previous_value = self.project_service_units[project]
-        self.assert_allocation_service_units_value(
-            allocation, expected_previous_value)
+        self.assert_allocation_service_units_value(allocation, expected_previous_value)
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
         allocation.refresh_from_db()
         expected_current_value = expected_previous_value + num_service_units
-        self.assert_allocation_service_units_value(
-            allocation, expected_current_value)
+        self.assert_allocation_service_units_value(allocation, expected_current_value)
 
     def test_runner_updates_allocation_user_service_units(self):
         """Test that the runner updates the AllocationUserAttributes
@@ -797,11 +802,11 @@ class TestRunnerMixin(TestRunnerMixinBase):
         value = self.project_service_units[project]
         for project_user in project_users:
             allocation_objects = create_user_project_allocation(
-                project_user.user, project, value)
-            attributes_cache.append(
-                allocation_objects.allocation_user_attribute)
+                project_user.user, project, value
+            )
+            attributes_cache.append(allocation_objects.allocation_user_attribute)
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -824,13 +829,16 @@ class TestFutureRequestsUpdateMixin(object):
         self.different_project = Project.objects.create(
             name=project_name,
             title=project_name,
-            status=ProjectStatusChoice.objects.get(name='Active'))
-        computing_allowance = ComputingAllowanceInterface(
-            ).allowance_from_project(self.different_project)
+            status=ProjectStatusChoice.objects.get(name="Active"),
+        )
+        computing_allowance = ComputingAllowanceInterface().allowance_from_project(
+            self.different_project
+        )
 
         allocation_period = get_next_allowance_year_period()
         approved_status = AllocationRenewalRequestStatusChoice.objects.get(
-            name='Approved')
+            name="Approved"
+        )
 
         return AllocationRenewalRequest.objects.create(
             requester=request.requester,
@@ -840,18 +848,19 @@ class TestFutureRequestsUpdateMixin(object):
             status=approved_status,
             pre_project=request.pre_project,
             post_project=self.different_project,
-            num_service_units=Decimal('0.00'),
-            request_time=utc_now_offset_aware())
+            num_service_units=Decimal("0.00"),
+            request_time=utc_now_offset_aware(),
+        )
 
-    def assert_update_message_logged(self, future_request, log_messages,
-                                     expected=True):
+    def assert_update_message_logged(self, future_request, log_messages, expected=True):
         """Given a list of strings representing messages written to the
         log during processing, assert that a message about the future
         request being updated is (not) included.."""
         expected_log_substring = (
-            f'Updated AllocationRenewalRequest {future_request.pk}\'s '
-            f'pre_project from {self.request_obj.pre_project.pk} to '
-            f'{self.request_obj.post_project.pk}')
+            f"Updated AllocationRenewalRequest {future_request.pk}'s "
+            f"pre_project from {self.request_obj.pre_project.pk} to "
+            f"{self.request_obj.post_project.pk}"
+        )
         message_found = False
         for log_message in log_messages:
             if expected_log_substring in log_message:
@@ -867,29 +876,33 @@ class TestFutureRequestsUpdateMixin(object):
         computing_allowance_interface = ComputingAllowanceInterface()
         allowance_name = BRCAllowances.FCA
         project_name_prefix = computing_allowance_interface.code_from_name(
-            allowance_name)
+            allowance_name
+        )
 
         future_requests = []
         for i in range(4):
             future_requests.append(
                 self.create_different_project_and_request(
-                    f'{project_name_prefix}different_{i}'))
+                    f"{project_name_prefix}different_{i}"
+                )
+            )
 
         # The first request has a 'Complete' or 'Denied' status.
-        future_requests[0].status = \
-            AllocationRenewalRequestStatusChoice.objects.get(name='Complete')
+        future_requests[0].status = AllocationRenewalRequestStatusChoice.objects.get(
+            name="Complete"
+        )
         future_requests[0].save()
         # The second request is for an AllocationPeriod that has already
         # started.
-        future_requests[1].allocation_period = \
-            get_current_allowance_year_period()
+        future_requests[1].allocation_period = get_current_allowance_year_period()
         future_requests[1].save()
         # The third request has a different allowance type.
-        other_project_name_prefix = \
-            computing_allowance_interface.code_from_name(BRCAllowances.ICA)
+        other_project_name_prefix = computing_allowance_interface.code_from_name(
+            BRCAllowances.ICA
+        )
         future_requests[2].pre_project.name = (
-            f'{other_project_name_prefix}'
-            f'{future_requests[2].pre_project.name}')
+            f"{other_project_name_prefix}{future_requests[2].pre_project.name}"
+        )
         future_requests[2].pre_project.save()
         # The fourth request has a different PI.
         future_requests[3].pi = future_requests[3].requester
@@ -902,35 +915,35 @@ class TestFutureRequestsUpdateMixin(object):
             AllocationRenewalRequest.POOLED_TO_UNPOOLED_NEW,
         ]
         project_changed = (
-            request.get_pooling_preference_case() in relevant_pooling_cases)
+            request.get_pooling_preference_case() in relevant_pooling_cases
+        )
 
-        log_args = ('coldfront.core.project.utils_.renewal_utils', 'INFO')
+        log_args = ("coldfront.core.project.utils_.renewal_utils", "INFO")
         tmp_status = request.status
         tmp_pre_project = request.pre_project
         tmp_post_project = request.post_project
         already_pi_of_post = request.pi in tmp_post_project.pis()
         project_pi_role = ProjectUserRoleChoice.objects.get(
-            name='Principal Investigator')
-        project_user_role = ProjectUserRoleChoice.objects.get(name='User')
+            name="Principal Investigator"
+        )
+        project_user_role = ProjectUserRoleChoice.objects.get(name="User")
         for future_request in future_requests:
-            num_service_units = Decimal('0.00')
-            runner = AllocationRenewalProcessingRunner(
-                request, num_service_units)
+            num_service_units = Decimal("0.00")
+            runner = AllocationRenewalProcessingRunner(request, num_service_units)
             with self.assertLogs(*log_args) as cm:
                 runner.run()
-            self.assert_update_message_logged(
-                future_request, cm.output, expected=False)
+            self.assert_update_message_logged(future_request, cm.output, expected=False)
             # Reset the request fields and other changed state.
             request.status = tmp_status
             request.pre_project = tmp_pre_project
             request.post_project = tmp_post_project
             ProjectUser.objects.filter(
-                project=request.pre_project, user=request.pi).update(
-                    role=project_pi_role)
+                project=request.pre_project, user=request.pi
+            ).update(role=project_pi_role)
             if not already_pi_of_post:
                 ProjectUser.objects.filter(
-                    project=request.post_project, user=request.pi).update(
-                        role=project_user_role)
+                    project=request.post_project, user=request.pi
+                ).update(role=project_user_role)
             request.save()
 
         # In cases where the pre_project of the future request was already
@@ -939,8 +952,7 @@ class TestFutureRequestsUpdateMixin(object):
         # should not have been updated.
         future_request.refresh_from_db()
         if project_changed:
-            self.assertNotEqual(
-                future_request.pre_project, request.post_project)
+            self.assertNotEqual(future_request.pre_project, request.post_project)
         else:
             self.assertEqual(future_request.pre_project, request.post_project)
 
@@ -949,11 +961,10 @@ class TestFutureRequestsUpdateMixin(object):
         conditions for being updated is updated."""
         request = self.request_obj
         # Update the pre_project to have a proper prefix.
-        request.pre_project.name = f'fc_{request.pre_project.name}'
+        request.pre_project.name = f"fc_{request.pre_project.name}"
         request.pre_project.save()
 
-        future_request = self.create_different_project_and_request(
-            'fc_different')
+        future_request = self.create_different_project_and_request("fc_different")
 
         relevant_pooling_cases = [
             AllocationRenewalRequest.UNPOOLED_TO_POOLED,
@@ -962,35 +973,37 @@ class TestFutureRequestsUpdateMixin(object):
             AllocationRenewalRequest.POOLED_TO_UNPOOLED_NEW,
         ]
         project_changed = (
-            request.get_pooling_preference_case() in relevant_pooling_cases)
+            request.get_pooling_preference_case() in relevant_pooling_cases
+        )
 
         # The future request has the 'Approved' status; more specifically, it
         # does not have the 'Complete' or 'Denied' statuses.
-        self.assertEqual(future_request.status.name, 'Approved')
+        self.assertEqual(future_request.status.name, "Approved")
         # The future request's AllocationPeriod has not started yet.
         current_date = display_time_zone_current_date()
-        self.assertGreater(
-            future_request.allocation_period.start_date, current_date)
+        self.assertGreater(future_request.allocation_period.start_date, current_date)
         # The future request has the same allowance type as this one.
         self.assertEqual(
-            future_request.pre_project.name[3:], request.pre_project.name[3:])
+            future_request.pre_project.name[3:], request.pre_project.name[3:]
+        )
         # The future request has the same PI as this one.
         self.assertEqual(future_request.pi, request.pi)
         # The future request has a different pre_project than this one's
         # post_project, if this request's project changed.
         if project_changed:
-            self.assertNotEqual(
-                future_request.pre_project, request.post_project)
+            self.assertNotEqual(future_request.pre_project, request.post_project)
         else:
             self.assertEqual(future_request.pre_project, request.post_project)
 
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         with self.assertLogs(
-                'coldfront.core.project.utils_.renewal_utils', 'INFO') as cm:
+            "coldfront.core.project.utils_.renewal_utils", "INFO"
+        ) as cm:
             runner.run()
         self.assert_update_message_logged(
-            future_request, cm.output, expected=project_changed)
+            future_request, cm.output, expected=project_changed
+        )
 
         # In all cases, the future request's pre_project should match this
         # one's post_project.
@@ -1008,20 +1021,19 @@ class TestPIDemotionMixin(object):
         pi = request.pi
         project = request.pre_project
 
-        pi_role = ProjectUserRoleChoice.objects.get(
-            name='Principal Investigator')
-        user_role = ProjectUserRoleChoice.objects.get(name='User')
+        pi_role = ProjectUserRoleChoice.objects.get(name="Principal Investigator")
+        user_role = ProjectUserRoleChoice.objects.get(name="User")
 
         num_pis = project.pis().count()
         self.assertGreater(num_pis, 1)
         try:
             pi_project_user = project.projectuser_set.get(user=pi)
         except ProjectUser.DoesNotExist:
-            self.fail('The PI is not a member of the pre_project.')
+            self.fail("The PI is not a member of the pre_project.")
 
         self.assertEqual(pi_role, pi_project_user.role)
 
-        num_service_units = Decimal('1000.00')
+        num_service_units = Decimal("1000.00")
         runner = AllocationRenewalProcessingRunner(request, num_service_units)
         runner.run()
 
@@ -1031,8 +1043,7 @@ class TestPIDemotionMixin(object):
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestUnpooledToUnpooled(TestFutureRequestsUpdateMixin, TestRunnerMixin,
-                             TestCase):
+class TestUnpooledToUnpooled(TestFutureRequestsUpdateMixin, TestRunnerMixin, TestCase):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'unpooled_to_unpooled' case."""
 
@@ -1040,23 +1051,23 @@ class TestUnpooledToUnpooled(TestFutureRequestsUpdateMixin, TestRunnerMixin,
         """Set up test data."""
         super().setUp()
         self.request_obj = self.create_request(
-            status=AllocationRenewalRequestStatusChoice.objects.get(
-                name='Approved'),
+            status=AllocationRenewalRequestStatusChoice.objects.get(name="Approved"),
             pi=self.pi0,
             computing_allowance=self.computing_allowance,
             pre_project=self.fc_unpooled_project0,
-            post_project=self.fc_unpooled_project0)
+            post_project=self.fc_unpooled_project0,
+        )
 
     def test_pooling_preference_case(self):
         """Test that the pooling preference case for the class' renewal
         request is 'unpooled_to_unpooled'."""
         self.assert_pooling_preference_case(
-            AllocationRenewalRequest.UNPOOLED_TO_UNPOOLED)
+            AllocationRenewalRequest.UNPOOLED_TO_UNPOOLED
+        )
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestUnpooledToPooled(TestFutureRequestsUpdateMixin, TestRunnerMixin,
-                           TestCase):
+class TestUnpooledToPooled(TestFutureRequestsUpdateMixin, TestRunnerMixin, TestCase):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'unpooled_to_pooled' case."""
 
@@ -1064,23 +1075,21 @@ class TestUnpooledToPooled(TestFutureRequestsUpdateMixin, TestRunnerMixin,
         """Set up test data."""
         super().setUp()
         self.request_obj = self.create_request(
-            status=AllocationRenewalRequestStatusChoice.objects.get(
-                name='Approved'),
+            status=AllocationRenewalRequestStatusChoice.objects.get(name="Approved"),
             pi=self.pi0,
             computing_allowance=self.computing_allowance,
             pre_project=self.fc_unpooled_project0,
-            post_project=self.fc_pooled_project1)
+            post_project=self.fc_pooled_project1,
+        )
 
     def test_pooling_preference_case(self):
         """Test that the pooling preference case for the class' renewal
         request is 'unpooled_to_pooled'."""
-        self.assert_pooling_preference_case(
-            AllocationRenewalRequest.UNPOOLED_TO_POOLED)
+        self.assert_pooling_preference_case(AllocationRenewalRequest.UNPOOLED_TO_POOLED)
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestPooledToPooledSame(TestFutureRequestsUpdateMixin, TestRunnerMixin,
-                             TestCase):
+class TestPooledToPooledSame(TestFutureRequestsUpdateMixin, TestRunnerMixin, TestCase):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'pooled_to_pooled_same' case."""
 
@@ -1088,24 +1097,25 @@ class TestPooledToPooledSame(TestFutureRequestsUpdateMixin, TestRunnerMixin,
         """Set up test data."""
         super().setUp()
         self.request_obj = self.create_request(
-            status=AllocationRenewalRequestStatusChoice.objects.get(
-                name='Approved'),
+            status=AllocationRenewalRequestStatusChoice.objects.get(name="Approved"),
             pi=self.pi0,
             computing_allowance=self.computing_allowance,
             pre_project=self.fc_pooled_project0,
-            post_project=self.fc_pooled_project0)
+            post_project=self.fc_pooled_project0,
+        )
 
     def test_pooling_preference_case(self):
         """Test that the pooling preference case for the class' renewal
         request is 'pooled_to_pooled_same'."""
         self.assert_pooling_preference_case(
-            AllocationRenewalRequest.POOLED_TO_POOLED_SAME)
+            AllocationRenewalRequest.POOLED_TO_POOLED_SAME
+        )
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestPooledToPooledDifferent(TestFutureRequestsUpdateMixin,
-                                  TestPIDemotionMixin, TestRunnerMixin,
-                                  TestCase):
+class TestPooledToPooledDifferent(
+    TestFutureRequestsUpdateMixin, TestPIDemotionMixin, TestRunnerMixin, TestCase
+):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'pooled_to_pooled_different' case."""
 
@@ -1113,23 +1123,25 @@ class TestPooledToPooledDifferent(TestFutureRequestsUpdateMixin,
         """Set up test data."""
         super().setUp()
         self.request_obj = self.create_request(
-            status=AllocationRenewalRequestStatusChoice.objects.get(
-                name='Approved'),
+            status=AllocationRenewalRequestStatusChoice.objects.get(name="Approved"),
             pi=self.pi0,
             computing_allowance=self.computing_allowance,
             pre_project=self.fc_pooled_project0,
-            post_project=self.fc_pooled_project1)
+            post_project=self.fc_pooled_project1,
+        )
 
     def test_pooling_preference_case(self):
         """Test that the pooling preference case for the class' renewal
         request is 'pooled_to_pooled_different'."""
         self.assert_pooling_preference_case(
-            AllocationRenewalRequest.POOLED_TO_POOLED_DIFFERENT)
+            AllocationRenewalRequest.POOLED_TO_POOLED_DIFFERENT
+        )
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestPooledToUnpooledOld(TestFutureRequestsUpdateMixin,
-                              TestPIDemotionMixin, TestRunnerMixin, TestCase):
+class TestPooledToUnpooledOld(
+    TestFutureRequestsUpdateMixin, TestPIDemotionMixin, TestRunnerMixin, TestCase
+):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'pooled_to_unpooled_old' case."""
 
@@ -1137,39 +1149,40 @@ class TestPooledToUnpooledOld(TestFutureRequestsUpdateMixin,
         """Set up test data."""
         super().setUp()
         self.request_obj = self.create_request(
-            status=AllocationRenewalRequestStatusChoice.objects.get(
-                name='Approved'),
+            status=AllocationRenewalRequestStatusChoice.objects.get(name="Approved"),
             pi=self.pi0,
             computing_allowance=self.computing_allowance,
             pre_project=self.fc_pooled_project0,
-            post_project=self.fc_unpooled_project0)
+            post_project=self.fc_unpooled_project0,
+        )
 
     def test_pooling_preference_case(self):
         """Test that the pooling preference case for the class' renewal
         request is 'pooled_to_unpooled_old'."""
         self.assert_pooling_preference_case(
-            AllocationRenewalRequest.POOLED_TO_UNPOOLED_OLD)
+            AllocationRenewalRequest.POOLED_TO_UNPOOLED_OLD
+        )
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestPooledToUnpooledNew(TestFutureRequestsUpdateMixin,
-                              TestPIDemotionMixin, TestRunnerMixin, TestCase):
+class TestPooledToUnpooledNew(
+    TestFutureRequestsUpdateMixin, TestPIDemotionMixin, TestRunnerMixin, TestCase
+):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'pooled_to_unpooled_new' case."""
 
     def setUp(self):
         """Set up test data."""
         super().setUp()
-        new_project_request = \
-            self.simulate_new_project_allocation_request_processing()
+        new_project_request = self.simulate_new_project_allocation_request_processing()
         self.request_obj = self.create_request(
-            status=AllocationRenewalRequestStatusChoice.objects.get(
-                name='Approved'),
+            status=AllocationRenewalRequestStatusChoice.objects.get(name="Approved"),
             pi=self.pi0,
             computing_allowance=self.computing_allowance,
             pre_project=self.fc_pooled_project0,
             post_project=new_project_request.project,
-            new_project_request=new_project_request)
+            new_project_request=new_project_request,
+        )
 
     def simulate_new_project_allocation_request_processing(self):
         """Create a new Project and simulate its processing. Return the
@@ -1178,9 +1191,8 @@ class TestPooledToUnpooledNew(TestFutureRequestsUpdateMixin,
         new_project = new_project_request.project
 
         # Process the request.
-        num_service_units = Decimal('1000.00')
-        runner = SavioProjectProcessingRunner(
-            new_project_request, num_service_units)
+        num_service_units = Decimal("1000.00")
+        runner = SavioProjectProcessingRunner(new_project_request, num_service_units)
         runner.run()
         # Clear the mail outbox.
         mail.outbox = []
@@ -1189,7 +1201,7 @@ class TestPooledToUnpooledNew(TestFutureRequestsUpdateMixin,
         self.project_service_units[new_project] = num_service_units
 
         new_project_request.refresh_from_db()
-        expected_status_name = 'Approved - Complete'
+        expected_status_name = "Approved - Complete"
         self.assertEqual(expected_status_name, new_project_request.status.name)
 
         return new_project_request
@@ -1198,4 +1210,5 @@ class TestPooledToUnpooledNew(TestFutureRequestsUpdateMixin,
         """Test that the pooling preference case for the class' renewal
         request is 'pooled_to_unpooled_new'."""
         self.assert_pooling_preference_case(
-            AllocationRenewalRequest.POOLED_TO_UNPOOLED_NEW)
+            AllocationRenewalRequest.POOLED_TO_UNPOOLED_NEW
+        )

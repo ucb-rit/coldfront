@@ -1,15 +1,14 @@
 from django.conf import settings
 from django.urls import path
 from django.views.generic import RedirectView, TemplateView
-
 from flags.urls import flagged_paths
 
 import coldfront.core.allocation.views_.secure_dir_views.new_directory.request_views as secure_dir_new_directory_request_views
 import coldfront.core.project.views as project_views
 import coldfront.core.project.views_.addition_views.approval_views as addition_approval_views
 import coldfront.core.project.views_.addition_views.request_views as addition_request_views
-import coldfront.core.project.views_.join_views.request_views as join_request_views
 import coldfront.core.project.views_.join_views.approval_views as join_approval_views
+import coldfront.core.project.views_.join_views.request_views as join_request_views
 import coldfront.core.project.views_.new_project_views.approval_views as new_project_approval_views
 import coldfront.core.project.views_.new_project_views.request_views as new_project_request_views
 import coldfront.core.project.views_.removal_views as removal_views
@@ -17,42 +16,94 @@ import coldfront.core.project.views_.renewal_views.approval_views as renewal_app
 import coldfront.core.project.views_.renewal_views.request_views as renewal_request_views
 import coldfront.core.utils.views.mou_views as mou_views
 
-
-
-
 urlpatterns = [
-    path('<int:pk>/', project_views.ProjectDetailView.as_view(), name='project-detail'),
-    path('<int:pk>/archive', project_views.ProjectArchiveProjectView.as_view(), name='project-archive'),
-    path('', project_views.ProjectListView.as_view(), name='project-list'),
-    path('project-user-update-email-notification/', project_views.project_update_email_notification, name='project-user-update-email-notification'),
-    path('archived/', project_views.ProjectArchivedListView.as_view(), name='project-archived-list'),
-    path('create/', project_views.ProjectCreateView.as_view(), name='project-create'),
-    path('<int:pk>/update/', project_views.ProjectUpdateView.as_view(), name='project-update'),
-    path('<int:pk>/add-users-search/', project_views.ProjectAddUsersSearchView.as_view(), name='project-add-users-search'),
-    path('<int:pk>/add-users-search-results/', project_views.ProjectAddUsersSearchResultsView.as_view(), name='project-add-users-search-results'),
-    path('<int:pk>/add-users/', project_views.ProjectAddUsersView.as_view(), name='project-add-users'),
-    path('<int:pk>/user-detail/<int:project_user_pk>', project_views.ProjectUserDetail.as_view(), name='project-user-detail'),
-    path('<int:pk>/review/', project_views.ProjectReviewView.as_view(), name='project-review'),
-    path('project-review-list', project_views.ProjectReviewListView.as_view(),name='project-review-list'),
-    path('project-review-complete/<int:project_review_pk>/', project_views.ProjectReviewCompleteView.as_view(),
-         name='project-review-complete'),
-    path('project-review/<int:pk>/email', project_views.ProjectReivewEmailView.as_view(), name='project-review-email'),
+    path("<int:pk>/", project_views.ProjectDetailView.as_view(), name="project-detail"),
+    path(
+        "<int:pk>/archive",
+        project_views.ProjectArchiveProjectView.as_view(),
+        name="project-archive",
+    ),
+    path("", project_views.ProjectListView.as_view(), name="project-list"),
+    path(
+        "project-user-update-email-notification/",
+        project_views.project_update_email_notification,
+        name="project-user-update-email-notification",
+    ),
+    path(
+        "archived/",
+        project_views.ProjectArchivedListView.as_view(),
+        name="project-archived-list",
+    ),
+    path("create/", project_views.ProjectCreateView.as_view(), name="project-create"),
+    path(
+        "<int:pk>/update/",
+        project_views.ProjectUpdateView.as_view(),
+        name="project-update",
+    ),
+    path(
+        "<int:pk>/add-users-search/",
+        project_views.ProjectAddUsersSearchView.as_view(),
+        name="project-add-users-search",
+    ),
+    path(
+        "<int:pk>/add-users-search-results/",
+        project_views.ProjectAddUsersSearchResultsView.as_view(),
+        name="project-add-users-search-results",
+    ),
+    path(
+        "<int:pk>/add-users/",
+        project_views.ProjectAddUsersView.as_view(),
+        name="project-add-users",
+    ),
+    path(
+        "<int:pk>/user-detail/<int:project_user_pk>",
+        project_views.ProjectUserDetail.as_view(),
+        name="project-user-detail",
+    ),
+    path(
+        "<int:pk>/review/",
+        project_views.ProjectReviewView.as_view(),
+        name="project-review",
+    ),
+    path(
+        "project-review-list",
+        project_views.ProjectReviewListView.as_view(),
+        name="project-review-list",
+    ),
+    path(
+        "project-review-complete/<int:project_review_pk>/",
+        project_views.ProjectReviewCompleteView.as_view(),
+        name="project-review-complete",
+    ),
+    path(
+        "project-review/<int:pk>/email",
+        project_views.ProjectReivewEmailView.as_view(),
+        name="project-review-email",
+    ),
 ]
 
 # Join Requests
 urlpatterns += [
-    path('join/',
-         join_request_views.ProjectJoinListView.as_view(),
-         name='project-join-list'),
-    path('<int:pk>/join/',
-         join_request_views.ProjectJoinView.as_view(),
-         name='project-join'),
-    path('<int:pk>/review-join-requests/',
-         join_approval_views.ProjectReviewJoinRequestsView.as_view(),
-         name='project-review-join-requests'),
-    path('join-list/',
-         join_approval_views.ProjectJoinRequestListView.as_view(),
-         name='project-join-request-list'),
+    path(
+        "join/",
+        join_request_views.ProjectJoinListView.as_view(),
+        name="project-join-list",
+    ),
+    path(
+        "<int:pk>/join/",
+        join_request_views.ProjectJoinView.as_view(),
+        name="project-join",
+    ),
+    path(
+        "<int:pk>/review-join-requests/",
+        join_approval_views.ProjectReviewJoinRequestsView.as_view(),
+        name="project-review-join-requests",
+    ),
+    path(
+        "join-list/",
+        join_approval_views.ProjectJoinRequestListView.as_view(),
+        name="project-join-request-list",
+    ),
 ]
 
 
@@ -60,155 +111,235 @@ urlpatterns += [
 urlpatterns += [
     # TODO: Once all callers link directly to 'project-request-landing',
     # remove this redirect and ProjectRequestView.
-    path('project-request/',
-         RedirectView.as_view(pattern_name='project-request-landing'),
-         name='project-request'),
-    path('project-request-landing/',
-         new_project_request_views.NewProjectRequestLandingView.as_view(),
-         name='project-request-landing'),
-    path('new-project-request/',
-         new_project_request_views.SavioProjectRequestWizard.as_view(
-             condition_dict=new_project_request_views.SavioProjectRequestWizard.condition_dict(),
-         ),
-         name='new-project-request'),
-    path('new-project-request-list/',
-         new_project_approval_views.SavioProjectRequestListView.as_view(),
-         name='new-project-request-list'),
+    path(
+        "project-request/",
+        RedirectView.as_view(pattern_name="project-request-landing"),
+        name="project-request",
+    ),
+    path(
+        "project-request-landing/",
+        new_project_request_views.NewProjectRequestLandingView.as_view(),
+        name="project-request-landing",
+    ),
+    path(
+        "new-project-request/",
+        new_project_request_views.SavioProjectRequestWizard.as_view(
+            condition_dict=new_project_request_views.SavioProjectRequestWizard.condition_dict(),
+        ),
+        name="new-project-request",
+    ),
+    path(
+        "new-project-request-list/",
+        new_project_approval_views.SavioProjectRequestListView.as_view(),
+        name="new-project-request-list",
+    ),
     # TODO: Remove these redirects once all internal references have been
     # updated to use 'new-project-request-list' with a ?status= parameter.
-    path('new-project-pending-request-list/',
-         RedirectView.as_view(
-             url='/project/new-project-request-list/?status=pending'),
-         name='new-project-pending-request-list'),
-    path('new-project-completed-request-list/',
-         RedirectView.as_view(
-             url='/project/new-project-request-list/?status=completed'),
-         name='new-project-completed-request-list'),
-    path('new-project-request/<int:pk>/',
-         new_project_approval_views.SavioProjectRequestDetailView.as_view(),
-         name='new-project-request-detail'),
-    path('new-project-request/<int:pk>/eligibility/',
-         new_project_approval_views.SavioProjectReviewEligibilityView.as_view(),
-         name='new-project-request-review-eligibility'),
-    path('new-project-request/<int:pk>/readiness/',
-         new_project_approval_views.SavioProjectReviewReadinessView.as_view(),
-         name='new-project-request-review-readiness'),
-    path('new-project-request/<int:pk>/notify-pi/',
-         new_project_approval_views.SavioProjectRequestNotifyPIView.as_view(),
-         name='new-project-request-notify-pi'),
-    path('new-project-request/<int:pk>/memorandum-signed/',
-         new_project_approval_views.SavioProjectReviewMemorandumSignedView.as_view(),
-         name='new-project-request-review-memorandum-signed'),
-    path('new-project-request/<int:pk>/setup/',
-         new_project_approval_views.SavioProjectReviewSetupView.as_view(),
-         name='new-project-request-review-setup'),
-    path('new-project-request/<int:pk>/deny/',
-         new_project_approval_views.SavioProjectReviewDenyView.as_view(),
-         name='new-project-request-review-deny'),
-    path('new-project-request/<int:pk>/undeny',
-         new_project_approval_views.SavioProjectUndenyRequestView.as_view(),
-         name='new-project-undeny-request'),
-    path('new-project-request-edit-extra-fields/<int:pk>/',
-         new_project_approval_views.SavioProjectRequestEditExtraFieldsView.as_view(),
-         name='new-project-request-edit-extra-fields'),
-    path('new-project-request/<int:pk>/download-unsigned-mou/<str:request_type>/',
-         mou_views.UnsignedMOUDownloadView.as_view(),
-         name='new-project-request-download-unsigned-mou'),
-    path('new-project-request/<int:pk>/upload-mou/<str:request_type>/',
-         mou_views.MOUUploadView.as_view(),
-         name='new-project-request-upload-mou'),
-    path('new-project-request/<int:pk>/download-mou/<str:request_type>/',
-         mou_views.MOUDownloadView.as_view(),
-         name='new-project-request-download-mou')
+    path(
+        "new-project-pending-request-list/",
+        RedirectView.as_view(url="/project/new-project-request-list/?status=pending"),
+        name="new-project-pending-request-list",
+    ),
+    path(
+        "new-project-completed-request-list/",
+        RedirectView.as_view(url="/project/new-project-request-list/?status=completed"),
+        name="new-project-completed-request-list",
+    ),
+    path(
+        "new-project-request/<int:pk>/",
+        new_project_approval_views.SavioProjectRequestDetailView.as_view(),
+        name="new-project-request-detail",
+    ),
+    path(
+        "new-project-request/<int:pk>/eligibility/",
+        new_project_approval_views.SavioProjectReviewEligibilityView.as_view(),
+        name="new-project-request-review-eligibility",
+    ),
+    path(
+        "new-project-request/<int:pk>/readiness/",
+        new_project_approval_views.SavioProjectReviewReadinessView.as_view(),
+        name="new-project-request-review-readiness",
+    ),
+    path(
+        "new-project-request/<int:pk>/notify-pi/",
+        new_project_approval_views.SavioProjectRequestNotifyPIView.as_view(),
+        name="new-project-request-notify-pi",
+    ),
+    path(
+        "new-project-request/<int:pk>/memorandum-signed/",
+        new_project_approval_views.SavioProjectReviewMemorandumSignedView.as_view(),
+        name="new-project-request-review-memorandum-signed",
+    ),
+    path(
+        "new-project-request/<int:pk>/setup/",
+        new_project_approval_views.SavioProjectReviewSetupView.as_view(),
+        name="new-project-request-review-setup",
+    ),
+    path(
+        "new-project-request/<int:pk>/deny/",
+        new_project_approval_views.SavioProjectReviewDenyView.as_view(),
+        name="new-project-request-review-deny",
+    ),
+    path(
+        "new-project-request/<int:pk>/undeny",
+        new_project_approval_views.SavioProjectUndenyRequestView.as_view(),
+        name="new-project-undeny-request",
+    ),
+    path(
+        "new-project-request-edit-extra-fields/<int:pk>/",
+        new_project_approval_views.SavioProjectRequestEditExtraFieldsView.as_view(),
+        name="new-project-request-edit-extra-fields",
+    ),
+    path(
+        "new-project-request/<int:pk>/download-unsigned-mou/<str:request_type>/",
+        mou_views.UnsignedMOUDownloadView.as_view(),
+        name="new-project-request-download-unsigned-mou",
+    ),
+    path(
+        "new-project-request/<int:pk>/upload-mou/<str:request_type>/",
+        mou_views.MOUUploadView.as_view(),
+        name="new-project-request-upload-mou",
+    ),
+    path(
+        "new-project-request/<int:pk>/download-mou/<str:request_type>/",
+        mou_views.MOUDownloadView.as_view(),
+        name="new-project-request-download-mou",
+    ),
 ]
 
 
 # New Project Requests for Vector (BRC-exclusive)
-with flagged_paths('BRC_ONLY') as f_path:
+with flagged_paths("BRC_ONLY") as f_path:
     urlpatterns += [
-        f_path('vector-project-pending-request-list/',
-               new_project_approval_views.VectorProjectRequestListView.as_view(
-                   completed=False),
-               name='vector-project-pending-request-list'),
-        f_path('vector-project-completed-request-list/',
-               new_project_approval_views.VectorProjectRequestListView.as_view(
-                   completed=True),
-               name='vector-project-completed-request-list'),
-        f_path('vector-project-request/<int:pk>/',
-               new_project_approval_views.VectorProjectRequestDetailView.as_view(),
-               name='vector-project-request-detail'),
-        f_path('vector-project-request/<int:pk>/eligibility',
-               new_project_approval_views.VectorProjectReviewEligibilityView.as_view(),
-               name='vector-project-request-review-eligibility'),
-        f_path('vector-project-request/<int:pk>/setup',
-               new_project_approval_views.VectorProjectReviewSetupView.as_view(),
-               name='vector-project-request-review-setup'),
-        f_path('vector-project-request/<int:pk>/undeny',
-               new_project_approval_views.VectorProjectUndenyRequestView.as_view(),
-               name='vector-project-undeny-request'),
+        f_path(
+            "vector-project-pending-request-list/",
+            new_project_approval_views.VectorProjectRequestListView.as_view(
+                completed=False
+            ),
+            name="vector-project-pending-request-list",
+        ),
+        f_path(
+            "vector-project-completed-request-list/",
+            new_project_approval_views.VectorProjectRequestListView.as_view(
+                completed=True
+            ),
+            name="vector-project-completed-request-list",
+        ),
+        f_path(
+            "vector-project-request/<int:pk>/",
+            new_project_approval_views.VectorProjectRequestDetailView.as_view(),
+            name="vector-project-request-detail",
+        ),
+        f_path(
+            "vector-project-request/<int:pk>/eligibility",
+            new_project_approval_views.VectorProjectReviewEligibilityView.as_view(),
+            name="vector-project-request-review-eligibility",
+        ),
+        f_path(
+            "vector-project-request/<int:pk>/setup",
+            new_project_approval_views.VectorProjectReviewSetupView.as_view(),
+            name="vector-project-request-review-setup",
+        ),
+        f_path(
+            "vector-project-request/<int:pk>/undeny",
+            new_project_approval_views.VectorProjectUndenyRequestView.as_view(),
+            name="vector-project-undeny-request",
+        ),
     ]
 
 
 # ProjectUser Removal Requests
 urlpatterns += [
-    path('<int:pk>/remove-self',
-         removal_views.ProjectRemoveSelf.as_view(),
-         name='project-remove-self'),
-    path('project-removal-request-list',
-         removal_views.ProjectRemovalRequestListView.as_view(completed=False),
-         name='project-removal-request-list'),
-    path('project-removal-request-list-completed',
-         removal_views.ProjectRemovalRequestListView.as_view(completed=True),
-         name='project-removal-request-list-completed'),
-    path('project-removal-request/<int:pk>/update-status',
-         removal_views.ProjectRemovalRequestUpdateStatusView.as_view(),
-         name='project-removal-request-update-status'),
-    path('project-removal-request/<int:pk>/complete-status',
-         removal_views.ProjectRemovalRequestCompleteStatusView.as_view(),
-         name='project-removal-request-complete-status'),
-    path('<int:pk>/remove-users/',
-         removal_views.ProjectRemoveUsersView.as_view(),
-         name='project-remove-users'),
+    path(
+        "<int:pk>/remove-self",
+        removal_views.ProjectRemoveSelf.as_view(),
+        name="project-remove-self",
+    ),
+    path(
+        "project-removal-request-list",
+        removal_views.ProjectRemovalRequestListView.as_view(completed=False),
+        name="project-removal-request-list",
+    ),
+    path(
+        "project-removal-request-list-completed",
+        removal_views.ProjectRemovalRequestListView.as_view(completed=True),
+        name="project-removal-request-list-completed",
+    ),
+    path(
+        "project-removal-request/<int:pk>/update-status",
+        removal_views.ProjectRemovalRequestUpdateStatusView.as_view(),
+        name="project-removal-request-update-status",
+    ),
+    path(
+        "project-removal-request/<int:pk>/complete-status",
+        removal_views.ProjectRemovalRequestCompleteStatusView.as_view(),
+        name="project-removal-request-complete-status",
+    ),
+    path(
+        "<int:pk>/remove-users/",
+        removal_views.ProjectRemoveUsersView.as_view(),
+        name="project-remove-users",
+    ),
 ]
 
 
 # Allocation Renewal Requests
 urlpatterns += [
-    path('<int:pk>/renew',
-         renewal_request_views.AllocationRenewalRequestUnderProjectView.as_view(
-             condition_dict=renewal_request_views.AllocationRenewalRequestUnderProjectView.condition_dict(),
-         ),
-         name='project-renew'),
-    path('renew-pi-allocation-landing/',
-         renewal_request_views.AllocationRenewalLandingView.as_view(),
-         name='renew-pi-allocation-landing'),
-    path('renew-pi-allocation/',
-         renewal_request_views.AllocationRenewalRequestView.as_view(
-             condition_dict=renewal_request_views.AllocationRenewalRequestView.condition_dict(),
-         ),
-         name='renew-pi-allocation'),
-    path('pi-allocation-renewal-request-list/',
-         renewal_approval_views.AllocationRenewalRequestListView.as_view(),
-         name='pi-allocation-renewal-request-list'),
+    path(
+        "<int:pk>/renew",
+        renewal_request_views.AllocationRenewalRequestUnderProjectView.as_view(
+            condition_dict=renewal_request_views.AllocationRenewalRequestUnderProjectView.condition_dict(),
+        ),
+        name="project-renew",
+    ),
+    path(
+        "renew-pi-allocation-landing/",
+        renewal_request_views.AllocationRenewalLandingView.as_view(),
+        name="renew-pi-allocation-landing",
+    ),
+    path(
+        "renew-pi-allocation/",
+        renewal_request_views.AllocationRenewalRequestView.as_view(
+            condition_dict=renewal_request_views.AllocationRenewalRequestView.condition_dict(),
+        ),
+        name="renew-pi-allocation",
+    ),
+    path(
+        "pi-allocation-renewal-request-list/",
+        renewal_approval_views.AllocationRenewalRequestListView.as_view(),
+        name="pi-allocation-renewal-request-list",
+    ),
     # TODO: Remove these redirects once all internal references have been
     # updated to use 'pi-allocation-renewal-request-list' with a ?status= parameter.
-    path('pi-allocation-renewal-pending-request-list/',
-         RedirectView.as_view(
-             url='/project/pi-allocation-renewal-request-list/?status=pending'),
-         name='pi-allocation-renewal-pending-request-list'),
-    path('pi-allocation-renewal-completed-request-list/',
-         RedirectView.as_view(
-             url='/project/pi-allocation-renewal-request-list/?status=completed'),
-         name='pi-allocation-renewal-completed-request-list'),
-    path('pi-allocation-renewal-request-detail/<int:pk>/',
-         renewal_approval_views.AllocationRenewalRequestDetailView.as_view(),
-         name='pi-allocation-renewal-request-detail'),
-    path('pi-allocation-renewal-request/<int:pk>/eligibility/',
-         renewal_approval_views.AllocationRenewalRequestReviewEligibilityView.as_view(),
-         name='pi-allocation-renewal-request-review-eligibility'),
-    path('pi-allocation-renewal-request/<int:pk>/deny/',
-         renewal_approval_views.AllocationRenewalRequestReviewDenyView.as_view(),
-         name='pi-allocation-renewal-request-review-deny'),
+    path(
+        "pi-allocation-renewal-pending-request-list/",
+        RedirectView.as_view(
+            url="/project/pi-allocation-renewal-request-list/?status=pending"
+        ),
+        name="pi-allocation-renewal-pending-request-list",
+    ),
+    path(
+        "pi-allocation-renewal-completed-request-list/",
+        RedirectView.as_view(
+            url="/project/pi-allocation-renewal-request-list/?status=completed"
+        ),
+        name="pi-allocation-renewal-completed-request-list",
+    ),
+    path(
+        "pi-allocation-renewal-request-detail/<int:pk>/",
+        renewal_approval_views.AllocationRenewalRequestDetailView.as_view(),
+        name="pi-allocation-renewal-request-detail",
+    ),
+    path(
+        "pi-allocation-renewal-request/<int:pk>/eligibility/",
+        renewal_approval_views.AllocationRenewalRequestReviewEligibilityView.as_view(),
+        name="pi-allocation-renewal-request-review-eligibility",
+    ),
+    path(
+        "pi-allocation-renewal-request/<int:pk>/deny/",
+        renewal_approval_views.AllocationRenewalRequestReviewDenyView.as_view(),
+        name="pi-allocation-renewal-request-review-deny",
+    ),
     # This is disabled because a PI may always make a new request.
     # path('pi-allocation-renewal-request/<int:pk>/undeny/',
     #      AllocationRenewalRequestUndenyView.as_view(),
@@ -217,63 +348,93 @@ urlpatterns += [
 
 
 # Purchase Service Units
-with flagged_paths('SERVICE_UNITS_PURCHASABLE'):
+with flagged_paths("SERVICE_UNITS_PURCHASABLE"):
     urlpatterns += [
-        f_path('<int:pk>/purchase-service-units-landing/',
-               addition_request_views.AllocationAdditionRequestLandingView.as_view(),
-               name='purchase-service-units-landing'),
-        f_path('<int:pk>/purchase-service-units/',
-               addition_request_views.AllocationAdditionRequestView.as_view(),
-               name='purchase-service-units'),
-        f_path('service-units-purchase-pending-request-list/',
-               addition_approval_views.AllocationAdditionRequestListView.as_view(
-                   completed=False),
-               name='service-units-purchase-pending-request-list'),
-        f_path('service-units-purchase-completed-request-list/',
-               addition_approval_views.AllocationAdditionRequestListView.as_view(
-                   completed=True),
-               name='service-units-purchase-completed-request-list'),
-        f_path('service-units-purchase-request/<int:pk>/',
-               addition_approval_views.AllocationAdditionRequestDetailView.as_view(),
-               name='service-units-purchase-request-detail'),
-        f_path('service-units-purchase-request/<int:pk>/memorandum-signed',
-               addition_approval_views.AllocationAdditionReviewMemorandumSignedView.as_view(),
-               name='service-units-purchase-request-review-memorandum-signed'),
-        f_path('service-units-purchase-request/<int:pk>/deny',
-               addition_approval_views.AllocationAdditionReviewDenyView.as_view(),
-               name='service-units-purchase-request-review-deny'),
-        f_path('service-units-purchase-request/<int:pk>/download-unsigned-mou/<str:request_type>/',
-               mou_views.UnsignedMOUDownloadView.as_view(),
-               name='service-units-purchase-request-download-unsigned-mou'),
-        f_path('service-units-purchase-request/<int:pk>/upload-mou/<str:request_type>/',
-               mou_views.MOUUploadView.as_view(),
-               name='service-units-purchase-request-upload-mou'),
-        f_path('service-units-purchase-request/<int:pk>/download-mou/<str:request_type>/',
-               mou_views.MOUDownloadView.as_view(),
-               name='service-units-purchase-request-download-mou'),
-        f_path('service-units-purchase-request/<int:pk>/edit-extra-fields/',
-               addition_approval_views.AllocationAdditionEditExtraFieldsView.as_view(),
-               name='service-units-purchase-request-edit-extra-fields'),
-        f_path('service-units-purchase-request/<int:pk>/notify-pi/',
-               addition_approval_views.AllocationAdditionNotifyPIView.as_view(),
-               name='service-units-purchase-request-notify-pi'),
+        f_path(
+            "<int:pk>/purchase-service-units-landing/",
+            addition_request_views.AllocationAdditionRequestLandingView.as_view(),
+            name="purchase-service-units-landing",
+        ),
+        f_path(
+            "<int:pk>/purchase-service-units/",
+            addition_request_views.AllocationAdditionRequestView.as_view(),
+            name="purchase-service-units",
+        ),
+        f_path(
+            "service-units-purchase-pending-request-list/",
+            addition_approval_views.AllocationAdditionRequestListView.as_view(
+                completed=False
+            ),
+            name="service-units-purchase-pending-request-list",
+        ),
+        f_path(
+            "service-units-purchase-completed-request-list/",
+            addition_approval_views.AllocationAdditionRequestListView.as_view(
+                completed=True
+            ),
+            name="service-units-purchase-completed-request-list",
+        ),
+        f_path(
+            "service-units-purchase-request/<int:pk>/",
+            addition_approval_views.AllocationAdditionRequestDetailView.as_view(),
+            name="service-units-purchase-request-detail",
+        ),
+        f_path(
+            "service-units-purchase-request/<int:pk>/memorandum-signed",
+            addition_approval_views.AllocationAdditionReviewMemorandumSignedView.as_view(),
+            name="service-units-purchase-request-review-memorandum-signed",
+        ),
+        f_path(
+            "service-units-purchase-request/<int:pk>/deny",
+            addition_approval_views.AllocationAdditionReviewDenyView.as_view(),
+            name="service-units-purchase-request-review-deny",
+        ),
+        f_path(
+            "service-units-purchase-request/<int:pk>/download-unsigned-mou/<str:request_type>/",
+            mou_views.UnsignedMOUDownloadView.as_view(),
+            name="service-units-purchase-request-download-unsigned-mou",
+        ),
+        f_path(
+            "service-units-purchase-request/<int:pk>/upload-mou/<str:request_type>/",
+            mou_views.MOUUploadView.as_view(),
+            name="service-units-purchase-request-upload-mou",
+        ),
+        f_path(
+            "service-units-purchase-request/<int:pk>/download-mou/<str:request_type>/",
+            mou_views.MOUDownloadView.as_view(),
+            name="service-units-purchase-request-download-mou",
+        ),
+        f_path(
+            "service-units-purchase-request/<int:pk>/edit-extra-fields/",
+            addition_approval_views.AllocationAdditionEditExtraFieldsView.as_view(),
+            name="service-units-purchase-request-edit-extra-fields",
+        ),
+        f_path(
+            "service-units-purchase-request/<int:pk>/notify-pi/",
+            addition_approval_views.AllocationAdditionNotifyPIView.as_view(),
+            name="service-units-purchase-request-notify-pi",
+        ),
     ]
 
 
 flagged_url_patterns = []
 
 # Request a secure directory
-with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
+with flagged_paths("SECURE_DIRS_REQUESTABLE") as path:
     flagged_url_patterns += [
         # New Directory Request Views
-        path('<int:pk>/secure-dir-request-landing',
-             secure_dir_new_directory_request_views.SecureDirRequestLandingView.as_view(),
-             name='secure-dir-request-landing'),
-        path('<int:pk>/secure-dir-request',
-             secure_dir_new_directory_request_views.SecureDirRequestWizard.as_view(
-                 condition_dict=secure_dir_new_directory_request_views.SecureDirRequestWizard.condition_dict(),
-             ),
-             name='secure-dir-request'),
+        path(
+            "<int:pk>/secure-dir-request-landing",
+            secure_dir_new_directory_request_views.SecureDirRequestLandingView.as_view(),
+            name="secure-dir-request-landing",
+        ),
+        path(
+            "<int:pk>/secure-dir-request",
+            secure_dir_new_directory_request_views.SecureDirRequestWizard.as_view(
+                condition_dict=secure_dir_new_directory_request_views.SecureDirRequestWizard.condition_dict(),
+            ),
+            name="secure-dir-request",
+        ),
     ]
 
 
@@ -281,18 +442,24 @@ with flagged_paths('SECURE_DIRS_REQUESTABLE') as path:
 # Note: The feature flag generally abstracts away the check for whether the app
 # is installed. However, the app module is still resolved, which may be
 # problematic if it is not installed, so the check is manually done here.
-if 'coldfront.plugins.faculty_storage_allocations' in settings.INSTALLED_APPS:
-     from coldfront.plugins.faculty_storage_allocations.views import FSARequestLandingView
-     from coldfront.plugins.faculty_storage_allocations.views import FSARequestView
+if "coldfront.plugins.faculty_storage_allocations" in settings.INSTALLED_APPS:
+    from coldfront.plugins.faculty_storage_allocations.views import (
+        FSARequestLandingView,
+        FSARequestView,
+    )
 
-     with flagged_paths('FACULTY_STORAGE_ALLOCATIONS_ENABLED') as path:
-          flagged_url_patterns += [
-               path('<int:pk>/faculty-storage-allocation-request-landing',
-                    FSARequestLandingView.as_view(),
-                    name='faculty-storage-allocation-request-landing'),
-               path('<int:pk>/faculty-storage-allocation-request',
-                    FSARequestView.as_view(),
-                    name='faculty-storage-allocation-request'),
-          ]
+    with flagged_paths("FACULTY_STORAGE_ALLOCATIONS_ENABLED") as path:
+        flagged_url_patterns += [
+            path(
+                "<int:pk>/faculty-storage-allocation-request-landing",
+                FSARequestLandingView.as_view(),
+                name="faculty-storage-allocation-request-landing",
+            ),
+            path(
+                "<int:pk>/faculty-storage-allocation-request",
+                FSARequestView.as_view(),
+                name="faculty-storage-allocation-request",
+            ),
+        ]
 
 urlpatterns = urlpatterns + flagged_url_patterns

@@ -1,47 +1,50 @@
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.models import AllocationAttribute
-from coldfront.core.allocation.models import AllocationAttributeType
-from coldfront.core.allocation.models import AllocationAttributeUsage
-from coldfront.core.allocation.models import AllocationStatusChoice
-from coldfront.core.allocation.models import AllocationUser
-from coldfront.core.allocation.models import AllocationUserAttribute
-from coldfront.core.allocation.models import AllocationUserAttributeUsage
-from coldfront.core.allocation.models import AllocationUserStatusChoice
-from coldfront.core.allocation.utils import get_project_compute_resource_name
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.resource.models import Resource
-from coldfront.core.utils.management.commands.utils import get_gspread_worksheet
-from coldfront.core.utils.management.commands.utils import get_gspread_worksheet_data
-from decimal import Decimal
-from decimal import InvalidOperation
+from decimal import Decimal, InvalidOperation
+import logging
+
 from django.conf import settings
 from django.core.exceptions import MultipleObjectsReturned
 from django.core.management.base import BaseCommand
-import logging
+
+from coldfront.core.allocation.models import (
+    Allocation,
+    AllocationAttribute,
+    AllocationAttributeType,
+    AllocationAttributeUsage,
+    AllocationStatusChoice,
+    AllocationUser,
+    AllocationUserAttribute,
+    AllocationUserAttributeUsage,
+    AllocationUserStatusChoice,
+)
+from coldfront.core.allocation.utils import get_project_compute_resource_name
+from coldfront.core.project.models import Project, ProjectUser
+from coldfront.core.resource.models import Resource
+from coldfront.core.utils.management.commands.utils import (
+    get_gspread_worksheet,
+    get_gspread_worksheet_data,
+)
 
 """An admin command that loads allocation data for BRC."""
 
 
 # Settings for the 'Savio-Projects' spreadsheet.
-SPREADSHEET_ID = '10Dby-MPDkWIovGkqWTS6MEYMofOKm4Ng5o7Zd5TrI2U'
+SPREADSHEET_ID = "10Dby-MPDkWIovGkqWTS6MEYMofOKm4Ng5o7Zd5TrI2U"
 SPREADSHEET_TABS = {
-    'fc_': 'FCA-Projects',
-    'pc_': 'Partner-Projects',
-    'ic_': 'ICA-Projects',
-    'co_': 'Condo-Projects',
-    'ac_': 'MOU-Projects',
+    "fc_": "FCA-Projects",
+    "pc_": "Partner-Projects",
+    "ic_": "ICA-Projects",
+    "co_": "Condo-Projects",
+    "ac_": "MOU-Projects",
 }
 SPREADSHEET_ROW_START = 2
 SPREADSHEET_COLS = {
-    'NAME': 2,
-    'ALLOCATION': 5,
+    "NAME": 2,
+    "ALLOCATION": 5,
 }
 
 
 class Command(BaseCommand):
-
-    help = 'Loads allocation data from a BRC spreadsheet.'
+    help = "Loads allocation data from a BRC spreadsheet."
     logger = logging.getLogger(__name__)
 
     def add_arguments(self, parser):
@@ -59,7 +62,8 @@ class Command(BaseCommand):
                 project = Project.objects.get(name=name)
             except Project.DoesNotExist:
                 raise Project.DoesNotExist(
-                    f'Project {name} unexpectedly does not exist.')
+                    f"Project {name} unexpectedly does not exist."
+                )
             self.set_allocations(project, value)
         # Create allocations for active Vector projects.
         self.create_vector_allocations()
@@ -87,23 +91,24 @@ class Command(BaseCommand):
         for prefix in SPREADSHEET_TABS:
             tab = SPREADSHEET_TABS[prefix]
             worksheet = get_gspread_worksheet(
-                settings.GOOGLE_OAUTH2_KEY_FILE, SPREADSHEET_ID, tab)
+                settings.GOOGLE_OAUTH2_KEY_FILE, SPREADSHEET_ID, tab
+            )
             row_start = SPREADSHEET_ROW_START
-            row_end = len(worksheet.col_values(SPREADSHEET_COLS['NAME']))
+            row_end = len(worksheet.col_values(SPREADSHEET_COLS["NAME"]))
             col_start = 1
-            if prefix in ('fc_', 'pc_', 'ic_', 'ac_'):
-                col_end = SPREADSHEET_COLS['ALLOCATION']
-            elif prefix == 'co_':
-                col_end = SPREADSHEET_COLS['NAME']
+            if prefix in ("fc_", "pc_", "ic_", "ac_"):
+                col_end = SPREADSHEET_COLS["ALLOCATION"]
+            elif prefix == "co_":
+                col_end = SPREADSHEET_COLS["NAME"]
             else:
                 continue
             data = get_gspread_worksheet_data(
-                worksheet, row_start, row_end, col_start, col_end)
+                worksheet, row_start, row_end, col_start, col_end
+            )
             for project in data:
-                name = project[SPREADSHEET_COLS['NAME'] - 1].strip()
-                if col_end >= SPREADSHEET_COLS['ALLOCATION']:
-                    allocation = project[
-                        SPREADSHEET_COLS['ALLOCATION'] - 1].strip()
+                name = project[SPREADSHEET_COLS["NAME"] - 1].strip()
+                if col_end >= SPREADSHEET_COLS["ALLOCATION"]:
+                    allocation = project[SPREADSHEET_COLS["ALLOCATION"] - 1].strip()
                 else:
                     allocation = None
                 allocation_data[name] = allocation
@@ -132,28 +137,30 @@ class Command(BaseCommand):
             except Project.DoesNotExist:
                 invalid[name] = allocation
                 continue
-            if name.startswith(('fc_', 'pc_', 'ic_', 'ac_')):
+            if name.startswith(("fc_", "pc_", "ic_", "ac_")):
                 if allocation is None:
-                    allocation = '0.00'
+                    allocation = "0.00"
                 try:
                     allocation = Decimal(allocation)
                 except InvalidOperation:
                     invalid[name] = allocation
                     continue
-                if (allocation < settings.ALLOCATION_MIN or
-                        allocation > settings.ALLOCATION_MAX):
+                if (
+                    allocation < settings.ALLOCATION_MIN
+                    or allocation > settings.ALLOCATION_MAX
+                ):
                     invalid[name] = allocation
                     continue
-            elif name.startswith('co_'):
+            elif name.startswith("co_"):
                 allocation = settings.ALLOCATION_MAX
             else:
                 invalid[name] = allocation
                 continue
             valid[name] = allocation
-        self.logger.info(f'Number of Valid rows: {len(valid)}')
-        self.logger.info(f'Number of Invalid rows: {len(invalid)}')
+        self.logger.info(f"Number of Valid rows: {len(valid)}")
+        self.logger.info(f"Number of Invalid rows: {len(invalid)}")
         for name, allocation in invalid.items():
-            self.logger.error(f'Invalid row ({name}, {allocation}).')
+            self.logger.error(f"Invalid row ({name}, {allocation}).")
         return valid
 
     def set_allocations(self, project, value):
@@ -181,40 +188,46 @@ class Command(BaseCommand):
         # Create or retrieve the allocation's Service Units attribute. Set its
         # value.
         allocation_attribute = self.__get_or_create_allocation_attribute(
-            allocation, 'Service Units', str(value))
+            allocation, "Service Units", str(value)
+        )
 
         # A usage object should exist for the allocation attribute.
         try:
             AllocationAttributeUsage.objects.get(
-                allocation_attribute=allocation_attribute)
+                allocation_attribute=allocation_attribute
+            )
         except AllocationAttributeUsage.DoesNotExist:
             raise AllocationAttributeUsage.DoesNotExist(
-                f'Unexpected: No AllocationAttributeUsage object exists for '
-                f'AllocationAttribute {allocation_attribute.pk}.')
+                f"Unexpected: No AllocationAttributeUsage object exists for "
+                f"AllocationAttribute {allocation_attribute.pk}."
+            )
 
         # Set allocations and cluster account statuses for each of the
         # project's users.
         project_users = ProjectUser.objects.prefetch_related(
-            'status', 'user__userprofile'
-        ).filter(project=project, status__name='Active')
+            "status", "user__userprofile"
+        ).filter(project=project, status__name="Active")
         for project_user in project_users:
             # Create or retrieve the allocation user.
             allocation_user = self.__get_or_create_allocation_user(
-                project_user, allocation)
+                project_user, allocation
+            )
             # Create or retrieve the allocation user's Service Units attribute.
             # Set its value.
-            allocation_user_attribute = \
-                self.__get_or_create_allocation_user_attribute(
-                    allocation_user, 'Service Units', str(value))
+            allocation_user_attribute = self.__get_or_create_allocation_user_attribute(
+                allocation_user, "Service Units", str(value)
+            )
             # A usage object should exist for the allocation user attribute.
             try:
                 AllocationUserAttributeUsage.objects.get(
-                    allocation_user_attribute=allocation_user_attribute)
+                    allocation_user_attribute=allocation_user_attribute
+                )
             except AllocationUserAttributeUsage.DoesNotExist:
                 raise AllocationUserAttributeUsage.DoesNotExist(
-                    f'Unexpected: No AllocationUserAttributeUsage object '
-                    f'exists for AllocationUserAttribute '
-                    f'{allocation_user_attribute}.')
+                    f"Unexpected: No AllocationUserAttributeUsage object "
+                    f"exists for AllocationUserAttribute "
+                    f"{allocation_user_attribute}."
+                )
 
             # If the user has a cluster_uid, create or retrieve the allocation
             # user's Cluster Account Status attribute. Set its value to
@@ -222,7 +235,8 @@ class Command(BaseCommand):
             if not project_user.user.userprofile.cluster_uid:
                 continue
             self.__get_or_create_allocation_user_attribute(
-                allocation_user, 'Cluster Account Status', 'Active')
+                allocation_user, "Cluster Account Status", "Active"
+            )
 
     def create_vector_allocations(self, allocation_user_status_choice=None):
         """Create allocations to the Vector Compute resource for Vector
@@ -242,27 +256,31 @@ class Command(BaseCommand):
             allocation to the Vector Compute resource
         """
         projects = Project.objects.prefetch_related(
-            'allocation_set__status', 'allocation_set__resources',
-            'projectuser_set',
-        ).filter(name__startswith='vector_', status__name='Active')
+            "allocation_set__status",
+            "allocation_set__resources",
+            "projectuser_set",
+        ).filter(name__startswith="vector_", status__name="Active")
         for project in projects:
             # Create or retrieve the project's allocation to the Vector Compute
             # resource, of which there should be only one.
             allocation = self.__get_or_create_allocation(project)
             # Set cluster account statuses for each of the project's users.
             project_users = project.projectuser_set.prefetch_related(
-                'status', 'user__userprofile').filter(status__name='Active')
+                "status", "user__userprofile"
+            ).filter(status__name="Active")
             for project_user in project_users:
                 # Create or retrieve the allocation user.
                 allocation_user = self.__get_or_create_allocation_user(
-                    project_user, allocation)
+                    project_user, allocation
+                )
                 # If the user has a cluster_uid, create or retrieve the
                 # allocation user's Cluster Account Status attribute. Set its
                 # value to 'Active'.
                 if not project_user.user.userprofile.cluster_uid:
                     continue
                 self.__get_or_create_allocation_user_attribute(
-                    allocation_user, 'Cluster Account Status', 'Active')
+                    allocation_user, "Cluster Account Status", "Active"
+                )
 
     def create_abc_allocations(self):
         """Create allocations to the ABC Compute resource for the abc
@@ -281,32 +299,36 @@ class Command(BaseCommand):
             - MultipleObjectsReturned, if a given Project has more than
             allocation to the ABC Compute resource
         """
-        name = 'abc'
+        name = "abc"
         try:
             project = Project.objects.prefetch_related(
-                'allocation_set__status', 'allocation_set__resources',
-                'projectuser_set',
-            ).get(name=name, status__name='Active')
+                "allocation_set__status",
+                "allocation_set__resources",
+                "projectuser_set",
+            ).get(name=name, status__name="Active")
         except Project.DoesNotExist:
-            self.logger.error(f'Expected Project {name} does not exist.')
+            self.logger.error(f"Expected Project {name} does not exist.")
             return
         # Create or retrieve the project's allocation to the ABC Compute
         # resource, of which there should be only one.
         allocation = self.__get_or_create_allocation(project)
         # Set cluster account statuses for each of the project's users.
         project_users = project.projectuser_set.prefetch_related(
-            'status', 'user__userprofile').filter(status__name='Active')
+            "status", "user__userprofile"
+        ).filter(status__name="Active")
         for project_user in project_users:
             # Create or retrieve the allocation user.
             allocation_user = self.__get_or_create_allocation_user(
-                project_user, allocation)
+                project_user, allocation
+            )
             # If the user has a cluster_uid, create or retrieve the
             # allocation user's Cluster Account Status attribute. Set its
             # value to 'Active'.
             if not project_user.user.userprofile.cluster_uid:
                 continue
             self.__get_or_create_allocation_user_attribute(
-                allocation_user, 'Cluster Account Status', 'Active')
+                allocation_user, "Cluster Account Status", "Active"
+            )
 
     def __get_or_create_allocation(self, project):
         """Get or create an Allocation to the correct Compute Resource
@@ -325,27 +347,28 @@ class Command(BaseCommand):
             - MultipleObjectsReturned, if a given Project has more than
             one allocation to the Compute resource
         """
-        resource = Resource.objects.get(
-            name=get_project_compute_resource_name(project))
-        allocation_status_choice = AllocationStatusChoice.objects.get(
-            name='Active')
+        resource = Resource.objects.get(name=get_project_compute_resource_name(project))
+        allocation_status_choice = AllocationStatusChoice.objects.get(name="Active")
         allocations = project.allocation_set.filter(resources=resource)
         if allocations.count() == 0:
             allocation = Allocation.objects.create(
-                project=project, status=allocation_status_choice)
+                project=project, status=allocation_status_choice
+            )
             allocation.resources.add(resource)
             allocation.save()
             self.logger.info(
-                f'Allocation for Project {project.name} to Resource '
-                f'{resource.name} was created.')
+                f"Allocation for Project {project.name} to Resource "
+                f"{resource.name} was created."
+            )
         elif allocations.count() == 1:
             allocation = allocations.first()
             allocation.status = allocation_status_choice
             allocation.save()
         else:
             raise MultipleObjectsReturned(
-                f'Unexpected: Project {project.name} has more than one '
-                f'Allocation to Resource {resource.name}.')
+                f"Unexpected: Project {project.name} has more than one "
+                f"Allocation to Resource {resource.name}."
+            )
         return allocation
 
     def __get_or_create_allocation_user(self, project_user, allocation):
@@ -365,24 +388,28 @@ class Command(BaseCommand):
             - None
         """
         allocation_user_status_choice = AllocationUserStatusChoice.objects.get(
-            name='Active')
+            name="Active"
+        )
         try:
             allocation_user = AllocationUser.objects.get(
-                allocation=allocation, user=project_user.user)
+                allocation=allocation, user=project_user.user
+            )
         except AllocationUser.DoesNotExist:
             allocation_user = AllocationUser.objects.create(
-                allocation=allocation, user=project_user.user,
-                status=allocation_user_status_choice)
+                allocation=allocation,
+                user=project_user.user,
+                status=allocation_user_status_choice,
+            )
             self.logger.info(
-                f'AllocationUser for Allocation {allocation.pk} and '
-                f'User {project_user.user.username} was created.')
+                f"AllocationUser for Allocation {allocation.pk} and "
+                f"User {project_user.user.username} was created."
+            )
         else:
             allocation_user.status = allocation_user_status_choice
             allocation_user.save()
         return allocation_user
 
-    def __get_or_create_allocation_attribute(self, allocation, type_name,
-                                             value):
+    def __get_or_create_allocation_attribute(self, allocation, type_name, value):
         """Get or create an AllocationAttribute having the type with the
         given name for the given Allocation. Set its value.
 
@@ -401,23 +428,23 @@ class Command(BaseCommand):
             - MultipleObjectsReturned, if more than one attribute is
             found
         """
-        allocation_attribute_type = AllocationAttributeType.objects.get(
-            name=type_name)
-        allocation_attribute, created = \
-            AllocationAttribute.objects.get_or_create(
-                allocation_attribute_type=allocation_attribute_type,
-                allocation=allocation)
+        allocation_attribute_type = AllocationAttributeType.objects.get(name=type_name)
+        allocation_attribute, created = AllocationAttribute.objects.get_or_create(
+            allocation_attribute_type=allocation_attribute_type, allocation=allocation
+        )
         if created:
             self.logger.info(
-                f'AllocationAttribute with type '
-                f'{allocation_attribute_type.name} for Allocation '
-                f'{allocation.pk} was created.')
+                f"AllocationAttribute with type "
+                f"{allocation_attribute_type.name} for Allocation "
+                f"{allocation.pk} was created."
+            )
         allocation_attribute.value = value
         allocation_attribute.save()
         return allocation_attribute
 
-    def __get_or_create_allocation_user_attribute(self, allocation_user,
-                                                  type_name, value):
+    def __get_or_create_allocation_user_attribute(
+        self, allocation_user, type_name, value
+    ):
         """Get or create an AllocationUserAttribute having the type with
         the given name for the given AllocationUser. Set its value.
 
@@ -436,18 +463,21 @@ class Command(BaseCommand):
             - MultipleObjectsReturned, if more than one attribute is
             found
         """
-        allocation_attribute_type = AllocationAttributeType.objects.get(
-            name=type_name)
+        allocation_attribute_type = AllocationAttributeType.objects.get(name=type_name)
         allocation = allocation_user.allocation
-        allocation_user_attribute, created = \
+        allocation_user_attribute, created = (
             AllocationUserAttribute.objects.get_or_create(
                 allocation_attribute_type=allocation_attribute_type,
-                allocation=allocation, allocation_user=allocation_user)
+                allocation=allocation,
+                allocation_user=allocation_user,
+            )
+        )
         if created:
             self.logger.info(
-                f'AllocationUserAttribute with type '
-                f'{allocation_attribute_type.name} for AllocationUser '
-                f'{allocation_user.pk} was created.')
+                f"AllocationUserAttribute with type "
+                f"{allocation_attribute_type.name} for AllocationUser "
+                f"{allocation_user.pk} was created."
+            )
         allocation_user_attribute.value = value
         allocation_user_attribute.save()
         return allocation_user_attribute

@@ -1,12 +1,11 @@
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectUser
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.validators import MaxValueValidator
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 from model_utils.models import TimeStampedModel
+
+from coldfront.core.project.models import Project, ProjectUser
 
 
 class Node(TimeStampedModel):
@@ -18,8 +17,7 @@ class Node(TimeStampedModel):
 
 class CPU(models.Model):
     timestamp = models.DateTimeField(blank=True, null=True)
-    host = models.ForeignKey(
-        Node, on_delete=models.CASCADE, blank=True, null=True)
+    host = models.ForeignKey(Node, on_delete=models.CASCADE, blank=True, null=True)
     usage_guest = models.FloatField(default=None, blank=True, null=True)
     usage_guest_nice = models.FloatField(default=None, blank=True, null=True)
     usage_idle = models.FloatField(default=None, blank=True, null=True)
@@ -32,7 +30,7 @@ class CPU(models.Model):
     usage_user = models.FloatField(default=None, blank=True, null=True)
 
     class Meta:
-        unique_together = ('timestamp', 'host')
+        unique_together = ("timestamp", "host")
 
 
 class Job(TimeStampedModel):
@@ -40,20 +38,20 @@ class Job(TimeStampedModel):
     submitdate = models.DateTimeField(blank=True, null=True)
     startdate = models.DateTimeField(blank=True, null=True)
     enddate = models.DateTimeField(blank=True, null=True)
-    userid = models.ForeignKey(
-        User, on_delete=models.CASCADE, blank=True, null=True)
+    userid = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
     accountid = models.ForeignKey(
-        Project, on_delete=models.CASCADE, blank=True, null=True)
+        Project, on_delete=models.CASCADE, blank=True, null=True
+    )
     amount = models.DecimalField(
         max_digits=settings.DECIMAL_MAX_DIGITS,
         decimal_places=settings.DECIMAL_MAX_PLACES,
         default=settings.ALLOCATION_MIN,
         validators=[
             MaxValueValidator(settings.ALLOCATION_MAX),
-            MinValueValidator(settings.ALLOCATION_MIN)
+            MinValueValidator(settings.ALLOCATION_MIN),
         ],
         blank=True,
-        null=True
+        null=True,
     )
     jobstatus = models.CharField(max_length=50, blank=True, null=True)
     partition = models.CharField(max_length=50, blank=True, null=True)
@@ -71,39 +69,41 @@ class Job(TimeStampedModel):
 
 class ProjectTransaction(models.Model):
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name='transactions')
-    date_time = models.DateTimeField(
-        blank=True, null=True, default=timezone.now)
+        Project, on_delete=models.CASCADE, related_name="transactions"
+    )
+    date_time = models.DateTimeField(blank=True, null=True, default=timezone.now)
     allocation = models.DecimalField(
         max_digits=settings.DECIMAL_MAX_DIGITS,
         decimal_places=settings.DECIMAL_MAX_PLACES,
         default=settings.ALLOCATION_MIN,
         validators=[
             MaxValueValidator(settings.ALLOCATION_MAX),
-            MinValueValidator(settings.ALLOCATION_MIN)
+            MinValueValidator(settings.ALLOCATION_MIN),
         ],
         blank=True,
-        null=True)
+        null=True,
+    )
 
     class Meta:
-        verbose_name = 'Project Transaction'
+        verbose_name = "Project Transaction"
 
 
 class ProjectUserTransaction(models.Model):
     project_user = models.ForeignKey(
-        ProjectUser, on_delete=models.CASCADE, related_name='transactions')
-    date_time = models.DateTimeField(
-        blank=True, null=True, default=timezone.now)
+        ProjectUser, on_delete=models.CASCADE, related_name="transactions"
+    )
+    date_time = models.DateTimeField(blank=True, null=True, default=timezone.now)
     allocation = models.DecimalField(
         max_digits=settings.DECIMAL_MAX_DIGITS,
         decimal_places=settings.DECIMAL_MAX_PLACES,
         default=settings.ALLOCATION_MIN,
         validators=[
             MaxValueValidator(settings.ALLOCATION_MAX),
-            MinValueValidator(settings.ALLOCATION_MIN)
+            MinValueValidator(settings.ALLOCATION_MIN),
         ],
         blank=True,
-        null=True)
+        null=True,
+    )
 
     class Meta:
-        verbose_name = 'Project User Transaction'
+        verbose_name = "Project User Transaction"

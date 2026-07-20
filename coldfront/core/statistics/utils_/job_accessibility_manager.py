@@ -9,9 +9,8 @@ class JobAccessibilityManager(object):
     users."""
 
     def __init__(self, *args, **kwargs):
-        self._valid_project_user_role_names = (
-            'Manager', 'Principal Investigator')
-        self._valid_project_user_status_names = ('Active', 'Pending - Remove')
+        self._valid_project_user_role_names = ("Manager", "Principal Investigator")
+        self._valid_project_user_status_names = ("Active", "Pending - Remove")
 
     def can_user_access_job(self, user, job):
         """Return whether the given User can access the given Job."""
@@ -22,7 +21,8 @@ class JobAccessibilityManager(object):
             project=job.accountid,
             user=user,
             role__name__in=self._valid_project_user_role_names,
-            status__name__in=self._valid_project_user_status_names).exists()
+            status__name__in=self._valid_project_user_status_names,
+        ).exists()
         if is_user_project_pi_or_manager:
             return True
 
@@ -45,17 +45,19 @@ class JobAccessibilityManager(object):
                 user=user,
                 role__name__in=self._valid_project_user_role_names,
                 status__name__in=self._valid_project_user_status_names,
-            ).values_list('project', flat=True))
+            ).values_list("project", flat=True)
+        )
         submitted_under_managed_project_q = Q(accountid__in=managed_project_pks)
 
         return Job.objects.filter(
-            submitted_by_user_q | submitted_under_managed_project_q)
+            submitted_by_user_q | submitted_under_managed_project_q
+        )
 
     @staticmethod
     def _user_has_global_access(user):
         """Return whether the given User has global access to all Jobs."""
         if user.is_superuser:
             return True
-        if user.has_perm('statistics.view_job'):
+        if user.has_perm("statistics.view_job"):
             return True
         return False

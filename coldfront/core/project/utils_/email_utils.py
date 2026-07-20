@@ -1,6 +1,6 @@
-from coldfront.core.project.models import Project
-
 from django.db.models import Q
+
+from coldfront.core.project.models import Project
 
 """Utilities relating to sending Project-related emails."""
 
@@ -21,5 +21,5 @@ def project_email_receiver_list(project):
         - Exception, if any other errors occur.
     """
     if not isinstance(project, Project):
-        raise TypeError(f'{project} is not a Project object.')
+        raise TypeError(f"{project} is not a Project object.")
     return project.managers_and_pis_emails()

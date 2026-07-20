@@ -12,36 +12,35 @@ class BillingProject(TimeStampedModel):
         max_length=6,
         unique=True,
         validators=[
-            RegexValidator(
-                r'^[0-9]{6}$', message='Identifier must contain 6 numbers.')
-        ])
+            RegexValidator(r"^[0-9]{6}$", message="Identifier must contain 6 numbers.")
+        ],
+    )
     history = HistoricalRecords()
 
     class Meta:
-        verbose_name = 'Billing Project'
-        verbose_name_plural = 'Billing Projects'
+        verbose_name = "Billing Project"
+        verbose_name_plural = "Billing Projects"
 
 
 class BillingActivity(TimeStampedModel):
     """The suffix of a complete billing ID (i.e., the '789' of
     '123456-789')."""
 
-    billing_project = models.ForeignKey(
-        BillingProject, on_delete=models.CASCADE)
+    billing_project = models.ForeignKey(BillingProject, on_delete=models.CASCADE)
     identifier = models.CharField(
         max_length=3,
         validators=[
-            RegexValidator(
-                r'^[0-9]{3}$', message='Identifier must contain 3 numbers.')
-        ])
+            RegexValidator(r"^[0-9]{3}$", message="Identifier must contain 3 numbers.")
+        ],
+    )
     history = HistoricalRecords()
 
     class Meta:
-        unique_together = ('billing_project', 'identifier')
-        verbose_name = 'Billing Activity'
-        verbose_name_plural = 'Billing Activities'
+        unique_together = ("billing_project", "identifier")
+        verbose_name = "Billing Activity"
+        verbose_name_plural = "Billing Activities"
 
     def full_id(self):
         """Return a string representing the fully-formed billing ID
         represented by the instance."""
-        return f'{self.billing_project.identifier}-{self.identifier}'
+        return f"{self.billing_project.identifier}-{self.identifier}"

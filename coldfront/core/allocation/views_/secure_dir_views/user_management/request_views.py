@@ -2,8 +2,7 @@ import logging
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.forms import formset_factory
@@ -14,21 +13,18 @@ from django.views.generic.base import TemplateView
 
 from coldfront.core.allocation.forms_.secure_dir_forms import SecureDirManageUsersForm
 from coldfront.core.allocation.models import Allocation
-
 from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirectory
-from coldfront.core.allocation.utils_.secure_dir_utils.user_management import get_secure_dir_manage_user_request_objects
-from coldfront.core.allocation.utils_.secure_dir_utils.user_management import SecureDirectoryManageUserRequestRunnerFactory
-
+from coldfront.core.allocation.utils_.secure_dir_utils.user_management import (
+    SecureDirectoryManageUserRequestRunnerFactory,
+    get_secure_dir_manage_user_request_objects,
+)
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
-
 
 logger = logging.getLogger(__name__)
 
 
-class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
-                               TemplateView):
-
-    template_name = 'secure_dir/secure_dir_manage_users.html'
+class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    template_name = "secure_dir/secure_dir_manage_users.html"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -47,24 +43,23 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
     def test_func(self):
         """Allow users with permissions to manage the directory to
         manage users."""
-        allocation_obj = get_object_or_404(Allocation, pk=self.kwargs.get('pk'))
+        allocation_obj = get_object_or_404(Allocation, pk=self.kwargs.get("pk"))
         secure_directory = SecureDirectory(allocation_obj)
         return secure_directory.user_can_manage(self.request.user)
 
     def dispatch(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
+        pk = self.kwargs.get("pk")
         self._allocation_obj = get_object_or_404(Allocation, pk=pk)
 
-        if self._allocation_obj.status.name != 'Active':
-            message = 'You may only manage users under an active directory.'
+        if self._allocation_obj.status.name != "Active":
+            message = "You may only manage users under an active directory."
             messages.error(request, message)
             return self._redirect_to_directory_allocation_detail()
 
         self._secure_directory = SecureDirectory(self._allocation_obj)
 
         # Set instance attributes based on the specified action.
-        get_secure_dir_manage_user_request_objects(
-            self, self.kwargs.get('action'))
+        get_secure_dir_manage_user_request_objects(self, self.kwargs.get("action"))
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -78,26 +73,26 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
         user_list = self._get_user_data(users)
 
         if user_list:
-            formset = formset_factory(
-                SecureDirManageUsersForm, max_num=len(user_list))
-            formset = formset(initial=user_list, prefix='userform')
-            context['formset'] = formset
+            formset = formset_factory(SecureDirManageUsersForm, max_num=len(user_list))
+            formset = formset(initial=user_list, prefix="userform")
+            context["formset"] = formset
 
-        context['action'] = self.action
-        context['preposition'] = self.language_dict['preposition']
-        context['directory'] = self._secure_directory.get_path()
-        context['manage_users_url'] = reverse(
-            'secure-dir-manage-users',
-            kwargs={'pk': self._allocation_obj.pk, 'action': self.action})
-        context['allocation_url'] = reverse(
-            'allocation-detail', kwargs={'pk': self._allocation_obj.pk})
-        context['button_class'] = (
-            'btn-success' if self.add_bool else 'btn-danger')
+        context["action"] = self.action
+        context["preposition"] = self.language_dict["preposition"]
+        context["directory"] = self._secure_directory.get_path()
+        context["manage_users_url"] = reverse(
+            "secure-dir-manage-users",
+            kwargs={"pk": self._allocation_obj.pk, "action": self.action},
+        )
+        context["allocation_url"] = reverse(
+            "allocation-detail", kwargs={"pk": self._allocation_obj.pk}
+        )
+        context["button_class"] = "btn-success" if self.add_bool else "btn-danger"
 
         return context
 
     def post(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
+        pk = self.kwargs.get("pk")
         alloc_obj = get_object_or_404(Allocation, pk=pk)
 
         secure_directory = SecureDirectory(alloc_obj)
@@ -107,10 +102,8 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
             users = secure_directory.get_removable_users()
         user_list = self._get_user_data(users)
 
-        formset = formset_factory(
-            SecureDirManageUsersForm, max_num=len(user_list))
-        formset = formset(
-            request.POST, initial=user_list, prefix='userform')
+        formset = formset_factory(SecureDirManageUsersForm, max_num=len(user_list))
+        formset = formset(request.POST, initial=user_list, prefix="userform")
 
         if formset.is_valid():
             try:
@@ -118,14 +111,15 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
                 self._process_users(secure_directory, selected_user_objs)
             except Exception as e:
                 logger.exception(e)
-                message = 'Unexpected failure. Please contact an administrator.'
+                message = "Unexpected failure. Please contact an administrator."
                 messages.error(request, message)
             else:
                 num_users = len(selected_user_objs)
                 message = (
-                    f'Successfully requested to {self.action} {num_users} '
-                    f'user(s) {self.language_dict["preposition"]} the secure '
-                    f'directory {secure_directory.get_path()}.')
+                    f"Successfully requested to {self.action} {num_users} "
+                    f"user(s) {self.language_dict['preposition']} the secure "
+                    f"directory {secure_directory.get_path()}."
+                )
                 messages.success(request, message)
         else:
             for error in formset.errors:
@@ -136,8 +130,7 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
     def _redirect_to_directory_allocation_detail(self):
         """Return a redirect to the detail view for the Allocation
         representing the secure directory."""
-        url = reverse(
-            'allocation-detail', kwargs={'pk': self._allocation_obj.pk})
+        url = reverse("allocation-detail", kwargs={"pk": self._allocation_obj.pk})
         return HttpResponseRedirect(url)
 
     @staticmethod
@@ -148,9 +141,8 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
         user_objs = []
         for form in formset:
             user_form_data = form.cleaned_data
-            if user_form_data.get('selected', False):
-                user_obj = User.objects.get(
-                    username=user_form_data.get('username'))
+            if user_form_data.get("selected", False):
+                user_obj = User.objects.get(username=user_form_data.get("username"))
                 user_objs.append(user_obj)
         return user_objs
 
@@ -161,10 +153,10 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
         user_data_list = []
         for user in users:
             user_data = {
-                'username': user.username,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'email': user.email
+                "username": user.username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "email": user.email,
             }
             user_data_list.append(user_data)
         return user_data_list
@@ -182,8 +174,11 @@ class SecureDirManageUsersView(LoginRequiredMixin, UserPassesTestMixin,
             for user_obj in user_objs:
                 runner_factory = SecureDirectoryManageUserRequestRunnerFactory()
                 runner = runner_factory.get_runner(
-                    self.action, secure_directory, user_obj,
-                    email_strategy=email_strategy)
+                    self.action,
+                    secure_directory,
+                    user_obj,
+                    email_strategy=email_strategy,
+                )
                 runner.run()
 
         try:

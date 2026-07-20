@@ -1,13 +1,14 @@
-import gspread
 import json
 import logging
 import os
 
 from django.conf import settings
 from django.core.cache import cache
+import gspread
 
-from coldfront.core.project.utils_.renewal_survey.backends.base import BaseRenewalSurveyBackend
-
+from coldfront.core.project.utils_.renewal_survey.backends.base import (
+    BaseRenewalSurveyBackend,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,9 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
     """A backend that supports a renewal survey hosted on Google
     Forms."""
 
-    def is_renewal_survey_completed(self, allocation_period_name, project_name,
-                                    pi_username):
+    def is_renewal_survey_completed(
+        self, allocation_period_name, project_name, pi_username
+    ):
         """Return whether there is a response for the given project and
         PI in the Google Sheet for the period."""
 
@@ -29,13 +31,15 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
 
         survey_data = self._load_renewal_survey_metadata(allocation_period_name)
 
-        wks = self._get_gspread_wks(survey_data['sheet_id'])
+        wks = self._get_gspread_wks(survey_data["sheet_id"])
         # periods_coor = self._gsheet_column_to_index(
         #     survey_data['sheet_data']['allocation_period_col'])
         pis_coor = self._gsheet_column_to_index(
-            survey_data['sheet_data']['pi_username_col'])
+            survey_data["sheet_data"]["pi_username_col"]
+        )
         projects_coor = self._gsheet_column_to_index(
-            survey_data['sheet_data']['project_name_col'])
+            survey_data["sheet_data"]["project_name_col"]
+        )
 
         # periods = wks.col_values(periods_coor)
         pis = wks.col_values(pis_coor)
@@ -52,22 +56,25 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
 
         return False
 
-    def get_renewal_survey_response(self, allocation_period_name, project_name,
-                                    pi_username):
+    def get_renewal_survey_response(
+        self, allocation_period_name, project_name, pi_username
+    ):
         """Fetch the response for the given project and PI in the Google
         Sheet for the period. Return None if there is no response."""
         gform_info = self._load_renewal_survey_metadata(allocation_period_name)
         if gform_info is None:
             return None
 
-        wks = self._get_gspread_wks(gform_info['sheet_id'])
+        wks = self._get_gspread_wks(gform_info["sheet_id"])
         if wks is None:
             return None
 
         pis_column_coor = self._gsheet_column_to_index(
-            gform_info['sheet_data']['pi_username_col'])
+            gform_info["sheet_data"]["pi_username_col"]
+        )
         projs_column_coor = self._gsheet_column_to_index(
-            gform_info['sheet_data']['project_name_col'])
+            gform_info["sheet_data"]["project_name_col"]
+        )
 
         pis = wks.col_values(pis_column_coor)
         projects = wks.col_values(projs_column_coor)
@@ -91,8 +98,9 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
 
         return zip(questions, response)
 
-    def get_renewal_survey_url(self, allocation_period_name, pi, project_name,
-                               requester):
+    def get_renewal_survey_url(
+        self, allocation_period_name, pi, project_name, requester
+    ):
         """Return a pre-filled link to the Google Form for the period,
         wherein the following are pre-filled:
             - The name of the AllocationPeriod
@@ -104,37 +112,40 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         if gform_info is None:
             return None
 
-        wks = self._get_gspread_wks(gform_info['sheet_id'])
+        wks = self._get_gspread_wks(gform_info["sheet_id"])
         if wks is None:
             return None
 
-        BASE_URL_ONE = 'https://docs.google.com/forms/d/e/'
-        BASE_URL_TWO = '/viewform?usp=pp_url'
+        BASE_URL_ONE = "https://docs.google.com/forms/d/e/"
+        BASE_URL_TWO = "/viewform?usp=pp_url"
 
-        url = BASE_URL_ONE + gform_info['form_id'] + BASE_URL_TWO
+        url = BASE_URL_ONE + gform_info["form_id"] + BASE_URL_TWO
 
-        PARAMETER_BASE_ONE = '&entry.'
-        PARAMETER_BASE_TWO = '='
+        PARAMETER_BASE_ONE = "&entry."
+        PARAMETER_BASE_TWO = "="
 
-        question_ids_dict = gform_info['form_question_ids']
+        question_ids_dict = gform_info["form_question_ids"]
         for question in question_ids_dict.keys():
-            value = ''
-            if question == 'allocation_period':
+            value = ""
+            if question == "allocation_period":
                 value = allocation_period_name
-            elif question == 'pi_name':
-                value = pi.first_name + '+' + pi.last_name
-            elif question == 'pi_username':
+            elif question == "pi_name":
+                value = pi.first_name + "+" + pi.last_name
+            elif question == "pi_username":
                 value = pi.username
-            elif question == 'project_name':
+            elif question == "project_name":
                 value = project_name
-            elif question == 'requester_name':
-                value = requester.first_name + '+' + \
-                    requester.last_name
-            elif question == 'requester_username':
+            elif question == "requester_name":
+                value = requester.first_name + "+" + requester.last_name
+            elif question == "requester_username":
                 value = requester.username
-            value = value.replace(' ', '+')
-            url += PARAMETER_BASE_ONE + question_ids_dict[question] + \
-                PARAMETER_BASE_TWO + value
+            value = value.replace(" ", "+")
+            url += (
+                PARAMETER_BASE_ONE
+                + question_ids_dict[question]
+                + PARAMETER_BASE_TWO
+                + value
+            )
         return url
 
     @staticmethod
@@ -145,12 +156,14 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         Raises:
             - FileNotFoundError
         """
-        credentials_file_path = settings.RENEWAL_SURVEY.get(
-            'details', {}).get('credentials_file_path', '')
+        credentials_file_path = settings.RENEWAL_SURVEY.get("details", {}).get(
+            "credentials_file_path", ""
+        )
         assert isinstance(credentials_file_path, str)
         if not os.path.isfile(credentials_file_path):
             raise FileNotFoundError(
-                f'Could not find credentials file: {credentials_file_path}.')
+                f"Could not find credentials file: {credentials_file_path}."
+            )
 
         gc = gspread.service_account(filename=credentials_file_path)
         sh = gc.open_by_key(sheet_id)
@@ -163,7 +176,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         """Convert Google Sheets column (e.g., 'A', 'AA') to index number."""
         index = 0
         for char in column_str:
-            index = index * 26 + (ord(char.upper()) - ord('A') + 1)
+            index = index * 26 + (ord(char.upper()) - ord("A") + 1)
         return index
 
     def _load_renewal_survey_metadata(self, allocation_period_name):
@@ -209,11 +222,10 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
             - FileNotFoundError
             - ValueError
         """
-        renewal_survey_details = settings.RENEWAL_SURVEY.get('details', {})
-        cache_key = renewal_survey_details.get('survey_data_cache_key', None)
+        renewal_survey_details = settings.RENEWAL_SURVEY.get("details", {})
+        cache_key = renewal_survey_details.get("survey_data_cache_key", None)
         if cache_key is None:
-            logger.error(
-                'Failed to retrieve cache key from settings.RENEWAL_SURVEY.')
+            logger.error("Failed to retrieve cache key from settings.RENEWAL_SURVEY.")
 
         cache_value = {}
         if cache_key is not None and cache_key in cache:
@@ -238,24 +250,24 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
             - FileNotFoundError
             - ValueError
         """
-        renewal_survey_details = settings.RENEWAL_SURVEY.get('details', {})
-        metadata_file_path = renewal_survey_details.get(
-            'survey_data_file_path', None)
+        renewal_survey_details = settings.RENEWAL_SURVEY.get("details", {})
+        metadata_file_path = renewal_survey_details.get("survey_data_file_path", None)
         if not os.path.isfile(metadata_file_path):
             raise FileNotFoundError(
-                f'Could not find renewal survey data file: '
-                f'{metadata_file_path}.')
+                f"Could not find renewal survey data file: {metadata_file_path}."
+            )
 
         metadata = None
-        with open(metadata_file_path, 'r') as f:
+        with open(metadata_file_path, "r") as f:
             metadata_dicts = json.load(f)
             for metadata_dict in metadata_dicts:
-                if metadata_dict['allocation_period'] == allocation_period_name:
+                if metadata_dict["allocation_period"] == allocation_period_name:
                     metadata = metadata_dict
                     break
 
         if metadata is None:
             raise ValueError(
-                'Failed to load survey data for AllocationPeriod from file.')
+                "Failed to load survey data for AllocationPeriod from file."
+            )
 
         return metadata

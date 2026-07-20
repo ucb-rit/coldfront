@@ -1,6 +1,5 @@
-from django.contrib.auth.models import User
-
 from allauth.account.models import EmailAddress
+from django.contrib.auth.models import User
 
 from coldfront.core.account.utils.queries import update_user_primary_email_address
 from coldfront.core.utils.tests.test_base import TestBase
@@ -15,10 +14,11 @@ class TestUpdateUserPrimaryEmailAddress(TestBase):
         super().setUp()
 
         self.user = User.objects.create(
-            email='user@email.com',
-            first_name='First',
-            last_name='Last',
-            username='user')
+            email="user@email.com",
+            first_name="First",
+            last_name="Last",
+            username="user",
+        )
 
     def test_creates_email_address_for_old_user_email_if_nonexistent(self):
         """Test that, if the User's email field did not have a
@@ -26,13 +26,11 @@ class TestUpdateUserPrimaryEmailAddress(TestBase):
         verified and non-primary."""
         old_email = self.user.email
         new_primary = EmailAddress.objects.create(
-            user=self.user,
-            email='new@email.com',
-            verified=True,
-            primary=False)
+            user=self.user, email="new@email.com", verified=True, primary=False
+        )
         self.assertEqual(EmailAddress.objects.count(), 1)
 
-        with self.assertLogs('', 'WARNING') as cm:
+        with self.assertLogs("", "WARNING") as cm:
             update_user_primary_email_address(new_primary)
 
         self.assertEqual(EmailAddress.objects.count(), 2)
@@ -40,8 +38,9 @@ class TestUpdateUserPrimaryEmailAddress(TestBase):
             email_address = EmailAddress.objects.get(email=old_email)
         except EmailAddress.DoesNotExist:
             self.fail(
-                f'An EmailAddress for User {self.user} and email {old_email} '
-                f'should have been created.')
+                f"An EmailAddress for User {self.user} and email {old_email} "
+                f"should have been created."
+            )
         else:
             self.assertTrue(email_address.verified)
             self.assertFalse(email_address.primary)
@@ -49,9 +48,10 @@ class TestUpdateUserPrimaryEmailAddress(TestBase):
         # Assert that a warning was logged.
         self.assertEqual(len(cm.output), 1)
         expected_log_message = (
-            f'Created EmailAddress {email_address.pk} for User '
-            f'{self.user.pk}\'s old primary address {old_email}, which '
-            f'unexpectedly did not exist.')
+            f"Created EmailAddress {email_address.pk} for User "
+            f"{self.user.pk}'s old primary address {old_email}, which "
+            f"unexpectedly did not exist."
+        )
         self.assertIn(expected_log_message, cm.output[0])
 
     def test_raises_type_error_for_bad_input(self):
@@ -62,34 +62,29 @@ class TestUpdateUserPrimaryEmailAddress(TestBase):
             try:
                 update_user_primary_email_address(bad_input)
             except TypeError as e:
-                self.assertEqual(f'Invalid EmailAddress {bad_input}.', str(e))
+                self.assertEqual(f"Invalid EmailAddress {bad_input}.", str(e))
             else:
-                self.fail('A TypeError should have been raised.')
+                self.fail("A TypeError should have been raised.")
 
     def test_raises_value_error_for_unverified_input(self):
         """Test that, if the input is an EmailAddress with verified
         set to False, a ValueError is raised."""
         email_address = EmailAddress.objects.create(
-            user=self.user,
-            email=self.user.email,
-            verified=False,
-            primary=False)
+            user=self.user, email=self.user.email, verified=False, primary=False
+        )
         try:
             update_user_primary_email_address(email_address)
         except ValueError as e:
-            self.assertEqual(
-                f'EmailAddress {email_address} is unverified.', str(e))
+            self.assertEqual(f"EmailAddress {email_address} is unverified.", str(e))
         else:
-            self.fail('A ValueError should have been raised.')
+            self.fail("A ValueError should have been raised.")
 
     def test_sets_email_address_to_primary(self):
         """Test that the methods sets the given EmailAddress to
         primary."""
         new_primary = EmailAddress.objects.create(
-            user=self.user,
-            email='new@email.com',
-            verified=True,
-            primary=False)
+            user=self.user, email="new@email.com", verified=True, primary=False
+        )
         self.assertFalse(new_primary.primary)
 
         update_user_primary_email_address(new_primary)
@@ -100,13 +95,11 @@ class TestUpdateUserPrimaryEmailAddress(TestBase):
     def test_sets_user_email_field(self):
         """Test that the method sets the User's "email" field to that of
         the EmailAddress."""
-        self.assertEqual(self.user.email, 'user@email.com')
+        self.assertEqual(self.user.email, "user@email.com")
 
         new_primary = EmailAddress.objects.create(
-            user=self.user,
-            email='new@email.com',
-            verified=True,
-            primary=False)
+            user=self.user, email="new@email.com", verified=True, primary=False
+        )
 
         update_user_primary_email_address(new_primary)
 
@@ -117,21 +110,16 @@ class TestUpdateUserPrimaryEmailAddress(TestBase):
         """Test that the method unsets the "primary" fields of other
         EmailAddresses belonging to the User."""
         old_primary = EmailAddress.objects.create(
-            email='user@email.com',
-            user=self.user,
-            verified=True,
-            primary=True)
+            email="user@email.com", user=self.user, verified=True, primary=True
+        )
 
         new_primary = EmailAddress.objects.create(
-            user=self.user,
-            email='new@email.com',
-            verified=True,
-            primary=False)
+            user=self.user, email="new@email.com", verified=True, primary=False
+        )
 
         update_user_primary_email_address(new_primary)
 
-        user_primary_emails = EmailAddress.objects.filter(
-            user=self.user, primary=True)
+        user_primary_emails = EmailAddress.objects.filter(user=self.user, primary=True)
         self.assertEqual(user_primary_emails.count(), 1)
         self.assertEqual(user_primary_emails.first().pk, new_primary.pk)
 

@@ -1,8 +1,13 @@
-from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import (
+    ComputingAllowance,
+)
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
-
-from coldfront.plugins.faculty_storage_allocations.services.eligibility_service import FSARequestEligibilityService
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
+from coldfront.plugins.faculty_storage_allocations.services.eligibility_service import (
+    FSARequestEligibilityService,
+)
 
 
 def has_eligible_pi_for_fsa_request(project):
@@ -29,6 +34,6 @@ def is_project_eligible_for_faculty_storage_allocations(project):
 
 
 __all__ = [
-    'has_eligible_pi_for_fsa_request',
-    'is_project_eligible_for_faculty_storage_allocations',
+    "has_eligible_pi_for_fsa_request",
+    "is_project_eligible_for_faculty_storage_allocations",
 ]
