@@ -7,3 +7,4 @@ class FacultyStorageAllocationsConfig(AppConfig):
 
     def ready(self):
         """Import signal handlers when the app is ready."""
+        import coldfront.plugins.faculty_storage_allocations.signals  # noqa: F401

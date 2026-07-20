@@ -10,4 +10,4 @@ class IPAConfig(AppConfig):
 
     def ready(self):
         if FREEIPA_ENABLE_SIGNALS:
-            pass
+            import coldfront.plugins.freeipa.signals  # noqa: F401

@@ -5,4 +5,4 @@ class UserConfig(AppConfig):
     name = "coldfront.core.user"
 
     def ready(self):
-        pass
+        import coldfront.core.user.signals  # noqa: F401
