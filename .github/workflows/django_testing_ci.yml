@@ -33,6 +33,31 @@ jobs:
   #
   # ─────────────────────────────────────────────────────────────────────────────
 
+  lint:
+    runs-on: ubuntu-22.04
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install ruff
+        run: pip install ruff==0.15.22
+
+      - name: Check formatting
+        run: ruff format --check coldfront/
+
+      - name: Lint
+        # --exit-zero: advisory until the existing violations are resolved;
+        # remove this flag once the codebase is clean.
+        run: ruff check --output-format github --exit-zero coldfront/
+
   test-pytest:
     runs-on: ubuntu-22.04
 
