@@ -129,6 +129,6 @@ def complete_fsa_request(request, pk):
     except Exception as e:
         logger.exception(f"Error completing FSA request {pk}: {e}")
         return Response(
-            {"detail": f"Error completing request: {str(e)}"},
+            {"detail": f"Error completing request: {e!s}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )

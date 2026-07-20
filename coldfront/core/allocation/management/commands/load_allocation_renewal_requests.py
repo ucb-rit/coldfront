@@ -113,7 +113,7 @@ class Command(BaseCommand):
         "pre_project", "post_project", "request_time",
         "num_service_units", (2) Users that have already renewed, and
         (3) invalid input objects."""
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             input_dicts = json.load(f)
 
         valid, already_renewed, invalid = [], [], []

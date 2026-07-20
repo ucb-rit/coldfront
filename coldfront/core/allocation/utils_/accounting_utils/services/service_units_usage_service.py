@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Optional
 
 from coldfront.core.project.utils import is_primary_cluster_project
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import (
@@ -32,7 +31,7 @@ class ServiceUnitsUsageService:
 
     def __init__(
         self,
-        computing_allowance_interface: Optional[ComputingAllowanceInterface] = None,
+        computing_allowance_interface: ComputingAllowanceInterface | None = None,
     ):
         self._computing_allowance_interface = (
             computing_allowance_interface or get_computing_allowance_interface()
@@ -112,7 +111,7 @@ class ServiceUnitsUsageService:
 
     def _handle_special_allowance_types(
         self, computing_allowance: ComputingAllowance
-    ) -> Optional[str]:
+    ) -> str | None:
         """Handle special allowance types (recharge, unlimited)."""
         if computing_allowance.is_recharge_postpaid():
             return self.RECHARGE_MESSAGE

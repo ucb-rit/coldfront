@@ -600,7 +600,7 @@ class Command(BaseCommand):
         # {project_name: {pid: set_of_usernames_using_pid_for_job_usage}}
         job_usage_fee_id_users_by_project = defaultdict(lambda: defaultdict(set))
 
-        with open(billing_file_path, "r") as billing_file:
+        with open(billing_file_path) as billing_file:
             for line in billing_file:
                 fields = [field.strip() for field in line.rstrip().split(":")]
                 if len(fields) != 8:
@@ -653,7 +653,7 @@ class Command(BaseCommand):
         with the keys 'email' and 'full_name', return a mapping from
         employee ID to a dict with the keys 'email', 'first_name',
         'middle_name', and 'last_name'."""
-        with open(employee_id_to_user_data_file, "r") as f:
+        with open(employee_id_to_user_data_file) as f:
             mapping = json.load(f)
         for employee_id, user_data in mapping.items():
             full_name = user_data.pop("full_name", "")
@@ -677,7 +677,7 @@ class Command(BaseCommand):
         employee ID."""
         host_employee_ids_by_username = {}
 
-        with open(billing_file_path, "r") as billing_file:
+        with open(billing_file_path) as billing_file:
             for line in billing_file:
                 fields = [field.strip() for field in line.rstrip().split(":")]
                 if len(fields) != 8:
@@ -754,7 +754,7 @@ class Command(BaseCommand):
 
         departmental_cluster_names = self.get_departmental_cluster_names()
         project_pis_and_managers_data = {}
-        with open(project_users_file_path, "r") as project_users_file:
+        with open(project_users_file_path) as project_users_file:
             reader = csv.reader(project_users_file)
             next(reader)
             for row in reader:
@@ -789,7 +789,7 @@ class Command(BaseCommand):
         of the users on the project."""
         departmental_cluster_names = self.get_departmental_cluster_names()
         project_and_project_users_data = {}
-        with open(project_users_file_path, "r") as project_users_file:
+        with open(project_users_file_path) as project_users_file:
             reader = csv.reader(project_users_file)
             next(reader)
             for row in reader:
@@ -814,7 +814,7 @@ class Command(BaseCommand):
         from a user's username to a dict containing the user's
         first_name, middle_name, last_name, cluster_uid, and email."""
         user_data = {}
-        with open(passwd_file_path, "r") as passwd_file:
+        with open(passwd_file_path) as passwd_file:
             for line in passwd_file:
                 fields = [field.strip() for field in line.rstrip().split(":")]
                 if len(fields) != 7:
@@ -861,7 +861,7 @@ class Command(BaseCommand):
     @staticmethod
     def is_billing_id_well_formed(billing_id):
         """Return whether the given string is a valid billing ID."""
-        return bool(re.match("\d{6}-\d{3}", billing_id))
+        return bool(re.match(r"\d{6}-\d{3}", billing_id))
 
     @staticmethod
     def is_email_address_valid(email):

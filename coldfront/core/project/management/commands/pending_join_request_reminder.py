@@ -140,4 +140,4 @@ class Command(BaseCommand):
                     message = f"Failed to send reminder email. Details:\n{e}"
                     self.logger.exception(message)
 
-        self.logger.info(f"Sent {str(emails_sent)} reminder emails.")
+        self.logger.info(f"Sent {emails_sent!s} reminder emails.")

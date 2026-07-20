@@ -120,7 +120,7 @@ class AllocationRequestClusterAccountView(
         request_runner = ClusterAccessRequestRunner(self.allocation_user_obj)
         try:
             request_runner.run()
-        except Exception as e:
+        except Exception:
             message = (
                 "Unexpected failure. Please try again, or contact an "
                 "administrator if the problem persists."
@@ -216,9 +216,9 @@ class AllocationClusterAccountRequestListView(
                 if value:
                     if isinstance(value, list):
                         for ele in value:
-                            filter_parameters += "{}={}&".format(key, ele)
+                            filter_parameters += f"{key}={ele}&"
                     else:
-                        filter_parameters += "{}={}&".format(key, value)
+                        filter_parameters += f"{key}={value}&"
             context["cluster_search_form"] = cluster_search_form
         else:
             filter_parameters = None

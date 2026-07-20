@@ -6,7 +6,6 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand
 from django.core.validators import validate_email
-from django.db.models import Q
 
 from coldfront.core.project.models import (
     Project,
@@ -578,7 +577,7 @@ class Command(BaseCommand):
             - None
         """
         if self.file_exists(password_file_path):
-            with open(password_file_path, "r") as password_file:
+            with open(password_file_path) as password_file:
                 for line in password_file:
                     fields = [field.strip() for field in line.rstrip().split(":")]
                     if len(fields) != 7:

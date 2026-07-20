@@ -3,7 +3,6 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponseRedirect
@@ -20,7 +19,7 @@ from coldfront.core.project.forms import ReviewDenyForm, ReviewStatusForm
 from coldfront.core.project.forms_.renewal_forms.approval_forms import (
     AllocationRenewalRequestSearchForm,
 )
-from coldfront.core.project.models import Project, ProjectAllocationRequestStatusChoice
+from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
 from coldfront.core.project.utils_.renewal_survey import get_renewal_survey_response
 from coldfront.core.project.utils_.renewal_utils import (
     AllocationRenewalApprovalRunner,
@@ -130,7 +129,7 @@ class AllocationRenewalRequestListView(
         return context
 
 
-class AllocationRenewalRequestMixin(object):
+class AllocationRenewalRequestMixin:
     allocation_period_obj = None
     request_obj = None
 
@@ -330,7 +329,7 @@ class AllocationRenewalRequestDetailView(
 
         try:
             email_strategy.send_queued_emails()
-        except Exception as e:
+        except Exception:
             pass
 
         return HttpResponseRedirect(

@@ -15,7 +15,7 @@ class UserMergeRollback(Exception):
     pass
 
 
-class UserMergeRunner(object):
+class UserMergeRunner:
     """A class that merges two User objects into one.
 
     It identifies one User as a source and the other as a destination,

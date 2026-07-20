@@ -8,7 +8,6 @@ from coldfront.core.billing.tests.test_commands.test_billing_ids import (
     BillingIdsCommand,
 )
 from coldfront.core.billing.utils.queries import (
-    get_billing_activity_from_full_id,
     is_billing_id_well_formed,
 )
 from coldfront.core.billing.utils.validation import is_billing_id_valid

@@ -6,9 +6,9 @@ from django.utils.module_loading import import_string
 
 __all__ = [
     "get_backend",
-    "is_renewal_survey_completed",
     "get_renewal_survey_response",
     "get_renewal_survey_url",
+    "is_renewal_survey_completed",
 ]
 
 

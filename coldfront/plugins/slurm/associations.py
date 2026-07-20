@@ -75,7 +75,7 @@ class SlurmCluster(SlurmBase):
                 if len(name) == 0:
                     raise (
                         SlurmParserError(
-                            "Cluster name not found for line: {}".format(line)
+                            f"Cluster name not found for line: {line}"
                         )
                     )
                 cluster = SlurmCluster(name)
@@ -90,7 +90,7 @@ class SlurmCluster(SlurmBase):
                 if not parent:
                     raise (
                         SlurmParserError(
-                            "Parent name not found for line: {}".format(line)
+                            f"Parent name not found for line: {line}"
                         )
                     )
             elif re.match("^User - '[^']+'", line):
@@ -98,7 +98,7 @@ class SlurmCluster(SlurmBase):
                 if not parent:
                     raise (
                         SlurmParserError(
-                            "Found user record without Parent for line: {}".format(line)
+                            f"Found user record without Parent for line: {line}"
                         )
                     )
                 account = cluster.accounts[parent]
@@ -121,7 +121,7 @@ class SlurmCluster(SlurmBase):
         specs = resource.get_attribute_list(SLURM_SPECS_ATTRIBUTE_NAME)
         user_specs = resource.get_attribute_list(SLURM_USER_SPECS_ATTRIBUTE_NAME)
         if not name:
-            raise (SlurmError("Resource {} missing slurm_cluster".format(resource)))
+            raise (SlurmError(f"Resource {resource} missing slurm_cluster"))
 
         cluster = SlurmCluster(name, specs)
 
@@ -163,16 +163,11 @@ class SlurmCluster(SlurmBase):
     def write(self, out):
         self._write(
             out,
-            "# ColdFront Allocation Slurm associations dump {}\n".format(
-                datetime.datetime.now().date()
-            ),
+            f"# ColdFront Allocation Slurm associations dump {datetime.datetime.now().date()}\n",
         )
         self._write(
             out,
-            "Cluster - '{}':{}\n".format(
-                self.name,
-                self.format_specs(),
-            ),
+            f"Cluster - '{self.name}':{self.format_specs()}\n",
         )
         if "root" in self.accounts:
             self.accounts["root"].write(out)
@@ -204,16 +199,14 @@ class SlurmAccount(SlurmBase):
         if not re.match("^Account - '[^']+'", line):
             raise (
                 SlurmParserError(
-                    'Invalid format. Must start with "Account" for line: {}'.format(
-                        line
-                    )
+                    f'Invalid format. Must start with "Account" for line: {line}'
                 )
             )
 
         parts = line.split(":")
         name = re.sub(r"^Account - ", "", parts[0]).strip("\n'")
         if len(name) == 0:
-            raise (SlurmParserError("Cluster name not found for line: {}".format(line)))
+            raise (SlurmParserError(f"Cluster name not found for line: {line}"))
 
         return SlurmAccount(name, specs=parts[1:])
 
@@ -229,9 +222,7 @@ class SlurmAccount(SlurmBase):
         if name != self.name:
             raise (
                 SlurmError(
-                    "Allocation {} slurm_account_name does not match {}".format(
-                        allocation, self.name
-                    )
+                    f"Allocation {allocation} slurm_account_name does not match {self.name}"
                 )
             )
 
@@ -258,14 +249,11 @@ class SlurmAccount(SlurmBase):
         if self.name != "root":
             self._write(
                 out,
-                "Account - '{}':{}\n".format(
-                    self.name,
-                    self.format_specs(),
-                ),
+                f"Account - '{self.name}':{self.format_specs()}\n",
             )
 
     def write_users(self, out):
-        self._write(out, "Parent - '{}'\n".format(self.name))
+        self._write(out, f"Parent - '{self.name}'\n")
         for uid, user in self.users.items():
             user.write(out)
 
@@ -278,22 +266,19 @@ class SlurmUser(SlurmBase):
         if not re.match("^User - '[^']+'", line):
             raise (
                 SlurmParserError(
-                    'Invalid format. Must start with "User" for line: {}'.format(line)
+                    f'Invalid format. Must start with "User" for line: {line}'
                 )
             )
 
         parts = line.split(":")
         name = re.sub(r"^User - ", "", parts[0]).strip("\n'")
         if len(name) == 0:
-            raise (SlurmParserError("User name not found for line: {}".format(line)))
+            raise (SlurmParserError(f"User name not found for line: {line}"))
 
         return SlurmUser(name, specs=parts[1:])
 
     def write(self, out):
         self._write(
             out,
-            "User - '{}':{}\n".format(
-                self.name,
-                self.format_specs(),
-            ),
+            f"User - '{self.name}':{self.format_specs()}\n",
         )

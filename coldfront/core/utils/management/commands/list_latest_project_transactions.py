@@ -17,6 +17,6 @@ class Command(BaseCommand):
                     "date_time"
                 )
                 date_time = transaction.date_time.strftime("%Y-%m-%dT%H:%M:%S")
-            except Exception as e:
+            except Exception:
                 continue
             self.stdout.write(f"{project.name},{date_time}")

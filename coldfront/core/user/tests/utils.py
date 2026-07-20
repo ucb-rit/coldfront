@@ -1,9 +1,4 @@
 from decimal import Decimal
-import os
-import sys
-
-from django.core.management import call_command
-from django.test import TestCase
 
 from coldfront.api.statistics.utils import (
     create_project_allocation,

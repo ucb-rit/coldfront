@@ -353,7 +353,7 @@ def send_allocation_renewal_request_approval_email(request, num_service_units):
     if not email_enabled:
         return
 
-    subject = f"{str(request)} Approved"
+    subject = f"{request!s} Approved"
     template_name = "email/project_renewal/project_renewal_request_approved.txt"
 
     context = {
@@ -381,7 +381,7 @@ def send_allocation_renewal_request_denial_email(request):
     if not email_enabled:
         return
 
-    subject = f"{str(request)} Denied"
+    subject = f"{request!s} Denied"
     template_name = "email/project_renewal/project_renewal_request_denied.txt"
     reason = allocation_renewal_request_denial_reason(request)
 
@@ -412,7 +412,7 @@ def send_allocation_renewal_request_processing_email(request, num_service_units)
     if not email_enabled:
         return
 
-    subject = f"{str(request)} Processed"
+    subject = f"{request!s} Processed"
     template_name = "email/project_renewal/project_renewal_request_processed.txt"
 
     context = {
@@ -671,7 +671,7 @@ def set_allocation_renewal_request_eligibility(
     request.save()
 
 
-class AllowanceRenewalAvailableEmailSender(object):
+class AllowanceRenewalAvailableEmailSender:
     """A class that sends emails to eligible project owners, notifying
     them that allowance renewal is available."""
 
@@ -786,7 +786,7 @@ class AllowanceRenewalAvailableEmailSender(object):
         self._email_strategy.process_email(email_method, *email_args)
 
 
-class AllocationRenewalRunnerBase(object):
+class AllocationRenewalRunnerBase:
     """A base class that Runners for handling AllocationRenewalsRequests
     should inherit from."""
 
@@ -1021,7 +1021,7 @@ class AllocationRenewalDenialRunner(AllocationRenewalRunnerBase):
         request = self.request_obj
         try:
             send_allocation_renewal_request_denial_email(request)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to send notification email. Details:\n{e}")
 
 

@@ -8,8 +8,6 @@ from coldfront.core.allocation.models import (
 from coldfront.core.project.tests.test_views.test_renewal_views.utils import (
     TestRenewalViewsMixin,
 )
-from coldfront.core.resource.models import Resource
-from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.utils.tests.test_base import TestBase
 
 

@@ -1,9 +1,8 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from ....utils.data_sources.backends.cached import HardwareProcurementsCacheManager
-from .conftest import MockUser, mock_look_up_user_by_email
 from .utils import CACHE_KEY, CACHE_MODULE, LOOK_UP_FUNC_MODULE, MockCache
 
 
@@ -54,7 +53,7 @@ def mock_hardware_procurements_by_id(mock_hardware_procurements):
     return {hp.get_id(): hp for hp in mock_hardware_procurements}
 
 
-class TestHardwareProcurementsCacheManager(object):
+class TestHardwareProcurementsCacheManager:
     """Unit and component tests for HardwareProcurementsCacheManager."""
 
     def setup_method(self):

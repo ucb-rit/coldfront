@@ -419,7 +419,7 @@ class LRCNewProjectUserRunner(NewProjectUserRunner):
         return self._project_obj.name.startswith(computing_allowance_project_prefixes)
 
 
-class NewProjectUserRunnerFactory(object):
+class NewProjectUserRunnerFactory:
     """A factory for returning a class that performs additional
     processing when a user is added to or joins a Project."""
 

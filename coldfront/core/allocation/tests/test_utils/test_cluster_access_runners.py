@@ -51,7 +51,7 @@ class TestClusterAccessRunnersBase(TestBase):
 
         # Create User
         self.user0 = User.objects.create(
-            username="user0", email=f"user0@nonexistent.com"
+            username="user0", email="user0@nonexistent.com"
         )
 
         self.manager = User.objects.create(
@@ -135,8 +135,8 @@ class TestClusterAccessRequestCompleteRunner(TestClusterAccessRunnersBase):
         email_body = [
             f"now has access to the project {self.project0.name}.",
             f"supercluster username is - {self.new_username}",
-            f"If this is the first time you are accessing",
-            f"start with the below Logging In page:",
+            "If this is the first time you are accessing",
+            "start with the below Logging In page:",
         ]
 
         self.assertEqual(len(mail.outbox), 1)

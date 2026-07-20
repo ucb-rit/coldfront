@@ -7,12 +7,6 @@ from ....utils.data_sources.backends.cached import (
     HardwareProcurementsCacheManager,
 )
 from ....utils.data_sources.backends.google_sheets import GoogleSheetsDataSourceBackend
-from .conftest import (
-    MockUser,
-    expected_hardware_procurements_data,
-    google_sheet_data,
-    mock_look_up_user_by_email,
-)
 from .utils import (
     CACHE_KEY,
     CACHE_MODULE,
@@ -81,7 +75,7 @@ def mock_cache():
     return MockCache()
 
 
-class TestCachedDataSourceBackend(object):
+class TestCachedDataSourceBackend:
     def setup_method(self):
         self._cache_key = CACHE_KEY
         self._cache_module = CACHE_MODULE

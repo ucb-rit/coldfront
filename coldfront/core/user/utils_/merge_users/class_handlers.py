@@ -10,7 +10,7 @@ from coldfront.core.project.models import ProjectUser, ProjectUserStatusChoice
 from coldfront.core.project.utils import higher_project_user_role
 
 
-class ClassHandlerFactory(object):
+class ClassHandlerFactory:
     """A factory for returning a concrete instance of ClassHandler for a
     particular class."""
 

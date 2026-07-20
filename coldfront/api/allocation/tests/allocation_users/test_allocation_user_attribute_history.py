@@ -125,9 +125,7 @@ class TestListAllocationUserAttributeHistory(TestAllocationBase):
                 result["history_type"],
             )
             self.assertEqual(
-                getattr(
-                    historical_allocation_user_attribute, "allocation_attribute_type"
-                ).name,
+                historical_allocation_user_attribute.allocation_attribute_type.name,
                 result["allocation_attribute_type"],
             )
             self.assertEqual(

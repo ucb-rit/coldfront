@@ -5,7 +5,7 @@ from .request_service import FacultyStorageAllocationRequestService
 
 __all__ = [
     "DirectoryService",
-    "FacultyStorageAllocationRequestService",
     "FSARequestEligibilityService",
     "FSARequestNotificationService",
+    "FacultyStorageAllocationRequestService",
 ]

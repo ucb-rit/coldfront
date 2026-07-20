@@ -51,7 +51,7 @@ def send_email(subject, body, sender, receiver_list, cc=[], html_body=""):
             email.attach_alternative(html_body, "text/html")
         email.send(fail_silently=False)
 
-    except SMTPException as e:
+    except SMTPException:
         logger.error(
             "Failed to send email to %s from %s with subject %s",
             sender,

@@ -1,4 +1,3 @@
-from django.db.models import Q
 
 from coldfront.core.project.models import Project
 

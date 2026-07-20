@@ -45,7 +45,7 @@ def get_departments_for_user(user, strs_only=False):
     return authoritative, non_authoritative
 
 
-class UserDepartmentUpdater(object):
+class UserDepartmentUpdater:
     """A class that updates a User's authoritative and/or
     non-authoritative Department associations."""
 
@@ -64,7 +64,7 @@ class UserDepartmentUpdater(object):
                 authoritative_user_department_data = (
                     self._fetch_authoritative_user_departments()
                 )
-            except Exception as e:
+            except Exception:
                 authoritative = False
 
         with transaction.atomic():

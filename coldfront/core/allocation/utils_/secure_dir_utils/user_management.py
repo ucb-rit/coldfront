@@ -58,11 +58,11 @@ def get_secure_dir_manage_user_request_objects(self, action):
         "verb": "add" if add_bool else "remove",
     }
 
-    setattr(self, "action", action.lower())
-    setattr(self, "add_bool", add_bool)
-    setattr(self, "request_obj", request_obj)
-    setattr(self, "request_status_obj", request_status_obj)
-    setattr(self, "language_dict", language_dict)
+    self.action = action.lower()
+    self.add_bool = add_bool
+    self.request_obj = request_obj
+    self.request_status_obj = request_status_obj
+    self.language_dict = language_dict
 
 
 class SecureDirectoryManageUserRequestRunner(ABC):
@@ -206,7 +206,7 @@ class SecureDirectoryRemoveUserRequestRunner(SecureDirectoryManageUserRequestRun
         send_email_template(subject, template_name, context, sender, recipients)
 
 
-class SecureDirectoryManageUserRequestRunnerFactory(object):
+class SecureDirectoryManageUserRequestRunnerFactory:
     """A factory for returning a class that performs processing when a
     user is requested to be added to or removed from a secure
     directory."""

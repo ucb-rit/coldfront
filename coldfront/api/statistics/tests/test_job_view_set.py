@@ -3,7 +3,6 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.core.management import call_command
 from django.db.models import Sum
 import pytz
 from rest_framework.test import APIClient
@@ -163,7 +162,7 @@ class TestJobList(TestJobBase):
         separator = "?"
         for parameter in parameters:
             base_url = separator.join(
-                [base_url, f"{parameter}={str(parameters[parameter])}"]
+                [base_url, f"{parameter}={parameters[parameter]!s}"]
             )
             separator = "&"
         return base_url
@@ -655,8 +654,8 @@ class TestJobSerializer(TestJobBase):
         """Test that requests wherein the user is not an active member
         of the account's compute allocation fail."""
         message = (
-            f"User user0 is not an active member of the compute allocation "
-            f"for account fc_project."
+            "User user0 is not an active member of the compute allocation "
+            "for account fc_project."
         )
         # The allocation user has been removed from the allocation.
         self.allocation_user.status = AllocationUserStatusChoice.objects.get(

@@ -1,33 +1,23 @@
 from datetime import datetime
 from decimal import Decimal
 import math
-import os
 from urllib.parse import urljoin
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
 from django.db.models import BooleanField, Case, Q, Value, When
 from django.urls import reverse
 from flags.state import flag_enabled
 import pytz
 
 from coldfront.core.allocation.models import (
-    Allocation,
-    AllocationAttribute,
     AllocationAttributeType,
     AllocationPeriod,
-    AllocationStatusChoice,
     AllocationUser,
     AllocationUserAttribute,
     AllocationUserStatusChoice,
-    SecureDirAddUserRequest,
-    SecureDirAddUserRequestStatusChoice,
-    SecureDirRemoveUserRequest,
-    SecureDirRemoveUserRequestStatusChoice,
 )
 from coldfront.core.allocation.signals import allocation_activate_user
-from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource_name
 from coldfront.core.resource.utils_.allowance_utils.interface import (
@@ -35,7 +25,6 @@ from coldfront.core.resource.utils_.allowance_utils.interface import (
 )
 from coldfront.core.utils.common import (
     display_time_zone_current_date,
-    utc_now_offset_aware,
 )
 
 

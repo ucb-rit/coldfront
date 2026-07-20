@@ -7,7 +7,7 @@ from coldfront.core.project.utils_.renewal_utils import (
 from coldfront.core.user.models import UserProfile
 
 
-class TestRunnerMixinBase(object):
+class TestRunnerMixinBase:
     """A base mixin for testing runners."""
 
     def setUp(self):

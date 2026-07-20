@@ -1,6 +1,5 @@
 """Component tests for forms with database."""
 
-from django.utils import timezone
 import pytest
 
 from coldfront.plugins.faculty_storage_allocations.forms.approval_forms import (
@@ -8,7 +7,6 @@ from coldfront.plugins.faculty_storage_allocations.forms.approval_forms import (
     FSARequestSearchForm,
 )
 from coldfront.plugins.faculty_storage_allocations.forms.form_utils import (
-    ReviewDenyForm,
     ReviewStatusForm,
 )
 from coldfront.plugins.faculty_storage_allocations.forms.request_forms import (

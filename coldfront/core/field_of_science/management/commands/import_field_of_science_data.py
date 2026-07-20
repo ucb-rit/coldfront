@@ -1,6 +1,6 @@
 import os
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 from coldfront.core.field_of_science.models import FieldOfScience
 
@@ -14,7 +14,7 @@ class Command(BaseCommand):
         print("Adding field of science ...")
         file_path = os.path.join(app_commands_dir, "data", "field_of_science_data.csv")
         # FieldOfScience.objects.all().delete()
-        with open(file_path, "r") as fp:
+        with open(file_path) as fp:
             for line in fp:
                 (
                     pk,

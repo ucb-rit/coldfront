@@ -56,9 +56,9 @@ class TestEmailAddressAdmin(TestUserBase):
         )
 
         self.request = HttpRequest()
-        setattr(self.request, "session", "session")
+        self.request.session = "session"
         messages = default_storage(self.request)
-        setattr(self.request, "_messages", messages)
+        self.request._messages = messages
 
     def test_delete_model_primary_email(self):
         """
@@ -68,8 +68,8 @@ class TestEmailAddressAdmin(TestUserBase):
             self.app_admin.delete_model(self.request, self.email1)
         except ValidationError as e:
             self.assertIn(
-                f"Cannot delete primary email. Unset primary status in list "
-                f"display before deleting.",
+                "Cannot delete primary email. Unset primary status in list "
+                "display before deleting.",
                 str(e),
             )
         else:
@@ -92,7 +92,7 @@ class TestEmailAddressAdmin(TestUserBase):
             self.app_admin.make_primary(self.request, query_set)
         except ValidationError as e:
             self.assertIn(
-                f"Cannot set more than one primary email address at a time.", str(e)
+                "Cannot set more than one primary email address at a time.", str(e)
             )
         else:
             self.fail("A ValidationError should have been raised.")
@@ -105,7 +105,7 @@ class TestEmailAddressAdmin(TestUserBase):
             query_set = EmailAddress.objects.filter(pk=self.email5.pk)
             self.app_admin.make_primary(self.request, query_set)
         except ValidationError as e:
-            self.assertIn(f"Cannot set an unverified email address as primary.", str(e))
+            self.assertIn("Cannot set an unverified email address as primary.", str(e))
         else:
             self.fail("A ValidationError should have been raised.")
 
@@ -161,8 +161,8 @@ class TestEmailAddressAdmin(TestUserBase):
 
         storage = list(get_messages(self.request))
         self.assertEqual(len(storage), 2)
-        self.assertEqual(f"Deleted 0 non-primary EmailAddresses.", str(storage[0]))
-        self.assertEqual(f"Skipped deleting 2 primary EmailAddresses.", str(storage[1]))
+        self.assertEqual("Deleted 0 non-primary EmailAddresses.", str(storage[0]))
+        self.assertEqual("Skipped deleting 2 primary EmailAddresses.", str(storage[1]))
 
     def test_make_delete_queryset_only_non_primary(self):
         """
@@ -179,7 +179,7 @@ class TestEmailAddressAdmin(TestUserBase):
 
         storage = list(get_messages(self.request))
         self.assertEqual(len(storage), 1)
-        self.assertEqual(f"Deleted 3 non-primary EmailAddresses.", str(storage[0]))
+        self.assertEqual("Deleted 3 non-primary EmailAddresses.", str(storage[0]))
 
     def test_make_delete_queryset_mixed(self):
         """
@@ -196,5 +196,5 @@ class TestEmailAddressAdmin(TestUserBase):
 
         storage = list(get_messages(self.request))
         self.assertEqual(len(storage), 2)
-        self.assertEqual(f"Deleted 2 non-primary EmailAddresses.", str(storage[0]))
-        self.assertEqual(f"Skipped deleting 1 primary EmailAddresses.", str(storage[1]))
+        self.assertEqual("Deleted 2 non-primary EmailAddresses.", str(storage[0]))
+        self.assertEqual("Skipped deleting 1 primary EmailAddresses.", str(storage[1]))

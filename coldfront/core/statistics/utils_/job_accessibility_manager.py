@@ -4,7 +4,7 @@ from coldfront.core.project.models import ProjectUser
 from coldfront.core.statistics.models import Job
 
 
-class JobAccessibilityManager(object):
+class JobAccessibilityManager:
     """A class that defines how read access to job data is delegated to
     users."""
 

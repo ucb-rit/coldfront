@@ -1,7 +1,6 @@
 from csv import DictReader
 import datetime
 from decimal import Decimal
-from http import HTTPStatus
 from io import StringIO
 import json
 import sys
@@ -9,7 +8,6 @@ import sys
 from django import forms
 from django.contrib.auth.models import User
 from django.core.management import CommandError, call_command
-from django.urls import reverse
 
 from coldfront.api.statistics.utils import (
     create_project_allocation,
@@ -35,9 +33,6 @@ from coldfront.core.project.models import (
     ProjectUserStatusChoice,
     SavioProjectAllocationRequest,
     VectorProjectAllocationRequest,
-)
-from coldfront.core.project.utils_.renewal_utils import (
-    get_current_allowance_year_period,
 )
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
@@ -79,7 +74,7 @@ class TestBaseExportData(TestBase):
 
         # Create a Project and ProjectUsers.
         project = Project.objects.create(name="fc_project0", status=project_status)
-        setattr(self, "fc_project0", project)
+        self.fc_project0 = project
         for j in range(2):
             ProjectUser.objects.create(
                 user=getattr(self, f"user{j}"),
@@ -494,7 +489,7 @@ class TestJobAvgQueueTime(TestBaseExportData):
     def test_partition(self):
         """Testing job_avg_queue_time with parition arg passed"""
         output, error = self.call_command(
-            "export_data", "job_avg_queue_time", f"--partition=savio_bigmem"
+            "export_data", "job_avg_queue_time", "--partition=savio_bigmem"
         )
         self.assertIn("48hrs 0mins 0secs", output)
         self.assertEqual(error, "")
@@ -533,7 +528,7 @@ class TestJobAvgQueueTime(TestBaseExportData):
         # no jobs found with the passed args
         with self.assertRaises(CommandError):
             output, error = self.call_command(
-                "export_data", "job_avg_queue_time", f"--partition=test_partition"
+                "export_data", "job_avg_queue_time", "--partition=test_partition"
             )
             self.assertEqual(output, "")
             self.assertEqual(error, "")
@@ -1079,10 +1074,8 @@ class TestNewProjectSurveyResponses(TestBase):
             if index % 2:
                 filtered_fixtures.append(fixture)
 
-        fixtures = list(sorted(fixtures, key=lambda x: x.project.name, reverse=True))
-        filtered_fixtures = list(
-            sorted(filtered_fixtures, key=lambda x: x.project.name, reverse=True)
-        )
+        fixtures = sorted(fixtures, key=lambda x: x.project.name, reverse=True)
+        filtered_fixtures = sorted(filtered_fixtures, key=lambda x: x.project.name, reverse=True)
 
         self.fixtures = fixtures
         self.filtered_fixtures = filtered_fixtures
@@ -1254,12 +1247,8 @@ class TestRenewalSurveyResponses(TestBase):
             if index % 2:
                 filtered_fixtures.append(fixture)
 
-        fixtures = list(
-            sorted(fixtures, key=lambda x: x.pre_project.name, reverse=True)
-        )
-        filtered_fixtures = list(
-            sorted(filtered_fixtures, key=lambda x: x.pre_project.name, reverse=True)
-        )
+        fixtures = sorted(fixtures, key=lambda x: x.pre_project.name, reverse=True)
+        filtered_fixtures = sorted(filtered_fixtures, key=lambda x: x.pre_project.name, reverse=True)
         self.fixtures = fixtures
         self.filtered_fixtures = filtered_fixtures
 

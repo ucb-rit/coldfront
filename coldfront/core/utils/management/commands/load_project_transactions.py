@@ -28,14 +28,14 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        with open(options["jsonl"], "r") as jsonl:
+        with open(options["jsonl"]) as jsonl:
             for line in jsonl:
                 line = line.strip()
                 if not line:
                     continue
                 try:
                     self.create_transaction(line)
-                except Exception as e:
+                except Exception:
                     message = f"Failed to create ProjectTransaction for line: {line}"
                     self.stderr.write(message)
 

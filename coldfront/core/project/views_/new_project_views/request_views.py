@@ -1,6 +1,5 @@
 from collections import OrderedDict
 import logging
-import os
 
 from allauth.account.models import EmailAddress
 from django.conf import settings

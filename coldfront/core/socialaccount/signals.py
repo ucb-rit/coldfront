@@ -3,7 +3,6 @@ import logging
 
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialLogin
-from allauth.socialaccount.providers.base import AuthProcess
 from allauth.socialaccount.signals import social_account_added, social_account_updated
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -29,7 +28,7 @@ def handle_social_account_added_or_updated(sender, **kwargs):
     social_login = kwargs["sociallogin"]
     try:
         set_verified_email_addresses_from_social_login(social_login)
-    except Exception as e:
+    except Exception:
         message = (
             "Failed to automatically create verified email addresses "
             "from the connected account. Please do so in the User "

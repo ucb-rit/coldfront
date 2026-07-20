@@ -90,20 +90,20 @@ class TestCanSubmitJobView(TestJobBase):
     def test_invalid_user_id(self):
         """Test that requests with an invalid user_id value fail."""
         self.user.delete()
-        message = f"No user exists with user_id 0."
+        message = "No user exists with user_id 0."
         self.assert_result("1.00", "0", "0", 400, False, message)
 
     def test_invalid_account_id(self):
         """Test that requests with an invalid account_id value fail."""
         self.project.delete()
-        message = f"No account exists with account_id 0."
+        message = "No account exists with account_id 0."
         self.assert_result("1.00", "0", "0", 400, False, message)
 
     def test_no_user_account_association(self):
         """Test that requests with an unrelated user and account
         fail."""
         self.project_user.delete()
-        message = f"User user0 is not a member of account fc_project."
+        message = "User user0 is not a member of account fc_project."
         self.assert_result("1.00", "0", "fc_project", 200, False, message)
 
     def test_compute_allocation_not_expected_always_allowed(self):
@@ -194,8 +194,8 @@ class TestCanSubmitJobView(TestJobBase):
         """Test that requests wherein the user is not an active member
         of the account's compute allocation fail."""
         message = (
-            f"User user0 is not an active member of the compute allocation "
-            f"for account fc_project."
+            "User user0 is not an active member of the compute allocation "
+            "for account fc_project."
         )
         # The allocation user has been removed from the allocation.
         self.allocation_user.status = AllocationUserStatusChoice.objects.get(

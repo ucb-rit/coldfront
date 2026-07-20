@@ -33,8 +33,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--created_after",
             help=(
-                f"A date (YYYY-MM-DD) that filters attributes to include only "
-                f"those created on or after it."
+                "A date (YYYY-MM-DD) that filters attributes to include only "
+                "those created on or after it."
             ),
             type=str,
         )

@@ -1,9 +1,8 @@
-import csv
 import datetime
 import os
 
 from django.conf import settings
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from coldfront.core.project.models import Project
@@ -27,7 +26,7 @@ class Command(BaseCommand):
         print("Adding subscriptions ...")
         AttributeType.objects.all().delete()
         filepath = os.path.join(base_dir, "local_data", "s_atttriute_type.tsv")
-        with open(filepath, "r") as fp:
+        with open(filepath) as fp:
             for line in fp:
                 AttributeType.objects.create(name=line.strip())
 
@@ -36,7 +35,7 @@ class Command(BaseCommand):
             base_dir, "local_data", "subscription_attribute_type.tsv"
         )
         # print(filepath)
-        with open(filepath, "r") as fp:
+        with open(filepath) as fp:
             for line in fp:
                 attribute_type, name, has_usage = line.strip().split("\t")
                 if has_usage == "True":
@@ -105,7 +104,7 @@ class Command(BaseCommand):
         )
 
         filepath = os.path.join(base_dir, "local_data", "subscriptions.tsv")
-        with open(filepath, "r") as fp:
+        with open(filepath) as fp:
             lines = fp.read().split("$$$$$$$$$$-new-line-$$$$$$$$$$")
             for line in lines:
                 if not line.strip():

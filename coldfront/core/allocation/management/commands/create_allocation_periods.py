@@ -107,7 +107,7 @@ class Command(BaseCommand):
             absolute_json_path = os.path.join(
                 os.path.dirname(__file__), relative_json_path
             )
-            with open(absolute_json_path, "r") as f:
+            with open(absolute_json_path) as f:
                 period_list = json.load(f)
             periods.extend(period_list)
 

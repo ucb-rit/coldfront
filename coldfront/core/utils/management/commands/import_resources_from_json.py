@@ -1,9 +1,7 @@
 import json
-import os
 from pprint import pprint
 
 from django.conf import settings
-from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 

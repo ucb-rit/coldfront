@@ -4,7 +4,6 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponseRedirect
@@ -14,7 +13,6 @@ from django.views import View
 from django.views.generic import DetailView
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
-from flags.state import flag_enabled
 import iso8601
 
 from coldfront.core.allocation.models import AllocationRenewalRequest
@@ -34,7 +32,6 @@ from coldfront.core.project.forms_.new_project_forms.request_forms import (
     SavioProjectSurveyForm,
 )
 from coldfront.core.project.models import (
-    Project,
     ProjectAllocationRequestStatusChoice,
     SavioProjectAllocationRequest,
     VectorProjectAllocationRequest,
@@ -149,7 +146,7 @@ class SavioProjectRequestListView(LoginRequiredMixin, ListFilterMixin, TemplateV
         return context
 
 
-class SavioProjectRequestMixin(object):
+class SavioProjectRequestMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.interface = get_computing_allowance_interface()
@@ -292,7 +289,7 @@ class SavioProjectRequestMixin(object):
         )
         try:
             context["allocation_amount"] = self.get_service_units_to_allocate()
-        except Exception as e:
+        except Exception:
             context["allocation_amount"] = "Failed to compute."
         context["survey_form"] = SavioProjectSurveyForm(
             initial=self.request_obj.survey_answers, disable_fields=True
@@ -563,7 +560,7 @@ class SavioProjectRequestDetailView(
 
         try:
             email_strategy.send_queued_emails()
-        except Exception as e:
+        except Exception:
             pass
 
         return HttpResponseRedirect(self.redirect)
@@ -1173,7 +1170,7 @@ class VectorProjectRequestListView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class VectorProjectRequestMixin(object):
+class VectorProjectRequestMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.request_obj = None

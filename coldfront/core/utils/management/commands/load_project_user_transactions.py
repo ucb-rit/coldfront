@@ -42,14 +42,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.set_user_mappings(options["user_ids_json"])
-        with open(options["jsonl"], "r") as jsonl:
+        with open(options["jsonl"]) as jsonl:
             for line in jsonl:
                 line = line.strip()
                 if not line:
                     continue
                 try:
                     self.create_transaction(line)
-                except Exception as e:
+                except Exception:
                     message = (
                         f"Failed to create ProjectUserTransaction for line: {line}"
                     )
@@ -80,7 +80,7 @@ class Command(BaseCommand):
         return path
 
     def set_user_mappings(self, json_file_path):
-        with open(json_file_path, "r") as user_ids_json:
+        with open(json_file_path) as user_ids_json:
             for old_id, cluster_uid in json.load(user_ids_json).items():
                 self.old_user_id_to_cluster_uid[int(old_id)] = cluster_uid
         for user in User.objects.select_related("userprofile"):

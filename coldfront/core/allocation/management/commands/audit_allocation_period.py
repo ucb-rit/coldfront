@@ -131,7 +131,7 @@ class AuditFailure(Exception):
     pass
 
 
-class CheckResult(object):
+class CheckResult:
     """An object containing the results of an individual audit check."""
 
     def __init__(self, success, message, html_message=None):
@@ -313,7 +313,7 @@ class YearlyAllocationPeriodReadinessAuditor(AllocationPeriodReadinessAuditor):
             get_renewal_survey_response(
                 self._allocation_period_name, project_name, pi_username
             )
-        except Exception as e:
+        except Exception:
             success = False
         else:
             success = True

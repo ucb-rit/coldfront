@@ -258,7 +258,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
             )
 
         metadata = None
-        with open(metadata_file_path, "r") as f:
+        with open(metadata_file_path) as f:
             metadata_dicts = json.load(f)
             for metadata_dict in metadata_dicts:
                 if metadata_dict["allocation_period"] == allocation_period_name:

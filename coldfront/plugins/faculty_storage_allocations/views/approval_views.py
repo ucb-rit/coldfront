@@ -13,7 +13,6 @@ from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
 import iso8601
 
-from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.plugins.faculty_storage_allocations.forms import (
     FSARequestEditForm,
     FSARequestReviewDenyForm,

@@ -333,7 +333,7 @@ class SavioProjectExtraFieldsForm(forms.Form):
                 self.fields[field].disabled = True
 
 
-class NewProjectExtraFieldsFormFactory(object):
+class NewProjectExtraFieldsFormFactory:
     """A factory for returning a form to acquire additional information
     about a particular allowance."""
 

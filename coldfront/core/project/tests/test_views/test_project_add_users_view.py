@@ -18,7 +18,7 @@ from coldfront.core.utils.tests.test_base import (
 )
 
 
-class TestProjectAddUsersViewMixin(object):
+class TestProjectAddUsersViewMixin:
     """A mixin for testing view functionality common to both
     deployments."""
 

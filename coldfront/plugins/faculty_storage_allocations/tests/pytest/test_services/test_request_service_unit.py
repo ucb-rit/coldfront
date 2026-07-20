@@ -4,8 +4,7 @@ These tests mock database operations to test business logic.
 For tests with real database operations, see test_request_service_integration.py.
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 from django.utils import timezone
 import pytest

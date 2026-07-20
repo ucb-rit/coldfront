@@ -19,7 +19,7 @@ from coldfront.core.utils.tests.test_base import (
 )
 
 
-class TestViewMixin(object):
+class TestViewMixin:
     """A mixin for testing view functionality common to both
     deployments."""
 

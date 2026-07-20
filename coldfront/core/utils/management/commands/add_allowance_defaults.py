@@ -224,7 +224,7 @@ class Command(BaseCommand):
                     os.path.dirname(__file__),
                     service_units_files_by_flag_name[flag_name],
                 )
-                with open(service_units_file_path, "r") as f:
+                with open(service_units_file_path) as f:
                     # A mapping from allowance name to a list of objects
                     # specifying how many Service Units the allowance grants
                     # during a particular AllocationPeriod.

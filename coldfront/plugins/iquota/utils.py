@@ -29,7 +29,7 @@ class Iquota:
             (_, vc) = kerberos.authGSSClientInit(service)
             kerberos.authGSSClientStep(vc, "")
             return kerberos.authGSSClientResponse(vc)
-        except kerberos.GSSError as e:
+        except kerberos.GSSError:
             raise KerberosError("error initializing GSS client")
 
     def _humanize_user_quota(self, user_used, user_limit):
@@ -48,18 +48,13 @@ class Iquota:
         token = self.gssclient_token()
 
         headers = {"Authorization": "Negotiate " + token}
-        url = "https://{}:{}/quota/user?user={}&path={}".format(
-            self.IQUOTA_API_HOST,
-            self.IQUOTA_API_PORT,
-            self.username,
-            self.IQUOTA_USER_PATH,
-        )
+        url = f"https://{self.IQUOTA_API_HOST}:{self.IQUOTA_API_PORT}/quota/user?user={self.username}&path={self.IQUOTA_USER_PATH}"
 
         r = requests.get(url, headers=headers, verify=self.IQUOTA_CA_CERT)
 
         try:
             usage = r.json()["quotas"][0]
-        except KeyError as e:
+        except KeyError:
             raise MissingQuotaError(
                 "Missing user quota for username: %s" % (self.username)
             )
@@ -84,13 +79,7 @@ class Iquota:
 
         headers = {"Authorization": "Negotiate " + token}
 
-        url = "https://{}:{}/quota/group?user={}&path={}&group={}".format(
-            self.IQUOTA_API_HOST,
-            self.IQUOTA_API_PORT,
-            self.username,
-            self.IQUOTA_GROUP_PATH,
-            group,
-        )
+        url = f"https://{self.IQUOTA_API_HOST}:{self.IQUOTA_API_PORT}/quota/group?user={self.username}&path={self.IQUOTA_GROUP_PATH}&group={group}"
 
         r = requests.get(url, headers=headers, verify=self.IQUOTA_CA_CERT)
 

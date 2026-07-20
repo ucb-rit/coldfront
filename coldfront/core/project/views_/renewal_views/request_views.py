@@ -134,7 +134,7 @@ class AllocationRenewalLandingView(
         return context
 
 
-class AllocationRenewalMixin(object):
+class AllocationRenewalMixin:
     success_message = (
         "Thank you for your submission. It will be reviewed and processed by "
         "administrators."
@@ -197,14 +197,14 @@ class AllocationRenewalMixin(object):
         try:
             send_new_allocation_renewal_request_admin_notification_email(request_obj)
         except Exception as e:
-            logger.error(f"Failed to send notification email. Details:\n")
+            logger.error("Failed to send notification email. Details:\n")
             logger.exception(e)
         # Send a notification email to the PI if the requester differs.
         if request_obj.requester != request_obj.pi:
             try:
                 send_new_allocation_renewal_request_pi_notification_email(request_obj)
             except Exception as e:
-                logger.error(f"Failed to send notification email. Details:\n")
+                logger.error("Failed to send notification email. Details:\n")
                 logger.exception(e)
         # If applicable, send a notification email to the managers and PIs of
         # the project being requested to pool with.
@@ -217,7 +217,7 @@ class AllocationRenewalMixin(object):
                     request_obj
                 )
             except Exception as e:
-                logger.error(f"Failed to send notification email. Details:\n")
+                logger.error("Failed to send notification email. Details:\n")
                 logger.exception(e)
 
     def show_billing_id_form_condition(self):
@@ -432,7 +432,7 @@ class AllocationRenewalMixin(object):
                     f"{prev_billing_activity_str} to "
                     f"{new_billing_activity_str}. {associated_updates_str}"
                 )
-            except Exception as e:
+            except Exception:
                 pass
 
     @staticmethod

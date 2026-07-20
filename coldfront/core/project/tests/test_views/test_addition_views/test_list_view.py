@@ -15,7 +15,7 @@ from coldfront.core.project.models import (
 from coldfront.core.utils.tests.test_base import TestBase, enable_deployment
 
 
-class TestViewMixin(object):
+class TestViewMixin:
     """A mixin for testing AllocationAdditionRequestListView."""
 
     completed_url = reverse("service-units-purchase-completed-request-list")

@@ -32,7 +32,7 @@ LOOK_UP_FUNC_MODULE = (
 )
 
 
-class MockCache(object):
+class MockCache:
     """A mock for Django's cache."""
 
     def __init__(self):
@@ -63,7 +63,7 @@ class MockCache(object):
         self.set(key, value)
 
 
-class MockUser(object):
+class MockUser:
     """A mock for Django's User object."""
 
     def __init__(self, user_id):

@@ -7,7 +7,7 @@ Unit tests focus on business logic by mocking the database.
 Component tests verify actual database queries work correctly.
 """
 
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 

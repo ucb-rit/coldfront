@@ -88,9 +88,7 @@ class SnakeCaseTemplateNameMixin:
         model_name = self.model.__name__
 
         return [
-            "{}/{}{}.html".format(
-                app_label, to_snake(model_name), self.template_name_suffix
-            )
+            f"{app_label}/{to_snake(model_name)}{self.template_name_suffix}.html"
         ]
 
 

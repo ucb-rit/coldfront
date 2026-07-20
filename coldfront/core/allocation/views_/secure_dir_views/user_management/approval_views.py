@@ -122,9 +122,9 @@ class SecureDirManageUsersRequestListView(
                 if value:
                     if isinstance(value, list):
                         for ele in value:
-                            filter_parameters += "{}={}&".format(key, ele)
+                            filter_parameters += f"{key}={ele}&"
                     else:
-                        filter_parameters += "{}={}&".format(key, value)
+                        filter_parameters += f"{key}={value}&"
             context["secure_dir_request_search_form"] = secure_dir_request_search_form
         else:
             filter_parameters = None
@@ -300,7 +300,7 @@ class SecureDirManageUsersCompleteStatusView(
             messages.error(self.request, message)
             return HttpResponseRedirect(
                 reverse(
-                    f"secure-dir-manage-users-request-list",
+                    "secure-dir-manage-users-request-list",
                     kwargs={"action": self.action, "status": "pending"},
                 )
             )
@@ -366,7 +366,7 @@ class SecureDirManageUsersCompleteStatusView(
 
     def get_success_url(self):
         return reverse(
-            f"secure-dir-manage-users-request-list",
+            "secure-dir-manage-users-request-list",
             kwargs={"action": self.action, "status": "pending"},
         )
 
@@ -465,7 +465,7 @@ class SecureDirManageUsersDenyRequestView(
             messages.error(request, message)
             return HttpResponseRedirect(
                 reverse(
-                    f"secure-dir-manage-users-request-list",
+                    "secure-dir-manage-users-request-list",
                     kwargs={"action": self.action, "status": "pending"},
                 )
             )
@@ -494,7 +494,7 @@ class SecureDirManageUsersDenyRequestView(
 
         return HttpResponseRedirect(
             reverse(
-                f"secure-dir-manage-users-request-list",
+                "secure-dir-manage-users-request-list",
                 kwargs={"action": self.action, "status": "pending"},
             )
         )

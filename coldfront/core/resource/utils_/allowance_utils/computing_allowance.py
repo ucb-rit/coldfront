@@ -8,7 +8,7 @@ from coldfront.core.resource.utils_.allowance_utils.constants import (
 )
 
 
-class ComputingAllowance(object):
+class ComputingAllowance:
     """A wrapper class around a Resource representing a computing
     allowance, with helper methods."""
 

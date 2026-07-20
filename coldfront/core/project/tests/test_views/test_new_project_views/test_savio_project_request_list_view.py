@@ -9,7 +9,7 @@ from coldfront.core.project.utils_.renewal_utils import (
 from coldfront.core.utils.tests.test_base import TestBase
 
 
-class TestViewMixin(object):
+class TestViewMixin:
     """A mixin for testing SavioProjectRequestListView."""
 
     completed_url = reverse("new-project-request-list") + "?status=completed"

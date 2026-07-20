@@ -25,7 +25,6 @@ from coldfront.core.billing.utils.billing_activity_managers import (
     UserBillingActivityManager,
 )
 from coldfront.core.billing.utils.queries import (
-    get_billing_activity_from_full_id,
     get_billing_id_usages,
     get_or_create_billing_activity_from_full_id,
     is_billing_id_well_formed,
@@ -136,7 +135,7 @@ class BillingIDSetView(LoginRequiredMixin, UserPassesTestMixin, FormView):
             )
             if form.is_billing_id_invalid:
                 # The form would only be valid if the user chose ignore_invalid.
-                invalid_note = f" (ignoring that it was invalid)"
+                invalid_note = " (ignoring that it was invalid)"
                 log_message += invalid_note
                 message += invalid_note
             log_message += "."

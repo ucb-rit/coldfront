@@ -12,7 +12,6 @@ from coldfront.core.allocation.models import (
     AllocationAccount,
     AllocationAttributeType,
     AllocationStatusChoice,
-    AllocationUserAttribute,
     ClusterAccessRequest,
 )
 from coldfront.core.allocation.utils import (

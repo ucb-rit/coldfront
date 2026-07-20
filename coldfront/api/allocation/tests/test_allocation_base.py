@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from django.contrib.auth.models import User
-from django.core.management import call_command
 
 from coldfront.api.statistics.utils import (
     create_project_allocation,

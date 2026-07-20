@@ -421,8 +421,8 @@ class Command(BaseCommand):
         #  differ from the cluster name (within expected bounds).
         if project_name != lowercase_cluster_name:
             raise CommandError(
-                f"This command may not be used to create a Project whose name "
-                f"differs from the cluster name."
+                "This command may not be used to create a Project whose name "
+                "differs from the cluster name."
             )
 
         return {

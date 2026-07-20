@@ -11,7 +11,7 @@ from coldfront.core.resource.models import (
 )
 
 
-class ComputingAllowanceInterface(object):
+class ComputingAllowanceInterface:
     """A singleton that fetches computing allowances from the database
     and provides methods for retrieving associated data."""
 

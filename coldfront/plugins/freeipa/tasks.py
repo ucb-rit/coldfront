@@ -1,7 +1,6 @@
 import logging
 import os
 
-from django.contrib.auth.models import User
 from ipalib import api
 
 from coldfront.core.allocation.models import Allocation, AllocationUser
@@ -11,7 +10,6 @@ from coldfront.plugins.freeipa.utils import (
     FREEIPA_NOOP,
     UNIX_GROUP_ATTRIBUTE_NAME,
     AlreadyMemberError,
-    ApiError,
     NotMemberError,
     check_ipa_group_error,
 )
@@ -48,7 +46,7 @@ def add_user_group(allocation_user_pk):
         try:
             res = api.Command.group_add_member(g, user=[allocation_user.user.username])
             check_ipa_group_error(res)
-        except AlreadyMemberError as e:
+        except AlreadyMemberError:
             logger.warn(
                 "User %s is already a member of group %s",
                 allocation_user.user.username,
@@ -134,7 +132,7 @@ def remove_user_group(allocation_user_pk):
                 g, user=[allocation_user.user.username]
             )
             check_ipa_group_error(res)
-        except NotMemberError as e:
+        except NotMemberError:
             logger.warn(
                 "User %s is not a member of group %s", allocation_user.user.username, g
             )

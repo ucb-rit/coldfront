@@ -509,7 +509,7 @@ class TestProjectsRenew(TestProjectsBase):
         )
 
 
-class ProjectsCommand(object):
+class ProjectsCommand:
     """A wrapper class over the 'projects' management command."""
 
     command_name = "projects"

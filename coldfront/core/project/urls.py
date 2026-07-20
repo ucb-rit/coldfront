@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.urls import path
-from django.views.generic import RedirectView, TemplateView
+from django.views.generic import RedirectView
 from flags.urls import flagged_paths
 
 import coldfront.core.allocation.views_.secure_dir_views.new_directory.request_views as secure_dir_new_directory_request_views

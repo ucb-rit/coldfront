@@ -34,7 +34,7 @@ allocation."""
 logger = logging.getLogger(__name__)
 
 
-class AllocationAdditionRunnerBase(object):
+class AllocationAdditionRunnerBase:
     """A base class that Runners for handling AllocationAdditionRequests
     should inherit from."""
 

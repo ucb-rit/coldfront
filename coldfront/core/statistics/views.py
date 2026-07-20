@@ -11,7 +11,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django.views import View
-from django.views.generic import DetailView, ListView, TemplateView
+from django.views.generic import DetailView, ListView
 
 from coldfront.core.project.models import ProjectUser
 from coldfront.core.statistics.forms import JobSearchForm
@@ -108,9 +108,9 @@ class SlurmJobListView(LoginRequiredMixin, ListView):
                 if value:
                     if isinstance(value, list):
                         for ele in value:
-                            filter_parameters += "{}={}&".format(key, ele)
+                            filter_parameters += f"{key}={ele}&"
                     else:
-                        filter_parameters += "{}={}&".format(key, value)
+                        filter_parameters += f"{key}={value}&"
         else:
             filter_parameters = None
             context["job_search_form"] = JobSearchForm()

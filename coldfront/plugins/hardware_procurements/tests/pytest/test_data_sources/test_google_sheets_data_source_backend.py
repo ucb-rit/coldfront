@@ -3,9 +3,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from ....utils import HardwareProcurement
 from ....utils.data_sources.backends.google_sheets import GoogleSheetsDataSourceBackend
-from .conftest import expected_hardware_procurements_data, google_sheet_data
 from .utils import GOOGLE_SHEET_COLUMNS, assert_procurement_expected
 
 
@@ -25,7 +23,7 @@ def backend_from_google_sheet_columns():
 
 
 @pytest.mark.component
-class TestGoogleSheetsDataSourceBackendComponent(object):
+class TestGoogleSheetsDataSourceBackendComponent:
     """Component tests for GoogleSheetsDataSourceBackend."""
 
     def _assert_fetch_output(
@@ -175,7 +173,7 @@ class TestGoogleSheetsDataSourceBackendComponent(object):
 
 
 @pytest.mark.unit
-class TestGoogleSheetsDataSourceBackendUnit(object):
+class TestGoogleSheetsDataSourceBackendUnit:
     """Unit tests for GoogleSheetsDataSourceBackend."""
 
     @pytest.mark.parametrize(

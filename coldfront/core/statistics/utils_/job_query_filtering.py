@@ -37,7 +37,7 @@ def job_query_filtering(job_list, data):
     return job_list
 
 
-class JobSearchFilterSessionStorage(object):
+class JobSearchFilterSessionStorage:
     """A class that stores job search filters in the user's session for
     retrieval."""
 

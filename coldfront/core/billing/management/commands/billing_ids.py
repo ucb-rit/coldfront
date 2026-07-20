@@ -400,7 +400,7 @@ def add_username_argument(parser, is_optional=False):
     parser.add_argument(name, help="The username of a user.", type=str)
 
 
-class Entity(object):
+class Entity:
     """A wrapper for storing details of a database object to set a
     BillingActivity for."""
 

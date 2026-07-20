@@ -1,21 +1,17 @@
 import hashlib
 import io
-from io import StringIO
 import json
-import os
 import re
 
 from bibtexparser.bibdatabase import as_text
 from bibtexparser.bparser import BibTexParser
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db import IntegrityError
 from django.forms import formset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
-from django.views.generic import DetailView, ListView, TemplateView, View
-from django.views.static import serve
+from django.views.generic import TemplateView, View
 from doi2bib import crossref
 import requests
 
@@ -123,9 +119,7 @@ class PublicationSearchResultView(
 
             elif source.name == "adsabs":
                 try:
-                    url = "http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode={}&data_type=BIBTEX".format(
-                        unique_id
-                    )
+                    url = f"http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode={unique_id}&data_type=BIBTEX"
                     r = requests.get(url, timeout=5)
                     bp = BibTexParser(interpolate_strings=False)
                     bib_database = bp.parse(r.text)
@@ -176,7 +170,7 @@ class PublicationSearchResultView(
         else:
             # fallback: clearly indicate that data was absent
             source_name = matching_source_obj.name
-            journal = "[no journal info from {}]".format(source_name.upper())
+            journal = f"[no journal info from {source_name.upper()}]"
 
         pub_dict = {}
         pub_dict["author"] = author
@@ -366,7 +360,7 @@ class PublicationAddManuallyView(LoginRequiredMixin, UserPassesTestMixin, Templa
                 client_pub["year"],
                 client_pub["author"],
             )
-            msg = "Skipped adding: {}".format(user_friendly_publication_info)
+            msg = f"Skipped adding: {user_friendly_publication_info}"
 
         messages.success(request, msg)
         return HttpResponseRedirect(
@@ -453,9 +447,7 @@ class PublicationDeletePublicationsView(
 
             messages.success(
                 request,
-                "Deleted {} publications from project.".format(
-                    publications_deleted_count
-                ),
+                f"Deleted {publications_deleted_count} publications from project.",
             )
         else:
             for error in formset.errors:

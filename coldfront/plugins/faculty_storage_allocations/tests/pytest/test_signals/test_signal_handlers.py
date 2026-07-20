@@ -4,7 +4,6 @@ These tests verify that signal handlers respond correctly to core application
 events and integrate properly with the DirectoryService.
 """
 
-import logging
 from unittest.mock import Mock, patch
 
 import pytest

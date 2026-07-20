@@ -18,7 +18,7 @@ class BillingActivityChoiceField(forms.ModelChoiceField):
         return obj.full_id()
 
 
-class BillingIDValidityMixin(object):
+class BillingIDValidityMixin:
     def __init__(self, *args, **kwargs):
         self.is_billing_id_invalid = False
         super().__init__(*args, **kwargs)

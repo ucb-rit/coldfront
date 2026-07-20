@@ -35,7 +35,7 @@ from coldfront.core.resource.utils_.allowance_utils.interface import (
 from coldfront.core.utils.common import utc_now_offset_aware
 
 
-class BaseTestMixin(object):
+class BaseTestMixin:
     """A mixin with useful methods for testing the application, to be
     incorporated into a class inheriting from e.g., TestCase."""
 

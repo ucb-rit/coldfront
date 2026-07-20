@@ -733,9 +733,9 @@ class AllocationListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
                 if value:
                     if isinstance(value, QuerySet):
                         for ele in value:
-                            filter_parameters += "{}={}&".format(key, ele.pk)
+                            filter_parameters += f"{key}={ele.pk}&"
                     else:
-                        filter_parameters += "{}={}&".format(key, value)
+                        filter_parameters += f"{key}={value}&"
             context["allocation_search_form"] = allocation_search_form
         else:
             filter_parameters = ""
@@ -843,7 +843,7 @@ class AllocationCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
                     resource_attribute_type__name="quantity_label"
                 ).value
                 resources_form_label_texts[resource.id] = mark_safe(
-                    "<strong>{}*</strong>".format(value)
+                    f"<strong>{value}*</strong>"
                 )
             if resource.resourceattribute_set.filter(
                 resource_attribute_type__name="eula"
@@ -953,7 +953,7 @@ class AllocationCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
         pi_names = []
         for pi in allocation_obj.project.pis():
             pi_names.append(
-                "{} {} ({})".format(pi.first_name, pi.last_name, pi.username)
+                f"{pi.first_name} {pi.last_name} ({pi.username})"
             )
         pi_names = ", ".join(pi_names)
 
@@ -965,9 +965,7 @@ class AllocationCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
             template_context = {"pi": pi_names, "resource": resource_name, "url": url}
 
             send_email_template(
-                "New allocation request: {} - {}".format(
-                    project_obj.name, resource_name
-                ),
+                f"New allocation request: {project_obj.name} - {resource_name}",
                 "email/new_allocation_request.txt",
                 template_context,
                 EMAIL_SENDER,
@@ -1018,9 +1016,7 @@ class AllocationAddUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
         ]:
             messages.error(
                 request,
-                "You cannot add users to a allocation with status {}.".format(
-                    allocation_obj.status.name
-                ),
+                f"You cannot add users to a allocation with status {allocation_obj.status.name}.",
             )
             return HttpResponseRedirect(
                 reverse("allocation-detail", kwargs={"pk": allocation_obj.pk})
@@ -1116,7 +1112,7 @@ class AllocationAddUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
                         sender=self.__class__, allocation_user_pk=allocation_user_obj.pk
                     )
             messages.success(
-                request, "Added {} users to allocation.".format(users_added_count)
+                request, f"Added {users_added_count} users to allocation."
             )
         else:
             for error in formset.errors:
@@ -1158,9 +1154,7 @@ class AllocationRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, Templat
         ]:
             messages.error(
                 request,
-                "You cannot remove users from a allocation with status {}.".format(
-                    allocation_obj.status.name
-                ),
+                f"You cannot remove users from a allocation with status {allocation_obj.status.name}.",
             )
             return HttpResponseRedirect(
                 reverse("allocation-detail", kwargs={"pk": allocation_obj.pk})
@@ -1248,7 +1242,7 @@ class AllocationRemoveUsersView(LoginRequiredMixin, UserPassesTestMixin, Templat
                     )
 
             messages.success(
-                request, "Removed {} users from allocation.".format(remove_users_count)
+                request, f"Removed {remove_users_count} users from allocation."
             )
         else:
             for error in formset.errors:
@@ -1383,9 +1377,7 @@ class AllocationAttributeDeleteView(
 
             messages.success(
                 request,
-                "Deleted {} attributes from allocation.".format(
-                    attributes_deleted_count
-                ),
+                f"Deleted {attributes_deleted_count} attributes from allocation.",
             )
         else:
             for error in formset.errors:
@@ -1448,9 +1440,7 @@ class AllocationActivateRequestView(LoginRequiredMixin, UserPassesTestMixin, Vie
 
         messages.success(
             request,
-            "Allocation to {} has been ACTIVATED for {}".format(
-                allocation_obj.get_parent_resource, allocation_obj.project.name
-            ),
+            f"Allocation to {allocation_obj.get_parent_resource} has been ACTIVATED for {allocation_obj.project.name}",
         )
 
         resource_name = allocation_obj.get_parent_resource
@@ -1515,9 +1505,7 @@ class AllocationDenyRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         messages.success(
             request,
-            "Allocation to {} has been DENIED for {}".format(
-                allocation_obj.resources.first(), allocation_obj.project.name
-            ),
+            f"Allocation to {allocation_obj.resources.first()} has been DENIED for {allocation_obj.project.name}",
         )
 
         resource_name = allocation_obj.get_parent_resource
@@ -1588,9 +1576,7 @@ class AllocationRenewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView)
         ]:
             messages.error(
                 request,
-                "You cannot renew a allocation with status {}.".format(
-                    allocation_obj.status.name
-                ),
+                f"You cannot renew a allocation with status {allocation_obj.status.name}.",
             )
             return HttpResponseRedirect(
                 reverse("allocation-detail", kwargs={"pk": allocation_obj.pk})
@@ -1743,7 +1729,7 @@ class AllocationRenewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView)
             pi_names = []
             for pi in allocation_obj.project.pis():
                 pi_names.append(
-                    "{} {} ({})".format(pi.first_name, pi.last_name, pi.username)
+                    f"{pi.first_name} {pi.last_name} ({pi.username})"
                 )
             pi_names = ", ".join(pi_names)
 
@@ -1759,9 +1745,7 @@ class AllocationRenewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView)
                 }
 
                 send_email_template(
-                    "Allocation renewed: {} - {}".format(
-                        allocation_obj.project.name, resource_name
-                    ),
+                    f"Allocation renewed: {allocation_obj.project.name} - {resource_name}",
                     "email/allocation_renewed.txt",
                     template_context,
                     EMAIL_SENDER,

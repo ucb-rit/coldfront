@@ -38,7 +38,7 @@ class ClusterAccessRequestRunnerValidationError(Exception):
     pass
 
 
-class ClusterAccessRequestRunner(object):
+class ClusterAccessRequestRunner:
     """An object that performs necessary database checks and updates
     when access to a project on the cluster is requested for a given
     user."""
@@ -161,7 +161,7 @@ class ClusterAccessRequestRunner(object):
             raise ClusterAccessRequestRunnerValidationError(message)
 
 
-class ClusterAccessRequestCompleteRunner(object):
+class ClusterAccessRequestCompleteRunner:
     """An object that performs necessary database checks and updates
     when a ClusterAccessRequest is updated."""
 
@@ -309,7 +309,7 @@ class ClusterAccessRequestCompleteRunner(object):
             logger.exception(message)
 
 
-class ClusterAccessRequestDenialRunner(object):
+class ClusterAccessRequestDenialRunner:
     """An object that performs necessary database checks and updates
     when a ClusterAccessRequest is denied."""
 

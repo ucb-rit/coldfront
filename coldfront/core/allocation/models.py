@@ -2,13 +2,11 @@ from ast import literal_eval
 from collections import namedtuple
 import datetime
 from decimal import Decimal
-import importlib
 import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.core.files.storage import FileSystemStorage
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -17,8 +15,7 @@ from django.utils.module_loading import import_string
 from model_utils.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
-from coldfront.core.billing.models import BillingActivity
-from coldfront.core.project.models import Project, ProjectUser
+from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource
 from coldfront.core.utils.common import (
     display_time_zone_current_date,
@@ -160,16 +157,11 @@ class Allocation(TimeStampedModel):
                         attribute.allocation_attribute_type.name,
                     )
 
-                string = "{}: {}/{} ({} %) <br>".format(
-                    attribute.allocation_attribute_type.name,
-                    attribute.allocationattributeusage.value,
-                    attribute.value,
-                    percent,
-                )
+                string = f"{attribute.allocation_attribute_type.name}: {attribute.allocationattributeusage.value}/{attribute.value} ({percent} %) <br>"
                 html_string += string
 
             if attribute.allocation_attribute_type.name == "Cluster Directory Access":
-                html_string += "Directory Name: {}".format(attribute.value)
+                html_string += f"Directory Name: {attribute.value}"
 
         return mark_safe(html_string)
 
@@ -305,9 +297,7 @@ class AllocationAttribute(TimeStampedModel):
             ).exists()
         ):
             raise ValidationError(
-                "'{}' attribute already exists for this allocation.".format(
-                    self.allocation_attribute_type
-                )
+                f"'{self.allocation_attribute_type}' attribute already exists for this allocation."
             )
 
         expected_value_type = self.allocation_attribute_type.attribute_type.name.strip()
@@ -335,9 +325,7 @@ class AllocationAttributeUsage(TimeStampedModel):
     history = HistoricalRecords()
 
     def __str__(self):
-        return "{}: {}".format(
-            self.allocation_attribute.allocation_attribute_type.name, self.value
-        )
+        return f"{self.allocation_attribute.allocation_attribute_type.name}: {self.value}"
 
 
 class AllocationUserStatusChoice(TimeStampedModel):
@@ -413,9 +401,7 @@ class AllocationUserAttribute(TimeStampedModel):
             }
             if self.allocation.allocationuserattribute_set.filter(**kwargs).exists():
                 raise ValidationError(
-                    ("'{}' attribute already exists for this allocation.").format(
-                        self.allocation_attribute_type
-                    )
+                    f"'{self.allocation_attribute_type}' attribute already exists for this allocation."
                 )
 
         expected_value_type = self.allocation_attribute_type.attribute_type.name.strip()
@@ -443,9 +429,7 @@ class AllocationUserAttributeUsage(TimeStampedModel):
     history = HistoricalRecords()
 
     def __str__(self):
-        return "{}: {}".format(
-            self.allocation_user_attribute.allocation_attribute_type.name, self.value
-        )
+        return f"{self.allocation_user_attribute.allocation_attribute_type.name}: {self.value}"
 
 
 def validate_allocation_attribute_value_type(expected_value_type, value):

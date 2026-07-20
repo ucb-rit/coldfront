@@ -15,7 +15,6 @@ from coldfront.core.project.utils_.new_project_utils import ProjectDenialRunner
 from coldfront.core.project.utils_.renewal_utils import (
     get_current_allowance_year_period,
 )
-from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils_.allowance_utils.interface import (
     ComputingAllowanceInterface,
 )

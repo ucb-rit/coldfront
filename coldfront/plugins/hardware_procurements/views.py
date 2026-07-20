@@ -33,7 +33,7 @@ class HardwareProcurementDetailView(
         procurement_id = self.kwargs.get("procurement_id")
         try:
             self._procurement = self._fetch_procurement(procurement_id)
-        except Exception as e:
+        except Exception:
             raise Http404("Invalid procurement.")
 
         if not self._check_permissions(self._procurement):

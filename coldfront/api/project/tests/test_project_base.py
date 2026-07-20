@@ -43,7 +43,7 @@ class TestProjectBase(TestAPIBase):
         self.staff_user = User.objects.get(username="staff")
 
         # Create a PI.
-        self.pi = User.objects.create(username=f"pi", email=f"pi@nonexistent.com")
+        self.pi = User.objects.create(username="pi", email="pi@nonexistent.com")
         user_profile = UserProfile.objects.get(user=self.pi)
         user_profile.is_pi = True
         user_profile.save()

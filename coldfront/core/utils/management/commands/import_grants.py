@@ -1,10 +1,8 @@
 import datetime
 import os
-import pprint
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-import pytz
 
 from coldfront.core.grant.models import Grant, GrantFundingAgency, GrantStatusChoice
 from coldfront.core.project.models import Project
@@ -17,7 +15,7 @@ def get_role_and_pi_mapping():
     file_path = os.path.join(base_dir, "local_data", "grants_role_pi.tsv")
 
     mapping = {}
-    with open(file_path, "r") as fp:
+    with open(file_path) as fp:
         for line in fp:
             if line.startswith("#"):
                 continue
@@ -105,7 +103,7 @@ class Command(BaseCommand):
 
         role_pi_mapping = get_role_and_pi_mapping()
 
-        with open(file_path, "r") as fp:
+        with open(file_path) as fp:
             for line in fp:
                 if line.startswith("#"):
                     continue

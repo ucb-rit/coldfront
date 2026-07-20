@@ -1,4 +1,3 @@
-from coldfront.core.billing.models import BillingActivity
 from coldfront.core.user.utils_.host_user_utils import lbl_email_address
 
 

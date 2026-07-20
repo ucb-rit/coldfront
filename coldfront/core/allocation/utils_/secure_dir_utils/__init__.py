@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 
-class SecureDirectory(object):
+class SecureDirectory:
     """A wrapper around an Allocation that represents a secure
     directory."""
 

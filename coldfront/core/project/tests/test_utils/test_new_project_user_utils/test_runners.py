@@ -120,7 +120,7 @@ class LRCTestRunnerBase(LRCTestBase):
         self.project_user = self.project.projectuser_set.get(user=self.user)
 
 
-class TestCommonRunnerMixin(object):
+class TestCommonRunnerMixin:
     """A mixin for testing functionality common to all concrete runner
     classes."""
 

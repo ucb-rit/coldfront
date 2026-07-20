@@ -12,8 +12,6 @@ from coldfront.core.project.tests.test_utils.test_new_project_utils.utils import
     TestRunnerMixinBase,
 )
 from coldfront.core.project.utils_.new_project_utils import SavioProjectApprovalRunner
-from coldfront.core.resource.models import Resource
-from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.interface import (
     ComputingAllowanceInterface,
 )

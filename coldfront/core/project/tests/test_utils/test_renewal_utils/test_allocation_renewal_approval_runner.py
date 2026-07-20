@@ -106,7 +106,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
 
-        expected_subject = f"{settings.EMAIL_SUBJECT_PREFIX} {str(request)} Approved"
+        expected_subject = f"{settings.EMAIL_SUBJECT_PREFIX} {request!s} Approved"
         self.assertEqual(expected_subject, email.subject)
 
         formatted_start_date = request.allocation_period.start_date.strftime(

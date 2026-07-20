@@ -121,7 +121,7 @@ def project_pi_pks(computing_allowance=None, project_status_names=[]):
     )
 
 
-class ProjectDenialRunner(object):
+class ProjectDenialRunner:
     """An object that performs necessary database changes when a new
     project request is denied."""
 
@@ -170,7 +170,7 @@ class ProjectDenialRunner(object):
             logger.exception(e)
 
 
-class ProjectProcessingRunner(object):
+class ProjectProcessingRunner:
     """An object that performs necessary database changes when a new
     project request is processed."""
 
@@ -280,7 +280,7 @@ class ProjectProcessingRunner(object):
         raise NotImplementedError("This method is not implemented.")
 
 
-class SavioProjectApprovalRunner(object):
+class SavioProjectApprovalRunner:
     """An object that performs necessary database changes when a new
     Savio project request is approved."""
 

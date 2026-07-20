@@ -14,24 +14,17 @@ SavioProjectAllocationRequest (ICA):
 """
 
 from django.core.management.base import BaseCommand
-from django.db.models import Q
 
 from coldfront.core.allocation.models import (
     AllocationAdditionRequest,
-    AllocationAttribute,
     SecureDirRequest,
 )
 from coldfront.core.project.models import SavioProjectAllocationRequest
-from coldfront.core.project.utils_.renewal_utils import (
-    get_current_allowance_year_period,
-)
 from coldfront.core.resource.utils_.allowance_utils.computing_allowance import (
     ComputingAllowance,
 )
-from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.common import (
     add_argparse_dry_run_argument,
-    display_time_zone_current_date,
 )
 
 

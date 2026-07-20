@@ -74,7 +74,7 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
                 ].strip()
                 try:
                     cleaned_value = self._clean_sheet_value(key, value)
-                except Exception as e:
+                except Exception:
                     cleaned_value = "Unknown"
                 entry[key] = cleaned_value
 
@@ -160,7 +160,7 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
         elif column_name in date_fields:
             try:
                 return datetime.strptime(value, self.DATE_FORMAT).date()
-            except Exception as e:
+            except Exception:
                 return None
 
         return value
@@ -192,5 +192,5 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
     def _load_config_from_file(self, config_file_path):
         """Read configuration from the given JSON file and return it as
         a dict."""
-        with open(config_file_path, "r") as f:
+        with open(config_file_path) as f:
             return json.load(f)

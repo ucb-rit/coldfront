@@ -357,7 +357,7 @@ class Command(BaseCommand):
         total_seconds = int(avg_queue_time.total_seconds())
         hours, remainder = divmod(total_seconds, 60 * 60)
         minutes, seconds = divmod(remainder, 60)
-        time_str = "{}hrs {}mins {}secs".format(hours, minutes, seconds)
+        time_str = f"{hours}hrs {minutes}mins {seconds}secs"
 
         self.stdout.write(self.style.SUCCESS(time_str))
 
@@ -602,9 +602,7 @@ class Command(BaseCommand):
                     }
                 )
 
-            surveys = list(
-                sorted(surveys, key=lambda x: x["project_name"], reverse=True)
-            )
+            surveys = sorted(surveys, key=lambda x: x["project_name"], reverse=True)
             try:
                 writer = csv.DictWriter(kwargs.get("stdout", stdout), surveys[0].keys())
                 writer.writeheader()
@@ -625,9 +623,7 @@ class Command(BaseCommand):
                     }
                 )
 
-            surveys = list(
-                sorted(surveys, key=lambda x: x["project_name"], reverse=True)
-            )
+            surveys = sorted(surveys, key=lambda x: x["project_name"], reverse=True)
             self.to_json(
                 surveys,
                 output=kwargs.get("stdout", stdout),
@@ -714,9 +710,7 @@ class Command(BaseCommand):
                     }
                 )
 
-            surveys = list(
-                sorted(surveys, key=lambda x: x["project_name"], reverse=True)
-            )
+            surveys = sorted(surveys, key=lambda x: x["project_name"], reverse=True)
             try:
                 headers = {}
                 for field in surveys[0].keys():
@@ -747,9 +741,7 @@ class Command(BaseCommand):
                     }
                 )
 
-            surveys = list(
-                sorted(surveys, key=lambda x: x["project_name"], reverse=True)
-            )
+            surveys = sorted(surveys, key=lambda x: x["project_name"], reverse=True)
             self.to_json(
                 surveys,
                 output=kwargs.get("stdout", stdout),

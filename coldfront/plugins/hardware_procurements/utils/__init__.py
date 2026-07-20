@@ -10,7 +10,7 @@ __all__ = [
 ]
 
 
-class HardwareProcurement(object):
+class HardwareProcurement:
     """An object representing a hardware procurement."""
 
     # Note: This object is intended to be stored in a cache, so it must

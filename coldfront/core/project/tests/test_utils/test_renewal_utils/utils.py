@@ -51,7 +51,7 @@ FLAGS_COPY = deepcopy(settings.FLAGS)
 FLAGS_COPY.pop("LRC_ONLY")
 
 
-class TestRunnerMixinBase(object):
+class TestRunnerMixinBase:
     """A base mixin for testing runners."""
 
     def setUp(self):

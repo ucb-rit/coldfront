@@ -7,9 +7,7 @@ from flags.state import flag_enabled
 
 from coldfront.core.allocation.models import (
     AllocationAdditionRequest,
-    AllocationAttributeType,
     AllocationRenewalRequest,
-    AllocationUserAttribute,
     ClusterAccessRequest,
     SecureDirAddUserRequest,
     SecureDirRemoveUserRequest,

@@ -15,7 +15,7 @@ from coldfront.core.project.utils_.renewal_utils import (
 from coldfront.core.utils.common import utc_now_offset_aware
 
 
-class TestRenewalViewsMixin(object):
+class TestRenewalViewsMixin:
     """A mixin for testing renewal views."""
 
     @staticmethod

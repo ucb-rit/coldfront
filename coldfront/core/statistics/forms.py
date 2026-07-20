@@ -60,7 +60,7 @@ class JobSearchForm(forms.Form):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
         is_pi = kwargs.pop("is_pi", None)
-        super(JobSearchForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         project_queryset = Project.objects.all()
         user_queryset = User.objects.order_by("username")

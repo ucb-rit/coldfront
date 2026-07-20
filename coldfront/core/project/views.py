@@ -70,9 +70,6 @@ from coldfront.core.project.utils_.new_project_user_utils import (
     NewProjectUserRunnerFactory,
     NewProjectUserSource,
 )
-from coldfront.core.project.utils_.permissions_utils import (
-    is_user_manager_or_pi_of_project,
-)
 from coldfront.core.project.utils_.renewal_utils import (
     get_current_allowance_year_period,
     is_any_project_pi_renewable,
@@ -323,8 +320,8 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         # TODO: Set this dynamically when supporting other types.
         allocation_period = get_current_allowance_year_period()
         context["renew_allowance_clickable"] = (
-            context["renew_allowance_visible"]
-            and is_any_project_pi_renewable(self.object, allocation_period)
+            (context["renew_allowance_visible"]
+            and is_any_project_pi_renewable(self.object, allocation_period))
             or flag_enabled("ALLOCATION_RENEWAL_FOR_NEXT_PERIOD_REQUESTABLE")
         )
 
@@ -554,9 +551,9 @@ class ProjectListView(LoginRequiredMixin, ListView):
                 if value:
                     if isinstance(value, list):
                         for ele in value:
-                            filter_parameters += "{}={}&".format(key, ele)
+                            filter_parameters += f"{key}={ele}&"
                     else:
-                        filter_parameters += "{}={}&".format(key, value)
+                        filter_parameters += f"{key}={value}&"
             context["project_search_form"] = project_search_form
         else:
             filter_parameters = None
@@ -750,9 +747,9 @@ class ProjectArchivedListView(LoginRequiredMixin, UserPassesTestMixin, ListView)
                 if value:
                     if isinstance(value, list):
                         for ele in value:
-                            filter_parameters += "{}={}&".format(key, ele)
+                            filter_parameters += f"{key}={ele}&"
                     else:
-                        filter_parameters += "{}={}&".format(key, value)
+                        filter_parameters += f"{key}={value}&"
             context["project_search_form"] = project_search_form
         else:
             filter_parameters = None
@@ -1182,7 +1179,7 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
                         messages.error(request, message)
 
             messages.success(
-                request, "Added {} users to project.".format(added_users_count)
+                request, f"Added {added_users_count} users to project."
             )
             messages.success(
                 request,
@@ -1248,7 +1245,7 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
                     email_strategy=email_strategy,
                 )
                 new_project_user_runner.run()
-        except Exception as e:
+        except Exception:
             return False
 
         if new_project_user_runner is not None:
@@ -1257,7 +1254,7 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         try:
             email_strategy.send_queued_emails()
-        except Exception as e:
+        except Exception:
             pass
 
         return True
@@ -1516,9 +1513,7 @@ class ProjectUserDetail(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
 
                             messages.warning(
                                 request,
-                                "User {} is no longer a manager. All PIs will now receive notifications.".format(
-                                    project_user_obj.user.username
-                                ),
+                                f"User {project_user_obj.user.username} is no longer a manager. All PIs will now receive notifications.",
                             )
                             messages.success(request, "User details updated.")
 
@@ -1635,7 +1630,7 @@ class ProjectReviewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         context["project_review_form"] = project_review_form
         context["project_users"] = ", ".join(
             [
-                "{} {}".format(ele.user.first_name, ele.user.last_name)
+                f"{ele.user.first_name} {ele.user.last_name}"
                 for ele in project_obj.projectuser_set.filter(
                     status__name="Active"
                 ).order_by("user__last_name")
@@ -1743,9 +1738,7 @@ class ProjectReviewCompleteView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         messages.success(
             request,
-            "Project review for {} has been completed".format(
-                project_review_obj.project.title
-            ),
+            f"Project review for {project_review_obj.project.title} has been completed",
         )
 
         return HttpResponseRedirect(reverse("project-review-list"))

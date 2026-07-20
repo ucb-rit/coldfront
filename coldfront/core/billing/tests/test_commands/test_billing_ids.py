@@ -392,7 +392,7 @@ class TestBillingIds(TestBillingBase):
         self.assertEqual(manager.billing_activity, other_billing_activity)
 
 
-class BillingIdsCommand(object):
+class BillingIdsCommand:
     """A wrapper class over the 'billing_ids' management command."""
 
     command_name = "billing_ids"

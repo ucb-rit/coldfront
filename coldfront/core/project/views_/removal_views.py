@@ -304,9 +304,9 @@ class ProjectRemovalRequestListView(LoginRequiredMixin, UserPassesTestMixin, Lis
                 if value:
                     if isinstance(value, list):
                         for ele in value:
-                            filter_parameters += "{}={}&".format(key, ele)
+                            filter_parameters += f"{key}={ele}&"
                     else:
-                        filter_parameters += "{}={}&".format(key, value)
+                        filter_parameters += f"{key}={value}&"
             context["removal_request_search_form"] = removal_request_search_form
         else:
             filter_parameters = None

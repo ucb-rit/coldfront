@@ -47,7 +47,7 @@ class SystemMonitor:
     def fetch_data(self):
         try:
             r = requests.get(self.SYSTEM_MONITOR_ENDPOINT, timeout=5)
-        except Exception as e:
+        except Exception:
             r = None
 
         if r and r.status_code == 200:
@@ -56,7 +56,7 @@ class SystemMonitor:
     def parse_html_using_beautiful_soup(self):
         try:
             soup = BeautifulSoup(self.response.text, "html.parser")
-        except Exception as e:
+        except Exception:
             print("Error in parsing HTML response")
             return
 
@@ -121,7 +121,7 @@ class SystemMonitor:
             queued_label = "Queued: %s" % (jobs[1])
             running_value = job_numbers[0]
             queued_value = job_numbers[1]
-        except Exception as e:
+        except Exception:
             print("Error in parsing Table. Maybe data is missing")
             return
 

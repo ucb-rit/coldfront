@@ -1,6 +1,4 @@
 from django.urls import path
-from django.views.generic import TemplateView
-from flags.state import flag_enabled
 from flags.urls import flagged_paths
 
 import coldfront.core.allocation.views as allocation_views

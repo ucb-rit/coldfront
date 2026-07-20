@@ -1,4 +1,3 @@
-from allauth.account.models import EmailAddress
 from django.contrib.auth.models import User
 from django.core.management import BaseCommand
 

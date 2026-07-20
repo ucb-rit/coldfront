@@ -21,13 +21,12 @@ from coldfront.core.allocation.utils import get_project_compute_resource_name
 from coldfront.core.project.models import Project, ProjectUser, ProjectUserStatusChoice
 from coldfront.core.resource.utils import (
     get_primary_compute_resource,
-    get_primary_compute_resource_name,
 )
 from coldfront.core.statistics.models import ProjectTransaction, ProjectUserTransaction
 from coldfront.core.utils.common import utc_now_offset_aware
 
 
-class AccountingAllocationObjects(object):
+class AccountingAllocationObjects:
     """A container for related Allocation objects needed for
     accounting."""
 

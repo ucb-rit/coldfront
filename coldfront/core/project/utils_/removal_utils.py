@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 project_user_removed = Signal()
 
 
-class ProjectRemovalRequestRunner(object):
+class ProjectRemovalRequestRunner:
     """An object that performs necessary database changes when a new
     project removal request is made."""
 
@@ -180,7 +180,7 @@ class ProjectRemovalRequestRunner(object):
             )
 
 
-class ProjectRemovalRequestProcessingRunner(object):
+class ProjectRemovalRequestProcessingRunner:
     """An object that performs necessary database changes after a project
     removal request has been completed."""
 

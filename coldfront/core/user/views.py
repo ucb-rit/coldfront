@@ -516,9 +516,9 @@ class UserSearchAll(LoginRequiredMixin, ListView):
                 if value:
                     if isinstance(value, list):
                         for ele in value:
-                            filter_parameters += "{}={}&".format(key, ele)
+                            filter_parameters += f"{key}={ele}&"
                     else:
-                        filter_parameters += "{}={}&".format(key, value)
+                        filter_parameters += f"{key}={value}&"
             context["user_search_form"] = user_search_form  # ??
         else:
             filter_parameters = None

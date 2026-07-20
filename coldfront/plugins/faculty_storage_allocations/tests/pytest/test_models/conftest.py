@@ -1,6 +1,5 @@
 """Fixtures specific to model tests."""
 
-from datetime import datetime
 
 from django.utils import timezone
 import pytest

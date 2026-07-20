@@ -86,7 +86,7 @@ class SecureDirRequestListView(LoginRequiredMixin, UserPassesTestMixin, Template
         return context
 
 
-class SecureDirRequestMixin(object):
+class SecureDirRequestMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.request_obj = None

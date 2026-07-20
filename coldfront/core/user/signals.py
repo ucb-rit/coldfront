@@ -1,5 +1,4 @@
 from django.contrib.auth.models import Group, User
-from django.contrib.auth.signals import user_logged_in
 from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
 

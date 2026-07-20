@@ -1,13 +1,9 @@
-from collections import Counter, defaultdict
-import operator
+from collections import Counter
 
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.contrib.humanize.templatetags.humanize import intcomma
-from django.db.models import Count, Q, Sum
+from django.db.models import Q
 from django.shortcuts import render
 from django.views.decorators.cache import cache_page
-from flags.state import flag_enabled
 
 from coldfront.core.allocation.models import (
     Allocation,
@@ -22,9 +18,7 @@ from coldfront.core.allocation.utils import (
 # from coldfront.core.grant.models import Grant
 from coldfront.core.portal.utils import (
     generate_allocations_chart_data,
-    generate_publication_by_year_chart_data,
     generate_resources_chart_data,
-    generate_total_grants_by_agency_chart_data,
 )
 from coldfront.core.project.models import (
     Project,
@@ -65,11 +59,11 @@ def home(request):
         template_name = "portal/authorized_home.html"
         project_list = (
             Project.objects.filter(
-                (
+
                     Q(status__name__in=["New", "Active", "Inactive"])
                     & Q(projectuser__user=request.user)
                     & Q(projectuser__status__name__in=["Active", "Pending - Remove"])
-                )
+
             )
             .distinct()
             .order_by("name")

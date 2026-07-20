@@ -1,4 +1,4 @@
-class Allowances(object):
+class Allowances:
     """Names of Resource objects corresponding to common computing
     allowances."""
 

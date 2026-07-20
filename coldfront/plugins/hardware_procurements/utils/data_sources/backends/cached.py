@@ -57,7 +57,7 @@ class CachedDataSourceBackend(BaseDataSourceBackend):
             self._cache_manager.populate_cache(hardware_procurement_generator)
 
 
-class HardwareProcurementsCacheManager(object):
+class HardwareProcurementsCacheManager:
     """A class that manages the caching of HardwareProcurement objects.
 
     The cache is designed to enabled fast lookup of procurements and
@@ -173,7 +173,7 @@ class HardwareProcurementsCacheManager(object):
                 pi_user = look_up_user_by_email(pi_email)
                 if pi_user is not None:
                     pi_users.append(pi_user)
-        except Exception as e:
+        except Exception:
             pass
 
         poc_users = []
@@ -183,7 +183,7 @@ class HardwareProcurementsCacheManager(object):
                 poc_user = look_up_user_by_email(poc_email)
                 if poc_user is not None:
                     poc_users.append(poc_user)
-        except Exception as e:
+        except Exception:
             pass
 
         associated_user_ids = set()

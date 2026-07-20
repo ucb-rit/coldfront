@@ -4,7 +4,6 @@ from urllib.parse import urlencode
 
 from django.contrib.auth.models import User
 from django.urls import reverse
-from django.utils import timezone
 
 from coldfront.core.project.models import *
 from coldfront.core.statistics.forms import JobSearchForm
@@ -653,8 +652,8 @@ class TestExportJobListView(TestJobBase):
         response = self.client.get(export_url)
         csv_lines = copy.deepcopy(list(response.streaming_content))
         self.assertIn(
-            f"jobslurmid,username,project_name,partition,"
-            f"jobstatus,submitdate,startdate,enddate",
+            "jobslurmid,username,project_name,partition,"
+            "jobstatus,submitdate,startdate,enddate",
             csv_lines[0].decode("utf-8"),
         )
         job1_line = self._create_job_csv_line(self.job1)
@@ -675,8 +674,8 @@ class TestExportJobListView(TestJobBase):
         response = self.client.get(export_url)
         csv_lines = copy.deepcopy(list(response.streaming_content))
         self.assertIn(
-            f"jobslurmid,username,project_name,partition,"
-            f"jobstatus,submitdate,startdate,enddate",
+            "jobslurmid,username,project_name,partition,"
+            "jobstatus,submitdate,startdate,enddate",
             csv_lines[0].decode("utf-8"),
         )
         job1_line = self._create_job_csv_line(self.job1)
@@ -707,8 +706,8 @@ class TestExportJobListView(TestJobBase):
         csv_lines = copy.deepcopy(list(response.streaming_content))
 
         self.assertIn(
-            f"jobslurmid,username,project_name,partition,"
-            f"jobstatus,submitdate,startdate,enddate",
+            "jobslurmid,username,project_name,partition,"
+            "jobstatus,submitdate,startdate,enddate",
             csv_lines[0].decode("utf-8"),
         )
 
@@ -747,8 +746,8 @@ class TestExportJobListView(TestJobBase):
         csv_lines = copy.deepcopy(list(response.streaming_content))
 
         self.assertIn(
-            f"jobslurmid,username,project_name,partition,"
-            f"jobstatus,submitdate,startdate,enddate,service_units",
+            "jobslurmid,username,project_name,partition,"
+            "jobstatus,submitdate,startdate,enddate,service_units",
             csv_lines[0].decode("utf-8"),
         )
 

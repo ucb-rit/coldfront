@@ -42,7 +42,7 @@ class Command(BaseCommand):
         self.set_node_mapping()
         self.set_project_mapping()
         self.set_user_mappings(options["user_ids_json"])
-        with open(options["old_jsonl"], "r") as old_jsonl:
+        with open(options["old_jsonl"]) as old_jsonl:
             with open(options["new_jsonl"], "w") as new_jsonl:
                 for line in old_jsonl:
                     line = line.strip()
@@ -50,7 +50,7 @@ class Command(BaseCommand):
                         continue
                     try:
                         new_line = self.transform(line)
-                    except Exception as e:
+                    except Exception:
                         message = f"Failed to transform line: {line}"
                         self.stderr.write(message)
                         continue
@@ -74,7 +74,7 @@ class Command(BaseCommand):
             self.project_name_to_id[project.name] = project.id
 
     def set_user_mappings(self, json_file_path):
-        with open(json_file_path, "r") as user_ids_json:
+        with open(json_file_path) as user_ids_json:
             for old_id, cluster_uid in json.load(user_ids_json).items():
                 self.old_user_id_to_cluster_uid[int(old_id)] = cluster_uid
         for user in User.objects.select_related("userprofile"):

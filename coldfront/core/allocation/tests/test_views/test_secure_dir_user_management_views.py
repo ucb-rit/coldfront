@@ -15,9 +15,7 @@ from coldfront.api.statistics.utils import (
     create_user_project_allocation,
 )
 from coldfront.core.allocation.models import (
-    Allocation,
     AllocationAttributeType,
-    AllocationStatusChoice,
     AllocationUser,
     AllocationUserAttribute,
     AllocationUserStatusChoice,
@@ -794,7 +792,7 @@ class TestSecureDirManageUsersDenyRequestView(TestSecureDirBase):
         self.assertRedirects(
             response,
             reverse(
-                f"secure-dir-manage-users-request-list",
+                "secure-dir-manage-users-request-list",
                 kwargs={"action": "add", "status": "pending"},
             ),
         )
@@ -867,7 +865,7 @@ class TestSecureDirManageUsersDenyRequestView(TestSecureDirBase):
         self.assertRedirects(
             response,
             reverse(
-                f"secure-dir-manage-users-request-list",
+                "secure-dir-manage-users-request-list",
                 kwargs={"action": "remove", "status": "pending"},
             ),
         )
@@ -888,7 +886,7 @@ class TestSecureDirManageUsersDenyRequestView(TestSecureDirBase):
 
         messages = self.get_message_strings(response)
         expected_message = (
-            f'Secure directory user removal request has unexpected status "Complete."'
+            'Secure directory user removal request has unexpected status "Complete."'
         )
         self.assertEqual(len(messages), 1)
         self.assertEqual(messages[0], expected_message)
@@ -897,7 +895,7 @@ class TestSecureDirManageUsersDenyRequestView(TestSecureDirBase):
         self.assertRedirects(
             response,
             reverse(
-                f"secure-dir-manage-users-request-list",
+                "secure-dir-manage-users-request-list",
                 kwargs={"action": "remove", "status": "pending"},
             ),
         )
@@ -962,7 +960,7 @@ class TestSecureDirManageUsersUpdateStatusView(TestSecureDirBase):
             )
 
             request.refresh_from_db()
-            self.assertEqual(request.status.name, f"Processing")
+            self.assertEqual(request.status.name, "Processing")
 
             # Test that the correct message is shown
             expected_message = (
@@ -1120,7 +1118,7 @@ class TestSecureDirManageUsersCompleteStatusView(TestSecureDirBase):
             )
 
             request.refresh_from_db()
-            self.assertEqual(request.status.name, f"Processing")
+            self.assertEqual(request.status.name, "Processing")
 
             # Test that the correct message is shown
             expected_message = (
@@ -1220,7 +1218,7 @@ class TestSecureDirManageUsersCompleteStatusView(TestSecureDirBase):
         self.assertRedirects(
             response,
             reverse(
-                f"secure-dir-manage-users-request-list",
+                "secure-dir-manage-users-request-list",
                 kwargs={"action": "add", "status": "pending"},
             ),
         )
@@ -1308,7 +1306,7 @@ class TestSecureDirManageUsersCompleteStatusView(TestSecureDirBase):
         self.assertRedirects(
             response,
             reverse(
-                f"secure-dir-manage-users-request-list",
+                "secure-dir-manage-users-request-list",
                 kwargs={"action": "remove", "status": "pending"},
             ),
         )

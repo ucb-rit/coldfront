@@ -6,9 +6,9 @@ from coldfront.plugins.departments.conf import settings
 
 
 __all__ = [
-    "get_data_source",
     "fetch_departments",
     "fetch_departments_for_user",
+    "get_data_source",
 ]
 
 

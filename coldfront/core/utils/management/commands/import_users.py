@@ -2,7 +2,7 @@ import os
 
 from django.conf import settings
 from django.contrib.auth.models import Group, User
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 base_dir = settings.BASE_DIR
 
@@ -13,7 +13,7 @@ class Command(BaseCommand):
         file_path = os.path.join(base_dir, "local_data", "users.tsv")
         User.objects.all().delete()
         Group.objects.all().delete()
-        with open(file_path, "r") as fp:
+        with open(file_path) as fp:
             for line in fp:
                 if line.startswith("#"):
                     continue

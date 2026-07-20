@@ -4,8 +4,6 @@ from coldfront.core.project.models import (
     ProjectStatusChoice,
     SavioProjectAllocationRequest,
 )
-from coldfront.core.resource.models import Resource
-from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
 from coldfront.core.resource.utils_.allowance_utils.interface import (
     ComputingAllowanceInterface,
 )

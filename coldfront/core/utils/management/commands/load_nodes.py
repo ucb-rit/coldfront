@@ -24,7 +24,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         num_created = 0
-        with open(options["file"], "r") as f:
+        with open(options["file"]) as f:
             for line in f:
                 name = line.strip()
                 if not name:

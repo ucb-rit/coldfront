@@ -1,4 +1,3 @@
-import textwrap
 
 from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
@@ -89,9 +88,7 @@ class ProjectUserAdmin(SimpleHistoryAdmin):
         return obj.project.name
 
     def User(self, obj):
-        return "{} {} ({})".format(
-            obj.user.first_name, obj.user.last_name, obj.user.username
-        )
+        return f"{obj.user.first_name} {obj.user.last_name} ({obj.user.username})"
 
     def get_fields(self, request, obj):
         if obj is None:
@@ -192,9 +189,7 @@ class ProjectAdmin(SimpleHistoryAdmin):
         pi_users = obj.pis()
         return "\n".join(
             [
-                "{} {} ({})".format(
-                    pi_user.first_name, pi_user.last_name, pi_user.username
-                )
+                f"{pi_user.first_name} {pi_user.last_name} ({pi_user.username})"
                 for pi_user in pi_users
             ]
         )
@@ -245,9 +240,7 @@ class ProjectReviewAdmin(SimpleHistoryAdmin):
         pi_users = obj.pis()
         return "\n".join(
             [
-                "{} {} ({})".format(
-                    pi_user.first_name, pi_user.last_name, pi_user.username
-                )
+                f"{pi_user.first_name} {pi_user.last_name} ({pi_user.username})"
                 for pi_user in pi_users
             ]
         )

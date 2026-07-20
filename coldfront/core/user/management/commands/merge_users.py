@@ -89,7 +89,7 @@ class Command(BaseCommand):
             )
             try:
                 user_merge_runner.run()
-            except Exception as e:
+            except Exception:
                 # TODO
                 pass
             else:

@@ -37,7 +37,7 @@ from coldfront.core.utils.tests.test_base import (
 )
 
 
-class TestAllocationRenewalRequestUnderProjectViewMixin(object):
+class TestAllocationRenewalRequestUnderProjectViewMixin:
     """A mixin for testing AllocationRenewalRequestUnderProjectView
     functionality common to both deployments."""
 

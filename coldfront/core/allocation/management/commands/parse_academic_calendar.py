@@ -80,7 +80,7 @@ class Command(BaseCommand):
         response = requests.get(pdf_url)
         if response.status_code != 200:
             self.stdout.write(
-                self.style.ERROR("Failed to fetch PDF at {}".format(pdf_url))
+                self.style.ERROR(f"Failed to fetch PDF at {pdf_url}")
             )
             return
         io_bytes = io.BytesIO(response.content)
@@ -153,11 +153,11 @@ class Command(BaseCommand):
 
             parsed_data = parsed_data.strip()
         else:
-            self.stdout.write(self.style.ERROR("Unsupported API: {}".format(api)))
+            self.stdout.write(self.style.ERROR(f"Unsupported API: {api}"))
             return
 
         try:
             parsed_json = json.loads(parsed_data)
             self.stdout.write(self.style.SUCCESS(json.dumps(parsed_json, indent=2)))
         except json.JSONDecodeError as e:
-            self.stdout.write(self.style.ERROR("Failed to parse JSON: {}".format(e)))
+            self.stdout.write(self.style.ERROR(f"Failed to parse JSON: {e}"))

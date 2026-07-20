@@ -19,7 +19,6 @@ LRC only:
 
 from django.core.management.base import BaseCommand
 from django.db.models import Q
-from flags.state import flag_enabled
 
 from coldfront.core.allocation.models import (
     Allocation,
@@ -167,7 +166,7 @@ class Command(BaseCommand):
             try:
                 resource = allocation.resources.first()
                 resource_name = resource.name
-            except AttributeError as e:
+            except AttributeError:
                 self.stdout.write(self.style.ERROR(f"Allocation {id} has no resource"))
                 continue
 
@@ -280,7 +279,7 @@ class Command(BaseCommand):
                                 f"{resource} allocation {allocation.id}."
                             )
                         )
-                except AttributeError as e:
+                except AttributeError:
                     pass
                 try:
                     allocation_attribute = allocation.allocationattribute_set.get(
@@ -293,7 +292,7 @@ class Command(BaseCommand):
                                 f"non-zero SUs."
                             )
                         )
-                except AllocationAttribute.DoesNotExist as e:
+                except AllocationAttribute.DoesNotExist:
                     pass
 
     def handle_project_pi(self):

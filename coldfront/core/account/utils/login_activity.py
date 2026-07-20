@@ -13,7 +13,7 @@ from coldfront.core.utils.common import (
 from coldfront.core.utils.mail import send_email_template
 
 
-class LoginActivityVerifier(object):
+class LoginActivityVerifier:
     """A class that can email an unverified EmailAddress, notifying the
     user that a blocked login attempt was made using it and asking the
     user to confirm that the attempt was made by them, which will verify

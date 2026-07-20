@@ -522,8 +522,8 @@ account_id_parameter = openapi.Parameter(
 
 response_200 = openapi.Response(
     description=(
-        f"A mapping from 'success' to whether or not the job can be "
-        f"submitted and a mapping from 'message' to reasoning."
+        "A mapping from 'success' to whether or not the job can be "
+        "submitted and a mapping from 'message' to reasoning."
     ),
     schema=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -538,8 +538,8 @@ response_200 = openapi.Response(
 
 response_400 = openapi.Response(
     description=(
-        f"A mapping from 'success' to False and a mapping from 'message' "
-        f"to an error message."
+        "A mapping from 'success' to False and a mapping from 'message' "
+        "to an error message."
     ),
     schema=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -622,7 +622,7 @@ def can_submit_job(request, job_cost, user_id, account_id):
 
     server_error = JsonResponse(
         status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        data={"success": False, "message": f"Unexpected server error."},
+        data={"success": False, "message": "Unexpected server error."},
     )
 
     # If all jobs are allowed, bypass checks.

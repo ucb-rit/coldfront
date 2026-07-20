@@ -6,8 +6,8 @@ from ...conf import settings
 
 
 __all__ = [
-    "get_data_source",
     "fetch_hardware_procurements",
+    "get_data_source",
 ]
 
 

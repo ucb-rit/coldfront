@@ -18,7 +18,7 @@ def expected_hardware_procurements_data():
         "resources",
         "test_google_sheets_data_source_backend_expected_output_data.json",
     )
-    with open(data_file_path, "r") as f:
+    with open(data_file_path) as f:
         return json.load(f)
 
 
@@ -30,7 +30,7 @@ def google_sheet_data():
     data_file_path = os.path.join(
         test_dir_path, "resources", "test_google_sheets_data_source_backend_data.tsv"
     )
-    with open(data_file_path, "r") as f:
+    with open(data_file_path) as f:
         reader = csv.reader(f, delimiter="\t")
         data = [row for row in reader]
     return data[1:]

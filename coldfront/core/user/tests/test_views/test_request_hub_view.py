@@ -16,10 +16,8 @@ from coldfront.api.statistics.utils import (
 from coldfront.core.allocation.models import (
     AllocationAdditionRequest,
     AllocationAdditionRequestStatusChoice,
-    AllocationAttributeType,
     AllocationRenewalRequest,
     AllocationRenewalRequestStatusChoice,
-    AllocationUserAttribute,
     ClusterAccessRequest,
     ClusterAccessRequestStatusChoice,
     allocation_addition_request_state_schema,
@@ -100,21 +98,21 @@ class TestRequestHubView(TestBase):
             # Create a Project and ProjectUsers.
             project_name = f"{project_name_prefix}_project{i}"
             project = Project.objects.create(name=project_name, status=project_status)
-            setattr(self, "project0", project)
+            self.project0 = project
             proj_user = ProjectUser.objects.create(
                 user=self.user0,
                 project=project,
                 role=user_role,
                 status=project_user_status,
             )
-            setattr(self, "project0_user0", proj_user)
+            self.project0_user0 = proj_user
             pi_proj_user = ProjectUser.objects.create(
                 user=self.pi,
                 project=project,
                 role=manager_role,
                 status=project_user_status,
             )
-            setattr(self, "project0_pi", pi_proj_user)
+            self.project0_pi = pi_proj_user
 
             # Create a compute allocation for the Project.
             allocation = Decimal(f"{i + 1}000.00")

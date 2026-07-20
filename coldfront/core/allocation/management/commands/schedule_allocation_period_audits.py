@@ -237,7 +237,7 @@ def call_audit_command(*args, **kwargs):
     succeeded. Re-raise any exception."""
     try:
         call_command("audit_allocation_period", *args, **kwargs)
-    except AuditFailure as e:
+    except AuditFailure:
         logger.warning(f'The audit of AllocationPeriod "{args[0]}" failed.')
         return False
     except Exception as e:

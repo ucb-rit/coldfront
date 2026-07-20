@@ -2,7 +2,7 @@ import datetime
 import os
 
 from django.conf import settings
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from coldfront.core.field_of_science.models import FieldOfScience
@@ -76,7 +76,7 @@ class Command(BaseCommand):
         ]:
             ProjectUserStatusChoice.objects.get_or_create(name=choice)
 
-        with open(file_path, "r") as fp:
+        with open(file_path) as fp:
             lines = fp.read().split("$$$$$$$$$$-new-line-$$$$$$$$$$")
             for idx, line in enumerate(lines):
                 line = line.strip()

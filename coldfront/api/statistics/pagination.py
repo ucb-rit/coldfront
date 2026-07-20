@@ -21,10 +21,10 @@ class JobPagination(pagination.PageNumberPagination):
             self.total_cpu_time = 0.0
         else:
             self.total_cpu_time = total_cpu_time
-        return super(JobPagination, self).paginate_queryset(queryset, request, view)
+        return super().paginate_queryset(queryset, request, view)
 
     def get_paginated_response(self, data):
-        paginated_response = super(JobPagination, self).get_paginated_response(data)
+        paginated_response = super().get_paginated_response(data)
         paginated_response.data["total_amount"] = self.total_amount
         paginated_response.data["total_cpu_time"] = self.total_cpu_time
         return paginated_response

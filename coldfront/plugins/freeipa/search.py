@@ -24,7 +24,7 @@ class LDAPUserSearch(UserSearch):
         self.FREEIPA_KTNAME = import_from_settings("FREEIPA_KTNAME", "")
 
         self.server = Server(
-            "ldap://{}".format(self.FREEIPA_SERVER), use_ssl=True, connect_timeout=1
+            f"ldap://{self.FREEIPA_SERVER}", use_ssl=True, connect_timeout=1
         )
         if len(self.FREEIPA_KTNAME) > 0:
             logger.info("Kerberos bind enabled: %s", self.FREEIPA_KTNAME)
@@ -42,7 +42,7 @@ class LDAPUserSearch(UserSearch):
 
         if not self.conn.bind():
             raise ImproperlyConfigured(
-                "Failed to bind to LDAP server: {}".format(self.conn.result)
+                f"Failed to bind to LDAP server: {self.conn.result}"
             )
         else:
             logger.info(

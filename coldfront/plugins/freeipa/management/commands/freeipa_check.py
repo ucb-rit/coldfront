@@ -4,11 +4,10 @@ import sys
 
 import dbus
 from django.contrib.auth.models import User
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from ipalib import api
-from ipalib.errors import NotFound
 
-from coldfront.core.allocation.models import Allocation, AllocationUser
+from coldfront.core.allocation.models import AllocationUser
 from coldfront.plugins.freeipa.utils import (
     CLIENT_KTNAME,
     FREEIPA_NOOP,
@@ -57,7 +56,7 @@ class Command(BaseCommand):
             try:
                 res = api.Command.group_add_member(group, user=[user.username])
                 check_ipa_group_error(res)
-            except AlreadyMemberError as e:
+            except AlreadyMemberError:
                 logger.warn(
                     "User %s is already a member of group %s", user.username, group
                 )
@@ -85,7 +84,7 @@ class Command(BaseCommand):
             try:
                 res = api.Command.group_remove_member(group, user=[user.username])
                 check_ipa_group_error(res)
-            except NotMemberError as e:
+            except NotMemberError:
                 logger.warn("User %s is not a member of group %s", user.username, group)
             except Exception as e:
                 logger.error(

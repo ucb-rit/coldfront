@@ -63,7 +63,7 @@ class SesameBackend(BaseSesameBackend):
         except UserLoginLinkIneligible as e:
             message = (
                 f"User {user.username} was blocked from Sesame authentication "
-                f"because: {str(e)}"
+                f"because: {e!s}"
             )
             logger.info(message)
             return False

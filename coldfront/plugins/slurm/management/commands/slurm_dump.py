@@ -1,7 +1,7 @@
 import logging
 import os
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 from coldfront.core.resource.models import ResourceAttribute
 from coldfront.plugins.slurm.associations import SlurmCluster
@@ -50,5 +50,5 @@ class Command(BaseCommand):
                 cluster.write(self.stdout)
                 continue
 
-            with open(os.path.join(out_dir, "{}.cfg".format(cluster.name)), "w") as fh:
+            with open(os.path.join(out_dir, f"{cluster.name}.cfg"), "w") as fh:
                 cluster.write(fh)

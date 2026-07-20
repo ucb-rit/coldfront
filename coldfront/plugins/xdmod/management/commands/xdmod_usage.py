@@ -1,21 +1,17 @@
 import logging
 import os
 import sys
-import tempfile
 
-from django.conf import settings
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from coldfront.core.allocation.models import Allocation
-from coldfront.core.utils.common import import_from_settings
 from coldfront.plugins.xdmod.utils import (
     XDMOD_ACCOUNT_ATTRIBUTE_NAME,
     XDMOD_CLOUD_CORE_TIME_ATTRIBUTE_NAME,
     XDMOD_CLOUD_PROJECT_ATTRIBUTE_NAME,
     XDMOD_CPU_HOURS_ATTRIBUTE_NAME,
     XDMOD_RESOURCE_ATTRIBUTE_NAME,
-    XdmodError,
     XdmodNotFoundError,
     xdmod_fetch_cloud_core_time,
     xdmod_fetch_total_cpu_hours,

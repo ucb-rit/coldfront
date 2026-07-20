@@ -87,7 +87,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
 
         request.refresh_from_db()
 
-        expected_subject = f"{settings.EMAIL_SUBJECT_PREFIX} {str(request)} Denied"
+        expected_subject = f"{settings.EMAIL_SUBJECT_PREFIX} {request!s} Denied"
         self.assertEqual(expected_subject, email.subject)
 
         expected_body_snippets = [
@@ -121,7 +121,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
         self.assertEqual(request.status.name, "Denied")
 
 
-class TestNewProjectDenialMixin(object):
+class TestNewProjectDenialMixin:
     """A mixin for testing that a new Project associated with the
     request is given to the 'Denied' status."""
 

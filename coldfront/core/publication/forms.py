@@ -1,7 +1,5 @@
 from django import forms
 
-from coldfront.core.publication.models import PublicationSource
-
 
 class PublicationAddForm(forms.Form):
     title = forms.CharField(max_length=1024, required=True)

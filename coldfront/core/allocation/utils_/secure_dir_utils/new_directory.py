@@ -133,7 +133,7 @@ def secure_dir_request_state_status(secure_dir_request):
     return SecureDirRequestStatusChoice.objects.get(name="Approved - Processing")
 
 
-class SecureDirRequestRunner(object):
+class SecureDirRequestRunner:
     """An object that performs necessary checks and updates, and sends
     notifications, when a new secure directory is requested for a
     project."""
@@ -264,7 +264,7 @@ class SecureDirRequestRunner(object):
             logger.exception(message)
 
 
-class SecureDirRequestDenialRunner(object):
+class SecureDirRequestDenialRunner:
     """An object that performs necessary database changes when a new
     secure directory request is denied."""
 
@@ -363,7 +363,7 @@ class SecureDirRequestDenialRunner(object):
             logger.exception(f"Failed to send notification emails. Details:\n{e}")
 
 
-class SecureDirRequestApprovalRunner(object):
+class SecureDirRequestApprovalRunner:
     """An object that performs necessary database changes when a new
     secure directory request is approved."""
 

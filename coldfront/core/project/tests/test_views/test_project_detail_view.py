@@ -514,7 +514,7 @@ class TestProjectDetailView(TestBase):
     def test_request_storage_link_invisible_when_pi_not_on_whitelist(self):
         """Test that the 'Request Faculty Storage Allocation' link is
         not visible when PI is not on the whitelist."""
-        from unittest.mock import PropertyMock, patch
+        from unittest.mock import patch
 
         from allauth.account.models import EmailAddress
 

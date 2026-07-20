@@ -12,7 +12,6 @@ import pytest
 
 from coldfront.plugins.faculty_storage_allocations.models import (
     FacultyStorageAllocationRequest,
-    FacultyStorageAllocationRequestStatusChoice,
     faculty_storage_allocation_request_state_schema,
 )
 from coldfront.plugins.faculty_storage_allocations.services import (

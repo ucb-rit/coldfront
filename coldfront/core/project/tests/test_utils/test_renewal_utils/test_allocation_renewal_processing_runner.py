@@ -625,7 +625,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
 
-        expected_subject = f"{settings.EMAIL_SUBJECT_PREFIX} {str(request)} Processed"
+        expected_subject = f"{settings.EMAIL_SUBJECT_PREFIX} {request!s} Processed"
         self.assertEqual(expected_subject, email.subject)
 
         expected_body_snippets = [
@@ -816,7 +816,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
             self.assertEqual(attribute.value, new_allocation_value)
 
 
-class TestFutureRequestsUpdateMixin(object):
+class TestFutureRequestsUpdateMixin:
     """A mixin for testing that future AllocationRenewalRequests may be
     updated as a result of processing."""
 
@@ -1011,7 +1011,7 @@ class TestFutureRequestsUpdateMixin(object):
         self.assertEqual(future_request.pre_project, request.post_project)
 
 
-class TestPIDemotionMixin(object):
+class TestPIDemotionMixin:
     """A mixin for testing PI demotion to the 'User' role."""
 
     def test_pre_project_pi_demoted_if_pooled(self):

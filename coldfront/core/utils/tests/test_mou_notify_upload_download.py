@@ -1,5 +1,4 @@
 from decimal import Decimal
-from http import HTTPStatus
 from io import BytesIO
 
 from django.contrib.auth.models import User
@@ -11,8 +10,6 @@ from django.urls import reverse
 from coldfront.core.allocation.models import (
     AllocationAdditionRequest,
     AllocationAdditionRequestStatusChoice,
-    AllocationRenewalRequest,
-    AllocationRenewalRequestStatusChoice,
     SecureDirRequest,
     SecureDirRequestStatusChoice,
 )
@@ -27,9 +24,6 @@ from coldfront.core.project.models import (
     savio_project_request_ica_extra_fields_schema,
     savio_project_request_ica_state_schema,
 )
-from coldfront.core.project.tests.test_views.test_renewal_views.utils import (
-    TestRenewalViewsMixin,
-)
 from coldfront.core.project.utils_.renewal_utils import (
     get_current_allowance_year_period,
 )
@@ -37,12 +31,6 @@ from coldfront.core.resource.models import (
     Resource,
     ResourceAttribute,
     ResourceAttributeType,
-)
-from coldfront.core.resource.utils_.allowance_utils.computing_allowance import (
-    ComputingAllowance,
-)
-from coldfront.core.resource.utils_.allowance_utils.interface import (
-    ComputingAllowanceInterface,
 )
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.mou import get_mou_filename
@@ -204,15 +192,15 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
 
     @staticmethod
     def eligibility_url(pk):
-        return reverse(f"new-project-request-review-eligibility", kwargs={"pk": pk})
+        return reverse("new-project-request-review-eligibility", kwargs={"pk": pk})
 
     @staticmethod
     def readiness_url(pk):
-        return reverse(f"new-project-request-review-readiness", kwargs={"pk": pk})
+        return reverse("new-project-request-review-readiness", kwargs={"pk": pk})
 
     @staticmethod
     def edit_extra_fields_url(pk):
-        return reverse(f"new-project-request-edit-extra-fields", kwargs={"pk": pk})
+        return reverse("new-project-request-edit-extra-fields", kwargs={"pk": pk})
 
     @enable_deployment("BRC")
     @override_settings(
@@ -311,7 +299,7 @@ class TestAllocationAdditionMOUNotifyUploadDownload(MOUTestBase):
     @staticmethod
     def edit_extra_fields_url(pk):
         return reverse(
-            f"service-units-purchase-request-edit-extra-fields", kwargs={"pk": pk}
+            "service-units-purchase-request-edit-extra-fields", kwargs={"pk": pk}
         )
 
     @enable_deployment("BRC")
@@ -395,7 +383,7 @@ class SecureDirMOUNotifyUploadDownload(MOUTestBase):
 
     @staticmethod
     def edit_department_url(pk):
-        return reverse(f"secure-dir-request-edit-department", kwargs={"pk": pk})
+        return reverse("secure-dir-request-edit-department", kwargs={"pk": pk})
 
     @enable_deployment("BRC")
     @override_settings(

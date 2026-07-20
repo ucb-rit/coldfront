@@ -50,7 +50,7 @@ class TestRemovalRequestRunnerBase(TestBase):
             pi = User.objects.create(
                 email=f"pi{i + 1}@email.com",
                 first_name=f"Pi{i + 1}",
-                last_name=f"User",
+                last_name="User",
                 username=f"pi{i + 1}",
             )
             setattr(self, f"pi{i + 1}", pi)

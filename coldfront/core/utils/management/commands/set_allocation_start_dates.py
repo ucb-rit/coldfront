@@ -17,7 +17,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "file",
             help=(
-                f"The file containing projects to consider. Each row should "
+                "The file containing projects to consider. Each row should "
                 "be of the form: project_name,{self.date_format}."
             ),
         )

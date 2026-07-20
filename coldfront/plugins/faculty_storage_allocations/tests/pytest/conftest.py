@@ -4,8 +4,6 @@ This conftest.py provides fixtures that are used across multiple test modules.
 Module-specific fixtures should be placed in the module's own conftest.py.
 """
 
-from datetime import datetime
-from decimal import Decimal
 from unittest.mock import Mock
 
 from django.contrib.auth import get_user_model
@@ -14,7 +12,6 @@ import pytest
 
 from coldfront.core.allocation.models import (
     Allocation,
-    AllocationAttribute,
     AllocationAttributeType,
     AllocationStatusChoice,
     AllocationUser,
@@ -28,10 +25,7 @@ from coldfront.core.project.models import (
     ProjectUserStatusChoice,
 )
 from coldfront.core.resource.models import (
-    AttributeType,
     Resource,
-    ResourceAttribute,
-    ResourceAttributeType,
     ResourceType,
 )
 from coldfront.plugins.faculty_storage_allocations.models import (

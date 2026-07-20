@@ -3,15 +3,12 @@ import datetime
 # import the logging library
 import logging
 
-from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
-
 from coldfront.core.allocation.models import (
     Allocation,
     AllocationAttribute,
     AllocationStatusChoice,
 )
-from coldfront.core.utils.common import get_domain_url, import_from_settings
+from coldfront.core.utils.common import import_from_settings
 from coldfront.core.utils.mail import send_email_template
 
 # Get an instance of a logger
@@ -44,7 +41,7 @@ def update_statuses():
         sub_obj.status = expired_status_choice
         sub_obj.save()
 
-    logger.info("Allocations set to expired: {}".format(allocations_to_expire.count()))
+    logger.info(f"Allocations set to expired: {allocations_to_expire.count()}")
 
 
 def send_expiry_emails():
@@ -98,9 +95,7 @@ def send_expiry_emails():
                     email_receiver_list.append(allocation_user.user.email)
 
             send_email_template(
-                "Allocation to {} expiring in {} days".format(
-                    resource_name, days_remaining
-                ),
+                f"Allocation to {resource_name} expiring in {days_remaining} days",
                 "email/allocation_expiring.txt",
                 template_context,
                 EMAIL_SENDER,
@@ -150,9 +145,7 @@ def send_expiry_emails():
                 email_receiver_list.append(allocation_user.user.email)
 
         send_email_template(
-            "Allocation to {} expiring in {} days".format(
-                resource_name, days_remaining
-            ),
+            f"Allocation to {resource_name} expiring in {days_remaining} days",
             "email/allocation_expiring.txt",
             template_context,
             EMAIL_SENDER,
@@ -207,7 +200,7 @@ def send_expiry_emails():
                 email_receiver_list.append(allocation_user.user.email)
 
         send_email_template(
-            "Allocation to {} has expired".format(resource_name),
+            f"Allocation to {resource_name} has expired",
             "email/allocation_expired.txt",
             template_context,
             EMAIL_SENDER,
