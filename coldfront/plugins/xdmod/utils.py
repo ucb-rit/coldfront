@@ -79,9 +79,7 @@ def xdmod_fetch_total_cpu_hours(start, end, account, resources=None):
 
     rows = root.find("rows")
     if len(rows) != 1:
-        raise XdmodNotFoundError(
-            f"Rows not found for {account} - {resources}"
-        )
+        raise XdmodNotFoundError(f"Rows not found for {account} - {resources}")
 
     cells = rows.find("row").findall("cell")
     if len(cells) != 2:
@@ -126,9 +124,7 @@ def xdmod_fetch_cloud_core_time(start, end, project, resources=None):
 
     rows = root.find("rows")
     if len(rows) != 1:
-        raise XdmodNotFoundError(
-            f"Rows not found for {project} - {resources}"
-        )
+        raise XdmodNotFoundError(f"Rows not found for {project} - {resources}")
 
     cells = rows.find("row").findall("cell")
     if len(cells) != 2:

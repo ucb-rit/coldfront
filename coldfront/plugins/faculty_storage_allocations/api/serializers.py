@@ -1,4 +1,3 @@
-
 from rest_framework import serializers
 
 from coldfront.plugins.faculty_storage_allocations.models import (

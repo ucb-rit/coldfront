@@ -886,9 +886,9 @@ class SavioProjectSurveyForm(forms.Form):
             f"{self.primary_cluster_name} provides a shared Lustre parallel "
             f"filesystem for jobs needing access to high performance storage."
         )
-        self.fields["network_to_internet"].label = (
-            f"Network connection from {self.primary_cluster_name} to the Internet"
-        )
+        self.fields[
+            "network_to_internet"
+        ].label = f"Network connection from {self.primary_cluster_name} to the Internet"
 
         if flag_enabled("BRC_ONLY"):
             condo_docs_url = (

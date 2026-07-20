@@ -952,9 +952,7 @@ class AllocationCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
 
         pi_names = []
         for pi in allocation_obj.project.pis():
-            pi_names.append(
-                f"{pi.first_name} {pi.last_name} ({pi.username})"
-            )
+            pi_names.append(f"{pi.first_name} {pi.last_name} ({pi.username})")
         pi_names = ", ".join(pi_names)
 
         resource_name = allocation_obj.get_parent_resource
@@ -1111,9 +1109,7 @@ class AllocationAddUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateVi
                     allocation_activate_user.send(
                         sender=self.__class__, allocation_user_pk=allocation_user_obj.pk
                     )
-            messages.success(
-                request, f"Added {users_added_count} users to allocation."
-            )
+            messages.success(request, f"Added {users_added_count} users to allocation.")
         else:
             for error in formset.errors:
                 messages.error(request, error)
@@ -1728,9 +1724,7 @@ class AllocationRenewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView)
 
             pi_names = []
             for pi in allocation_obj.project.pis():
-                pi_names.append(
-                    f"{pi.first_name} {pi.last_name} ({pi.username})"
-                )
+                pi_names.append(f"{pi.first_name} {pi.last_name} ({pi.username})")
             pi_names = ", ".join(pi_names)
 
             resource_name = allocation_obj.get_parent_resource

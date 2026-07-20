@@ -87,9 +87,7 @@ class SnakeCaseTemplateNameMixin:
         app_label = self.model._meta.app_label
         model_name = self.model.__name__
 
-        return [
-            f"{app_label}/{to_snake(model_name)}{self.template_name_suffix}.html"
-        ]
+        return [f"{app_label}/{to_snake(model_name)}{self.template_name_suffix}.html"]
 
 
 class ProjectInContextMixin:

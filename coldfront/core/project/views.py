@@ -320,10 +320,9 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         # TODO: Set this dynamically when supporting other types.
         allocation_period = get_current_allowance_year_period()
         context["renew_allowance_clickable"] = (
-            (context["renew_allowance_visible"]
-            and is_any_project_pi_renewable(self.object, allocation_period))
-            or flag_enabled("ALLOCATION_RENEWAL_FOR_NEXT_PERIOD_REQUESTABLE")
-        )
+            context["renew_allowance_visible"]
+            and is_any_project_pi_renewable(self.object, allocation_period)
+        ) or flag_enabled("ALLOCATION_RENEWAL_FOR_NEXT_PERIOD_REQUESTABLE")
 
         # Display the "Purchase Service Units" button when the functionality is
         # enabled, for eligible allocation types under the primary cluster, for
@@ -1178,9 +1177,7 @@ class ProjectAddUsersView(LoginRequiredMixin, UserPassesTestMixin, View):
                         )
                         messages.error(request, message)
 
-            messages.success(
-                request, f"Added {added_users_count} users to project."
-            )
+            messages.success(request, f"Added {added_users_count} users to project.")
             messages.success(
                 request,
                 (

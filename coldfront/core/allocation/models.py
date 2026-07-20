@@ -325,7 +325,9 @@ class AllocationAttributeUsage(TimeStampedModel):
     history = HistoricalRecords()
 
     def __str__(self):
-        return f"{self.allocation_attribute.allocation_attribute_type.name}: {self.value}"
+        return (
+            f"{self.allocation_attribute.allocation_attribute_type.name}: {self.value}"
+        )
 
 
 class AllocationUserStatusChoice(TimeStampedModel):

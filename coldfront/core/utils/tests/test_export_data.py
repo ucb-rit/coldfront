@@ -1075,7 +1075,9 @@ class TestNewProjectSurveyResponses(TestBase):
                 filtered_fixtures.append(fixture)
 
         fixtures = sorted(fixtures, key=lambda x: x.project.name, reverse=True)
-        filtered_fixtures = sorted(filtered_fixtures, key=lambda x: x.project.name, reverse=True)
+        filtered_fixtures = sorted(
+            filtered_fixtures, key=lambda x: x.project.name, reverse=True
+        )
 
         self.fixtures = fixtures
         self.filtered_fixtures = filtered_fixtures
@@ -1248,7 +1250,9 @@ class TestRenewalSurveyResponses(TestBase):
                 filtered_fixtures.append(fixture)
 
         fixtures = sorted(fixtures, key=lambda x: x.pre_project.name, reverse=True)
-        filtered_fixtures = sorted(filtered_fixtures, key=lambda x: x.pre_project.name, reverse=True)
+        filtered_fixtures = sorted(
+            filtered_fixtures, key=lambda x: x.pre_project.name, reverse=True
+        )
         self.fixtures = fixtures
         self.filtered_fixtures = filtered_fixtures
 

@@ -2,11 +2,11 @@ from django.contrib.auth.models import User
 
 from coldfront.core.allocation.models import (
     AllocationUser,
-    ProjectUser,
     SecureDirAddUserRequest,
     SecureDirRemoveUserRequest,
 )
 from coldfront.core.allocation.utils import has_cluster_access
+from coldfront.core.project.models import ProjectUser
 
 __all__ = [
     "SecureDirectory",

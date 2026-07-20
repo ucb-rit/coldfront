@@ -79,9 +79,7 @@ class Command(BaseCommand):
         # Fetch the PDF
         response = requests.get(pdf_url)
         if response.status_code != 200:
-            self.stdout.write(
-                self.style.ERROR(f"Failed to fetch PDF at {pdf_url}")
-            )
+            self.stdout.write(self.style.ERROR(f"Failed to fetch PDF at {pdf_url}"))
             return
         io_bytes = io.BytesIO(response.content)
 

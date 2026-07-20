@@ -900,7 +900,9 @@ class TestFutureRequestsUpdateMixin:
         other_project_name_prefix = computing_allowance_interface.code_from_name(
             BRCAllowances.ICA
         )
-        future_requests[2].pre_project.name = (
+        future_requests[
+            2
+        ].pre_project.name = (
             f"{other_project_name_prefix}{future_requests[2].pre_project.name}"
         )
         future_requests[2].pre_project.save()

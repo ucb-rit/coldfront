@@ -1,4 +1,3 @@
-
 from django import template
 from django.template.defaultfilters import stringfilter
 import iso8601

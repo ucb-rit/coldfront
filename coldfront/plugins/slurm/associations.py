@@ -73,11 +73,7 @@ class SlurmCluster(SlurmBase):
                 parts = line.split(":")
                 name = re.sub(r"^Cluster - ", "", parts[0]).strip("\n'")
                 if len(name) == 0:
-                    raise (
-                        SlurmParserError(
-                            f"Cluster name not found for line: {line}"
-                        )
-                    )
+                    raise (SlurmParserError(f"Cluster name not found for line: {line}"))
                 cluster = SlurmCluster(name)
                 cluster.specs += parts[1:]
             elif re.match("^Account - '[^']+'", line):
@@ -88,11 +84,7 @@ class SlurmCluster(SlurmBase):
                 if parent == "root":
                     cluster.accounts["root"] = SlurmAccount("root")
                 if not parent:
-                    raise (
-                        SlurmParserError(
-                            f"Parent name not found for line: {line}"
-                        )
-                    )
+                    raise (SlurmParserError(f"Parent name not found for line: {line}"))
             elif re.match("^User - '[^']+'", line):
                 user = SlurmUser.new_from_sacctmgr(line)
                 if not parent:

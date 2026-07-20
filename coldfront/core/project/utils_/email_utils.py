@@ -1,4 +1,3 @@
-
 from coldfront.core.project.models import Project
 
 """Utilities relating to sending Project-related emails."""
