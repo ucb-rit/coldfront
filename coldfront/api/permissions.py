@@ -1,5 +1,4 @@
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.permissions import SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 
 
 class IsAdminUserOrReadOnly(IsAuthenticated):
@@ -14,10 +13,9 @@ class IsAdminUserOrReadOnly(IsAuthenticated):
         if not is_authenticated:
             return False
         return bool(
-            request.method in SAFE_METHODS or
-            request.user and
-            request.user.is_staff or
-            request.user.is_superuser
+            request.method in SAFE_METHODS
+            or (request.user and request.user.is_staff)
+            or request.user.is_superuser
         )
 
 
@@ -31,15 +29,14 @@ def IsSuperuserOrHasPerm(perm_codename):
 
         permission_classes=[IsSuperuserOrHasPerm('app.codename')]
     """
+
     class Permission(IsAuthenticated):
         def has_permission(self, request, view):
             if not super().has_permission(request, view):
                 return False
-            return (
-                request.user.is_superuser or
-                request.user.has_perm(perm_codename)
-            )
-    Permission.__name__ = f'IsSuperuserOrHasPerm<{perm_codename}>'
+            return request.user.is_superuser or request.user.has_perm(perm_codename)
+
+    Permission.__name__ = f"IsSuperuserOrHasPerm<{perm_codename}>"
     return Permission
 
 
@@ -50,6 +47,7 @@ class IsSuperuserOrStaff(IsAuthenticated):
 
     Disallows unauthenticated users.
     """
+
     def has_permission(self, request, view):
         is_authenticated = super().has_permission(request, view)
         if not is_authenticated:

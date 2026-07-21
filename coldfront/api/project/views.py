@@ -3,36 +3,46 @@ import logging
 from django.db import transaction
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.exceptions import APIException
 from rest_framework import mixins, viewsets
+from rest_framework.exceptions import APIException
 
 from coldfront.api.permissions import IsAdminUserOrReadOnly, IsSuperuserOrStaff
-from coldfront.api.project.filters import ProjectUserRemovalRequestFilter, \
-    ProjectUserFilter, ProjectFilter
-from coldfront.api.project.serializers import ProjectSerializer
-from coldfront.api.project.serializers import ProjectUserRemovalRequestSerializer
-from coldfront.api.project.serializers import ProjectUserSerializer
-
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserRemovalRequest
-
-from coldfront.core.project.utils_.removal_utils import ProjectRemovalRequestProcessingRunner
+from coldfront.api.project.filters import (
+    ProjectFilter,
+    ProjectUserFilter,
+    ProjectUserRemovalRequestFilter,
+)
+from coldfront.api.project.serializers import (
+    ProjectSerializer,
+    ProjectUserRemovalRequestSerializer,
+    ProjectUserSerializer,
+)
+from coldfront.core.project.models import (
+    Project,
+    ProjectUser,
+    ProjectUserRemovalRequest,
+)
+from coldfront.core.project.utils_.removal_utils import (
+    ProjectRemovalRequestProcessingRunner,
+)
 
 authorization_parameter = openapi.Parameter(
-    'Authorization',
+    "Authorization",
     openapi.IN_HEADER,
     description=(
-        'The authorization token for the requester. The token should be '
-        'preceded by "Token " (no quotes).'),
-    type=openapi.TYPE_STRING)
+        "The authorization token for the requester. The token should be "
+        'preceded by "Token " (no quotes).'
+    ),
+    type=openapi.TYPE_STRING,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-class ProjectViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
-                     viewsets.GenericViewSet):
+class ProjectViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     """A ViewSet for the Project model."""
 
     filterset_class = ProjectFilter
@@ -40,47 +50,52 @@ class ProjectViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
-        return Project.objects.order_by('id')
+        return Project.objects.order_by("id")
 
 
-class ProjectUserRemovalRequestViewSet(mixins.ListModelMixin,
-                                       mixins.RetrieveModelMixin,
-                                       mixins.UpdateModelMixin,
-                                       viewsets.GenericViewSet):
+class ProjectUserRemovalRequestViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
     """A ViewSet for the ProjectUserRemovalRequestViewSet model."""
 
     filterset_class = ProjectUserRemovalRequestFilter
-    http_method_names = ['get', 'patch']
+    http_method_names = ["get", "patch"]
     permission_classes = [IsSuperuserOrStaff]
     serializer_class = ProjectUserRemovalRequestSerializer
 
     def get_queryset(self):
-        return ProjectUserRemovalRequest.objects.order_by('id')
+        return ProjectUserRemovalRequest.objects.order_by("id")
 
     def perform_update(self, serializer):
         try:
             with transaction.atomic():
                 instance = serializer.save()
-                if instance.status.name == 'Complete':
+                if instance.status.name == "Complete":
                     runner = ProjectRemovalRequestProcessingRunner(instance)
                     runner.run()
         except Exception as e:
-            message = f'Rolling back failed transaction. Details:\n{e}'
+            message = f"Rolling back failed transaction. Details:\n{e}"
             logger.exception(message)
-            raise APIException('Internal server error.')
+            raise APIException("Internal server error.")
 
     @swagger_auto_schema(
         manual_parameters=[authorization_parameter],
         operation_description=(
-            'Updates one or more fields of the ProjectUserRemovalRequest '
-            'identified by the given ID.'))
+            "Updates one or more fields of the ProjectUserRemovalRequest "
+            "identified by the given ID."
+        ),
+    )
     def partial_update(self, request, *args, **kwargs):
         """The method for PATCH (partial update) requests."""
         return super().partial_update(request, *args, **kwargs)
 
 
-class ProjectUserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
-                         viewsets.GenericViewSet):
+class ProjectUserViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     """A ViewSet for the ProjectUser model."""
 
     filterset_class = ProjectUserFilter
@@ -88,7 +103,7 @@ class ProjectUserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
     serializer_class = ProjectUserSerializer
 
     def get_queryset(self):
-        project_pk = self.kwargs.get('project_pk')
+        project_pk = self.kwargs.get("project_pk")
         if project_pk:
             return ProjectUser.objects.filter(project_id=project_pk)
-        return ProjectUser.objects.order_by('id')
+        return ProjectUser.objects.order_by("id")

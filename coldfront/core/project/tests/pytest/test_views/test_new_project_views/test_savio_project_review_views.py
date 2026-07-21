@@ -3,15 +3,18 @@
 Tests for eligibility, readiness, and memorandum signed views.
 """
 
-import pytest
 from unittest.mock import patch
-from django.urls import reverse
+
 from django.contrib.auth import get_user_model
+from django.urls import reverse
+import pytest
 
 from coldfront.core.allocation.models import AllocationPeriod
 from coldfront.core.project.models import (
-    Project, SavioProjectAllocationRequest, ProjectStatusChoice,
+    Project,
     ProjectAllocationRequestStatusChoice,
+    ProjectStatusChoice,
+    SavioProjectAllocationRequest,
 )
 from coldfront.core.resource.utils_.allowance_utils.constants import (
     BRCAllowances,
@@ -28,9 +31,7 @@ User = get_user_model()
 def superuser(db):
     """Create a superuser for testing."""
     return User.objects.create_superuser(
-        username='admin',
-        email='admin@test.com',
-        password='adminpass'
+        username="admin", email="admin@test.com", password="adminpass"
     )
 
 
@@ -41,9 +42,7 @@ def computing_allowance(db):
     # Get the first available allowance
     allowances = interface.allowances()
     if not allowances:
-        pytest.skip(
-            "No computing allowances found in database"
-        )
+        pytest.skip("No computing allowances found in database")
     return allowances[0]
 
 
@@ -52,13 +51,10 @@ def allocation_period(db):
     """Get a valid allocation period."""
     now = utc_now_offset_aware()
     period = AllocationPeriod.objects.filter(
-        start_date__lte=now,
-        end_date__gte=now
+        start_date__lte=now, end_date__gte=now
     ).first()
     if not period:
-        pytest.skip(
-            "No valid allocation period found in database"
-        )
+        pytest.skip("No valid allocation period found in database")
     return period
 
 
@@ -66,9 +62,7 @@ def allocation_period(db):
 def requester(db):
     """Create a requester user."""
     return User.objects.create_user(
-        username='requester',
-        email='requester@test.com',
-        password='password'
+        username="requester", email="requester@test.com", password="password"
     )
 
 
@@ -76,9 +70,7 @@ def requester(db):
 def pi(db):
     """Create a PI user."""
     return User.objects.create_user(
-        username='pi',
-        email='pi@test.com',
-        password='password'
+        username="pi", email="pi@test.com", password="password"
     )
 
 
@@ -88,8 +80,8 @@ def _create_savio_request(
     allocation_period,
     requester,
     pi,
-    eligibility_status='Pending',
-    readiness_status='Pending'
+    eligibility_status="Pending",
+    readiness_status="Pending",
 ):
     """Helper to create a SavioProjectAllocationRequest.
 
@@ -105,19 +97,17 @@ def _create_savio_request(
     interface = ComputingAllowanceInterface()
 
     # Create project
-    project_status = ProjectStatusChoice.objects.get(name='Active')
+    project_status = ProjectStatusChoice.objects.get(name="Active")
     project = Project.objects.create(
-        name='test_project',
+        name="test_project",
         status=project_status,
-        title='Test Project',
-        description='Test project for review views'
+        title="Test Project",
+        description="Test project for review views",
     )
 
     # Create request
-    request_status = (
-        ProjectAllocationRequestStatusChoice.objects.get(
-            name='Under Review'
-        )
+    request_status = ProjectAllocationRequestStatusChoice.objects.get(
+        name="Under Review"
     )
 
     request_obj = SavioProjectAllocationRequest.objects.create(
@@ -133,27 +123,23 @@ def _create_savio_request(
 
     # Initialize state with all required keys
     request_obj.state = {
-        'eligibility': {
-            'status': eligibility_status,
-            'justification': '',
-            'timestamp': ''
+        "eligibility": {
+            "status": eligibility_status,
+            "justification": "",
+            "timestamp": "",
         },
-        'readiness': {
-            'status': readiness_status,
-            'justification': '',
-            'timestamp': ''
-        },
-        'setup': {
-            'status': 'Pending',
-            'name_change': {
-                'requested_name': '',
-                'final_name': '',
-                'justification': ''
+        "readiness": {"status": readiness_status, "justification": "", "timestamp": ""},
+        "setup": {
+            "status": "Pending",
+            "name_change": {
+                "requested_name": "",
+                "final_name": "",
+                "justification": "",
             },
-            'timestamp': ''
+            "timestamp": "",
         },
-        'other': {'justification': '', 'timestamp': ''},
-        'memorandum_signed': {'status': 'Pending', 'timestamp': ''},
+        "other": {"justification": "", "timestamp": ""},
+        "memorandum_signed": {"status": "Pending", "timestamp": ""},
     }
     request_obj.save()
 
@@ -175,8 +161,8 @@ def savio_request_for_eligibility(
         allocation_period,
         requester,
         pi,
-        eligibility_status='Pending',
-        readiness_status='Approved'
+        eligibility_status="Pending",
+        readiness_status="Approved",
     )
 
 
@@ -195,8 +181,8 @@ def savio_request_for_readiness(
         allocation_period,
         requester,
         pi,
-        eligibility_status='Approved',
-        readiness_status='Pending'
+        eligibility_status="Approved",
+        readiness_status="Pending",
     )
 
 
@@ -218,17 +204,17 @@ def savio_request_for_memorandum(db, allocation_period, requester, pi):
     ica_allowance = Resource.objects.get(name=BRCAllowances.ICA)
 
     # Create project
-    project_status = ProjectStatusChoice.objects.get(name='Active')
+    project_status = ProjectStatusChoice.objects.get(name="Active")
     project = Project.objects.create(
-        name='test_project',
+        name="test_project",
         status=project_status,
-        title='Test Project',
-        description='Test project for review views'
+        title="Test Project",
+        description="Test project for review views",
     )
 
     # Create request
     request_status = ProjectAllocationRequestStatusChoice.objects.get(
-        name='Under Review'
+        name="Under Review"
     )
     # Get the allocation_type (short name) for the allowance
     allocation_type = interface.name_short_from_name(ica_allowance.name)
@@ -247,27 +233,19 @@ def savio_request_for_memorandum(db, allocation_period, requester, pi):
 
     # Initialize state with all required keys
     request_obj.state = {
-        'eligibility': {
-            'status': 'Approved',
-            'justification': '',
-            'timestamp': ''
-        },
-        'readiness': {
-            'status': 'Approved',
-            'justification': '',
-            'timestamp': ''
-        },
-        'setup': {
-            'status': 'Pending',
-            'name_change': {
-                'requested_name': '',
-                'final_name': '',
-                'justification': ''
+        "eligibility": {"status": "Approved", "justification": "", "timestamp": ""},
+        "readiness": {"status": "Approved", "justification": "", "timestamp": ""},
+        "setup": {
+            "status": "Pending",
+            "name_change": {
+                "requested_name": "",
+                "final_name": "",
+                "justification": "",
             },
-            'timestamp': ''
+            "timestamp": "",
         },
-        'other': {'justification': '', 'timestamp': ''},
-        'memorandum_signed': {'status': 'Pending', 'timestamp': ''},
+        "other": {"justification": "", "timestamp": ""},
+        "memorandum_signed": {"status": "Pending", "timestamp": ""},
     }
     request_obj.save()
 
@@ -284,14 +262,13 @@ class TestSavioProjectReviewEligibilityView:
         """Test that form submission updates eligibility status."""
         client.force_login(superuser)
         url = reverse(
-            'new-project-request-review-eligibility',
-            kwargs={'pk': savio_request_for_eligibility.pk}
+            "new-project-request-review-eligibility",
+            kwargs={"pk": savio_request_for_eligibility.pk},
         )
 
-        response = client.post(url, {
-            'status': 'Approved',
-            'justification': 'Test approval'
-        })
+        response = client.post(
+            url, {"status": "Approved", "justification": "Test approval"}
+        )
 
         # Should redirect on success
         assert response.status_code == 302
@@ -299,8 +276,7 @@ class TestSavioProjectReviewEligibilityView:
         # Check that eligibility status was updated
         savio_request_for_eligibility.refresh_from_db()
         assert (
-            savio_request_for_eligibility.state['eligibility']['status']
-            == 'Approved'
+            savio_request_for_eligibility.state["eligibility"]["status"] == "Approved"
         )
 
     def test_email_conditionally_sent_on_status_change(
@@ -310,19 +286,18 @@ class TestSavioProjectReviewEligibilityView:
         Processing'."""
         client.force_login(superuser)
         url = reverse(
-            'new-project-request-review-eligibility',
-            kwargs={'pk': savio_request_for_eligibility.pk}
+            "new-project-request-review-eligibility",
+            kwargs={"pk": savio_request_for_eligibility.pk},
         )
 
         with patch(
-            'coldfront.core.project.views_.new_project_views.'
-            'approval_views.'
-            'send_project_request_ready_for_processing_email'
+            "coldfront.core.project.views_.new_project_views."
+            "approval_views."
+            "send_project_request_ready_for_processing_email"
         ) as mock_send:
-            response = client.post(url, {
-                'status': 'Approved',
-                'justification': 'Test approval'
-            })
+            response = client.post(
+                url, {"status": "Approved", "justification": "Test approval"}
+            )
 
         # Should redirect on success
         assert response.status_code == 302
@@ -330,27 +305,18 @@ class TestSavioProjectReviewEligibilityView:
         # Email function should be called when status becomes
         # 'Approved - Processing'
         savio_request_for_eligibility.refresh_from_db()
-        assert (
-            savio_request_for_eligibility.status.name
-            == 'Approved - Processing'
-        )
-        mock_send.assert_called_once_with(
-            savio_request_for_eligibility
-        )
+        assert savio_request_for_eligibility.status.name == "Approved - Processing"
+        mock_send.assert_called_once_with(savio_request_for_eligibility)
 
-    def test_requires_superuser_permission(
-        self, client, savio_request_for_eligibility
-    ):
+    def test_requires_superuser_permission(self, client, savio_request_for_eligibility):
         """Test that view requires superuser permission."""
         regular_user = User.objects.create_user(
-            username='regular',
-            email='regular@test.com',
-            password='password'
+            username="regular", email="regular@test.com", password="password"
         )
         client.force_login(regular_user)
         url = reverse(
-            'new-project-request-review-eligibility',
-            kwargs={'pk': savio_request_for_eligibility.pk}
+            "new-project-request-review-eligibility",
+            kwargs={"pk": savio_request_for_eligibility.pk},
         )
 
         response = client.get(url)
@@ -359,8 +325,7 @@ class TestSavioProjectReviewEligibilityView:
         assert response.status_code in [302, 403]
 
     def test_email_not_sent_if_readiness_pending(
-        self, client, superuser, computing_allowance,
-        allocation_period, requester, pi
+        self, client, superuser, computing_allowance, allocation_period, requester, pi
     ):
         """Email not sent if readiness review still pending."""
         # Create request with readiness still pending
@@ -370,25 +335,23 @@ class TestSavioProjectReviewEligibilityView:
             allocation_period,
             requester,
             pi,
-            eligibility_status='Pending',
-            readiness_status='Pending'
+            eligibility_status="Pending",
+            readiness_status="Pending",
         )
 
         client.force_login(superuser)
         url = reverse(
-            'new-project-request-review-eligibility',
-            kwargs={'pk': savio_request.pk}
+            "new-project-request-review-eligibility", kwargs={"pk": savio_request.pk}
         )
 
         with patch(
-            'coldfront.core.project.views_.new_project_views.'
-            'approval_views.'
-            'send_project_request_ready_for_processing_email'
+            "coldfront.core.project.views_.new_project_views."
+            "approval_views."
+            "send_project_request_ready_for_processing_email"
         ) as mock_send:
-            response = client.post(url, {
-                'status': 'Approved',
-                'justification': 'Test approval'
-            })
+            response = client.post(
+                url, {"status": "Approved", "justification": "Test approval"}
+            )
 
         # Should redirect on success
         assert response.status_code == 302
@@ -396,7 +359,7 @@ class TestSavioProjectReviewEligibilityView:
         # Status should remain 'Under Review' (not 'Approved -
         # Processing') because readiness is still pending
         savio_request.refresh_from_db()
-        assert savio_request.status.name == 'Under Review'
+        assert savio_request.status.name == "Under Review"
 
         # Email should NOT be sent
         mock_send.assert_not_called()
@@ -412,24 +375,20 @@ class TestSavioProjectReviewReadinessView:
         """Test that form submission updates readiness status."""
         client.force_login(superuser)
         url = reverse(
-            'new-project-request-review-readiness',
-            kwargs={'pk': savio_request_for_readiness.pk}
+            "new-project-request-review-readiness",
+            kwargs={"pk": savio_request_for_readiness.pk},
         )
 
-        response = client.post(url, {
-            'status': 'Approved',
-            'justification': 'Test approval'
-        })
+        response = client.post(
+            url, {"status": "Approved", "justification": "Test approval"}
+        )
 
         # Should redirect on success
         assert response.status_code == 302
 
         # Check that readiness status was updated
         savio_request_for_readiness.refresh_from_db()
-        assert (
-            savio_request_for_readiness.state['readiness']['status']
-            == 'Approved'
-        )
+        assert savio_request_for_readiness.state["readiness"]["status"] == "Approved"
 
     def test_email_conditionally_sent_on_status_change(
         self, client, superuser, savio_request_for_readiness
@@ -438,19 +397,18 @@ class TestSavioProjectReviewReadinessView:
         Processing'."""
         client.force_login(superuser)
         url = reverse(
-            'new-project-request-review-readiness',
-            kwargs={'pk': savio_request_for_readiness.pk}
+            "new-project-request-review-readiness",
+            kwargs={"pk": savio_request_for_readiness.pk},
         )
 
         with patch(
-            'coldfront.core.project.views_.new_project_views.'
-            'approval_views.'
-            'send_project_request_ready_for_processing_email'
+            "coldfront.core.project.views_.new_project_views."
+            "approval_views."
+            "send_project_request_ready_for_processing_email"
         ) as mock_send:
-            response = client.post(url, {
-                'status': 'Approved',
-                'justification': 'Test approval'
-            })
+            response = client.post(
+                url, {"status": "Approved", "justification": "Test approval"}
+            )
 
         # Should redirect on success
         assert response.status_code == 302
@@ -458,27 +416,18 @@ class TestSavioProjectReviewReadinessView:
         # Email function should be called when status becomes
         # 'Approved - Processing'
         savio_request_for_readiness.refresh_from_db()
-        assert (
-            savio_request_for_readiness.status.name
-            == 'Approved - Processing'
-        )
-        mock_send.assert_called_once_with(
-            savio_request_for_readiness
-        )
+        assert savio_request_for_readiness.status.name == "Approved - Processing"
+        mock_send.assert_called_once_with(savio_request_for_readiness)
 
-    def test_requires_superuser_permission(
-        self, client, savio_request_for_readiness
-    ):
+    def test_requires_superuser_permission(self, client, savio_request_for_readiness):
         """Test that view requires superuser permission."""
         regular_user = User.objects.create_user(
-            username='regular',
-            email='regular@test.com',
-            password='password'
+            username="regular", email="regular@test.com", password="password"
         )
         client.force_login(regular_user)
         url = reverse(
-            'new-project-request-review-readiness',
-            kwargs={'pk': savio_request_for_readiness.pk}
+            "new-project-request-review-readiness",
+            kwargs={"pk": savio_request_for_readiness.pk},
         )
 
         response = client.get(url)
@@ -486,8 +435,7 @@ class TestSavioProjectReviewReadinessView:
         assert response.status_code in [302, 403]
 
     def test_email_not_sent_if_eligibility_pending(
-        self, client, superuser, computing_allowance,
-        allocation_period, requester, pi
+        self, client, superuser, computing_allowance, allocation_period, requester, pi
     ):
         """Email not sent if eligibility review still pending."""
         # Create request with eligibility still pending
@@ -497,25 +445,23 @@ class TestSavioProjectReviewReadinessView:
             allocation_period,
             requester,
             pi,
-            eligibility_status='Pending',
-            readiness_status='Pending'
+            eligibility_status="Pending",
+            readiness_status="Pending",
         )
 
         client.force_login(superuser)
         url = reverse(
-            'new-project-request-review-readiness',
-            kwargs={'pk': savio_request.pk}
+            "new-project-request-review-readiness", kwargs={"pk": savio_request.pk}
         )
 
         with patch(
-            'coldfront.core.project.views_.new_project_views.'
-            'approval_views.'
-            'send_project_request_ready_for_processing_email'
+            "coldfront.core.project.views_.new_project_views."
+            "approval_views."
+            "send_project_request_ready_for_processing_email"
         ) as mock_send:
-            response = client.post(url, {
-                'status': 'Approved',
-                'justification': 'Test approval'
-            })
+            response = client.post(
+                url, {"status": "Approved", "justification": "Test approval"}
+            )
 
         # Should redirect on success
         assert response.status_code == 302
@@ -523,7 +469,7 @@ class TestSavioProjectReviewReadinessView:
         # Status should remain 'Under Review' (not 'Approved -
         # Processing') because eligibility is still pending
         savio_request.refresh_from_db()
-        assert savio_request.status.name == 'Under Review'
+        assert savio_request.status.name == "Under Review"
 
         # Email should NOT be sent
         mock_send.assert_not_called()
@@ -540,13 +486,11 @@ class TestSavioProjectReviewMemorandumSignedView:
         status."""
         client.force_login(superuser)
         url = reverse(
-            'new-project-request-review-memorandum-signed',
-            kwargs={'pk': savio_request_for_memorandum.pk}
+            "new-project-request-review-memorandum-signed",
+            kwargs={"pk": savio_request_for_memorandum.pk},
         )
 
-        response = client.post(url, {
-            'status': 'Complete'
-        })
+        response = client.post(url, {"status": "Complete"})
 
         # Should redirect on success or 404 if MOU not required
         assert response.status_code in [302, 404]
@@ -556,10 +500,10 @@ class TestSavioProjectReviewMemorandumSignedView:
         savio_request_for_memorandum.refresh_from_db()
         if response.status_code == 302:
             assert (
-                savio_request_for_memorandum.state.get(
-                    'memorandum_signed', {}
-                ).get('status')
-                == 'Complete'
+                savio_request_for_memorandum.state.get("memorandum_signed", {}).get(
+                    "status"
+                )
+                == "Complete"
             )
 
     def test_email_conditionally_sent_on_status_change(
@@ -569,18 +513,16 @@ class TestSavioProjectReviewMemorandumSignedView:
         Processing'."""
         client.force_login(superuser)
         url = reverse(
-            'new-project-request-review-memorandum-signed',
-            kwargs={'pk': savio_request_for_memorandum.pk}
+            "new-project-request-review-memorandum-signed",
+            kwargs={"pk": savio_request_for_memorandum.pk},
         )
 
         with patch(
-            'coldfront.core.project.views_.new_project_views.'
-            'approval_views.'
-            'send_project_request_ready_for_processing_email'
+            "coldfront.core.project.views_.new_project_views."
+            "approval_views."
+            "send_project_request_ready_for_processing_email"
         ) as mock_send:
-            response = client.post(url, {
-                'status': 'Complete'
-            })
+            response = client.post(url, {"status": "Complete"})
 
         # Should redirect on success
         assert response.status_code == 302
@@ -588,27 +530,18 @@ class TestSavioProjectReviewMemorandumSignedView:
         # Email function should be called when status becomes
         # 'Approved - Processing'
         savio_request_for_memorandum.refresh_from_db()
-        assert (
-            savio_request_for_memorandum.status.name
-            == 'Approved - Processing'
-        )
-        mock_send.assert_called_once_with(
-            savio_request_for_memorandum
-        )
+        assert savio_request_for_memorandum.status.name == "Approved - Processing"
+        mock_send.assert_called_once_with(savio_request_for_memorandum)
 
-    def test_requires_superuser_permission(
-        self, client, savio_request_for_memorandum
-    ):
+    def test_requires_superuser_permission(self, client, savio_request_for_memorandum):
         """Test that view requires superuser permission."""
         regular_user = User.objects.create_user(
-            username='regular',
-            email='regular@test.com',
-            password='password'
+            username="regular", email="regular@test.com", password="password"
         )
         client.force_login(regular_user)
         url = reverse(
-            'new-project-request-review-memorandum-signed',
-            kwargs={'pk': savio_request_for_memorandum.pk}
+            "new-project-request-review-memorandum-signed",
+            kwargs={"pk": savio_request_for_memorandum.pk},
         )
 
         response = client.get(url)
@@ -622,33 +555,29 @@ class TestSavioProjectReviewMemorandumSignedView:
         from coldfront.core.resource.models import Resource
 
         # Create request with eligibility pending
-        ica_allowance = Resource.objects.get(
-            name=BRCAllowances.ICA
-        )
+        ica_allowance = Resource.objects.get(name=BRCAllowances.ICA)
         savio_request = _create_savio_request(
             None,
             ica_allowance,
             allocation_period,
             requester,
             pi,
-            eligibility_status='Pending',
-            readiness_status='Approved'
+            eligibility_status="Pending",
+            readiness_status="Approved",
         )
 
         client.force_login(superuser)
         url = reverse(
-            'new-project-request-review-memorandum-signed',
-            kwargs={'pk': savio_request.pk}
+            "new-project-request-review-memorandum-signed",
+            kwargs={"pk": savio_request.pk},
         )
 
         with patch(
-            'coldfront.core.project.views_.new_project_views.'
-            'approval_views.'
-            'send_project_request_ready_for_processing_email'
+            "coldfront.core.project.views_.new_project_views."
+            "approval_views."
+            "send_project_request_ready_for_processing_email"
         ) as mock_send:
-            response = client.post(url, {
-                'status': 'Complete'
-            })
+            response = client.post(url, {"status": "Complete"})
 
         # Should redirect on success
         assert response.status_code == 302
@@ -656,7 +585,7 @@ class TestSavioProjectReviewMemorandumSignedView:
         # Status should remain 'Under Review' (not 'Approved -
         # Processing') because eligibility is still pending
         savio_request.refresh_from_db()
-        assert savio_request.status.name == 'Under Review'
+        assert savio_request.status.name == "Under Review"
 
         # Email should NOT be sent
         mock_send.assert_not_called()

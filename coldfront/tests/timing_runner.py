@@ -6,6 +6,7 @@ Usage:
 Pair with Django's built-in --timing flag for full breakdown:
     python manage.py test --timing --testrunner=coldfront.tests.timing_runner.TimingTestRunner
 """
+
 import time
 import unittest
 
@@ -28,7 +29,7 @@ class TimingTestRunner(DiscoverRunner):
 
             def stopTest(self, test):
                 elapsed = time.monotonic() - getattr(
-                    self, '_test_start_time', time.monotonic()
+                    self, "_test_start_time", time.monotonic()
                 )
                 runner._timings.append((elapsed, str(test)))
                 super().stopTest(test)
@@ -47,13 +48,10 @@ class TimingTestRunner(DiscoverRunner):
         timings = sorted(self._timings, reverse=True)
         n = min(self.TOP_N, len(timings))
         total = sum(elapsed for elapsed, _ in timings)
-        sep = '=' * 72
-        print(f'\n{sep}')
-        print(
-            f'SLOWEST {n} TESTS '
-            f'(of {len(timings)} total, {total:.1f}s combined)'
-        )
+        sep = "=" * 72
+        print(f"\n{sep}")
+        print(f"SLOWEST {n} TESTS (of {len(timings)} total, {total:.1f}s combined)")
         print(sep)
         for elapsed, test_id in timings[:n]:
-            print(f'  {elapsed:7.3f}s  {test_id}')
+            print(f"  {elapsed:7.3f}s  {test_id}")
         print(sep)

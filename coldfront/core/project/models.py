@@ -1,7 +1,5 @@
-import datetime
-import textwrap
-
 from collections import namedtuple
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator
@@ -13,12 +11,12 @@ from simple_history.models import HistoricalRecords
 
 from coldfront.core.field_of_science.models import FieldOfScience
 from coldfront.core.utils.common import import_from_settings
-from coldfront.core.utils.mou import DynamicFileField
-from coldfront.core.utils.mou import upload_to_func
-
+from coldfront.core.utils.mou import DynamicFileField, upload_to_func
 
 PROJECT_ENABLE_PROJECT_REVIEW = import_from_settings(
-    'PROJECT_ENABLE_PROJECT_REVIEW', False)
+    "PROJECT_ENABLE_PROJECT_REVIEW", False
+)
+
 
 class ProjectStatusChoice(TimeStampedModel):
     name = models.CharField(max_length=64)
@@ -27,41 +25,47 @@ class ProjectStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ('name',)
+        ordering = ("name",)
 
 
 class Project(TimeStampedModel):
-
-    DEFAULT_DESCRIPTION = '''
+    DEFAULT_DESCRIPTION = """
 We do not have information about your research. Please provide a detailed description of your work and update your field of science. Thank you!
-        '''
+        """
 
     name = models.CharField(max_length=255, unique=True, blank=True, null=True)
-    title = models.CharField(max_length=255,)
+    title = models.CharField(
+        max_length=255,
+    )
     description = models.TextField(
         default=DEFAULT_DESCRIPTION,
         validators=[
             MinLengthValidator(
                 10,
-                'The project description must be > 10 characters.',
+                "The project description must be > 10 characters.",
             )
         ],
     )
 
     field_of_science = models.ForeignKey(
-        FieldOfScience, on_delete=models.CASCADE, default=FieldOfScience.DEFAULT_PK)
+        FieldOfScience, on_delete=models.CASCADE, default=FieldOfScience.DEFAULT_PK
+    )
     status = models.ForeignKey(ProjectStatusChoice, on_delete=models.CASCADE)
     force_review = models.BooleanField(default=False)
     requires_review = models.BooleanField(default=True)
     history = HistoricalRecords()
 
     def clean(self):
-        if 'Auto-Import Project'.lower() in self.title.lower():
+        if "Auto-Import Project".lower() in self.title.lower():
             raise ValidationError(
-                'You must update the project title. You cannot have "Auto-Import Project" in the title.')
+                'You must update the project title. You cannot have "Auto-Import Project" in the title.'
+            )
 
-        if 'We do not have information about your research. Please provide a detailed description of your work and update your field of science. Thank you!' in self.description:
-            raise ValidationError('You must update the project description.')
+        if (
+            "We do not have information about your research. Please provide a detailed description of your work and update your field of science. Thank you!"
+            in self.description
+        ):
+            raise ValidationError("You must update the project description.")
 
     def save(self, *args, **kwargs):
         """If the Project previously existed and its status has changed,
@@ -70,40 +74,43 @@ We do not have information about your research. Please provide a detailed descri
             old_obj = Project.objects.get(pk=self.pk)
             if old_obj.status.name != self.status.name:
                 pending_status = ProjectUserStatusChoice.objects.get(
-                    name='Pending - Add')
-                if self.status.name == 'Active':
+                    name="Pending - Add"
+                )
+                if self.status.name == "Active":
                     # If the status changed to 'Active', create another join
                     # request, since only the latest created request is
                     # considered. This ensures that the auto-approval delay
                     # begins after the project becomes active.
-                    project_users = self.projectuser_set.filter(
-                        status=pending_status)
+                    project_users = self.projectuser_set.filter(status=pending_status)
 
                     for project_user in project_users:
                         try:
-                            reason = project_user.projectuserjoinrequest_set.latest('created').reason
+                            reason = project_user.projectuserjoinrequest_set.latest(
+                                "created"
+                            ).reason
                             ProjectUserJoinRequest.objects.create(
-                                project_user=project_user,
-                                reason=reason)
+                                project_user=project_user, reason=reason
+                            )
                         except ProjectUserJoinRequest.DoesNotExist:
                             # use default reason if no prior request exists
                             ProjectUserJoinRequest.objects.create(
-                                    project_user=project_user)
+                                project_user=project_user
+                            )
 
-                elif self.status.name == 'Denied':
+                elif self.status.name == "Denied":
                     # If the status changed to 'Denied', deny all pending
                     # join requests.
-                    denied_status = ProjectUserStatusChoice.objects.get(
-                        name='Denied')
-                    self.projectuser_set.filter(
-                        status=pending_status).update(status=denied_status)
+                    denied_status = ProjectUserStatusChoice.objects.get(name="Denied")
+                    self.projectuser_set.filter(status=pending_status).update(
+                        status=denied_status
+                    )
 
         super().save(*args, **kwargs)
 
     @property
     def last_project_review(self):
         if self.projectreview_set.exists():
-            return self.projectreview_set.order_by('-created')[0]
+            return self.projectreview_set.order_by("-created")[0]
         else:
             return None
 
@@ -165,37 +172,37 @@ We do not have information about your research. Please provide a detailed descri
         """Return a queryset of User objects that are PIs on this
         project, ordered by username. Optionally return only active
         PIs."""
-        kwargs = {'role__name': 'Principal Investigator'}
+        kwargs = {"role__name": "Principal Investigator"}
         if active_only:
-            kwargs['status__name'] = 'Active'
-        pi_user_pks = self.projectuser_set.filter(
-            **kwargs).values_list('user', flat=True)
-        return User.objects.filter(pk__in=pi_user_pks).order_by('username')
+            kwargs["status__name"] = "Active"
+        pi_user_pks = self.projectuser_set.filter(**kwargs).values_list(
+            "user", flat=True
+        )
+        return User.objects.filter(pk__in=pi_user_pks).order_by("username")
 
     def managers(self, active_only=False):
         """Return a queryset of User objects that are Managers on this
         project, ordered by username. Optionally return only active
         Managers."""
-        kwargs = {'role__name': 'Manager'}
+        kwargs = {"role__name": "Manager"}
         if active_only:
-            kwargs['status__name'] = 'Active'
-        manager_user_pks = self.projectuser_set.filter(
-            **kwargs).values_list('user', flat=True)
-        return User.objects.filter(
-            pk__in=manager_user_pks).order_by('username')
+            kwargs["status__name"] = "Active"
+        manager_user_pks = self.projectuser_set.filter(**kwargs).values_list(
+            "user", flat=True
+        )
+        return User.objects.filter(pk__in=manager_user_pks).order_by("username")
 
     def is_pooled(self):
         """Return whether this project is a pooled project. In
         particular, it is pooled if it has more than one PI."""
-        pi_role = ProjectUserRoleChoice.objects.get(
-            name='Principal Investigator')
+        pi_role = ProjectUserRoleChoice.objects.get(name="Principal Investigator")
         return self.projectuser_set.filter(role=pi_role).count() > 1
 
     def managers_and_pis_emails(self):
         """Return a list of primary emails belonging to managers and PIs
         who should be emailed about the project."""
         users = self.managers_and_pis_to_email()
-        return list(users.values_list('user__email', flat=True))
+        return list(users.values_list("user__email", flat=True))
 
     def managers_and_pis_to_email(self):
         """Return a queryset of ProjectUsers who should be emailed about
@@ -203,30 +210,35 @@ We do not have information about your research. Please provide a detailed descri
             a) Active managers (ignoring enable_notifications), and
             b) Active PIs who have enable_notifications=True"""
         pi_condition = Q(
-            role__name='Principal Investigator', status__name='Active',
-            enable_notifications=True)
-        manager_condition = Q(role__name='Manager', status__name='Active')
-        return self.projectuser_set.filter(
-            pi_condition | manager_condition).distinct()
+            role__name="Principal Investigator",
+            status__name="Active",
+            enable_notifications=True,
+        )
+        manager_condition = Q(role__name="Manager", status__name="Active")
+        return self.projectuser_set.filter(pi_condition | manager_condition).distinct()
 
     def pis_to_email(self):
         """Return a queryset of Active PI ProjectUsers who have
         enable_notifications=True."""
         pi_condition = Q(
-            role__name='Principal Investigator', status__name='Active',
-            enable_notifications=True)
+            role__name="Principal Investigator",
+            status__name="Active",
+            enable_notifications=True,
+        )
         return self.projectuser_set.filter(pi_condition).distinct()
 
     def __str__(self):
         return self.name
 
     class Meta:
-        ordering = ['title']
+        ordering = ["title"]
 
         permissions = (
             ("can_view_all_projects", "Can view all projects"),
-            ("can_review_pending_project_reviews",
-             "Can review pending project reviews"),
+            (
+                "can_review_pending_project_reviews",
+                "Can review pending project reviews",
+            ),
         )
 
 
@@ -255,13 +267,16 @@ class ProjectReviewStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class ProjectReview(TimeStampedModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     status = models.ForeignKey(
-        ProjectReviewStatusChoice, on_delete=models.CASCADE, verbose_name='Status')
+        ProjectReviewStatusChoice, on_delete=models.CASCADE, verbose_name="Status"
+    )
     reason_for_not_updating_project = models.TextField(blank=True, null=True)
     history = HistoricalRecords()
 
@@ -273,7 +288,9 @@ class ProjectUserRoleChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class ProjectUserStatusChoice(TimeStampedModel):
@@ -283,56 +300,65 @@ class ProjectUserStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 class ProjectUser(TimeStampedModel):
-
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     role = models.ForeignKey(ProjectUserRoleChoice, on_delete=models.CASCADE)
     status = models.ForeignKey(
-        ProjectUserStatusChoice, on_delete=models.CASCADE, verbose_name='Status')
+        ProjectUserStatusChoice, on_delete=models.CASCADE, verbose_name="Status"
+    )
     enable_notifications = models.BooleanField(default=True)
     history = HistoricalRecords()
 
     def __str__(self):
-        return '%s %s (%s)' % (self.user.first_name, self.user.last_name, self.user.username)
+        return "%s %s (%s)" % (
+            self.user.first_name,
+            self.user.last_name,
+            self.user.username,
+        )
 
     class Meta:
-        unique_together = ('user', 'project')
+        unique_together = ("user", "project")
         verbose_name_plural = "Project User Status"
         permissions = [
-            ('can_view_project_memberships',
-             'Can view project memberships via API'),
+            ("can_view_project_memberships", "Can view project memberships via API"),
         ]
 
 
 class ProjectUserJoinRequest(TimeStampedModel):
     """A model to track when a user requested to join a project."""
-    DEFAULT_REASON = 'This is the default join reason.'
+
+    DEFAULT_REASON = "This is the default join reason."
 
     project_user = models.ForeignKey(ProjectUser, on_delete=models.CASCADE)
     reason = models.TextField(
-            default=DEFAULT_REASON,
-            validators=[
-                MinLengthValidator(20, 'The project join reason must be > 20 characters.',)
-            ])
+        default=DEFAULT_REASON,
+        validators=[
+            MinLengthValidator(
+                20,
+                "The project join reason must be > 20 characters.",
+            )
+        ],
+    )
     host_user = models.ForeignKey(
-        User,
-        blank=True,
-        null=True,
-        on_delete=models.SET_NULL)
+        User, blank=True, null=True, on_delete=models.SET_NULL
+    )
 
     def __str__(self):
         user = self.project_user.user
         return (
-            f'{user.first_name} {user.last_name} ({user.username}) '
-            f'({self.created}) ({self.reason})')
+            f"{user.first_name} {user.last_name} ({user.username}) "
+            f"({self.created}) ({self.reason})"
+        )
 
     class Meta:
-        verbose_name = 'Project User Join Request'
-        verbose_name_plural = 'Project User Join Requests'
+        verbose_name = "Project User Join Request"
+        verbose_name_plural = "Project User Join Requests"
 
 
 class ProjectAllocationRequestStatusChoice(TimeStampedModel):
@@ -342,36 +368,27 @@ class ProjectAllocationRequestStatusChoice(TimeStampedModel):
         return self.name
 
     class Meta:
-        ordering = ['name', ]
+        ordering = [
+            "name",
+        ]
 
 
 def savio_project_request_state_schema():
     """Return the schema for the SavioProjectAllocationRequest.state
     field."""
     return {
-        'eligibility': {
-            'status': 'Pending',
-            'justification': '',
-            'timestamp': ''
-        },
-        'readiness': {
-            'status': 'Pending',
-            'justification': '',
-            'timestamp': ''
-        },
-        'setup': {
-            'status': 'Pending',
-            'name_change': {
-                'requested_name': '',
-                'final_name': '',
-                'justification': ''
+        "eligibility": {"status": "Pending", "justification": "", "timestamp": ""},
+        "readiness": {"status": "Pending", "justification": "", "timestamp": ""},
+        "setup": {
+            "status": "Pending",
+            "name_change": {
+                "requested_name": "",
+                "final_name": "",
+                "justification": "",
             },
-            'timestamp': ''
+            "timestamp": "",
         },
-        'other': {
-            'justification': '',
-            'timestamp': ''
-        }
+        "other": {"justification": "", "timestamp": ""},
     }
 
 
@@ -380,15 +397,15 @@ def savio_project_request_ica_extra_fields_schema():
     SavioProjectAllocationRequest.extra_fields for Instructional Compute
     Allowance (ICA) projects."""
     return {
-        'course_name': '',
-        'course_department': '',
-        'point_of_contact': '',
-        'num_students': 0,
-        'num_gsis': 0,
-        'manager_experience_description': '',
-        'student_experience_description': '',
-        'max_simultaneous_jobs': 0,
-        'max_simultaneous_nodes': 0,
+        "course_name": "",
+        "course_department": "",
+        "point_of_contact": "",
+        "num_students": 0,
+        "num_gsis": 0,
+        "manager_experience_description": "",
+        "student_experience_description": "",
+        "max_simultaneous_jobs": 0,
+        "max_simultaneous_nodes": 0,
     }
 
 
@@ -396,13 +413,10 @@ def savio_project_request_ica_state_schema():
     """Return the schema for the SavioProjectAllocationRequest.state
     field for Instructional Computing Allowance (ICA) projects."""
     schema = savio_project_request_state_schema()
-    schema['notified'] = {
-        'status': 'Pending',
-        'timestamp': ''
-    }
-    schema['memorandum_signed'] = {
-        'status': 'Pending',
-        'timestamp': '',
+    schema["notified"] = {"status": "Pending", "timestamp": ""}
+    schema["memorandum_signed"] = {
+        "status": "Pending",
+        "timestamp": "",
     }
     return schema
 
@@ -411,13 +425,10 @@ def savio_project_request_recharge_state_schema():
     """Return the schema for the SavioProjectAllocationRequest.state
     field for Recharge projects."""
     schema = savio_project_request_state_schema()
-    schema['notified'] = {
-        'status': 'Pending',
-        'timestamp': ''
-    }
-    schema['memorandum_signed'] = {
-        'status': 'Pending',
-        'timestamp': '',
+    schema["notified"] = {"status": "Pending", "timestamp": ""}
+    schema["memorandum_signed"] = {
+        "status": "Pending",
+        "timestamp": "",
     }
     return schema
 
@@ -427,11 +438,11 @@ def savio_project_request_recharge_extra_fields_schema():
     SavioProjectAllocationRequest.extra_fields field for Recharge
     projects."""
     return {
-        'num_service_units': '',
-        'campus_chartstring': '',
-        'chartstring_account_type': '',
-        'chartstring_contact_name': '',
-        'chartstring_contact_email': '',
+        "num_service_units": "",
+        "campus_chartstring": "",
+        "chartstring_account_type": "",
+        "chartstring_contact_name": "",
+        "chartstring_contact_email": "",
     }
 
 
@@ -439,56 +450,65 @@ def vector_project_request_state_schema():
     """Return the schema for the VectorProjectAllocationRequest.state
     field."""
     return {
-        'eligibility': {
-            'status': 'Pending',
-            'justification': '',
-            'timestamp': ''
-        },
-        'setup': {
-            'status': 'Pending',
-            'name_change': {
-                'requested_name': '',
-                'final_name': '',
-                'justification': ''
+        "eligibility": {"status": "Pending", "justification": "", "timestamp": ""},
+        "setup": {
+            "status": "Pending",
+            "name_change": {
+                "requested_name": "",
+                "final_name": "",
+                "justification": "",
             },
-            'timestamp': ''
-        }
+            "timestamp": "",
+        },
     }
 
 
 class SavioProjectAllocationRequest(TimeStampedModel):
     requester = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='savio_requester')
+        User, on_delete=models.CASCADE, related_name="savio_requester"
+    )
 
     # TODO: Retire allocation_type eventually.
     allocation_type = models.CharField(max_length=16, blank=True, null=True)
     computing_allowance = models.ForeignKey(
-        'resource.Resource', blank=True, null=True, on_delete=models.SET_NULL,
-        related_name='computing_allowance')
+        "resource.Resource",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="computing_allowance",
+    )
 
     allocation_period = models.ForeignKey(
-        'allocation.AllocationPeriod', blank=True, null=True,
-        on_delete=models.CASCADE, related_name='allocation_period')
+        "allocation.AllocationPeriod",
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="allocation_period",
+    )
 
-    pi = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='savio_pi')
+    pi = models.ForeignKey(User, on_delete=models.CASCADE, related_name="savio_pi")
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     pool = models.BooleanField(default=False)
     survey_answers = models.JSONField()
     status = models.ForeignKey(
-        ProjectAllocationRequestStatusChoice, on_delete=models.CASCADE,
-        verbose_name='Status')
+        ProjectAllocationRequestStatusChoice,
+        on_delete=models.CASCADE,
+        verbose_name="Status",
+    )
 
-    request_time = models.DateTimeField(
-        null=True, blank=True, default=timezone.now)
+    request_time = models.DateTimeField(null=True, blank=True, default=timezone.now)
     approval_time = models.DateTimeField(null=True, blank=True)
     completion_time = models.DateTimeField(null=True, blank=True)
 
     state = models.JSONField(default=savio_project_request_state_schema)
     extra_fields = models.JSONField(default=dict)
     billing_activity = models.ForeignKey(
-        'billing.BillingActivity', blank=True, null=True,
-        on_delete=models.SET_NULL, related_name='billing_activity')
+        "billing.BillingActivity",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="billing_activity",
+    )
 
     mou_file = DynamicFileField(upload_to=upload_to_func, null=True)
 
@@ -497,37 +517,36 @@ class SavioProjectAllocationRequest(TimeStampedModel):
     def denial_reason(self):
         """Return the reason why the request was denied, based on its
         'state' field."""
-        if self.status.name != 'Denied':
+        if self.status.name != "Denied":
             raise ValueError(
-                f'Provided request has unexpected status '
-                f'{self.status.name}.')
+                f"Provided request has unexpected status {self.status.name}."
+            )
 
         state = self.state
-        eligibility = state['eligibility']
-        readiness = state['readiness']
-        other = state['other']
+        eligibility = state["eligibility"]
+        readiness = state["readiness"]
+        other = state["other"]
 
-        DenialReason = namedtuple(
-            'DenialReason', 'category justification timestamp')
+        DenialReason = namedtuple("DenialReason", "category justification timestamp")
 
-        if other['timestamp']:
-            category = 'Other'
-            justification = other['justification']
-            timestamp = other['timestamp']
-        elif eligibility['status'] == 'Denied':
-            category = 'PI Ineligible'
-            justification = eligibility['justification']
-            timestamp = eligibility['timestamp']
-        elif readiness['status'] == 'Denied':
-            category = 'Readiness Criteria Unsatisfied'
-            justification = readiness['justification']
-            timestamp = readiness['timestamp']
+        if other["timestamp"]:
+            category = "Other"
+            justification = other["justification"]
+            timestamp = other["timestamp"]
+        elif eligibility["status"] == "Denied":
+            category = "PI Ineligible"
+            justification = eligibility["justification"]
+            timestamp = eligibility["timestamp"]
+        elif readiness["status"] == "Denied":
+            category = "Readiness Criteria Unsatisfied"
+            justification = readiness["justification"]
+            timestamp = readiness["timestamp"]
         else:
-            raise ValueError('Provided request has an unexpected state.')
+            raise ValueError("Provided request has an unexpected state.")
 
         return DenialReason(
-            category=category, justification=justification,
-            timestamp=timestamp)
+            category=category, justification=justification, timestamp=timestamp
+        )
 
     def latest_update_timestamp(self):
         """Return the latest timestamp stored in the request's 'state'
@@ -536,75 +555,72 @@ class SavioProjectAllocationRequest(TimeStampedModel):
         The expected values are ISO 8601 strings, or the empty string,
         so taking the maximum should provide the correct output."""
         state = self.state
-        max_timestamp = ''
+        max_timestamp = ""
         for field in state:
-            max_timestamp = max(
-                max_timestamp, state[field].get('timestamp', ''))
+            max_timestamp = max(max_timestamp, state[field].get("timestamp", ""))
         return max_timestamp
 
     def save(self, *args, **kwargs):
         # On creation, set the requested_name.
         if not self.pk:
-            self.state['setup']['name_change']['requested_name'] = \
-                self.project.name
+            self.state["setup"]["name_change"]["requested_name"] = self.project.name
         super().save(*args, **kwargs)
 
     def __str__(self):
-        name = (
-            f'{self.project.name} - {self.pi.first_name} {self.pi.last_name}')
+        name = f"{self.project.name} - {self.pi.first_name} {self.pi.last_name}"
         if self.pool:
-            name = f'{name} (Pooled)'
+            name = f"{name} (Pooled)"
         return name
 
     class Meta:
-        verbose_name = 'Savio Project Allocation Request'
-        verbose_name_plural = 'Savio Project Allocation Requests'
+        verbose_name = "Savio Project Allocation Request"
+        verbose_name_plural = "Savio Project Allocation Requests"
 
 
 class VectorProjectAllocationRequest(TimeStampedModel):
     requester = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='vector_requester')
+        User, on_delete=models.CASCADE, related_name="vector_requester"
+    )
 
-    pi = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='vector_pi')
+    pi = models.ForeignKey(User, on_delete=models.CASCADE, related_name="vector_pi")
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     status = models.ForeignKey(
-        ProjectAllocationRequestStatusChoice, on_delete=models.CASCADE,
-        verbose_name='Status')
+        ProjectAllocationRequestStatusChoice,
+        on_delete=models.CASCADE,
+        verbose_name="Status",
+    )
     state = models.JSONField(default=vector_project_request_state_schema)
     history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
         # On creation, set the requested_name.
         if not self.pk:
-            self.state['setup']['name_change']['requested_name'] = \
-                self.project.name
+            self.state["setup"]["name_change"]["requested_name"] = self.project.name
         super().save(*args, **kwargs)
 
     def denial_reason(self):
         """Return the reason why the request was denied, based on its
         'state' field."""
-        if self.status.name != 'Denied':
+        if self.status.name != "Denied":
             raise ValueError(
-                f'Provided request has unexpected status '
-                f'{self.status.name}.')
+                f"Provided request has unexpected status {self.status.name}."
+            )
 
         state = self.state
-        eligibility = state['eligibility']
+        eligibility = state["eligibility"]
 
-        DenialReason = namedtuple(
-            'DenialReason', 'category justification timestamp')
+        DenialReason = namedtuple("DenialReason", "category justification timestamp")
 
-        if eligibility['status'] == 'Denied':
-            category = 'Requester Ineligible'
-            justification = eligibility['justification']
-            timestamp = eligibility['timestamp']
+        if eligibility["status"] == "Denied":
+            category = "Requester Ineligible"
+            justification = eligibility["justification"]
+            timestamp = eligibility["timestamp"]
         else:
-            raise ValueError('Provided request has an unexpected state.')
+            raise ValueError("Provided request has an unexpected state.")
 
         return DenialReason(
-            category=category, justification=justification,
-            timestamp=timestamp)
+            category=category, justification=justification, timestamp=timestamp
+        )
 
     def latest_update_timestamp(self):
         """Return the latest timestamp stored in the request's 'state'
@@ -613,19 +629,17 @@ class VectorProjectAllocationRequest(TimeStampedModel):
         The expected values are ISO 8601 strings, or the empty string,
         so taking the maximum should provide the correct output."""
         state = self.state
-        max_timestamp = ''
+        max_timestamp = ""
         for field in state:
-            max_timestamp = max(
-                max_timestamp, state[field].get('timestamp', ''))
+            max_timestamp = max(max_timestamp, state[field].get("timestamp", ""))
         return max_timestamp
 
     def __str__(self):
-        return (
-            f'{self.project.name} - {self.pi.first_name} {self.pi.last_name}')
+        return f"{self.project.name} - {self.pi.first_name} {self.pi.last_name}"
 
     class Meta:
-        verbose_name = 'Vector Project Allocation Request'
-        verbose_name_plural = 'Vector Project Allocation Requests'
+        verbose_name = "Vector Project Allocation Request"
+        verbose_name_plural = "Vector Project Allocation Requests"
 
 
 class ProjectUserRemovalRequestStatusChoice(TimeStampedModel):
@@ -638,4 +652,6 @@ class ProjectUserRemovalRequest(TimeStampedModel):
     requester = models.ForeignKey(User, on_delete=models.CASCADE)
     request_time = models.DateTimeField(auto_now_add=True)
     completion_time = models.DateTimeField(null=True)
-    status = models.ForeignKey(ProjectUserRemovalRequestStatusChoice, on_delete=models.CASCADE, null=True)
+    status = models.ForeignKey(
+        ProjectUserRemovalRequestStatusChoice, on_delete=models.CASCADE, null=True
+    )

@@ -1,31 +1,49 @@
 import datetime
-import pytz
 from decimal import Decimal
-from bs4 import BeautifulSoup
 
+from bs4 import BeautifulSoup
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.urls import reverse
-
 from flags.state import flag_enabled
+import pytz
 
-from coldfront.api.statistics.utils import create_project_allocation, \
-    create_user_project_allocation, get_accounting_allocation_objects
-from coldfront.core.allocation.models import AllocationUserAttribute, \
-    AllocationAttributeType, \
-    allocation_renewal_request_state_schema, \
-    AllocationRenewalRequestStatusChoice, AllocationRenewalRequest, \
-    allocation_addition_request_state_schema, \
-    AllocationAdditionRequestStatusChoice, AllocationAdditionRequest, \
-    ClusterAccessRequest, ClusterAccessRequestStatusChoice
-from coldfront.core.project.models import ProjectStatusChoice, \
-    ProjectUserStatusChoice, ProjectUserRoleChoice, Project, ProjectUser, \
-    ProjectUserRemovalRequestStatusChoice, ProjectUserRemovalRequest, \
-    SavioProjectAllocationRequest, ProjectAllocationRequestStatusChoice, \
-    savio_project_request_state_schema, vector_project_request_state_schema, \
-    VectorProjectAllocationRequest, ProjectUserJoinRequest
-from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.api.statistics.utils import (
+    create_project_allocation,
+    create_user_project_allocation,
+    get_accounting_allocation_objects,
+)
+from coldfront.core.allocation.models import (
+    AllocationAdditionRequest,
+    AllocationAdditionRequestStatusChoice,
+    AllocationRenewalRequest,
+    AllocationRenewalRequestStatusChoice,
+    ClusterAccessRequest,
+    ClusterAccessRequestStatusChoice,
+    allocation_addition_request_state_schema,
+    allocation_renewal_request_state_schema,
+)
+from coldfront.core.project.models import (
+    Project,
+    ProjectAllocationRequestStatusChoice,
+    ProjectStatusChoice,
+    ProjectUser,
+    ProjectUserJoinRequest,
+    ProjectUserRemovalRequest,
+    ProjectUserRemovalRequestStatusChoice,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+    SavioProjectAllocationRequest,
+    VectorProjectAllocationRequest,
+    savio_project_request_state_schema,
+    vector_project_request_state_schema,
+)
+from coldfront.core.project.utils_.renewal_utils import (
+    get_current_allowance_year_period,
+)
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    ComputingAllowanceInterface,
+)
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.tests.test_base import TestBase
@@ -40,86 +58,95 @@ class TestRequestHubView(TestBase):
 
         # self.password = 'password'
 
-        self.pi = User.objects.create(
-            username='pi0', email='pi0@nonexistent.com')
+        self.pi = User.objects.create(username="pi0", email="pi0@nonexistent.com")
         user_profile = UserProfile.objects.get(user=self.pi)
         user_profile.is_pi = True
         user_profile.save()
 
         # create staff and admin users
         self.admin = User.objects.create(
-            username='admin', email='admin@nonexistent.com', is_superuser=True)
+            username="admin", email="admin@nonexistent.com", is_superuser=True
+        )
 
         self.staff = User.objects.create(
-            username='staff', email='staff@nonexistent.com', is_staff=True)
+            username="staff", email="staff@nonexistent.com", is_staff=True
+        )
 
         # Create two Users.
         for i in range(2):
             user = User.objects.create(
-                username=f'user{i}', email=f'user{i}@nonexistent.com')
+                username=f"user{i}", email=f"user{i}@nonexistent.com"
+            )
             user_profile = UserProfile.objects.get(user=user)
-            user_profile.cluster_uid = f'{i}'
+            user_profile.cluster_uid = f"{i}"
             user_profile.save()
-            setattr(self, f'user{i}', user)
-            setattr(self, f'user_profile{i}', user_profile)
+            setattr(self, f"user{i}", user)
+            setattr(self, f"user_profile{i}", user_profile)
 
         computing_allowance_interface = ComputingAllowanceInterface()
         computing_allowance = self.get_predominant_computing_allowance()
         project_name_prefix = computing_allowance_interface.code_from_name(
-            computing_allowance.name)
+            computing_allowance.name
+        )
 
         # Create Projects and associate Users with them.
-        project_status = ProjectStatusChoice.objects.get(name='Active')
-        project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Active')
-        user_role = ProjectUserRoleChoice.objects.get(name='User')
-        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
+        project_status = ProjectStatusChoice.objects.get(name="Active")
+        project_user_status = ProjectUserStatusChoice.objects.get(name="Active")
+        user_role = ProjectUserRoleChoice.objects.get(name="User")
+        manager_role = ProjectUserRoleChoice.objects.get(name="Manager")
         for i in range(2):
             # Create a Project and ProjectUsers.
-            project_name = f'{project_name_prefix}_project{i}'
-            project = Project.objects.create(
-                name=project_name, status=project_status)
-            setattr(self, 'project0', project)
+            project_name = f"{project_name_prefix}_project{i}"
+            project = Project.objects.create(name=project_name, status=project_status)
+            self.project0 = project
             proj_user = ProjectUser.objects.create(
-                user=self.user0, project=project,
-                role=user_role, status=project_user_status)
-            setattr(self, 'project0_user0', proj_user)
+                user=self.user0,
+                project=project,
+                role=user_role,
+                status=project_user_status,
+            )
+            self.project0_user0 = proj_user
             pi_proj_user = ProjectUser.objects.create(
-                user=self.pi, project=project, role=manager_role,
-                status=project_user_status)
-            setattr(self, 'project0_pi', pi_proj_user)
+                user=self.pi,
+                project=project,
+                role=manager_role,
+                status=project_user_status,
+            )
+            self.project0_pi = pi_proj_user
 
             # Create a compute allocation for the Project.
-            allocation = Decimal(f'{i + 1}000.00')
+            allocation = Decimal(f"{i + 1}000.00")
             create_project_allocation(project, allocation)
 
             # Create a compute allocation for each User on the Project.
-            create_user_project_allocation(
-                self.user0, project, allocation / 2)
+            create_user_project_allocation(self.user0, project, allocation / 2)
 
         # set passwords
         for user in User.objects.all():
             user.set_password(self.password)
             user.save()
 
-        self.url = reverse('request-hub')
-        self.admin_url = reverse('request-hub-admin')
+        self.url = reverse("request-hub")
+        self.admin_url = reverse("request-hub-admin")
 
-        self.requests = ['cluster access request',
-                         'project removal request',
-                         'new project request',
-                         'vector project request',
-                         'project join request',
-                         'project renewal request',
-                         'service unit purchase request']
+        self.requests = [
+            "cluster access request",
+            "project removal request",
+            "new project request",
+            "vector project request",
+            "project join request",
+            "project renewal request",
+            "service unit purchase request",
+        ]
 
     @staticmethod
     def format_date(d):
         """Return a string representing the given UTC datetime,
         converted to the display time zone, in the format
         '%b. %d, %Y'."""
-        return d.astimezone(
-            pytz.timezone(settings.DISPLAY_TIME_ZONE)).strftime('%b. %d, %Y')
+        return d.astimezone(pytz.timezone(settings.DISPLAY_TIME_ZONE)).strftime(
+            "%b. %d, %Y"
+        )
 
     def get_response(self, user, url):
         self.client.login(username=user.username, password=self.password)
@@ -127,26 +154,27 @@ class TestRequestHubView(TestBase):
 
     def assert_no_requests(self, user, url, exclude=None):
         response = self.get_response(user, url)
-        soup = BeautifulSoup(response.content, 'html.parser')
+        soup = BeautifulSoup(response.content, "html.parser")
         for request in self.requests:
-            if flag_enabled('LRC_ONLY'):
-                if request == 'vector project request':
+            if flag_enabled("LRC_ONLY"):
+                if request == "vector project request":
                     continue
             if request == exclude:
                 continue
-            divs = soup.find(id=f'{request.replace(" ", "_")}_section'). \
-                find_all('div', {'class': 'alert alert-info'})
+            divs = soup.find(id=f"{request.replace(' ', '_')}_section").find_all(
+                "div", {"class": "alert alert-info"}
+            )
             self.assertEqual(len(divs), 2)
             for i, div in enumerate(divs):
                 self.assertIn(request.title(), str(div))
-                self.assertIn('No pending' if i == 0 else 'No completed',
-                              str(div))
+                self.assertIn("No pending" if i == 0 else "No completed", str(div))
 
     def assert_pending_request_badge_shown(self, section, response, num_requests):
-        soup = BeautifulSoup(response.content, 'html.parser')
+        soup = BeautifulSoup(response.content, "html.parser")
         divs = soup.find(id=section)
-        notification = f'{num_requests} pending request' \
-                       f'{"s" if num_requests > 1 else ""}'
+        notification = (
+            f"{num_requests} pending request{'s' if num_requests > 1 else ''}"
+        )
         self.assertIn(notification, str(divs))
 
     def test_access(self):
@@ -173,12 +201,12 @@ class TestRequestHubView(TestBase):
             appear."""
             button_list = []
             for request in self.requests:
-                if flag_enabled('LRC_ONLY'):
-                    if request == 'vector project request':
+                if flag_enabled("LRC_ONLY"):
+                    if request == "vector project request":
                         continue
-                button_list.append(f'Go To {request.title()}s Main Page')
+                button_list.append(f"Go To {request.title()}s Main Page")
             response = self.get_response(user, self.url)
-            html = response.content.decode('utf-8')
+            html = response.content.decode("utf-8")
             func = self.assertIn if displayed else self.assertNotIn
 
             for button in button_list:
@@ -204,52 +232,46 @@ class TestRequestHubView(TestBase):
         """Testing that cluster access requests appear"""
 
         def assert_request_shown(user, url):
-            section = 'cluster_access_request_section'
+            section = "cluster_access_request_section"
             response = self.get_response(user, url)
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = BeautifulSoup(response.content, "html.parser")
 
             # notification badge is shown
-            self.assert_pending_request_badge_shown(
-                section, response, 1)
+            self.assert_pending_request_badge_shown(section, response, 1)
 
             # pending request is shown
-            pending_div = str(
-                soup.find(id=f'{section}_pending'))
+            pending_div = str(soup.find(id=f"{section}_pending"))
             self.assertIn(str(pending_req.pk), pending_div)
             self.assertIn(pending_req.allocation_user.user.email, pending_div)
             self.assertIn(pending_req.status.name, pending_div)
 
             # completed request is shown
-            completed_div = str(
-                soup.find(id=f'{section}_completed'))
+            completed_div = str(soup.find(id=f"{section}_completed"))
             self.assertIn(str(completed_req.pk), completed_div)
-            self.assertIn(completed_req.allocation_user.user.email,
-                          completed_div)
+            self.assertIn(completed_req.allocation_user.user.email, completed_div)
             self.assertIn(completed_req.status.name, completed_div)
 
         # creating two cluster access requests for user0
-        allocation_obj = \
-            get_accounting_allocation_objects(self.project0)
-        allocation_user_obj = \
-            get_accounting_allocation_objects(self.project0, self.user0)
+        allocation_obj = get_accounting_allocation_objects(self.project0)
+        allocation_user_obj = get_accounting_allocation_objects(
+            self.project0, self.user0
+        )
 
         kwargs = {
-            'allocation_user': allocation_user_obj.allocation_user,
-            'request_time': utc_now_offset_aware(),
+            "allocation_user": allocation_user_obj.allocation_user,
+            "request_time": utc_now_offset_aware(),
         }
 
-        pending_req = \
-            ClusterAccessRequest.objects.create(
-                status=ClusterAccessRequestStatusChoice.objects.get(
-                    name='Processing'),
-                **kwargs)
+        pending_req = ClusterAccessRequest.objects.create(
+            status=ClusterAccessRequestStatusChoice.objects.get(name="Processing"),
+            **kwargs,
+        )
 
-        completed_req = \
-            ClusterAccessRequest.objects.create(
-                status=ClusterAccessRequestStatusChoice.objects.get(
-                    name='Denied'),
-                completion_time=utc_now_offset_aware(),
-                **kwargs)
+        completed_req = ClusterAccessRequest.objects.create(
+            status=ClusterAccessRequestStatusChoice.objects.get(name="Denied"),
+            completion_time=utc_now_offset_aware(),
+            **kwargs,
+        )
 
         # assert the correct requests are shown
         assert_request_shown(self.user0, self.url)
@@ -257,9 +279,13 @@ class TestRequestHubView(TestBase):
         assert_request_shown(self.staff, self.admin_url)
 
         # other request sections should be empty
-        self.assert_no_requests(self.user0, self.url, exclude='cluster access request')
-        self.assert_no_requests(self.admin, self.admin_url, exclude='cluster access request')
-        self.assert_no_requests(self.staff, self.admin_url, exclude='cluster access request')
+        self.assert_no_requests(self.user0, self.url, exclude="cluster access request")
+        self.assert_no_requests(
+            self.admin, self.admin_url, exclude="cluster access request"
+        )
+        self.assert_no_requests(
+            self.staff, self.admin_url, exclude="cluster access request"
+        )
 
         # should not see any requests
         self.assert_no_requests(self.user1, self.url)
@@ -269,18 +295,17 @@ class TestRequestHubView(TestBase):
 
     def test_project_removal_requests(self):
         """Testing that project removal requests appear"""
+
         def assert_request_shown(user, url):
             response = self.get_response(user, url)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            section = 'project_removal_request_section'
+            soup = BeautifulSoup(response.content, "html.parser")
+            section = "project_removal_request_section"
 
             # notification badge is shown
-            self.assert_pending_request_badge_shown(
-                section, response, 1)
+            self.assert_pending_request_badge_shown(section, response, 1)
 
             # pending request is shown
-            pending_div = str(
-                soup.find(id=f'{section}_pending'))
+            pending_div = str(soup.find(id=f"{section}_pending"))
             self.assertIn(str(pending_req.pk), pending_div)
             self.assertIn(pending_req.project_user.user.username, pending_div)
             self.assertIn(pending_req.requester.username, pending_div)
@@ -288,31 +313,35 @@ class TestRequestHubView(TestBase):
             self.assertIn(pending_req.status.name, pending_div)
 
             # completed request is shown
-            completed_div = str(
-                soup.find(id=f'{section}_completed'))
+            completed_div = str(soup.find(id=f"{section}_completed"))
             self.assertIn(str(completed_req.pk), completed_div)
             self.assertIn(completed_req.project_user.user.username, completed_div)
             self.assertIn(completed_req.requester.username, completed_div)
-            self.assertIn(self.format_date(completed_req.completion_time), completed_div)
+            self.assertIn(
+                self.format_date(completed_req.completion_time), completed_div
+            )
             self.assertIn(completed_req.status.name, completed_div)
 
-        processing_status = \
-            ProjectUserRemovalRequestStatusChoice.objects.get(name='Processing')
-        complete_status = \
-            ProjectUserRemovalRequestStatusChoice.objects.get(name='Complete')
+        processing_status = ProjectUserRemovalRequestStatusChoice.objects.get(
+            name="Processing"
+        )
+        complete_status = ProjectUserRemovalRequestStatusChoice.objects.get(
+            name="Complete"
+        )
         current_time = utc_now_offset_aware()
 
         kwargs = {
-            'project_user': self.project0_user0,
-            'requester': self.project0_pi.user,
-            'request_time': current_time,
+            "project_user": self.project0_user0,
+            "requester": self.project0_pi.user,
+            "request_time": current_time,
         }
         pending_req = ProjectUserRemovalRequest.objects.create(
-            status=processing_status, **kwargs)
+            status=processing_status, **kwargs
+        )
         completed_req = ProjectUserRemovalRequest.objects.create(
             status=complete_status,
             completion_time=current_time + datetime.timedelta(days=4),
-            **kwargs
+            **kwargs,
         )
 
         # assert the correct requests are shown
@@ -322,10 +351,14 @@ class TestRequestHubView(TestBase):
         assert_request_shown(self.staff, self.admin_url)
 
         # other request sections should be empty
-        self.assert_no_requests(self.user0, self.url, exclude='project removal request')
-        self.assert_no_requests(self.pi, self.url, exclude='project removal request')
-        self.assert_no_requests(self.admin, self.admin_url, exclude='project removal request')
-        self.assert_no_requests(self.staff, self.admin_url, exclude='project removal request')
+        self.assert_no_requests(self.user0, self.url, exclude="project removal request")
+        self.assert_no_requests(self.pi, self.url, exclude="project removal request")
+        self.assert_no_requests(
+            self.admin, self.admin_url, exclude="project removal request"
+        )
+        self.assert_no_requests(
+            self.staff, self.admin_url, exclude="project removal request"
+        )
 
         # should not see any requests
         self.assert_no_requests(self.user1, self.url)
@@ -337,47 +370,46 @@ class TestRequestHubView(TestBase):
 
         def assert_request_shown(user, url):
             response = self.get_response(user, url)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            section = 'new_project_request_section'
+            soup = BeautifulSoup(response.content, "html.parser")
+            section = "new_project_request_section"
 
             # notification badge is shown
-            self.assert_pending_request_badge_shown(
-                section, response, 1)
+            self.assert_pending_request_badge_shown(section, response, 1)
 
             # pending request is shown
-            pending_div = str(
-                soup.find(id=f'{section}_pending'))
+            pending_div = str(soup.find(id=f"{section}_pending"))
             self.assertIn(str(pending_req.pk), pending_div)
             self.assertIn(pending_req.pi.email, pending_div)
             self.assertIn(pending_req.status.name, pending_div)
 
             # completed request is shown
-            completed_div = str(
-                soup.find(id=f'{section}_completed'))
+            completed_div = str(soup.find(id=f"{section}_completed"))
             self.assertIn(str(completed_req.pk), completed_div)
             self.assertIn(completed_req.pi.email, completed_div)
             self.assertIn(completed_req.status.name, completed_div)
 
         kwargs = {
-            'requester': self.user0,
-            'allocation_type': 'FCA',
-            'pi': self.pi,
-            'project': self.project0,
-            'pool': False,
-            'survey_answers': savio_project_request_state_schema()
+            "requester": self.user0,
+            "allocation_type": "FCA",
+            "pi": self.pi,
+            "project": self.project0,
+            "pool": False,
+            "survey_answers": savio_project_request_state_schema(),
         }
 
-        processing_status = \
-            ProjectAllocationRequestStatusChoice.objects.get(
-                name='Approved - Processing')
-        complete_status = \
-            ProjectAllocationRequestStatusChoice.objects.get(
-                name='Approved - Complete')
+        processing_status = ProjectAllocationRequestStatusChoice.objects.get(
+            name="Approved - Processing"
+        )
+        complete_status = ProjectAllocationRequestStatusChoice.objects.get(
+            name="Approved - Complete"
+        )
 
         pending_req = SavioProjectAllocationRequest.objects.create(
-            status=processing_status, **kwargs)
+            status=processing_status, **kwargs
+        )
         completed_req = SavioProjectAllocationRequest.objects.create(
-            status=complete_status, **kwargs)
+            status=complete_status, **kwargs
+        )
 
         # assert the correct requests are shown
         assert_request_shown(self.user0, self.url)
@@ -386,10 +418,14 @@ class TestRequestHubView(TestBase):
         assert_request_shown(self.staff, self.admin_url)
 
         # other request sections should be empty
-        self.assert_no_requests(self.user0, self.url, exclude='new project request')
-        self.assert_no_requests(self.pi, self.url, exclude='new project request')
-        self.assert_no_requests(self.admin, self.admin_url, exclude='new project request')
-        self.assert_no_requests(self.staff, self.admin_url, exclude='new project request')
+        self.assert_no_requests(self.user0, self.url, exclude="new project request")
+        self.assert_no_requests(self.pi, self.url, exclude="new project request")
+        self.assert_no_requests(
+            self.admin, self.admin_url, exclude="new project request"
+        )
+        self.assert_no_requests(
+            self.staff, self.admin_url, exclude="new project request"
+        )
 
         # should not see any requests
         self.assert_no_requests(self.user1, self.url)
@@ -398,21 +434,19 @@ class TestRequestHubView(TestBase):
 
     def test_vector_project_requests(self):
         """Testing that vector project requests appear"""
-        if flag_enabled('LRC_ONLY'):
+        if flag_enabled("LRC_ONLY"):
             return
 
         def assert_request_shown(user, url):
             response = self.get_response(user, url)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            section = 'vector_project_request_section'
+            soup = BeautifulSoup(response.content, "html.parser")
+            section = "vector_project_request_section"
 
             # notification badge is shown
-            self.assert_pending_request_badge_shown(
-                section, response, 1)
+            self.assert_pending_request_badge_shown(section, response, 1)
 
             # pending request is shown
-            pending_div = str(
-                soup.find(id=f'{section}_pending'))
+            pending_div = str(soup.find(id=f"{section}_pending"))
             self.assertIn(str(pending_req.pk), pending_div)
             self.assertIn(pending_req.requester.email, pending_div)
             self.assertIn(pending_req.pi.email, pending_div)
@@ -420,8 +454,7 @@ class TestRequestHubView(TestBase):
             self.assertIn(pending_req.status.name, pending_div)
 
             # completed request is shown
-            completed_div = str(
-                soup.find(id=f'{section}_completed'))
+            completed_div = str(soup.find(id=f"{section}_completed"))
             self.assertIn(str(completed_req.pk), completed_div)
             self.assertIn(completed_req.requester.email, completed_div)
             self.assertIn(completed_req.pi.email, completed_div)
@@ -429,23 +462,25 @@ class TestRequestHubView(TestBase):
             self.assertIn(completed_req.status.name, completed_div)
 
         kwargs = {
-            'requester': self.user0,
-            'pi': self.pi,
-            'project': self.project0,
-            'state': vector_project_request_state_schema()
+            "requester": self.user0,
+            "pi": self.pi,
+            "project": self.project0,
+            "state": vector_project_request_state_schema(),
         }
 
-        processing_status = \
-            ProjectAllocationRequestStatusChoice.objects.get(
-                name='Approved - Processing')
-        complete_status = \
-            ProjectAllocationRequestStatusChoice.objects.get(
-                name='Approved - Complete')
+        processing_status = ProjectAllocationRequestStatusChoice.objects.get(
+            name="Approved - Processing"
+        )
+        complete_status = ProjectAllocationRequestStatusChoice.objects.get(
+            name="Approved - Complete"
+        )
 
         pending_req = VectorProjectAllocationRequest.objects.create(
-            status=processing_status, **kwargs)
+            status=processing_status, **kwargs
+        )
         completed_req = VectorProjectAllocationRequest.objects.create(
-            status=complete_status, **kwargs)
+            status=complete_status, **kwargs
+        )
 
         # assert the correct requests are shown
         assert_request_shown(self.user0, self.url)
@@ -454,10 +489,14 @@ class TestRequestHubView(TestBase):
         assert_request_shown(self.staff, self.admin_url)
 
         # other request sections should be empty
-        self.assert_no_requests(self.user0, self.url, exclude='vector project request')
-        self.assert_no_requests(self.pi, self.url, exclude='vector project request')
-        self.assert_no_requests(self.admin, self.admin_url, exclude='vector project request')
-        self.assert_no_requests(self.staff, self.admin_url, exclude='vector project request')
+        self.assert_no_requests(self.user0, self.url, exclude="vector project request")
+        self.assert_no_requests(self.pi, self.url, exclude="vector project request")
+        self.assert_no_requests(
+            self.admin, self.admin_url, exclude="vector project request"
+        )
+        self.assert_no_requests(
+            self.staff, self.admin_url, exclude="vector project request"
+        )
 
         # should not see any requests
         self.assert_no_requests(self.user1, self.url)
@@ -469,56 +508,59 @@ class TestRequestHubView(TestBase):
 
         def assert_request_shown(user, url, status):
             response = self.get_response(user, url)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            section = 'project_join_request_section'
+            soup = BeautifulSoup(response.content, "html.parser")
+            section = "project_join_request_section"
 
             # pending request is shown
-            if status == 'both' or status == 'pending':
+            if status == "both" or status == "pending":
                 # notification badge is shown
-                self.assert_pending_request_badge_shown(
-                    section, response, 1)
+                self.assert_pending_request_badge_shown(section, response, 1)
 
-                pending_div = str(
-                    soup.find(id=f'{section}_pending'))
+                pending_div = str(soup.find(id=f"{section}_pending"))
                 self.assertIn(pending_req.project_user.user.username, pending_div)
                 self.assertIn(pending_req.project_user.project.name, pending_div)
                 self.assertIn(self.format_date(pending_req.created), pending_div)
                 self.assertIn(pending_req.reason, pending_div)
 
             # completed request is shown
-            if status == 'both' or status == 'completed':
-                completed_div = str(
-                    soup.find(id=f'{section}_completed'))
+            if status == "both" or status == "completed":
+                completed_div = str(soup.find(id=f"{section}_completed"))
                 self.assertIn(completed_req.project_user.user.username, completed_div)
                 self.assertIn(completed_req.project_user.project.name, completed_div)
                 self.assertIn(self.format_date(completed_req.created), completed_div)
                 self.assertIn(completed_req.reason, completed_div)
 
-        project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Pending - Add')
-        user_role = ProjectUserRoleChoice.objects.get(name='User')
+        project_user_status = ProjectUserStatusChoice.objects.get(name="Pending - Add")
+        user_role = ProjectUserRoleChoice.objects.get(name="User")
         pending_proj_user = ProjectUser.objects.create(
-            user=self.user1, project=self.project0,
-            role=user_role, status=project_user_status)
+            user=self.user1,
+            project=self.project0,
+            role=user_role,
+            status=project_user_status,
+        )
 
         pending_req = ProjectUserJoinRequest.objects.create(
-            project_user=pending_proj_user,
-            reason='Request hub testing.')
+            project_user=pending_proj_user, reason="Request hub testing."
+        )
         completed_req = ProjectUserJoinRequest.objects.create(
-            project_user=self.project0_user0,
-            reason='Request hub testing.')
+            project_user=self.project0_user0, reason="Request hub testing."
+        )
 
         # assert the correct requests are shown
-        assert_request_shown(self.user0, self.url, 'completed')
-        assert_request_shown(self.user1, self.url, 'pending')
-        assert_request_shown(self.admin, self.admin_url, 'both')
-        assert_request_shown(self.staff, self.admin_url, 'both')
+        assert_request_shown(self.user0, self.url, "completed")
+        assert_request_shown(self.user1, self.url, "pending")
+        assert_request_shown(self.admin, self.admin_url, "both")
+        assert_request_shown(self.staff, self.admin_url, "both")
 
         # other request sections should be empty
-        self.assert_no_requests(self.user0, self.url, exclude='project join request')
-        self.assert_no_requests(self.user1, self.url, exclude='project join request')
-        self.assert_no_requests(self.admin, self.admin_url, exclude='project join request')
-        self.assert_no_requests(self.staff, self.admin_url, exclude='project join request')
+        self.assert_no_requests(self.user0, self.url, exclude="project join request")
+        self.assert_no_requests(self.user1, self.url, exclude="project join request")
+        self.assert_no_requests(
+            self.admin, self.admin_url, exclude="project join request"
+        )
+        self.assert_no_requests(
+            self.staff, self.admin_url, exclude="project join request"
+        )
 
         # should not see any requests
         self.assert_no_requests(self.pi, self.url)
@@ -530,47 +572,48 @@ class TestRequestHubView(TestBase):
 
         def assert_request_shown(user, url):
             response = self.get_response(user, url)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            section = 'project_renewal_request_section'
+            soup = BeautifulSoup(response.content, "html.parser")
+            section = "project_renewal_request_section"
 
             # notification badge is shown
-            self.assert_pending_request_badge_shown(
-                section, response, 1)
+            self.assert_pending_request_badge_shown(section, response, 1)
 
             # pending request is shown
-            pending_div = str(
-                soup.find(id=f'{section}_pending'))
+            pending_div = str(soup.find(id=f"{section}_pending"))
             self.assertIn(str(pending_req.pk), pending_div)
             self.assertIn(pending_req.post_project.name, pending_div)
             self.assertIn(pending_req.pi.email, pending_div)
             self.assertIn(pending_req.status.name, pending_div)
 
             # completed request is shown
-            completed_div = str(
-                soup.find(id=f'{section}_completed'))
+            completed_div = str(soup.find(id=f"{section}_completed"))
             self.assertIn(str(completed_req.pk), completed_div)
             self.assertIn(completed_req.post_project.name, completed_div)
             self.assertIn(completed_req.pi.email, completed_div)
             self.assertIn(completed_req.status.name, completed_div)
 
         kwargs = {
-            'pi': self.pi,
-            'requester': self.user0,
-            'allocation_period': get_current_allowance_year_period(),
-            'pre_project': self.project0,
-            'post_project': self.project0,
-            'num_service_units': 1000,
-            'request_time': utc_now_offset_aware(),
-            'state': allocation_renewal_request_state_schema()
+            "pi": self.pi,
+            "requester": self.user0,
+            "allocation_period": get_current_allowance_year_period(),
+            "pre_project": self.project0,
+            "post_project": self.project0,
+            "num_service_units": 1000,
+            "request_time": utc_now_offset_aware(),
+            "state": allocation_renewal_request_state_schema(),
         }
         pending_status = AllocationRenewalRequestStatusChoice.objects.get(
-            name='Under Review')
+            name="Under Review"
+        )
         complete_status = AllocationRenewalRequestStatusChoice.objects.get(
-            name='Complete')
+            name="Complete"
+        )
         pending_req = AllocationRenewalRequest.objects.create(
-            status=pending_status, **kwargs)
+            status=pending_status, **kwargs
+        )
         completed_req = AllocationRenewalRequest.objects.create(
-            status=complete_status, **kwargs)
+            status=complete_status, **kwargs
+        )
 
         # assert the correct requests are shown
         assert_request_shown(self.user0, self.url)
@@ -579,10 +622,14 @@ class TestRequestHubView(TestBase):
         assert_request_shown(self.staff, self.admin_url)
 
         # other request sections should be empty
-        self.assert_no_requests(self.user0, self.url, exclude='project renewal request')
-        self.assert_no_requests(self.pi, self.url, exclude='project renewal request')
-        self.assert_no_requests(self.admin, self.admin_url, exclude='project renewal request')
-        self.assert_no_requests(self.staff, self.admin_url, exclude='project renewal request')
+        self.assert_no_requests(self.user0, self.url, exclude="project renewal request")
+        self.assert_no_requests(self.pi, self.url, exclude="project renewal request")
+        self.assert_no_requests(
+            self.admin, self.admin_url, exclude="project renewal request"
+        )
+        self.assert_no_requests(
+            self.staff, self.admin_url, exclude="project renewal request"
+        )
 
         # should not see any requests
         self.assert_no_requests(self.user1, self.url)
@@ -594,16 +641,14 @@ class TestRequestHubView(TestBase):
 
         def assert_request_shown(user, url):
             response = self.get_response(user, url)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            section = 'service_unit_purchase_request_section'
+            soup = BeautifulSoup(response.content, "html.parser")
+            section = "service_unit_purchase_request_section"
 
             # notification badge is shown
-            self.assert_pending_request_badge_shown(
-                section, response, 1)
+            self.assert_pending_request_badge_shown(section, response, 1)
 
             # pending request is shown
-            pending_div = str(
-                soup.find(id=f'{section}_pending'))
+            pending_div = str(soup.find(id=f"{section}_pending"))
             self.assertIn(str(pending_req.pk), pending_div)
             self.assertIn(pending_req.requester.email, pending_div)
             self.assertIn(pending_req.project.name, pending_div)
@@ -611,8 +656,7 @@ class TestRequestHubView(TestBase):
             self.assertIn(self.format_date(pending_req.modified), pending_div)
             self.assertIn(pending_req.status.name, pending_div)
 
-            completed_div = str(
-                soup.find(id=f'{section}_completed'))
+            completed_div = str(soup.find(id=f"{section}_completed"))
             self.assertIn(str(completed_req.pk), completed_div)
             self.assertIn(completed_req.requester.email, completed_div)
             self.assertIn(completed_req.project.name, completed_div)
@@ -622,23 +666,27 @@ class TestRequestHubView(TestBase):
 
         current_time = utc_now_offset_aware()
         kwargs = {
-            'requester': self.pi,
-            'project': self.project0,
-            'num_service_units': 1000,
-            'request_time': current_time,
-            'state': allocation_addition_request_state_schema()
+            "requester": self.pi,
+            "project": self.project0,
+            "num_service_units": 1000,
+            "request_time": current_time,
+            "state": allocation_addition_request_state_schema(),
         }
 
         pending_status = AllocationAdditionRequestStatusChoice.objects.get(
-            name='Under Review')
+            name="Under Review"
+        )
         complete_status = AllocationAdditionRequestStatusChoice.objects.get(
-            name='Complete')
+            name="Complete"
+        )
         pending_req = AllocationAdditionRequest.objects.create(
-            status=pending_status, **kwargs)
+            status=pending_status, **kwargs
+        )
         completed_req = AllocationAdditionRequest.objects.create(
             status=complete_status,
             completion_time=current_time + datetime.timedelta(days=4),
-            **kwargs)
+            **kwargs,
+        )
 
         # assert the correct requests are shown
         assert_request_shown(self.pi, self.url)
@@ -646,9 +694,15 @@ class TestRequestHubView(TestBase):
         assert_request_shown(self.staff, self.admin_url)
 
         # other request sections should be empty
-        self.assert_no_requests(self.pi, self.url, exclude='service unit purchase request')
-        self.assert_no_requests(self.admin, self.admin_url, exclude='service unit purchase request')
-        self.assert_no_requests(self.staff, self.admin_url, exclude='service unit purchase request')
+        self.assert_no_requests(
+            self.pi, self.url, exclude="service unit purchase request"
+        )
+        self.assert_no_requests(
+            self.admin, self.admin_url, exclude="service unit purchase request"
+        )
+        self.assert_no_requests(
+            self.staff, self.admin_url, exclude="service unit purchase request"
+        )
 
         # should not see any requests
         self.assert_no_requests(self.user0, self.url)

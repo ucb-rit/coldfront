@@ -4,12 +4,13 @@ from django.db.models import Q
 
 from coldfront.core.project.models import Project
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
 
-from .form_utils import PIUserChoiceField
+from .form_utils import PIUserChoiceField, StorageAmountChoiceField
 from .form_utils import ReviewDenyForm as FSARequestReviewDenyForm
 from .form_utils import ReviewStatusForm as FSARequestReviewStatusForm
-from .form_utils import StorageAmountChoiceField
 
 
 class FSARequestSearchForm(forms.Form):
@@ -18,31 +19,31 @@ class FSARequestSearchForm(forms.Form):
 
     # TODO: Read these from the database using ModelChoiceField.
     STATUS_CHOICES = (
-        ('', '-----'),
-        ('Approved - Complete', 'Approved - Complete'),
-        ('Approved - Queued', 'Approved - Queued'),
-        ('Approved - Processing', 'Approved - Processing'),
-        ('Denied', 'Denied'),
-        ('Under Review', 'Under Review'),
+        ("", "-----"),
+        ("Approved - Complete", "Approved - Complete"),
+        ("Approved - Queued", "Approved - Queued"),
+        ("Approved - Processing", "Approved - Processing"),
+        ("Denied", "Denied"),
+        ("Under Review", "Under Review"),
     )
 
     project = forms.ModelChoiceField(
-        label='Project',
+        label="Project",
         queryset=Project.objects.none(),
         required=False,
-        widget=forms.Select())
+        widget=forms.Select(),
+    )
 
     pi = PIUserChoiceField(
-        label='Principal Investigator',
+        label="Principal Investigator",
         queryset=User.objects.all(),
         required=False,
-        widget=forms.Select())
+        widget=forms.Select(),
+    )
 
     status = forms.ChoiceField(
-        label='Status',
-        choices=STATUS_CHOICES,
-        widget=forms.Select(),
-        required=False)
+        label="Status", choices=STATUS_CHOICES, widget=forms.Select(), required=False
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -50,45 +51,45 @@ class FSARequestSearchForm(forms.Form):
         computing_allowance_interface = get_computing_allowance_interface()
         prefix = computing_allowance_interface.code_from_name(BRCAllowances.FCA)
 
-        self.fields['project'].queryset = Project.objects.filter(
-            name__startswith=prefix)
+        self.fields["project"].queryset = Project.objects.filter(
+            name__startswith=prefix
+        )
 
         self._exclude_pi_choices()
 
     def _exclude_pi_choices(self):
         """Exclude certain Users from being displayed as PI options."""
         # Exclude any user that does not have an email address.
-        exclude_q = (
-            Q(email__isnull=True) | Q(email__exact=''))
-        self.fields['pi'].queryset = User.objects.exclude(exclude_q)
+        exclude_q = Q(email__isnull=True) | Q(email__exact="")
+        self.fields["pi"].queryset = User.objects.exclude(exclude_q)
 
 
 class FSARequestEditForm(forms.Form):
-
     storage_amount = StorageAmountChoiceField(
         required=True,
-        label='Updated Storage Amount',
-        help_text='Select the updated amount of storage.')
+        label="Updated Storage Amount",
+        help_text="Select the updated amount of storage.",
+    )
 
 
 # TODO
 class FSARequestReviewSetupForm(forms.Form):
-
     status = forms.ChoiceField(
         choices=(
-            ('', 'Select one.'),
-            ('Pending', 'Pending'),
-            ('Complete', 'Complete'),
+            ("", "Select one."),
+            ("Pending", "Pending"),
+            ("Complete", "Complete"),
         ),
         help_text='If you are unsure, leave the status as "Pending".',
-        label='Status',
-        required=True)
+        label="Status",
+        required=True,
+    )
 
 
 __all__ = [
-    'FSARequestEditForm',
-    'FSARequestReviewDenyForm',
-    'FSARequestReviewSetupForm',
-    'FSARequestReviewStatusForm',
-    'FSARequestSearchForm',
+    "FSARequestEditForm",
+    "FSARequestReviewDenyForm",
+    "FSARequestReviewSetupForm",
+    "FSARequestReviewStatusForm",
+    "FSARequestSearchForm",
 ]

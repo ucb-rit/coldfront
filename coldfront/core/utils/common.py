@@ -1,19 +1,16 @@
 import datetime
+from datetime import datetime
+from decimal import Decimal
+
 # import the logging library
 import logging
-import pytz
-
-from datetime import datetime
-
-from decimal import Decimal
+from urllib.parse import urljoin
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
-
 from django_q.models import Schedule
-
-from urllib.parse import urljoin
+import pytz
 
 # Get an instance of a logger
 
@@ -32,16 +29,15 @@ def import_from_settings(attr, *args):
             return getattr(settings, attr, args[0])
         return getattr(settings, attr)
     except AttributeError:
-        raise ImproperlyConfigured('Setting {0} not found'.format(attr))
+        raise ImproperlyConfigured(f"Setting {attr} not found")
 
 
 def get_domain_url(request):
-    return request.build_absolute_uri().replace(request.get_full_path(), '')
+    return request.build_absolute_uri().replace(request.get_full_path(), "")
 
 
 def project_detail_url(project):
-    return build_absolute_url(
-        reverse('project-detail', kwargs={'pk': project.pk}))
+    return build_absolute_url(reverse("project-detail", kwargs={"pk": project.pk}))
 
 
 class Echo:
@@ -55,13 +51,13 @@ class Echo:
 
 
 def su_login_callback(user):
-    """Only superusers are allowed to login as other users
-    """
+    """Only superusers are allowed to login as other users"""
     if user.is_active and user.is_superuser:
         return True
 
     logger.warn(
-        'User {} requested to login as another user but does not have permissions', user)
+        "User {} requested to login as another user but does not have permissions", user
+    )
     return False
 
 
@@ -70,9 +66,10 @@ def add_argparse_dry_run_argument(parser):
     to indicate that the corresponding action will display would-be
     updates instead of performing them."""
     parser.add_argument(
-        '--dry_run',
-        action='store_true',
-        help='Display updates without performing them.')
+        "--dry_run",
+        action="store_true",
+        help="Display updates without performing them.",
+    )
 
 
 def assert_obj_type(obj, expected_obj_type, null_allowed=False):
@@ -81,14 +78,14 @@ def assert_obj_type(obj, expected_obj_type, null_allowed=False):
     None."""
     if null_allowed and obj is None:
         return
-    message = f'{obj} does not have type {expected_obj_type}.'
+    message = f"{obj} does not have type {expected_obj_type}."
     assert isinstance(obj, expected_obj_type), message
 
 
 def build_absolute_url(path):
     """Return the given URL path (e.g., "/users/1/") with the domain
     (CENTER_BASE_URL) prepended."""
-    domain = import_from_settings('CENTER_BASE_URL')
+    domain = import_from_settings("CENTER_BASE_URL")
     return urljoin(domain, path)
 
 
@@ -100,15 +97,19 @@ def delete_scheduled_tasks(func, *args):
     if num_scheduled_tasks:
         scheduled_tasks.delete()
         message = (
-            f'Deleted {num_scheduled_tasks} scheduled tasks for running '
-            f'{func}({", ".join(str(arg) for arg in args)}).')
+            f"Deleted {num_scheduled_tasks} scheduled tasks for running "
+            f"{func}({', '.join(str(arg) for arg in args)})."
+        )
         logger.info(message)
 
 
 def display_time_zone_current_date():
     """Return the current date in settings.DISPLAY_TIME_ZONE."""
-    return utc_now_offset_aware().astimezone(
-        pytz.timezone(settings.DISPLAY_TIME_ZONE)).date()
+    return (
+        utc_now_offset_aware()
+        .astimezone(pytz.timezone(settings.DISPLAY_TIME_ZONE))
+        .date()
+    )
 
 
 def display_time_zone_date_to_utc_datetime(date):
@@ -127,11 +128,12 @@ def display_time_zone_date_to_utc_datetime(date):
 def format_date_month_name_day_year(date):
     """Return a string of the form "Month Day, Year" for the given
     date (i.e., June 1, 2022)."""
-    return date.strftime('%B %-d, %Y')
+    return date.strftime("%B %-d, %Y")
 
 
-def session_wizard_all_form_data(submitted_forms_list, step_num_to_data,
-                                 total_num_forms):
+def session_wizard_all_form_data(
+    submitted_forms_list, step_num_to_data, total_num_forms
+):
     """Given a list of user-submitted forms, a mapping from step number
     (str) to user-submitted data, and the total number of possible
     forms, return a list of dictionaries containing data for each step,
@@ -177,20 +179,24 @@ def validate_num_service_units(num_service_units):
     not conform to the expected constraints."""
     if not isinstance(num_service_units, Decimal):
         raise TypeError(
-            f'Number of service units {num_service_units} is not a Decimal.')
+            f"Number of service units {num_service_units} is not a Decimal."
+        )
     minimum, maximum = settings.ALLOCATION_MIN, settings.ALLOCATION_MAX
     if not (minimum <= num_service_units <= maximum):
         raise ValueError(
-            f'Number of service units {num_service_units} is not in the '
-            f'acceptable range [{minimum}, {maximum}].')
+            f"Number of service units {num_service_units} is not in the "
+            f"acceptable range [{minimum}, {maximum}]."
+        )
     num_service_units_tuple = num_service_units.as_tuple()
     max_digits = settings.DECIMAL_MAX_DIGITS
     if len(num_service_units_tuple.digits) > max_digits:
         raise ValueError(
-            f'Number of service units {num_service_units} has greater than '
-            f'{max_digits} digits.')
+            f"Number of service units {num_service_units} has greater than "
+            f"{max_digits} digits."
+        )
     max_places = settings.DECIMAL_MAX_PLACES
     if abs(num_service_units_tuple.exponent) > max_places:
         raise ValueError(
-            f'Number of service units {num_service_units} has greater than '
-            f'{max_places} decimal places.')
+            f"Number of service units {num_service_units} has greater than "
+            f"{max_places} decimal places."
+        )

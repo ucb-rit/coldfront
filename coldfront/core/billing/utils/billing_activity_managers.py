@@ -1,17 +1,17 @@
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 
-from coldfront.core.allocation.models import AllocationAttribute
-from coldfront.core.allocation.models import AllocationAttributeType
-from coldfront.core.allocation.models import AllocationUser
-from coldfront.core.allocation.models import AllocationUserAttribute
+from coldfront.core.allocation.models import (
+    AllocationAttribute,
+    AllocationAttributeType,
+    AllocationUser,
+    AllocationUserAttribute,
+)
 from coldfront.core.allocation.utils import get_project_compute_allocation
 from coldfront.core.billing.models import BillingActivity
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectUser
+from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.user.models import UserProfile
 
 
@@ -120,7 +120,8 @@ class ProjectBillingActivityManager(BillingActivityManager):
 
     def __init__(self, project):
         self._allocation_attribute_type = AllocationAttributeType.objects.get(
-            name='Billing Activity')
+            name="Billing Activity"
+        )
         self._allocation = get_project_compute_allocation(project)
         super().__init__(project)
 
@@ -132,7 +133,8 @@ class ProjectBillingActivityManager(BillingActivityManager):
         self._container = AllocationAttribute.objects.create(
             allocation_attribute_type=self._allocation_attribute_type,
             allocation=self._allocation,
-            value=value)
+            value=value,
+        )
 
     def _deserialize_billing_activity(self):
         return BillingActivity.objects.get(pk=int(self._container.value))
@@ -140,7 +142,8 @@ class ProjectBillingActivityManager(BillingActivityManager):
     def _get_container(self):
         return self._get_container_or_none(
             allocation_attribute_type=self._allocation_attribute_type,
-            allocation=self._allocation)
+            allocation=self._allocation,
+        )
 
     def _serialize_billing_activity(self, billing_activity):
         return str(billing_activity.pk)
@@ -159,22 +162,25 @@ class ProjectUserBillingActivityManager(BillingActivityManager):
 
     def __init__(self, project_user):
         self._allocation_attribute_type = AllocationAttributeType.objects.get(
-            name='Billing Activity')
+            name="Billing Activity"
+        )
         self._allocation = get_project_compute_allocation(project_user.project)
         self._allocation_user = AllocationUser.objects.get(
-            allocation=self._allocation, user=project_user.user)
+            allocation=self._allocation, user=project_user.user
+        )
         super().__init__(project_user)
 
     @property
     def entity_str(self):
-        return f'({self._entity.project.name}, {self._entity.user.username})'
+        return f"({self._entity.project.name}, {self._entity.user.username})"
 
     def _create_container_with_value(self, value):
         self._container = self.container_type.objects.create(
             allocation_attribute_type=self._allocation_attribute_type,
             allocation=self._allocation,
             allocation_user=self._allocation_user,
-            value=value)
+            value=value,
+        )
 
     def _deserialize_billing_activity(self):
         return BillingActivity.objects.get(pk=int(self._container.value))
@@ -183,7 +189,8 @@ class ProjectUserBillingActivityManager(BillingActivityManager):
         return self._get_container_or_none(
             allocation_attribute_type=self._allocation_attribute_type,
             allocation=self._allocation,
-            allocation_user=self._allocation_user)
+            allocation_user=self._allocation_user,
+        )
 
     def _serialize_billing_activity(self, billing_activity):
         return str(billing_activity.pk)
@@ -209,8 +216,8 @@ class UserBillingActivityManager(BillingActivityManager):
 
     def _create_container_with_value(self, value):
         self._container = self.container_type.objects.create(
-            user=self._entity,
-            billing_activity=value)
+            user=self._entity, billing_activity=value
+        )
 
     def _deserialize_billing_activity(self):
         return self._container.billing_activity

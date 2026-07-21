@@ -1,9 +1,7 @@
-from django.db import transaction
-
-from allauth.account.models import EmailAddress
-
 import logging
 
+from allauth.account.models import EmailAddress
+from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
@@ -58,28 +56,30 @@ def update_user_primary_email_address(email_address):
         - ValueError, if the provided address is not verified
     """
     if not isinstance(email_address, EmailAddress):
-        raise TypeError(f'Invalid EmailAddress {email_address}.')
+        raise TypeError(f"Invalid EmailAddress {email_address}.")
     if not email_address.verified:
-        raise ValueError(f'EmailAddress {email_address} is unverified.')
+        raise ValueError(f"EmailAddress {email_address} is unverified.")
 
     user = email_address.user
     with transaction.atomic():
-
         old_primary, created = EmailAddress.objects.get_or_create(
-            user=user, email=user.email.lower())
+            user=user, email=user.email.lower()
+        )
         if created:
             message = (
-                f'Created EmailAddress {old_primary.pk} for User {user.pk}\'s '
-                f'old primary address {old_primary.email}, which unexpectedly '
-                f'did not exist.')
+                f"Created EmailAddress {old_primary.pk} for User {user.pk}'s "
+                f"old primary address {old_primary.email}, which unexpectedly "
+                f"did not exist."
+            )
             logger.warning(message)
         old_primary.verified = True
         old_primary.primary = False
         old_primary.save()
 
         # TODO: Hide behind feature flag? This seems relevant no matter what.
-        for ea in EmailAddress.objects.filter(
-                user=user, primary=True).exclude(pk=email_address.pk):
+        for ea in EmailAddress.objects.filter(user=user, primary=True).exclude(
+            pk=email_address.pk
+        ):
             ea.primary = False
             ea.save()
 

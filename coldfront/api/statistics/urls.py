@@ -1,15 +1,14 @@
-from coldfront.api.statistics.views import can_submit_job
-from coldfront.api.statistics.views import JobViewSet
 from django.urls import re_path
 from rest_framework.routers import DefaultRouter
 
+from coldfront.api.statistics.views import JobViewSet, can_submit_job
 
 router = DefaultRouter()
-router.register(r'jobs', JobViewSet, basename='jobs')
+router.register(r"jobs", JobViewSet, basename="jobs")
 urlpatterns = router.urls
 
 can_submit_job_url = (
-    r'^can_submit_job/(?P<job_cost>.*)/(?P<user_id>.*)/'
-    r'(?P<account_id>.*)/$')
-urlpatterns.append(
-    re_path(can_submit_job_url, can_submit_job, name='can_submit_job'))
+    r"^can_submit_job/(?P<job_cost>.*)/(?P<user_id>.*)/"
+    r"(?P<account_id>.*)/$"
+)
+urlpatterns.append(re_path(can_submit_job_url, can_submit_job, name="can_submit_job"))

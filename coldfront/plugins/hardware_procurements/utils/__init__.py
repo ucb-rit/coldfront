@@ -1,25 +1,29 @@
-import hashlib
-
 from copy import deepcopy
 from datetime import date
+import hashlib
 
 from allauth.account.models import EmailAddress
 
-
 __all__ = [
-    'HardwareProcurement',
-    'UserInfoDict',
+    "HardwareProcurement",
+    "UserInfoDict",
 ]
 
 
-class HardwareProcurement(object):
+class HardwareProcurement:
     """An object representing a hardware procurement."""
 
     # Note: This object is intended to be stored in a cache, so it must
     # be serializable.
 
-    def __init__(self, pi_emails_str, hardware_type_str,
-                 initial_inquiry_date_str, copy_number, data):
+    def __init__(
+        self,
+        pi_emails_str,
+        hardware_type_str,
+        initial_inquiry_date_str,
+        copy_number,
+        data,
+    ):
         # A procurement could have multiple PIs, and thus multiple PI emails,
         # but for identification purposes, the given pi_emails_str should be a
         # str (e.g., one email, or a comma-separated list of emails).
@@ -42,8 +46,8 @@ class HardwareProcurement(object):
 
     def __lt__(self, other):
         """Sort on initial inquiry date."""
-        self_initial_inquiry_date = self['initial_inquiry_date'] or date.min
-        other_initial_inquiry_date = other['initial_inquiry_date'] or date.min
+        self_initial_inquiry_date = self["initial_inquiry_date"] or date.min
+        other_initial_inquiry_date = other["initial_inquiry_date"] or date.min
         return self_initial_inquiry_date < other_initial_inquiry_date
 
     def get_data(self):
@@ -68,27 +72,28 @@ class HardwareProcurement(object):
         additional `id` field set to the ID, and lists converted into
         comma-separated strs."""
         data = self.get_data()
-        data['id'] = self.get_id()
+        data["id"] = self.get_id()
         for key, value in data.items():
             if isinstance(value, list):
-                data[key] = ', '.join([str(v) for v in value])
+                data[key] = ", ".join([str(v) for v in value])
             elif value is None:
-                data[key] = ''
+                data[key] = ""
         return data
 
     def is_user_associated(self, user_data):
         """Given a UserInfoDict representing a user, return whether the
         user is associated with the procurement."""
-        user_emails = set(user_data['emails'])
-        pi_emails = set(self['pi_emails'])
-        poc_emails = set(self['poc_emails'])
+        user_emails = set(user_data["emails"])
+        pi_emails = set(self["pi_emails"])
+        poc_emails = set(self["poc_emails"])
         return bool(
-            set.intersection(user_emails, pi_emails) or
-            set.intersection(user_emails, poc_emails))
+            set.intersection(user_emails, pi_emails)
+            or set.intersection(user_emails, poc_emails)
+        )
 
     def _compute_id(self):
         """Compute a unique ID (str), based on identifying fields."""
-        object_bytes = str(self._get_identifying_fields()).encode('utf-8')
+        object_bytes = str(self._get_identifying_fields()).encode("utf-8")
         return hashlib.sha256(object_bytes).hexdigest()[:8]
 
     def _get_identifying_fields(self):
@@ -109,7 +114,8 @@ class HardwareProcurement(object):
             self._pi_emails_str,
             self._hardware_type_str,
             self._initial_inquiry_date_str,
-            self._copy_number)
+            self._copy_number,
+        )
 
 
 class UserInfoDict(dict):
@@ -120,20 +126,20 @@ class UserInfoDict(dict):
         super().__init__(*args, **kwargs)
         self.__dict__ = self
 
-        assert 'id' in self
-        assert 'emails' in self
-        assert 'first_name' in self
-        assert 'last_name' in self
+        assert "id" in self
+        assert "emails" in self
+        assert "first_name" in self
+        assert "last_name" in self
 
     @classmethod
     def from_user(cls, user):
         """Instantiate from the given User."""
         user_data = {
-            'id': user.id,
-            'emails': list(
-                EmailAddress.objects.filter(user=user).values_list(
-                    'email', flat=True)),
-            'first_name': user.first_name,
-            'last_name': user.last_name,
+            "id": user.id,
+            "emails": list(
+                EmailAddress.objects.filter(user=user).values_list("email", flat=True)
+            ),
+            "first_name": user.first_name,
+            "last_name": user.last_name,
         }
         return cls(**user_data)

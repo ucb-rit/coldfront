@@ -1,44 +1,43 @@
-from coldfront.core.allocation.models import AllocationPeriod
-from coldfront.core.utils.common import delete_scheduled_tasks
-from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
-from coldfront.core.utils.common import utc_now_offset_aware
+import logging
 
-from django.db.models.signals import post_delete
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 import django.dispatch
-
 from django_q.models import Schedule
 from django_q.tasks import schedule
 
-import logging
-
+from coldfront.core.allocation.models import AllocationPeriod
+from coldfront.core.utils.common import (
+    delete_scheduled_tasks,
+    display_time_zone_date_to_utc_datetime,
+    utc_now_offset_aware,
+)
 
 logger = logging.getLogger(__name__)
 
 
 @django.dispatch.receiver(post_save, sender=AllocationPeriod)
-def reschedule_allocation_renewal_scheduled_task(sender, instance, created,
-                                                 **kwargs):
+def reschedule_allocation_renewal_scheduled_task(sender, instance, created, **kwargs):
     """When an AllocationPeriod is saved, delete any scheduled tasks for
     starting it and schedule a new one if its start date is in the
     future."""
-    func = 'django.core.management.call_command'
-    args = ('start_allocation_period', instance.pk)
+    func = "django.core.management.call_command"
+    args = ("start_allocation_period", instance.pk)
 
     delete_scheduled_tasks(func, *args)
 
     next_run = display_time_zone_date_to_utc_datetime(instance.start_date)
     if next_run > utc_now_offset_aware():
         kwargs = {
-            'next_run': next_run,
-            'repeats': -1,
-            'schedule_type': Schedule.ONCE,
+            "next_run": next_run,
+            "repeats": -1,
+            "schedule_type": Schedule.ONCE,
         }
         schedule(func, *args, **kwargs)
 
         message = (
-            f'Scheduled a task for starting AllocationPeriod {instance.pk} to '
-            f'run at {next_run}.')
+            f"Scheduled a task for starting AllocationPeriod {instance.pk} to "
+            f"run at {next_run}."
+        )
         logger.info(message)
 
 
@@ -46,7 +45,7 @@ def reschedule_allocation_renewal_scheduled_task(sender, instance, created,
 def delete_allocation_renewal_scheduled_task(sender, instance, **kwargs):
     """When an AllocationPeriod is deleted, delete any scheduled tasks
     for starting it."""
-    func = 'django.core.management.call_command'
-    args = ('start_allocation_period', instance.pk)
+    func = "django.core.management.call_command"
+    args = ("start_allocation_period", instance.pk)
 
     delete_scheduled_tasks(func, *args)

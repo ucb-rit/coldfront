@@ -1,74 +1,80 @@
 from decimal import Decimal
 import logging
 
-from django.core.management.base import BaseCommand
-from django.core.management.base import CommandError
+from django.core.management.base import BaseCommand, CommandError
 
-from coldfront.core.allocation.models import AllocationPeriod
-from coldfront.core.allocation.models import AllocationRenewalRequest
+from coldfront.core.allocation.models import AllocationPeriod, AllocationRenewalRequest
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalApprovalRunner
-from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
-from coldfront.core.utils.common import add_argparse_dry_run_argument
-from coldfront.core.utils.common import display_time_zone_current_date
-from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
-from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.utils.email.email_strategy import DropEmailStrategy
-from coldfront.core.utils.email.email_strategy import SendEmailStrategy
-
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import (
+    ComputingAllowance,
+)
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
+from coldfront.core.utils.common import (
+    add_argparse_dry_run_argument,
+    display_time_zone_current_date,
+    display_time_zone_date_to_utc_datetime,
+    utc_now_offset_aware,
+)
+from coldfront.core.utils.email.email_strategy import (
+    DropEmailStrategy,
+    SendEmailStrategy,
+)
 
 """An admin command that approves AllocationRenewalRequests for a
 particular Allocation Period."""
 
 
 class Command(BaseCommand):
-
     help = (
-        'Approve AllocationRenewalRequests for the AllocationPeriod with the '
-        'given ID, for requests made before the start of the period and '
+        "Approve AllocationRenewalRequests for the AllocationPeriod with the "
+        "given ID, for requests made before the start of the period and "
         'currently "Under Review". Warning: Currently, this command is only '
-        'intended for use for renewal requests for yearly allowances.')
+        "intended for use for renewal requests for yearly allowances."
+    )
 
-    logger = logging.getLogger('coldfront.commands')
+    logger = logging.getLogger("coldfront.commands")
 
     def add_arguments(self, parser):
         parser.add_argument(
-            'allocation_period_id',
-            help='The ID of the AllocationPeriod.',
-            type=int)
+            "allocation_period_id", help="The ID of the AllocationPeriod.", type=int
+        )
         parser.add_argument(
-            '--skip_emails',
-            action='store_true',
+            "--skip_emails",
+            action="store_true",
             default=False,
-            help='Skip sending notification emails to requesters and PIs.')
+            help="Skip sending notification emails to requesters and PIs.",
+        )
         add_argparse_dry_run_argument(parser)
 
     def handle(self, *args, **options):
         """Approve eligible requests if the AllocationPeriod is valid
         and eligible."""
-        dry_run = options['dry_run']
-        skip_emails = options['skip_emails']
+        dry_run = options["dry_run"]
+        skip_emails = options["skip_emails"]
 
-        allocation_period_id = options['allocation_period_id']
+        allocation_period_id = options["allocation_period_id"]
         try:
-            allocation_period = AllocationPeriod.objects.get(
-                pk=allocation_period_id)
+            allocation_period = AllocationPeriod.objects.get(pk=allocation_period_id)
         except AllocationPeriod.DoesNotExist:
             raise CommandError(
-                f'AllocationPeriod {allocation_period_id} does not exist.')
+                f"AllocationPeriod {allocation_period_id} does not exist."
+            )
 
         # TODO: If supporting other allocation types, remove this check.
-        if not allocation_period.name.startswith('Allowance Year'):
+        if not allocation_period.name.startswith("Allowance Year"):
             raise CommandError(
-                f'AllocationPeriod {allocation_period_id} does not represent '
-                f'an allowance year.')
+                f"AllocationPeriod {allocation_period_id} does not represent "
+                f"an allowance year."
+            )
 
         current_date = display_time_zone_current_date()
         allocation_period_start_date = allocation_period.start_date
         if allocation_period_start_date <= current_date:
             raise CommandError(
-                f'AllocationPeriod {allocation_period_id} has already '
-                f'started.')
+                f"AllocationPeriod {allocation_period_id} has already started."
+            )
 
         computing_allowance_interface = get_computing_allowance_interface()
         yearly_allowances = []
@@ -79,48 +85,60 @@ class Command(BaseCommand):
                 yearly_allowances.append(allowance)
                 num_service_units_by_allowance_name[allowance.name] = Decimal(
                     computing_allowance_interface.service_units_from_name(
-                        allowance.name, is_timed=True,
-                        allocation_period=allocation_period))
+                        allowance.name,
+                        is_timed=True,
+                        allocation_period=allocation_period,
+                    )
+                )
 
         allocation_period_start_utc = display_time_zone_date_to_utc_datetime(
-            allocation_period_start_date)
+            allocation_period_start_date
+        )
         requests = AllocationRenewalRequest.objects.filter(
             allocation_period=allocation_period,
             computing_allowance__in=yearly_allowances,
-            status__name='Under Review',
-            request_time__lt=allocation_period_start_utc)
+            status__name="Under Review",
+            request_time__lt=allocation_period_start_utc,
+        )
 
         message_template = (
-            f'{{0}} AllocationRenewalRequest {{1}} for PI {{2}}, scheduling '
-            f'{{3}} to be granted to {{4}} on {allocation_period_start_date}')
+            f"{{0}} AllocationRenewalRequest {{1}} for PI {{2}}, scheduling "
+            f"{{3}} to be granted to {{4}} on {allocation_period_start_date}"
+        )
         if skip_emails:
-            message_template += '.'
+            message_template += "."
         else:
-            message_template += ', and emailing the requester and/or PI.'
+            message_template += ", and emailing the requester and/or PI."
         for request in requests:
             num_service_units = num_service_units_by_allowance_name[
-                request.computing_allowance.name]
+                request.computing_allowance.name
+            ]
             message_args = [
-                request.pk, request.pi, num_service_units,
-                request.post_project.name]
+                request.pk,
+                request.pi,
+                num_service_units,
+                request.post_project.name,
+            ]
             if dry_run:
-                phrase = 'Would automatically approve'
+                phrase = "Would automatically approve"
                 message = message_template.format(phrase, *message_args)
-                self.logger.info(f'DRY RUN: {message}')
+                self.logger.info(f"DRY RUN: {message}")
             else:
                 try:
                     self.update_request_state(request)
                     request.refresh_from_db()
                     self.approve_request(
-                        request, num_service_units, skip_emails=skip_emails)
+                        request, num_service_units, skip_emails=skip_emails
+                    )
                 except Exception as e:
                     message = (
-                        f'Failed to approve AllocationRenewalRequest '
-                        f'{request.pk}. Details:\n'
-                        f'{e}')
+                        f"Failed to approve AllocationRenewalRequest "
+                        f"{request.pk}. Details:\n"
+                        f"{e}"
+                    )
                     self.logger.error(message)
                 else:
-                    phrase = 'Automatically approved'
+                    phrase = "Automatically approved"
                     message = message_template.format(phrase, *message_args)
                 self.logger.info(message)
 
@@ -129,17 +147,17 @@ class Command(BaseCommand):
         """Fill in the 'Eligibility' field in the given request's
         state."""
         state = request.state
-        eligibility = state['eligibility']
-        eligibility['status'] = 'Approved'
-        eligibility['timestamp'] = utc_now_offset_aware().isoformat()
+        eligibility = state["eligibility"]
+        eligibility["status"] = "Approved"
+        eligibility["timestamp"] = utc_now_offset_aware().isoformat()
         request.save()
 
     @staticmethod
     def approve_request(request, num_service_units, skip_emails=False):
         """Instantiate and run the approval runner for the given request
         and number of service units. Optionally skip sending email."""
-        email_strategy = (
-            DropEmailStrategy() if skip_emails else SendEmailStrategy())
+        email_strategy = DropEmailStrategy() if skip_emails else SendEmailStrategy()
         approval_runner = AllocationRenewalApprovalRunner(
-            request, num_service_units, email_strategy=email_strategy)
+            request, num_service_units, email_strategy=email_strategy
+        )
         approval_runner.run()

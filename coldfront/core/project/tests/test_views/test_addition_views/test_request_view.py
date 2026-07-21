@@ -1,29 +1,35 @@
-from coldfront.core.allocation.models import AllocationAdditionRequest
-from coldfront.core.allocation.models import AllocationAdditionRequestStatusChoice
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserRoleChoice
-from coldfront.core.project.models import ProjectUserStatusChoice
-from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
-from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.utils.tests.test_base import enable_deployment
-from coldfront.core.utils.tests.test_base import TestBase
-
 from decimal import Decimal
+from http import HTTPStatus
+
 from django.conf import settings
-from django.contrib.auth.models import Permission
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
 
-from http import HTTPStatus
+from coldfront.core.allocation.models import (
+    AllocationAdditionRequest,
+    AllocationAdditionRequestStatusChoice,
+)
+from coldfront.core.project.models import (
+    ProjectUser,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import (
+    ComputingAllowance,
+)
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    ComputingAllowanceInterface,
+)
+from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.utils.tests.test_base import TestBase, enable_deployment
 
 
 class TestAllocationAdditionRequestView(TestBase):
     """A class for testing AllocationAdditionRequestView."""
 
-    @enable_deployment('BRC')
+    @enable_deployment("BRC")
     def setUp(self):
         """Set up test data."""
         super().setUp()
@@ -35,15 +41,15 @@ class TestAllocationAdditionRequestView(TestBase):
     def project_detail_url(pk):
         """Return the URL to the detail view for the Project with the
         given primary key."""
-        return reverse('project-detail', kwargs={'pk': pk})
+        return reverse("project-detail", kwargs={"pk": pk})
 
     @staticmethod
     def request_view_url(pk):
         """Return the URL to the request view for the Project with the
         given primary key."""
-        return reverse('purchase-service-units', kwargs={'pk': pk})
+        return reverse("purchase-service-units", kwargs={"pk": pk})
 
-    @enable_deployment('BRC')
+    @enable_deployment("BRC")
     def test_ineligible_projects_redirected(self):
         """Test that requests for ineligible Projects are redirected
         back to the Project's Detail view."""
@@ -51,9 +57,11 @@ class TestAllocationAdditionRequestView(TestBase):
         for allowance in computing_allowance_interface.allowances():
             wrapper = ComputingAllowance(allowance)
             project_name_prefix = computing_allowance_interface.code_from_name(
-                wrapper.get_name())
+                wrapper.get_name()
+            )
             project = self.create_active_project_with_pi(
-                f'{project_name_prefix}project', self.user)
+                f"{project_name_prefix}project", self.user
+            )
             url = self.request_view_url(project.pk)
             response = self.client.get(url)
             messages = self.get_message_strings(response)
@@ -61,21 +69,19 @@ class TestAllocationAdditionRequestView(TestBase):
                 self.assertEqual(response.status_code, HTTPStatus.OK)
                 self.assertFalse(messages)
             else:
-                self.assertRedirects(
-                    response, self.project_detail_url(project.pk))
+                self.assertRedirects(response, self.project_detail_url(project.pk))
                 self.assertEqual(len(messages), 1)
-                self.assertIn('ineligible', messages[0])
+                self.assertIn("ineligible", messages[0])
 
-    @enable_deployment('BRC')
+    @enable_deployment("BRC")
     def test_permissions_get(self):
         """Test that the correct users have permissions to perform GET
         requests."""
-        project = self.create_active_project_with_pi('ac_project', self.user)
+        project = self.create_active_project_with_pi("ac_project", self.user)
         url = self.request_view_url(project.pk)
 
         project_user = ProjectUser.objects.get(project=project, user=self.user)
-        project_user.status = ProjectUserStatusChoice.objects.get(
-            name='Removed')
+        project_user.status = ProjectUserStatusChoice.objects.get(name="Removed")
         project_user.save()
 
         # Superusers should not have access.
@@ -94,39 +100,38 @@ class TestAllocationAdditionRequestView(TestBase):
                 project_user.save()
                 for signed_status in (True, False):
                     self.user.userprofile.access_agreement_signed_date = (
-                        utc_now_offset_aware() if signed_status else None)
+                        utc_now_offset_aware() if signed_status else None
+                    )
                     self.user.userprofile.save()
                     has_access = (
-                        status.name == 'Active' and
-                        role.name in ('Principal Investigator', 'Manager') and
-                        signed_status)
-                    self.assert_has_access(
-                        url, self.user, has_access=has_access)
+                        status.name == "Active"
+                        and role.name in ("Principal Investigator", "Manager")
+                        and signed_status
+                    )
+                    self.assert_has_access(url, self.user, has_access=has_access)
 
         project_user.delete()
 
         # Users with the permission to view AllocationAdditionRequests should
         # not have access. (Re-fetch the user to avoid permission caching.)
-        permission = Permission.objects.get(
-            codename='view_allocationadditionrequest')
+        permission = Permission.objects.get(codename="view_allocationadditionrequest")
         self.user.user_permissions.add(permission)
         self.user = User.objects.get(pk=self.user.pk)
-        self.assertTrue(
-            self.user.has_perm(f'allocation.{permission.codename}'))
+        self.assertTrue(self.user.has_perm(f"allocation.{permission.codename}"))
         self.assert_has_access(url, self.user, has_access=False)
 
-    @enable_deployment('BRC')
+    @enable_deployment("BRC")
     def test_project_with_under_review_request_redirected(self):
         """Test that, if the Project already has an 'Under Review'
         request, the request is redirected."""
-        project = self.create_active_project_with_pi('ac_project', self.user)
+        project = self.create_active_project_with_pi("ac_project", self.user)
 
         request = AllocationAdditionRequest.objects.create(
             requester=self.user,
             project=project,
-            status=AllocationAdditionRequestStatusChoice.objects.get(
-                name='Complete'),
-            num_service_units=Decimal('1000.00'))
+            status=AllocationAdditionRequestStatusChoice.objects.get(name="Complete"),
+            num_service_units=Decimal("1000.00"),
+        )
 
         url = self.request_view_url(project.pk)
 
@@ -136,22 +141,24 @@ class TestAllocationAdditionRequestView(TestBase):
 
             response = self.client.get(url)
 
-            if status.name == 'Under Review':
-                self.assertRedirects(
-                    response, self.project_detail_url(project.pk))
+            if status.name == "Under Review":
+                self.assertRedirects(response, self.project_detail_url(project.pk))
             else:
                 self.assertEqual(response.status_code, HTTPStatus.OK)
-                self.assertContains(response, 'Submit')
+                self.assertContains(response, "Submit")
 
-    @enable_deployment('BRC')
+    @enable_deployment("BRC")
     @override_settings(
         EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
-            'service_units_purchase_requests': {
-                'created': ['admin0@example.com', 'admin1@example.com']}})
+            "service_units_purchase_requests": {
+                "created": ["admin0@example.com", "admin1@example.com"]
+            }
+        }
+    )
     def test_valid_post(self):
         """Test that a valid POST request creates an
         AllocationAdditionRequest and sends a notification email."""
-        project = self.create_active_project_with_pi('ac_project', self.user)
+        project = self.create_active_project_with_pi("ac_project", self.user)
         url = self.request_view_url(project.pk)
 
         self.assertEqual(AllocationAdditionRequest.objects.count(), 0)
@@ -159,11 +166,11 @@ class TestAllocationAdditionRequestView(TestBase):
         pre_time = utc_now_offset_aware()
 
         data = {
-            'num_service_units': 100,
-            'campus_chartstring': 'Campus Chartstring',
-            'chartstring_account_type': 'Chartstring Account Type',
-            'chartstring_contact_name': 'Chartstring Account Name',
-            'chartstring_contact_email': 'charstring_contact@email.com',
+            "num_service_units": 100,
+            "campus_chartstring": "Campus Chartstring",
+            "chartstring_account_type": "Chartstring Account Type",
+            "chartstring_contact_name": "Chartstring Account Name",
+            "chartstring_contact_email": "charstring_contact@email.com",
         }
         response = self.client.post(url, data)
 
@@ -172,16 +179,15 @@ class TestAllocationAdditionRequestView(TestBase):
         self.assertRedirects(response, self.project_detail_url(project.pk))
         messages = self.get_message_strings(response)
         self.assertEqual(len(messages), 1)
-        self.assertIn('Thank you', messages[0])
+        self.assertIn("Thank you", messages[0])
 
         # A request should have been created.
         self.assertEqual(AllocationAdditionRequest.objects.count(), 1)
         request = AllocationAdditionRequest.objects.first()
         self.assertEqual(request.requester, self.user)
         self.assertEqual(request.project, project)
-        self.assertEqual(request.status.name, 'Under Review')
-        self.assertEqual(
-            request.num_service_units, Decimal(data['num_service_units']))
+        self.assertEqual(request.status.name, "Under Review")
+        self.assertEqual(request.num_service_units, Decimal(data["num_service_units"]))
         self.assertTrue(pre_time <= request.request_time <= post_time)
         extra_fields = request.extra_fields
         self.assertEqual(len(extra_fields), len(data))
@@ -192,16 +198,14 @@ class TestAllocationAdditionRequestView(TestBase):
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
 
-        self.assertIn('New Service Units Purchase Request', email.subject)
+        self.assertIn("New Service Units Purchase Request", email.subject)
 
         expected_body_snippets = [
-            'There is a new request to purchase',
+            "There is a new request to purchase",
             project.name,
             self.user.first_name,
             self.user.last_name,
-            reverse(
-                'service-units-purchase-request-detail',
-                kwargs={'pk': request.pk}),
+            reverse("service-units-purchase-request-detail", kwargs={"pk": request.pk}),
         ]
         for expected_body_snippet in expected_body_snippets:
             self.assertIn(expected_body_snippet, email.body)
@@ -209,5 +213,5 @@ class TestAllocationAdditionRequestView(TestBase):
         expected_from_email = settings.EMAIL_SENDER
         self.assertEqual(expected_from_email, email.from_email)
 
-        expected_to = ['admin0@example.com', 'admin1@example.com']
+        expected_to = ["admin0@example.com", "admin1@example.com"]
         self.assertEqual(expected_to, sorted(email.to))

@@ -1,29 +1,31 @@
 from django.contrib.auth.models import User
-
 from flags.state import flag_enabled
 from rest_framework import serializers
 
-from coldfront.core.user.models import IdentityLinkingRequest
-from coldfront.core.user.models import IdentityLinkingRequestStatusChoice
-from coldfront.core.user.models import UserProfile
-from coldfront.core.user.utils_.host_user_utils import host_user_lbl_email as host_user_lbl_email_method
+from coldfront.core.user.models import (
+    IdentityLinkingRequest,
+    IdentityLinkingRequestStatusChoice,
+    UserProfile,
+)
+from coldfront.core.user.utils_.host_user_utils import (
+    host_user_lbl_email as host_user_lbl_email_method,
+)
 
 
 class IdentityLinkingRequestSerializer(serializers.ModelSerializer):
     """A serializer for the IdentityLinkingRequest model."""
 
     status = serializers.SlugRelatedField(
-        slug_field='name',
-        queryset=IdentityLinkingRequestStatusChoice.objects.all())
+        slug_field="name", queryset=IdentityLinkingRequestStatusChoice.objects.all()
+    )
 
     class Meta:
         model = IdentityLinkingRequest
-        fields = (
-            'id', 'requester', 'request_time', 'completion_time', 'status')
+        fields = ("id", "requester", "request_time", "completion_time", "status")
         extra_kwargs = {
-            'id': {'read_only': True},
-            'requester': {'read_only': True},
-            'request_time': {'read_only': True},
+            "id": {"read_only": True},
+            "requester": {"read_only": True},
+            "request_time": {"read_only": True},
         }
 
 
@@ -36,16 +38,23 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = (
-            'id', 'user', 'is_pi', 'middle_name', 'cluster_uid',
-            'access_agreement_signed_date', 'billing_activity',
-            'host_user', 'host_user_lbl_email')
+            "id",
+            "user",
+            "is_pi",
+            "middle_name",
+            "cluster_uid",
+            "access_agreement_signed_date",
+            "billing_activity",
+            "host_user",
+            "host_user_lbl_email",
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not flag_enabled('LRC_ONLY'):
-            self.fields.pop('billing_activity')
-            self.fields.pop('host_user')
-            self.fields.pop('host_user_lbl_email')
+        if not flag_enabled("LRC_ONLY"):
+            self.fields.pop("billing_activity")
+            self.fields.pop("host_user")
+            self.fields.pop("host_user_lbl_email")
 
     @staticmethod
     def get_billing_activity(obj):
@@ -69,8 +78,14 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'username', 'first_name', 'last_name', 'email',
-            'last_login', 'profile')
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+            "last_login",
+            "profile",
+        )
 
     @staticmethod
     def get_profile(obj):

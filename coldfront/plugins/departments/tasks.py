@@ -2,7 +2,6 @@ from django.contrib.auth.models import User
 
 from coldfront.plugins.departments.utils.queries import UserDepartmentUpdater
 
-
 """Functions designed to be run as Django-Q tasks."""
 
 

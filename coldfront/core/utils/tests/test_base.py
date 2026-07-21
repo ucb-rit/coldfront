@@ -10,42 +10,42 @@ from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
-from django.test import Client
-from django.test import override_settings
-from django.test import TestCase
-from django.test import TransactionTestCase
+from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.test.utils import TestContextDecorator
 from django.urls import reverse
+from flags.state import enable_flag, flag_enabled
 
-from flags.state import enable_flag
-from flags.state import flag_enabled
-
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.models import AllocationStatusChoice
+from coldfront.core.allocation.models import Allocation, AllocationStatusChoice
 from coldfront.core.allocation.utils import get_project_compute_resource_name
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectStatusChoice
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserRoleChoice
-from coldfront.core.project.models import ProjectUserStatusChoice
+from coldfront.core.project.models import (
+    Project,
+    ProjectStatusChoice,
+    ProjectUser,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
 from coldfront.core.resource.models import Resource
-from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
+from coldfront.core.resource.utils_.allowance_utils.constants import (
+    BRCAllowances,
+    LRCAllowances,
+)
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
 from coldfront.core.utils.common import utc_now_offset_aware
 
 
-class BaseTestMixin(object):
+class BaseTestMixin:
     """A mixin with useful methods for testing the application, to be
     incorporated into a class inheriting from e.g., TestCase."""
 
     # A password for convenient reference.
-    password = 'password'
+    password = "password"
 
     # The deployment whose setup commands are run for this base class.
     # Subclasses (e.g. LRCTestBase) override this to run a different
     # deployment's setup commands.
-    _deployment_name = 'BRC'
+    _deployment_name = "BRC"
 
     @classmethod
     def setUpClass(cls):
@@ -71,8 +71,7 @@ class BaseTestMixin(object):
         """Tear down test data."""
         get_computing_allowance_interface.cache_clear()
 
-    def assert_has_access(self, url, user, has_access=True,
-                          expected_messages=[]):
+    def assert_has_access(self, url, user, has_access=True, expected_messages=[]):
         """Assert that the given user has or does not have access to the
         given URL. Optionally, assert that the given messages were sent
         to the user.
@@ -90,70 +89,69 @@ class BaseTestMixin(object):
         self.assertEqual(response.status_code, status_code)
         self.client.logout()
 
-    def assert_redirects_to_login(self, response, next_url=None,
-                                  target_status_code=301):
+    def assert_redirects_to_login(
+        self, response, next_url=None, target_status_code=301
+    ):
         """Assert that the response involves being redirected to the
         login view."""
         # Remove the trailing slash.
-        login_url = reverse('login')
+        login_url = reverse("login")
         if next_url:
-            login_url = login_url[:-1] + f'?next={next_url}'
+            login_url = login_url[:-1] + f"?next={next_url}"
         self.assertRedirects(
-            response, login_url, status_code=302,
-            target_status_code=target_status_code)
+            response, login_url, status_code=302, target_status_code=target_status_code
+        )
 
     @staticmethod
     def call_setup_commands():
         """Call the management commands that load required database
         objects."""
-        enable_flag('SERVICE_UNITS_PURCHASABLE', create_boolean_condition=True)
+        enable_flag("SERVICE_UNITS_PURCHASABLE", create_boolean_condition=True)
 
         out, err = StringIO(), StringIO()
         commands = [
-            'add_resource_defaults',
-            'add_allocation_defaults',
-            'add_accounting_defaults',
-            'create_allocation_periods',
-            'add_allowance_defaults',
+            "add_resource_defaults",
+            "add_allocation_defaults",
+            "add_accounting_defaults",
+            "create_allocation_periods",
+            "add_allowance_defaults",
             # This command calls 'print', whose output must be suppressed.
-            'import_field_of_science_data',
-            'add_default_project_choices',
-            'create_staff_group',
-            'add_default_user_choices',
-            'add_directory_defaults'
+            "import_field_of_science_data",
+            "add_default_project_choices",
+            "create_staff_group",
+            "add_default_user_choices",
+            "add_directory_defaults",
         ]
-        sys.stdout = open(os.devnull, 'w')
+        sys.stdout = open(os.devnull, "w")
         for command in commands:
             call_command(command, stdout=out, stderr=err)
         sys.stdout = sys.__stdout__
 
     @staticmethod
-    def create_active_project_with_pi(project_name, pi_user,
-                                      create_compute_allocation=False):
+    def create_active_project_with_pi(
+        project_name, pi_user, create_compute_allocation=False
+    ):
         """Create an 'Active' Project with the given name and the given
         user as its PI. Return the Project. Optionally create an
         associated active compute Allocation."""
-        active_project_status = ProjectStatusChoice.objects.get(name='Active')
+        active_project_status = ProjectStatusChoice.objects.get(name="Active")
         project = Project.objects.create(
-            name=project_name,
-            title=project_name,
-            status=active_project_status)
-        pi_role = ProjectUserRoleChoice.objects.get(
-            name='Principal Investigator')
-        active_project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Active')
+            name=project_name, title=project_name, status=active_project_status
+        )
+        pi_role = ProjectUserRoleChoice.objects.get(name="Principal Investigator")
+        active_project_user_status = ProjectUserStatusChoice.objects.get(name="Active")
         ProjectUser.objects.create(
             project=project,
             role=pi_role,
             status=active_project_user_status,
-            user=pi_user)
+            user=pi_user,
+        )
 
         if create_compute_allocation:
             resource_name = get_project_compute_resource_name(project)
             compute_resource = Resource.objects.get(name=resource_name)
-            status = AllocationStatusChoice.objects.get(name='Active')
-            allocation = Allocation.objects.create(
-                project=project, status=status)
+            status = AllocationStatusChoice.objects.get(name="Active")
+            allocation = Allocation.objects.create(project=project, status=status)
             allocation.resources.add(compute_resource)
 
         return project
@@ -162,10 +160,11 @@ class BaseTestMixin(object):
         """Create a User with username 'test_user' and set this
         instance's 'user' attribute to it."""
         self.user = User.objects.create(
-            email='test_user@email.com',
-            first_name='Test',
-            last_name='User',
-            username='test_user')
+            email="test_user@email.com",
+            first_name="Test",
+            last_name="User",
+            username="test_user",
+        )
         self.user.set_password(self.password)
         self.user.save()
         return self.user
@@ -174,9 +173,9 @@ class BaseTestMixin(object):
     def get_predominant_computing_allowance():
         """Return the most-allocated Computing Allowance Resource: FCA
         on BRC, or PCA on LRC."""
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             computing_allowance_name = BRCAllowances.FCA
-        elif flag_enabled('LRC_ONLY'):
+        elif flag_enabled("LRC_ONLY"):
             computing_allowance_name = LRCAllowances.PCA
         else:
             raise ImproperlyConfigured
@@ -192,7 +191,7 @@ class BaseTestMixin(object):
     def parse_urls_from_str(s):
         """Return a list of URLs parsed from the given string, in the
         order that they appear."""
-        return re.findall(r'(?P<url>https?://[^\s]+)', s)
+        return re.findall(r"(?P<url>https?://[^\s]+)", s)
 
     @staticmethod
     def sign_user_access_agreement(user):
@@ -205,12 +204,14 @@ class BaseTestMixin(object):
 
 class TestBase(BaseTestMixin, TestCase):
     """A base class for testing BRC-deployment functionality."""
+
     pass
 
 
 class LRCTestBase(BaseTestMixin, TestCase):
     """A base class for testing LRC-deployment functionality."""
-    _deployment_name = 'LRC'
+
+    _deployment_name = "LRC"
 
 
 class TransactionTestBase(BaseTestMixin, TransactionTestCase):
@@ -252,34 +253,33 @@ class enable_deployment(TestContextDecorator):
     """
 
     def __init__(self, deployment_name):
-        assert deployment_name in ('BRC', 'LRC')
+        assert deployment_name in ("BRC", "LRC")
         self._deployment_name = deployment_name
         super().__init__()
 
-        if self._deployment_name == 'BRC':
-            self._flag_to_enable = 'BRC_ONLY'
-            self._flag_to_disable = 'LRC_ONLY'
+        if self._deployment_name == "BRC":
+            self._flag_to_enable = "BRC_ONLY"
+            self._flag_to_disable = "LRC_ONLY"
             self._settings = {
-                'PRIMARY_CLUSTER_NAME': 'Savio',
+                "PRIMARY_CLUSTER_NAME": "Savio",
             }
         else:
-            self._flag_to_enable = 'LRC_ONLY'
-            self._flag_to_disable = 'BRC_ONLY'
+            self._flag_to_enable = "LRC_ONLY"
+            self._flag_to_disable = "BRC_ONLY"
             self._settings = {
-                'PRIMARY_CLUSTER_NAME': 'Lawrencium',
+                "PRIMARY_CLUSTER_NAME": "Lawrencium",
             }
 
         self._override_settings_cm = None
 
     def enable(self):
         flags_copy = deepcopy(settings.FLAGS)
-        flags_copy[self._flag_to_enable] = [
-            {'condition': 'boolean', 'value': True}]
-        flags_copy[self._flag_to_disable] = [
-            {'condition': 'boolean', 'value': False}]
+        flags_copy[self._flag_to_enable] = [{"condition": "boolean", "value": True}]
+        flags_copy[self._flag_to_disable] = [{"condition": "boolean", "value": False}]
 
         self._override_settings_cm = override_settings(
-            FLAGS=flags_copy, **self._settings)
+            FLAGS=flags_copy, **self._settings
+        )
         self._override_settings_cm.__enter__()
 
         assert flag_enabled(self._flag_to_enable)

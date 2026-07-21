@@ -1,6 +1,5 @@
 import logging
 import os
-
 from urllib.parse import urljoin
 
 from django.core.exceptions import ValidationError
@@ -9,35 +8,38 @@ from django.db.models import Q
 from django.urls import reverse
 
 from coldfront.config import settings
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.models import AllocationAttribute
-from coldfront.core.allocation.models import AllocationAttributeType
-from coldfront.core.allocation.models import AllocationStatusChoice
-from coldfront.core.allocation.models import SecureDirRequest
-from coldfront.core.allocation.models import SecureDirRequestStatusChoice
+from coldfront.core.allocation.models import (
+    Allocation,
+    AllocationAttribute,
+    AllocationAttributeType,
+    AllocationStatusChoice,
+    SecureDirRequest,
+    SecureDirRequestStatusChoice,
+)
 from coldfront.core.allocation.utils import has_cluster_access
 from coldfront.core.allocation.utils_.secure_dir_utils import SecureDirectory
-from coldfront.core.allocation.utils_.secure_dir_utils.user_management import SecureDirectoryAddUserRequestRunner
-
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectStatusChoice
-
+from coldfront.core.allocation.utils_.secure_dir_utils.user_management import (
+    SecureDirectoryAddUserRequestRunner,
+)
+from coldfront.core.project.models import Project, ProjectStatusChoice
 from coldfront.core.resource.models import Resource, ResourceAttribute
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterfaceError
-
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    ComputingAllowanceInterfaceError,
+    get_computing_allowance_interface,
+)
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.email import get_email_admin_notification_recipients
-from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
+from coldfront.core.utils.email.email_strategy import (
+    validate_email_strategy_or_get_default,
+)
 from coldfront.core.utils.mail import send_email_template
-
 
 logger = logging.getLogger(__name__)
 
 
 # All project-specific secure subdirectories begin with the following prefix.
-SECURE_DIRECTORY_NAME_PREFIX = 'pl1_'
+SECURE_DIRECTORY_NAME_PREFIX = "pl1_"
 
 
 def create_secure_directory(project, subdirectory_name, scratch_or_groups):
@@ -60,40 +62,43 @@ def create_secure_directory(project, subdirectory_name, scratch_or_groups):
     """
 
     if not isinstance(project, Project):
-        raise TypeError(f'Invalid Project {project}.')
+        raise TypeError(f"Invalid Project {project}.")
     if not isinstance(subdirectory_name, str):
-        raise TypeError(f'Invalid subdirectory_name {subdirectory_name}.')
-    if scratch_or_groups not in ['scratch', 'groups']:
-        raise ValueError(f'Invalid scratch_or_groups arg {scratch_or_groups}.')
+        raise TypeError(f"Invalid subdirectory_name {subdirectory_name}.")
+    if scratch_or_groups not in ["scratch", "groups"]:
+        raise ValueError(f"Invalid scratch_or_groups arg {scratch_or_groups}.")
 
-    if scratch_or_groups == 'scratch':
-        p2p3_directory = Resource.objects.get(name='Scratch P2/P3 Directory')
+    if scratch_or_groups == "scratch":
+        p2p3_directory = Resource.objects.get(name="Scratch P2/P3 Directory")
     else:
-        p2p3_directory = Resource.objects.get(name='Groups P2/P3 Directory')
+        p2p3_directory = Resource.objects.get(name="Groups P2/P3 Directory")
 
-    query = Allocation.objects.filter(project=project,
-                                      resources__in=[p2p3_directory])
+    query = Allocation.objects.filter(project=project, resources__in=[p2p3_directory])
 
     if query.exists():
-        raise ValidationError('Allocation already exist')
+        raise ValidationError("Allocation already exist")
 
     allocation = Allocation.objects.create(
         project=project,
-        status=AllocationStatusChoice.objects.get(name='Active'),
-        start_date=utc_now_offset_aware())
+        status=AllocationStatusChoice.objects.get(name="Active"),
+        start_date=utc_now_offset_aware(),
+    )
 
     p2p3_path = p2p3_directory.resourceattribute_set.get(
-        resource_attribute_type__name='path')
+        resource_attribute_type__name="path"
+    )
 
     allocation.resources.add(p2p3_directory)
 
     allocation_attribute_type = AllocationAttributeType.objects.get(
-        name='Cluster Directory Access')
+        name="Cluster Directory Access"
+    )
 
     p2p3_subdirectory = AllocationAttribute.objects.create(
         allocation_attribute_type=allocation_attribute_type,
         allocation=allocation,
-        value=os.path.join(p2p3_path.value, subdirectory_name))
+        value=os.path.join(p2p3_path.value, subdirectory_name),
+    )
 
     return allocation
 
@@ -103,55 +108,57 @@ def secure_dir_request_state_status(secure_dir_request):
     'state' field of the given SecureDirRequest."""
     if not isinstance(secure_dir_request, SecureDirRequest):
         raise TypeError(
-            f'Provided request has unexpected type {type(secure_dir_request)}.')
+            f"Provided request has unexpected type {type(secure_dir_request)}."
+        )
 
     state = secure_dir_request.state
-    rdm_consultation = state['rdm_consultation']
-    mou = state['mou']
-    setup = state['setup']
-    other = state['other']
+    rdm_consultation = state["rdm_consultation"]
+    mou = state["mou"]
+    setup = state["setup"]
+    other = state["other"]
 
-    if (rdm_consultation['status'] == 'Denied' or
-            mou['status'] == 'Denied' or
-            setup['status'] == 'Denied' or
-            other['timestamp']):
-        return SecureDirRequestStatusChoice.objects.get(name='Denied')
+    if (
+        rdm_consultation["status"] == "Denied"
+        or mou["status"] == "Denied"
+        or setup["status"] == "Denied"
+        or other["timestamp"]
+    ):
+        return SecureDirRequestStatusChoice.objects.get(name="Denied")
 
     # One or more steps is pending.
-    if (rdm_consultation['status'] == 'Pending' or
-            mou['status'] == 'Pending'):
-        return SecureDirRequestStatusChoice.objects.get(
-            name='Under Review')
+    if rdm_consultation["status"] == "Pending" or mou["status"] == "Pending":
+        return SecureDirRequestStatusChoice.objects.get(name="Under Review")
 
     # The request has been approved and is processing.
-    return SecureDirRequestStatusChoice.objects.get(
-        name='Approved - Processing')
+    return SecureDirRequestStatusChoice.objects.get(name="Approved - Processing")
 
 
-class SecureDirRequestRunner(object):
+class SecureDirRequestRunner:
     """An object that performs necessary checks and updates, and sends
-     notifications, when a new secure directory is requested for a
-     project."""
+    notifications, when a new secure directory is requested for a
+    project."""
 
     def __init__(self, request_kwargs, email_strategy=None):
         self._request_kwargs = request_kwargs
         # Always create the request with 'Under Review' status.
-        self._request_kwargs['status'] = \
-            SecureDirRequestStatusChoice.objects.get(name='Under Review')
-        self._project_obj = self._request_kwargs['project']
+        self._request_kwargs["status"] = SecureDirRequestStatusChoice.objects.get(
+            name="Under Review"
+        )
+        self._project_obj = self._request_kwargs["project"]
         self._request_obj = None
 
         self._email_strategy = validate_email_strategy_or_get_default(
-            email_strategy=email_strategy)
+            email_strategy=email_strategy
+        )
 
     def run(self):
         """Perform checks and updates."""
-        is_project_eligible = is_project_eligible_for_secure_dirs(
-            self._project_obj)
+        is_project_eligible = is_project_eligible_for_secure_dirs(self._project_obj)
         if not is_project_eligible:
             raise Exception(
-                f'Project {self._project_obj.name} is ineligible for a secure '
-                f'directory.')
+                f"Project {self._project_obj.name} is ineligible for a secure "
+                f"directory."
+            )
 
         with transaction.atomic():
             self._request_obj = self._create_secure_directory_request_obj()
@@ -168,7 +175,7 @@ class SecureDirRequestRunner(object):
         """Given the primary key of a SecureDirRequest, return a URL to
         the detail page for it."""
         domain = settings.CENTER_BASE_URL
-        view = reverse('secure-dir-request-detail', kwargs={'pk': request_pk})
+        view = reverse("secure-dir-request-detail", kwargs={"pk": request_pk})
         return urljoin(domain, view)
 
     def _send_email_to_admins(self, secure_dir_request_obj):
@@ -176,26 +183,27 @@ class SecureDirRequestRunner(object):
         of the newly-created request."""
         requester = secure_dir_request_obj.requester
         requester_str = (
-            f'{requester.first_name} {requester.last_name} ({requester.email})')
+            f"{requester.first_name} {requester.last_name} ({requester.email})"
+        )
 
         pi = secure_dir_request_obj.pi
-        pi_str = f'{pi.first_name} {pi.last_name} ({pi.email})'
+        pi_str = f"{pi.first_name} {pi.last_name} ({pi.email})"
 
         review_url = self._get_request_detail_url(secure_dir_request_obj.pk)
 
         context = {
-            'pi_str': pi_str,
-            'project_name': secure_dir_request_obj.project.name,
-            'requester_str': requester_str,
-            'review_url': review_url,
+            "pi_str": pi_str,
+            "project_name": secure_dir_request_obj.project.name,
+            "requester_str": requester_str,
+            "review_url": review_url,
         }
 
-        subject = 'New Secure Directory Request'
-        template_name = (
-            'email/secure_dir_request/secure_dir_new_request_admin.txt')
+        subject = "New Secure Directory Request"
+        template_name = "email/secure_dir_request/secure_dir_new_request_admin.txt"
         sender = settings.EMAIL_SENDER
         recipients = get_email_admin_notification_recipients(
-            'secure_directory_requests', 'created')
+            "secure_directory_requests", "created"
+        )
 
         send_email_template(subject, template_name, context, sender, recipients)
 
@@ -204,24 +212,24 @@ class SecureDirRequestRunner(object):
         that a request was made under their name."""
         requester = secure_dir_request_obj.requester
         requester_str = (
-            f'{requester.first_name} {requester.last_name} ({requester.email})')
+            f"{requester.first_name} {requester.last_name} ({requester.email})"
+        )
 
         pi = secure_dir_request_obj.pi
-        pi_str = f'{pi.first_name} {pi.last_name}'
+        pi_str = f"{pi.first_name} {pi.last_name}"
 
         review_url = self._get_request_detail_url(secure_dir_request_obj.pk)
 
         context = {
-            'pi_str': pi_str,
-            'PORTAL_NAME': settings.PORTAL_NAME,
-            'project_name': secure_dir_request_obj.project.name,
-            'requester_str': requester_str,
-            'review_url': review_url,
+            "pi_str": pi_str,
+            "PORTAL_NAME": settings.PORTAL_NAME,
+            "project_name": secure_dir_request_obj.project.name,
+            "requester_str": requester_str,
+            "review_url": review_url,
         }
 
-        subject = 'New Secure Directory Request'
-        template_name = (
-            'email/secure_dir_request/secure_dir_new_request_pi.txt')
+        subject = "New Secure Directory Request"
+        template_name = "email/secure_dir_request/secure_dir_new_request_pi.txt"
         sender = settings.EMAIL_SENDER
         recipients = [pi.email]
 
@@ -231,13 +239,13 @@ class SecureDirRequestRunner(object):
         """Send email notifications."""
         # To cluster admins
         email_method = self._send_email_to_admins
-        email_args = (self._request_obj, )
+        email_args = (self._request_obj,)
         self._email_strategy.process_email(email_method, *email_args)
 
         # To the PI, if not the requester
         if self._request_obj.pi != self._request_obj.requester:
             email_method = self._send_email_to_pi
-            email_args = (self._request_obj, )
+            email_args = (self._request_obj,)
             self._email_strategy.process_email(email_method, *email_args)
 
     def _send_emails_safe(self):
@@ -250,12 +258,13 @@ class SecureDirRequestRunner(object):
             self._send_emails()
         except Exception as e:
             message = (
-                f'Encountered unexpected exception when sending notification '
-                f'emails. Details:\n{e}')
+                f"Encountered unexpected exception when sending notification "
+                f"emails. Details:\n{e}"
+            )
             logger.exception(message)
 
 
-class SecureDirRequestDenialRunner(object):
+class SecureDirRequestDenialRunner:
     """An object that performs necessary database changes when a new
     secure directory request is denied."""
 
@@ -265,7 +274,8 @@ class SecureDirRequestDenialRunner(object):
     def __init__(self, request_obj, email_strategy=None):
         self._request_obj = request_obj
         self._email_strategy = validate_email_strategy_or_get_default(
-            email_strategy=email_strategy)
+            email_strategy=email_strategy
+        )
 
         self._success_messages = []
         self._error_messages = []
@@ -279,21 +289,23 @@ class SecureDirRequestDenialRunner(object):
                 self._deny_request()
         except Exception as e:
             log_message = (
-                f'Failed to deny secure directory request '
-                f'{self._request_obj.pk}. Details:\n{e}')
+                f"Failed to deny secure directory request "
+                f"{self._request_obj.pk}. Details:\n{e}"
+            )
             logger.exception(log_message)
-            message = 'Unexpected failure. Please contact an administrator.'
+            message = "Unexpected failure. Please contact an administrator."
             self._error_messages.append(message)
         else:
-            message = 'Successfully denied the request.'
+            message = "Successfully denied the request."
             self._success_messages.append(message)
 
             self._send_emails_safe()
 
     def _deny_request(self):
         """Set the status of the request to 'Denied'."""
-        self._request_obj.status = \
-            SecureDirRequestStatusChoice.objects.get(name='Denied')
+        self._request_obj.status = SecureDirRequestStatusChoice.objects.get(
+            name="Denied"
+        )
         self._request_obj.save()
 
     def _send_emails_to_users(self):
@@ -305,28 +317,31 @@ class SecureDirRequestDenialRunner(object):
         requester = self._request_obj.requester
 
         context = {
-            'user_first_name': requester.first_name,
-            'user_last_name': requester.last_name,
-            'project': self._request_obj.project.name,
-            'reason': self._request_obj.denial_reason().justification,
-            'signature': settings.EMAIL_SIGNATURE,
-            'support_email': settings.CENTER_HELP_EMAIL,
+            "user_first_name": requester.first_name,
+            "user_last_name": requester.last_name,
+            "project": self._request_obj.project.name,
+            "reason": self._request_obj.denial_reason().justification,
+            "signature": settings.EMAIL_SIGNATURE,
+            "support_email": settings.CENTER_HELP_EMAIL,
         }
 
-        subject = 'Secure Directory Request Denied'
-        template_name = 'email/secure_dir_request/secure_dir_request_denied.txt'
+        subject = "Secure Directory Request Denied"
+        template_name = "email/secure_dir_request/secure_dir_request_denied.txt"
         sender = settings.EMAIL_SENDER
         receiver_list = [requester.email]
 
         kwargs = {}
         pis_to_cc = [
-            pi for pi in self._request_obj.project.pis(active_only=True)
-            if pi != requester]
+            pi
+            for pi in self._request_obj.project.pis(active_only=True)
+            if pi != requester
+        ]
         if pis_to_cc:
-            kwargs['cc'] = [pi.email for pi in pis_to_cc]
+            kwargs["cc"] = [pi.email for pi in pis_to_cc]
 
         send_email_template(
-            subject, template_name, context, sender, receiver_list, **kwargs)
+            subject, template_name, context, sender, receiver_list, **kwargs
+        )
 
     def _send_emails(self):
         """Send email notifications."""
@@ -345,11 +360,10 @@ class SecureDirRequestDenialRunner(object):
             # TODO: The language in this message and in the function names
             #  should be updated to something more general (i.e., notifying
             #  users).
-            logger.exception(
-                f'Failed to send notification emails. Details:\n{e}')
+            logger.exception(f"Failed to send notification emails. Details:\n{e}")
 
 
-class SecureDirRequestApprovalRunner(object):
+class SecureDirRequestApprovalRunner:
     """An object that performs necessary database changes when a new
     secure directory request is approved."""
 
@@ -359,7 +373,8 @@ class SecureDirRequestApprovalRunner(object):
     def __init__(self, request_obj, email_strategy=None):
         self._request_obj = request_obj
         self._email_strategy = validate_email_strategy_or_get_default(
-            email_strategy=email_strategy)
+            email_strategy=email_strategy
+        )
 
         self._groups_directory = None
         self._scratch_directory = None
@@ -376,18 +391,20 @@ class SecureDirRequestApprovalRunner(object):
                 self._approve_request()
                 self._create_secure_directories()
                 if self._should_add_requester_to_directories():
-                   self._add_requester_to_directories()
+                    self._add_requester_to_directories()
         except Exception as e:
             log_message = (
-                f'Failed to approve secure directory request '
-                f'{self._request_obj.pk}. Details:\n{e}')
+                f"Failed to approve secure directory request "
+                f"{self._request_obj.pk}. Details:\n{e}"
+            )
             logger.exception(log_message)
-            message = 'Unexpected failure. Please contact an administrator.'
+            message = "Unexpected failure. Please contact an administrator."
             self._error_messages.append(message)
         else:
             message = (
-                f'Successfully approved the request and created secure '
-                f'directories for {self._request_obj.project.name}.')
+                f"Successfully approved the request and created secure "
+                f"directories for {self._request_obj.project.name}."
+            )
             self._success_messages.append(message)
 
             self._send_emails_safe()
@@ -397,18 +414,17 @@ class SecureDirRequestApprovalRunner(object):
         directories."""
         requester = self._request_obj.requester
 
-        for secure_directory in (
-                self._groups_directory, self._scratch_directory):
-
+        for secure_directory in (self._groups_directory, self._scratch_directory):
             runner = SecureDirectoryAddUserRequestRunner(
-                secure_directory, requester,
-                email_strategy=self._email_strategy)
+                secure_directory, requester, email_strategy=self._email_strategy
+            )
             runner.run()
 
     def _approve_request(self):
         """Set the status of the request to 'Approved - Complete'."""
-        self._request_obj.status = \
-            SecureDirRequestStatusChoice.objects.get(name='Approved - Complete')
+        self._request_obj.status = SecureDirRequestStatusChoice.objects.get(
+            name="Approved - Complete"
+        )
         self._request_obj.completion_time = utc_now_offset_aware()
         self._request_obj.save()
 
@@ -418,9 +434,11 @@ class SecureDirRequestApprovalRunner(object):
         instance."""
         subdirectory_name = self._request_obj.directory_name
         groups_allocation = create_secure_directory(
-            self._request_obj.project, subdirectory_name, 'groups')
+            self._request_obj.project, subdirectory_name, "groups"
+        )
         scratch_allocation = create_secure_directory(
-            self._request_obj.project, subdirectory_name, 'scratch')
+            self._request_obj.project, subdirectory_name, "scratch"
+        )
 
         self._groups_directory = SecureDirectory(groups_allocation)
         self._scratch_directory = SecureDirectory(scratch_allocation)
@@ -437,18 +455,17 @@ class SecureDirRequestApprovalRunner(object):
         scratch_dir_path = self._scratch_directory.get_path()
 
         context = {
-            'user_first_name': requester.first_name,
-            'user_last_name': requester.last_name,
-            'project': self._request_obj.project.name,
-            'groups_dir_path': groups_dir_path,
-            'scratch_dir_path': scratch_dir_path,
-            'signature': settings.EMAIL_SIGNATURE,
-            'support_email': settings.CENTER_HELP_EMAIL,
+            "user_first_name": requester.first_name,
+            "user_last_name": requester.last_name,
+            "project": self._request_obj.project.name,
+            "groups_dir_path": groups_dir_path,
+            "scratch_dir_path": scratch_dir_path,
+            "signature": settings.EMAIL_SIGNATURE,
+            "support_email": settings.CENTER_HELP_EMAIL,
         }
 
-        subject = 'Secure Directory Request Approved'
-        template_name = (
-            'email/secure_dir_request/secure_dir_request_approved.txt')
+        subject = "Secure Directory Request Approved"
+        template_name = "email/secure_dir_request/secure_dir_request_approved.txt"
         sender = settings.EMAIL_SENDER
         receiver_list = [requester.email]
 
@@ -456,12 +473,14 @@ class SecureDirRequestApprovalRunner(object):
         pis_to_cc = [
             project_user.user
             for project_user in self._request_obj.project.pis_to_email()
-            if project_user.user != requester]
+            if project_user.user != requester
+        ]
         if pis_to_cc:
-            kwargs['cc'] = [user.email for user in pis_to_cc]
+            kwargs["cc"] = [user.email for user in pis_to_cc]
 
         send_email_template(
-            subject, template_name, context, sender, receiver_list, **kwargs)
+            subject, template_name, context, sender, receiver_list, **kwargs
+        )
 
     def _send_emails(self):
         """Send email notifications."""
@@ -480,8 +499,7 @@ class SecureDirRequestApprovalRunner(object):
             # TODO: The language in this message and in the function names
             #  should be updated to something more general (i.e., notifying
             #  users).
-            logger.exception(
-                f'Failed to send notification emails. Details:\n{e}')
+            logger.exception(f"Failed to send notification emails. Details:\n{e}")
 
     def _should_add_requester_to_directories(self):
         """Return whether requests should be made to add the requester
@@ -496,16 +514,16 @@ class SecureDirRequestApprovalRunner(object):
 def get_secure_dir_allocations(project=None):
     """Returns a queryset of all active secure directory allocations.
     Optionally, return those for a specific project."""
-    scratch_directory = Resource.objects.get(name='Scratch P2/P3 Directory')
-    groups_directory = Resource.objects.get(name='Groups P2/P3 Directory')
+    scratch_directory = Resource.objects.get(name="Scratch P2/P3 Directory")
+    groups_directory = Resource.objects.get(name="Groups P2/P3 Directory")
 
     kwargs = {
-        'resources__in': [scratch_directory, groups_directory],
-        'status__name': 'Active',
+        "resources__in": [scratch_directory, groups_directory],
+        "status__name": "Active",
     }
     if project is not None:
         assert isinstance(project, Project)
-        kwargs['project'] = project
+        kwargs["project"] = project
 
     return Allocation.objects.filter(**kwargs)
 
@@ -513,14 +531,12 @@ def get_secure_dir_allocations(project=None):
 def get_default_secure_dir_paths():
     """Returns the default Groups and Scratch secure directory paths."""
 
-    groups_path = \
-        ResourceAttribute.objects.get(
-            resource_attribute_type__name='path',
-            resource__name='Groups P2/P3 Directory').value
-    scratch_path = \
-        ResourceAttribute.objects.get(
-            resource_attribute_type__name='path',
-            resource__name='Scratch P2/P3 Directory').value
+    groups_path = ResourceAttribute.objects.get(
+        resource_attribute_type__name="path", resource__name="Groups P2/P3 Directory"
+    ).value
+    scratch_path = ResourceAttribute.objects.get(
+        resource_attribute_type__name="path", resource__name="Scratch P2/P3 Directory"
+    ).value
 
     return groups_path, scratch_path
 
@@ -536,7 +552,7 @@ def is_project_eligible_for_secure_dirs(project):
     assert isinstance(project, Project)
 
     # Is active
-    active_project_status = ProjectStatusChoice.objects.get(name='Active')
+    active_project_status = ProjectStatusChoice.objects.get(name="Active")
     if project.status != active_project_status:
         return False
 
@@ -548,8 +564,9 @@ def is_project_eligible_for_secure_dirs(project):
     }
     computing_allowance_interface = get_computing_allowance_interface()
     try:
-        computing_allowance = \
-            computing_allowance_interface.allowance_from_project(project)
+        computing_allowance = computing_allowance_interface.allowance_from_project(
+            project
+        )
     except ComputingAllowanceInterfaceError:
         # Non-primary-cluster projects (ineligible) raise this error.
         return False
@@ -558,7 +575,8 @@ def is_project_eligible_for_secure_dirs(project):
 
     eligible_project_prefixes = tuple(
         computing_allowance_interface.code_from_name(computing_allowance_name)
-        for computing_allowance_name in eligible_computing_allowance_names)
+        for computing_allowance_name in eligible_computing_allowance_names
+    )
     if not project.name.startswith(eligible_project_prefixes):
         return False
 
@@ -567,10 +585,10 @@ def is_project_eligible_for_secure_dirs(project):
         return False
 
     # Does not have a non-"Denied" request for secure directories
-    denied_request_status = SecureDirRequestStatusChoice.objects.get(
-        name='Denied')
+    denied_request_status = SecureDirRequestStatusChoice.objects.get(name="Denied")
     non_denied_requests = SecureDirRequest.objects.filter(
-        Q(project=project) & ~Q(status=denied_request_status))
+        Q(project=project) & ~Q(status=denied_request_status)
+    )
     if non_denied_requests.exists():
         return False
 
@@ -580,20 +598,22 @@ def is_project_eligible_for_secure_dirs(project):
 def get_all_secure_dir_paths():
     """Returns a set of all secure directory paths."""
 
-    group_resource = Resource.objects.get(name='Groups P2/P3 Directory')
-    scratch_resource = Resource.objects.get(name='Scratch P2/P3 Directory')
+    group_resource = Resource.objects.get(name="Groups P2/P3 Directory")
+    scratch_resource = Resource.objects.get(name="Scratch P2/P3 Directory")
 
-    paths = \
-        set(AllocationAttribute.objects.filter(
-            allocation_attribute_type__name='Cluster Directory Access',
-            allocation__resources__in=[scratch_resource, group_resource]).
-            values_list('value', flat=True))
+    paths = set(
+        AllocationAttribute.objects.filter(
+            allocation_attribute_type__name="Cluster Directory Access",
+            allocation__resources__in=[scratch_resource, group_resource],
+        ).values_list("value", flat=True)
+    )
 
     return paths
 
 
-def is_secure_directory_name_suffix_available(proposed_directory_name_suffix,
-                                              exclude_request_pk=None):
+def is_secure_directory_name_suffix_available(
+    proposed_directory_name_suffix, exclude_request_pk=None
+):
     """Returns True if the proposed secure directory name suffix is
     available and False otherwise. A name suffix is available if it is
     neither in use by an existing secure directory nor in use by a
@@ -614,12 +634,10 @@ def is_secure_directory_name_suffix_available(proposed_directory_name_suffix,
 
     def get_directory_name_suffix(_directory_name):
         if _directory_name.startswith(SECURE_DIRECTORY_NAME_PREFIX):
-            _directory_name = _directory_name[
-                len(SECURE_DIRECTORY_NAME_PREFIX):]
+            _directory_name = _directory_name[len(SECURE_DIRECTORY_NAME_PREFIX) :]
         return _directory_name
 
-    assert not proposed_directory_name_suffix.startswith(
-        SECURE_DIRECTORY_NAME_PREFIX)
+    assert not proposed_directory_name_suffix.startswith(SECURE_DIRECTORY_NAME_PREFIX)
 
     unavailable_name_suffixes = set()
     existing_secure_directory_paths = get_all_secure_dir_paths()
@@ -628,10 +646,10 @@ def is_secure_directory_name_suffix_available(proposed_directory_name_suffix,
         directory_name_suffix = get_directory_name_suffix(directory_name)
         unavailable_name_suffixes.add(directory_name_suffix)
     pending_requested_directory_names = list(
-        SecureDirRequest.objects
-            .exclude(status__name='Denied')
-            .exclude(pk=exclude_request_pk)
-            .values_list('directory_name', flat=True))
+        SecureDirRequest.objects.exclude(status__name="Denied")
+        .exclude(pk=exclude_request_pk)
+        .values_list("directory_name", flat=True)
+    )
     for directory_name in pending_requested_directory_names:
         directory_name_suffix = get_directory_name_suffix(directory_name)
         unavailable_name_suffixes.add(directory_name_suffix)
@@ -645,23 +663,24 @@ def send_secure_directory_request_ready_for_processing_email(request_obj):
     if not settings.EMAIL_ENABLED:
         return
 
-    subject = 'Secure Directory Request Ready for Processing'
+    subject = "Secure Directory Request Ready for Processing"
     template_name = (
-        'email/secure_dir_request/'
-        'secure_dir_request_ready_for_processing_admin.txt')
+        "email/secure_dir_request/secure_dir_request_ready_for_processing_admin.txt"
+    )
 
     domain = settings.CENTER_BASE_URL
-    view = reverse('secure-dir-request-detail', kwargs={'pk': request_obj.pk})
+    view = reverse("secure-dir-request-detail", kwargs={"pk": request_obj.pk})
     review_url = urljoin(domain, view)
 
     context = {
-        'project_name': request_obj.project.name,
-        'review_url': review_url,
+        "project_name": request_obj.project.name,
+        "review_url": review_url,
     }
 
     sender = settings.EMAIL_SENDER
     receiver_list = get_email_admin_notification_recipients(
-        'secure_directory_requests', 'approved')
+        "secure_directory_requests", "approved"
+    )
 
     send_email_template(subject, template_name, context, sender, receiver_list)
 
@@ -681,14 +700,16 @@ def set_sec_dir_context(context_dict, request_obj):
     """
 
     if not isinstance(context_dict, dict):
-        raise TypeError(f'Passed context_dict {context_dict} is not a dict.')
+        raise TypeError(f"Passed context_dict {context_dict} is not a dict.")
     if not isinstance(request_obj, SecureDirRequest):
-        raise TypeError(f'Invalid SecureDirRequest {request_obj}.')
+        raise TypeError(f"Invalid SecureDirRequest {request_obj}.")
 
-    context_dict['secure_dir_request'] = request_obj
-    context_dict['proposed_directory_name'] = request_obj.directory_name
+    context_dict["secure_dir_request"] = request_obj
+    context_dict["proposed_directory_name"] = request_obj.directory_name
     groups_path, scratch_path = get_default_secure_dir_paths()
-    context_dict['proposed_groups_path'] = \
-        os.path.join(groups_path, context_dict['proposed_directory_name'])
-    context_dict['proposed_scratch_path'] = \
-        os.path.join(scratch_path, context_dict['proposed_directory_name'])
+    context_dict["proposed_groups_path"] = os.path.join(
+        groups_path, context_dict["proposed_directory_name"]
+    )
+    context_dict["proposed_scratch_path"] = os.path.join(
+        scratch_path, context_dict["proposed_directory_name"]
+    )

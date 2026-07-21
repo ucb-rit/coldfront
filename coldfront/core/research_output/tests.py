@@ -1,4 +1,5 @@
-"""
+(
+    """
 import datetime
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -13,7 +14,9 @@ from coldfront.core.test_helpers.factories import (
 
 class TestResearchOutput(TestCase):
     class Data:
-        """"""Collection of test data, separated for readability""""""
+        """
+    """Collection of test data, separated for readability"""
+    """
 
         def __init__(self):
             project = ProjectFactory()
@@ -147,3 +150,4 @@ class TestResearchOutput(TestCase):
         retrieved_obj = ResearchOutput.objects.get(pk=research_output_obj.pk)
         self.assertIsInstance(retrieved_obj.created, datetime.datetime)
 """
+)

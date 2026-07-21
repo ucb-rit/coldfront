@@ -1,36 +1,42 @@
+import logging
+
 from django.db import transaction
 
 from coldfront.core.utils.common import utc_now_offset_aware
-
-from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequest
-from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequestStatusChoice
-from coldfront.plugins.faculty_storage_allocations.services import DirectoryService
-from coldfront.plugins.faculty_storage_allocations.services import FSARequestNotificationService
-
-import logging
+from coldfront.plugins.faculty_storage_allocations.models import (
+    FacultyStorageAllocationRequest,
+    FacultyStorageAllocationRequestStatusChoice,
+)
+from coldfront.plugins.faculty_storage_allocations.services import (
+    DirectoryService,
+    FSARequestNotificationService,
+)
 
 logger = logging.getLogger(__name__)
 
-class FacultyStorageAllocationRequestService:
 
+class FacultyStorageAllocationRequestService:
     @staticmethod
     def create_request(data, email_strategy=None):
         # Directly create the request, relying on Django's built-in validation
-        data['status'] = \
-            FacultyStorageAllocationRequestStatusChoice.objects.get(
-                name=data['status'])
-        faculty_scratch_fsa_request = \
-            FacultyStorageAllocationRequest.objects.create(**data)
+        data["status"] = FacultyStorageAllocationRequestStatusChoice.objects.get(
+            name=data["status"]
+        )
+        faculty_scratch_fsa_request = FacultyStorageAllocationRequest.objects.create(
+            **data
+        )
 
         FSARequestNotificationService.send_request_created_email_to_admins(
-            faculty_scratch_fsa_request, email_strategy=email_strategy)
+            faculty_scratch_fsa_request, email_strategy=email_strategy
+        )
 
         return faculty_scratch_fsa_request
 
     @staticmethod
     def approve_request(request, email_strategy=None):
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
-            name='Approved - Queued')
+            name="Approved - Queued"
+        )
         request.status = status
         request.approval_time = utc_now_offset_aware()
 
@@ -39,14 +45,15 @@ class FacultyStorageAllocationRequestService:
         if request.approved_amount_gb is None:
             request.approved_amount_gb = request.requested_amount_gb
             logger.info(
-                f'Request {request.pk}: approved_amount_gb set to '
-                f'requested_amount_gb ({request.requested_amount_gb} GB)'
+                f"Request {request.pk}: approved_amount_gb set to "
+                f"requested_amount_gb ({request.requested_amount_gb} GB)"
             )
 
         request.save()
 
         FSARequestNotificationService.send_request_approved_email_to_admins(
-            request, email_strategy=email_strategy)
+            request, email_strategy=email_strategy
+        )
 
     @staticmethod
     def claim_next_request():
@@ -66,47 +73,50 @@ class FacultyStorageAllocationRequestService:
             FacultyStorageAllocationRequest: The claimed request, or None if
                 no requests are available.
         """
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
 
         # Timeout for stale processing requests (configurable)
         PROCESSING_TIMEOUT_MINUTES = 30
 
         with transaction.atomic():
             queued_status = FacultyStorageAllocationRequestStatusChoice.objects.get(
-                name='Approved - Queued')
+                name="Approved - Queued"
+            )
             processing_status = FacultyStorageAllocationRequestStatusChoice.objects.get(
-                name='Approved - Processing')
+                name="Approved - Processing"
+            )
 
             # First priority: Find the oldest queued request
             fsa_request = (
-                FacultyStorageAllocationRequest.objects
-                .filter(status=queued_status)
+                FacultyStorageAllocationRequest.objects.filter(status=queued_status)
                 .select_for_update(skip_locked=True)
-                .order_by('approval_time', 'request_time')
+                .order_by("approval_time", "request_time")
                 .first()
             )
 
             # Second priority: If no queued requests, look for stale processing requests
             if not fsa_request:
-                timeout_threshold = timezone.now() - timedelta(minutes=PROCESSING_TIMEOUT_MINUTES)
+                timeout_threshold = timezone.now() - timedelta(
+                    minutes=PROCESSING_TIMEOUT_MINUTES
+                )
 
                 fsa_request = (
-                    FacultyStorageAllocationRequest.objects
-                    .filter(
+                    FacultyStorageAllocationRequest.objects.filter(
                         status=processing_status,
-                        modified__lt=timeout_threshold  # Stuck for too long
+                        modified__lt=timeout_threshold,  # Stuck for too long
                     )
                     .select_for_update(skip_locked=True)
-                    .order_by('modified')
+                    .order_by("modified")
                     .first()
                 )
 
                 if fsa_request:
                     logger.warning(
-                        f'Reclaiming stale request {fsa_request.id} that has been '
-                        f'in Processing state since {fsa_request.modified} '
-                        f'(project: {fsa_request.project.name})'
+                        f"Reclaiming stale request {fsa_request.id} that has been "
+                        f"in Processing state since {fsa_request.modified} "
+                        f"(project: {fsa_request.project.name})"
                     )
 
             if fsa_request:
@@ -115,8 +125,8 @@ class FacultyStorageAllocationRequestService:
                 fsa_request.save()
 
                 logger.info(
-                    f'Request {fsa_request.id} claimed for processing '
-                    f'(project: {fsa_request.project.name})'
+                    f"Request {fsa_request.id} claimed for processing "
+                    f"(project: {fsa_request.project.name})"
                 )
 
             return fsa_request
@@ -133,15 +143,13 @@ class FacultyStorageAllocationRequestService:
             justification: The justification text for the decision
         """
         state = request.state
-        state['eligibility']['status'] = status
-        state['eligibility']['justification'] = justification
-        state['eligibility']['timestamp'] = utc_now_offset_aware().isoformat()
+        state["eligibility"]["status"] = status
+        state["eligibility"]["justification"] = justification
+        state["eligibility"]["timestamp"] = utc_now_offset_aware().isoformat()
         request.state = state
         request.save()
 
-        logger.info(
-            f'Request {request.pk}: eligibility state updated to {status}'
-        )
+        logger.info(f"Request {request.pk}: eligibility state updated to {status}")
 
     @staticmethod
     def update_intake_consistency_state(request, status, justification):
@@ -155,18 +163,18 @@ class FacultyStorageAllocationRequestService:
             justification: The justification text for the decision
         """
         state = request.state
-        state['intake_consistency']['status'] = status
-        state['intake_consistency']['justification'] = justification
-        state['intake_consistency']['timestamp'] = utc_now_offset_aware().isoformat()
+        state["intake_consistency"]["status"] = status
+        state["intake_consistency"]["justification"] = justification
+        state["intake_consistency"]["timestamp"] = utc_now_offset_aware().isoformat()
         request.state = state
         request.save()
 
         logger.info(
-            f'Request {request.pk}: intake_consistency state updated to {status}'
+            f"Request {request.pk}: intake_consistency state updated to {status}"
         )
 
     @staticmethod
-    def update_setup_state(request, directory_name=None, status='Complete'):
+    def update_setup_state(request, directory_name=None, status="Complete"):
         """Update the setup state.
 
         This encapsulates the state structure and can be called from both
@@ -178,22 +186,20 @@ class FacultyStorageAllocationRequestService:
             status: The setup status ('Pending' or 'Complete')
         """
         state = request.state
-        state['setup']['status'] = status
+        state["setup"]["status"] = status
         if directory_name is not None:
-            state['setup']['directory_name'] = directory_name
-        state['setup']['timestamp'] = utc_now_offset_aware().isoformat()
+            state["setup"]["directory_name"] = directory_name
+        state["setup"]["timestamp"] = utc_now_offset_aware().isoformat()
         request.state = state
         request.save()
 
         if directory_name:
             logger.info(
-                f'Request {request.pk}: setup state updated to {status} '
-                f'with directory_name={directory_name}'
+                f"Request {request.pk}: setup state updated to {status} "
+                f"with directory_name={directory_name}"
             )
         else:
-            logger.info(
-                f'Request {request.pk}: setup state updated to {status}'
-            )
+            logger.info(f"Request {request.pk}: setup state updated to {status}")
 
     @staticmethod
     def update_other_state(request, justification):
@@ -207,30 +213,29 @@ class FacultyStorageAllocationRequestService:
             justification: The justification text for the denial
         """
         state = request.state
-        state['other']['justification'] = justification
-        state['other']['timestamp'] = utc_now_offset_aware().isoformat()
+        state["other"]["justification"] = justification
+        state["other"]["timestamp"] = utc_now_offset_aware().isoformat()
         request.state = state
         request.save()
 
-        logger.info(
-            f'Request {request.pk}: other denial reason set'
-        )
+        logger.info(f"Request {request.pk}: other denial reason set")
 
     @staticmethod
     def complete_request(request, directory_name, email_strategy=None):
         # Check if already completed to avoid double-processing
-        if request.status.name == 'Approved - Complete':
-            logger.warning(
-                f'Request {request.pk} is already completed, skipping')
+        if request.status.name == "Approved - Complete":
+            logger.warning(f"Request {request.pk} is already completed, skipping")
             return
 
         # Update setup state (idempotent - safe to call multiple times)
         FacultyStorageAllocationRequestService.update_setup_state(
-            request, directory_name)
+            request, directory_name
+        )
 
         # Update status to complete
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
-            name='Approved - Complete')
+            name="Approved - Complete"
+        )
         request.status = status
         request.completion_time = utc_now_offset_aware()
         request.save()
@@ -244,23 +249,24 @@ class FacultyStorageAllocationRequestService:
             # Directory already exists, add to existing quota
             directory_service.add_to_directory_quota(amount_gb)
             logger.info(
-                f'Added {amount_gb} GB to existing directory '
-                f'for project {request.project.name}')
+                f"Added {amount_gb} GB to existing directory "
+                f"for project {request.project.name}"
+            )
         else:
             # New directory, create it and set initial quota
             directory_service.create_directory()
             directory_service.set_directory_quota(amount_gb)
             logger.info(
-                f'Created new directory with {amount_gb} GB '
-                f'for project {request.project.name}')
+                f"Created new directory with {amount_gb} GB "
+                f"for project {request.project.name}"
+            )
 
         # Add all active project users to the allocation
-        FacultyStorageAllocationRequestService._add_project_users_to_allocation(
-            request)
+        FacultyStorageAllocationRequestService._add_project_users_to_allocation(request)
 
         FSARequestNotificationService.send_completion_email_to_users(
-            request, directory_service.directory_path,
-            email_strategy=email_strategy)
+            request, directory_service.directory_path, email_strategy=email_strategy
+        )
 
     @staticmethod
     def _add_project_users_to_allocation(request):
@@ -272,29 +278,29 @@ class FacultyStorageAllocationRequestService:
         """
         try:
             # Use the DirectoryService to add all project users
-            directory_name = request.state['setup']['directory_name']
-            directory_service = DirectoryService(
-                request.project, directory_name)
-            allocation_users = \
-                directory_service.add_project_users_to_directory()
+            directory_name = request.state["setup"]["directory_name"]
+            directory_service = DirectoryService(request.project, directory_name)
+            allocation_users = directory_service.add_project_users_to_directory()
             logger.info(
-                f'Added {len(allocation_users)} users to faculty storage '
-                f'allocation for project {request.project.name}')
+                f"Added {len(allocation_users)} users to faculty storage "
+                f"allocation for project {request.project.name}"
+            )
         except Exception as e:
             logger.exception(
-                f'Error adding users to faculty storage allocation for '
-                f'project {request.project.name}: {e}')
+                f"Error adding users to faculty storage allocation for "
+                f"project {request.project.name}: {e}"
+            )
             raise
 
     @staticmethod
     def deny_request(request, email_strategy=None):
-        status = FacultyStorageAllocationRequestStatusChoice.objects.get(
-            name='Denied')
+        status = FacultyStorageAllocationRequestStatusChoice.objects.get(name="Denied")
         request.status = status
         request.save()
 
         FSARequestNotificationService.send_denial_email_to_users(
-            request, email_strategy=email_strategy)
+            request, email_strategy=email_strategy
+        )
 
     @staticmethod
     def undeny_request(request):
@@ -307,26 +313,28 @@ class FacultyStorageAllocationRequestService:
         state = request.state
 
         # Reset eligibility to Pending if it was denied
-        eligibility = state['eligibility']
-        if eligibility['status'] == 'Denied':
+        eligibility = state["eligibility"]
+        if eligibility["status"] == "Denied":
             FacultyStorageAllocationRequestService.update_eligibility_state(
-                request, 'Pending', eligibility.get('justification', ''))
+                request, "Pending", eligibility.get("justification", "")
+            )
 
         # Reset intake_consistency to Pending if it was denied
-        intake_consistency = state['intake_consistency']
-        if intake_consistency['status'] == 'Denied':
+        intake_consistency = state["intake_consistency"]
+        if intake_consistency["status"] == "Denied":
             FacultyStorageAllocationRequestService.update_intake_consistency_state(
-                request, 'Pending', intake_consistency.get('justification', ''))
+                request, "Pending", intake_consistency.get("justification", "")
+            )
 
         # Clear any 'other' denial reason if it exists
-        other = state['other']
-        if other.get('timestamp'):
-            FacultyStorageAllocationRequestService.update_other_state(
-                request, '')
+        other = state["other"]
+        if other.get("timestamp"):
+            FacultyStorageAllocationRequestService.update_other_state(request, "")
 
         # Update overall status to Under Review
         status = FacultyStorageAllocationRequestStatusChoice.objects.get(
-            name='Under Review')
+            name="Under Review"
+        )
         request.status = status
         request.save()
 

@@ -12,7 +12,7 @@ class DummyDataSourceBackend(BaseDataSourceBackend):
             ...
             ("DEPTZ", "Department Z").
         """
-        for ascii_code in range(ord('A'), ord('Z') + 1):
+        for ascii_code in range(ord("A"), ord("Z") + 1):
             letter = chr(ascii_code)
             yield self._get_department_for_letter(letter)
 
@@ -46,7 +46,7 @@ class DummyDataSourceBackend(BaseDataSourceBackend):
             return self._get_department_for_letter(initial)
 
         departments = []
-        for name_part in (user_data['first_name'], user_data['last_name']):
+        for name_part in (user_data["first_name"], user_data["last_name"]):
             department = _get_department_for_name_part(name_part)
             if not department:
                 continue
@@ -60,6 +60,6 @@ class DummyDataSourceBackend(BaseDataSourceBackend):
         """Return the identifier and description for the department
         corresponding to the given letter, which is assumed to be an
         uppercase alphabetic letter."""
-        identifier = f'DEPT{letter}'
-        description = f'Department {letter}'
+        identifier = f"DEPT{letter}"
+        description = f"Department {letter}"
         return identifier, description

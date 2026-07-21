@@ -1,13 +1,14 @@
 """Tests for SavioProjectExistingPIForm.disable_pi_choices() per-request cache."""
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from coldfront.core.project.forms_.new_project_forms.request_forms import (
     SavioProjectExistingPIForm,
 )
 
-_BASE = 'coldfront.core.project.forms_.new_project_forms.request_forms'
+_BASE = "coldfront.core.project.forms_.new_project_forms.request_forms"
 
 
 def _qs_mock():
@@ -21,15 +22,15 @@ def _patches(ca_wrapper):
     """Return a list of (target, kwargs) pairs for the five expensive functions
     and the ComputingAllowance constructor, ready to be used with patch()."""
     return [
-        (f'{_BASE}.ComputingAllowance', dict(return_value=ca_wrapper)),
-        (f'{_BASE}.project_pi_pks', dict(return_value=set())),
-        (f'{_BASE}.non_denied_new_project_request_statuses',
-         dict(return_value=_qs_mock())),
-        (f'{_BASE}.pis_with_new_project_requests_pks',
-         dict(return_value=set())),
-        (f'{_BASE}.non_denied_renewal_request_statuses',
-         dict(return_value=_qs_mock())),
-        (f'{_BASE}.pis_with_renewal_requests_pks', dict(return_value=set())),
+        (f"{_BASE}.ComputingAllowance", dict(return_value=ca_wrapper)),
+        (f"{_BASE}.project_pi_pks", dict(return_value=set())),
+        (
+            f"{_BASE}.non_denied_new_project_request_statuses",
+            dict(return_value=_qs_mock()),
+        ),
+        (f"{_BASE}.pis_with_new_project_requests_pks", dict(return_value=set())),
+        (f"{_BASE}.non_denied_renewal_request_statuses", dict(return_value=_qs_mock())),
+        (f"{_BASE}.pis_with_renewal_requests_pks", dict(return_value=set())),
     ]
 
 
@@ -60,20 +61,25 @@ class TestDisablePIChoicesCache:
             pi_choices_cache=cache,
         )
 
-        with patch(f'{_BASE}.ComputingAllowance', return_value=wrapper), \
-             patch(f'{_BASE}.project_pi_pks',
-                   return_value=set()) as mock_pks, \
-             patch(f'{_BASE}.non_denied_new_project_request_statuses',
-                   return_value=_qs_mock()) as mock_new_statuses, \
-             patch(f'{_BASE}.pis_with_new_project_requests_pks',
-                   return_value=set()) as mock_new_pks, \
-             patch(f'{_BASE}.non_denied_renewal_request_statuses',
-                   return_value=_qs_mock()) as mock_renewal_statuses, \
-             patch(f'{_BASE}.pis_with_renewal_requests_pks',
-                   return_value=set()) as mock_renewal_pks:
-
-            SavioProjectExistingPIForm(**kwargs)   # cache miss → queries run
-            SavioProjectExistingPIForm(**kwargs)   # cache hit  → queries skip
+        with (
+            patch(f"{_BASE}.ComputingAllowance", return_value=wrapper),
+            patch(f"{_BASE}.project_pi_pks", return_value=set()) as mock_pks,
+            patch(
+                f"{_BASE}.non_denied_new_project_request_statuses",
+                return_value=_qs_mock(),
+            ) as mock_new_statuses,
+            patch(
+                f"{_BASE}.pis_with_new_project_requests_pks", return_value=set()
+            ) as mock_new_pks,
+            patch(
+                f"{_BASE}.non_denied_renewal_request_statuses", return_value=_qs_mock()
+            ) as mock_renewal_statuses,
+            patch(
+                f"{_BASE}.pis_with_renewal_requests_pks", return_value=set()
+            ) as mock_renewal_pks,
+        ):
+            SavioProjectExistingPIForm(**kwargs)  # cache miss → queries run
+            SavioProjectExistingPIForm(**kwargs)  # cache hit  → queries skip
 
         assert mock_pks.call_count == 1
         assert mock_new_statuses.call_count == 1
@@ -92,17 +98,19 @@ class TestDisablePIChoicesCache:
         wrapper = _ca_wrapper()
         cache = {}
 
-        with patch(f'{_BASE}.ComputingAllowance', return_value=wrapper), \
-             patch(f'{_BASE}.project_pi_pks', return_value={10, 20}), \
-             patch(f'{_BASE}.non_denied_new_project_request_statuses',
-                   return_value=_qs_mock()), \
-             patch(f'{_BASE}.pis_with_new_project_requests_pks',
-                   return_value={30}), \
-             patch(f'{_BASE}.non_denied_renewal_request_statuses',
-                   return_value=_qs_mock()), \
-             patch(f'{_BASE}.pis_with_renewal_requests_pks',
-                   return_value={40}):
-
+        with (
+            patch(f"{_BASE}.ComputingAllowance", return_value=wrapper),
+            patch(f"{_BASE}.project_pi_pks", return_value={10, 20}),
+            patch(
+                f"{_BASE}.non_denied_new_project_request_statuses",
+                return_value=_qs_mock(),
+            ),
+            patch(f"{_BASE}.pis_with_new_project_requests_pks", return_value={30}),
+            patch(
+                f"{_BASE}.non_denied_renewal_request_statuses", return_value=_qs_mock()
+            ),
+            patch(f"{_BASE}.pis_with_renewal_requests_pks", return_value={40}),
+        ):
             assert not cache
             SavioProjectExistingPIForm(
                 computing_allowance=Mock(),
@@ -111,8 +119,8 @@ class TestDisablePIChoicesCache:
             )
 
         assert len(cache) == 1
-        (cache_key, cached_value), = cache.items()
-        assert cache_key[0] == 'disabled_pks'
+        ((cache_key, cached_value),) = cache.items()
+        assert cache_key[0] == "disabled_pks"
         assert cached_value == {10, 20, 30, 40}
 
     def test_second_form_uses_cached_disabled_pks(self):
@@ -127,17 +135,19 @@ class TestDisablePIChoicesCache:
             pi_choices_cache=cache,
         )
 
-        with patch(f'{_BASE}.ComputingAllowance', return_value=wrapper), \
-             patch(f'{_BASE}.project_pi_pks', return_value={99}), \
-             patch(f'{_BASE}.non_denied_new_project_request_statuses',
-                   return_value=_qs_mock()), \
-             patch(f'{_BASE}.pis_with_new_project_requests_pks',
-                   return_value=set()), \
-             patch(f'{_BASE}.non_denied_renewal_request_statuses',
-                   return_value=_qs_mock()), \
-             patch(f'{_BASE}.pis_with_renewal_requests_pks',
-                   return_value=set()):
-
+        with (
+            patch(f"{_BASE}.ComputingAllowance", return_value=wrapper),
+            patch(f"{_BASE}.project_pi_pks", return_value={99}),
+            patch(
+                f"{_BASE}.non_denied_new_project_request_statuses",
+                return_value=_qs_mock(),
+            ),
+            patch(f"{_BASE}.pis_with_new_project_requests_pks", return_value=set()),
+            patch(
+                f"{_BASE}.non_denied_renewal_request_statuses", return_value=_qs_mock()
+            ),
+            patch(f"{_BASE}.pis_with_renewal_requests_pks", return_value=set()),
+        ):
             form1 = SavioProjectExistingPIForm(**kwargs)
 
             # Mutate the cache entry (using the tuple key written by the first
@@ -147,7 +157,7 @@ class TestDisablePIChoicesCache:
             cache[cache_key] = {42}
             form2 = SavioProjectExistingPIForm(**kwargs)
 
-        assert form2.fields['PI'].widget.disabled_choices == {42}
+        assert form2.fields["PI"].widget.disabled_choices == {42}
 
     # -------------------------------------------------------------------------
     # No cache (None): queries run on every instantiation
@@ -163,18 +173,23 @@ class TestDisablePIChoicesCache:
             pi_choices_cache=None,
         )
 
-        with patch(f'{_BASE}.ComputingAllowance', return_value=wrapper), \
-             patch(f'{_BASE}.project_pi_pks',
-                   return_value=set()) as mock_pks, \
-             patch(f'{_BASE}.non_denied_new_project_request_statuses',
-                   return_value=_qs_mock()) as mock_new_statuses, \
-             patch(f'{_BASE}.pis_with_new_project_requests_pks',
-                   return_value=set()) as mock_new_pks, \
-             patch(f'{_BASE}.non_denied_renewal_request_statuses',
-                   return_value=_qs_mock()) as mock_renewal_statuses, \
-             patch(f'{_BASE}.pis_with_renewal_requests_pks',
-                   return_value=set()) as mock_renewal_pks:
-
+        with (
+            patch(f"{_BASE}.ComputingAllowance", return_value=wrapper),
+            patch(f"{_BASE}.project_pi_pks", return_value=set()) as mock_pks,
+            patch(
+                f"{_BASE}.non_denied_new_project_request_statuses",
+                return_value=_qs_mock(),
+            ) as mock_new_statuses,
+            patch(
+                f"{_BASE}.pis_with_new_project_requests_pks", return_value=set()
+            ) as mock_new_pks,
+            patch(
+                f"{_BASE}.non_denied_renewal_request_statuses", return_value=_qs_mock()
+            ) as mock_renewal_statuses,
+            patch(
+                f"{_BASE}.pis_with_renewal_requests_pks", return_value=set()
+            ) as mock_renewal_pks,
+        ):
             SavioProjectExistingPIForm(**kwargs)
             SavioProjectExistingPIForm(**kwargs)
 
@@ -194,14 +209,16 @@ class TestDisablePIChoicesCache:
         wrapper = _ca_wrapper(is_one_per_pi=False)
         cache = {}
 
-        with patch(f'{_BASE}.ComputingAllowance', return_value=wrapper), \
-             patch(f'{_BASE}.project_pi_pks',
-                   return_value=set()) as mock_pks, \
-             patch(f'{_BASE}.pis_with_new_project_requests_pks',
-                   return_value=set()) as mock_new_pks, \
-             patch(f'{_BASE}.pis_with_renewal_requests_pks',
-                   return_value=set()) as mock_renewal_pks:
-
+        with (
+            patch(f"{_BASE}.ComputingAllowance", return_value=wrapper),
+            patch(f"{_BASE}.project_pi_pks", return_value=set()) as mock_pks,
+            patch(
+                f"{_BASE}.pis_with_new_project_requests_pks", return_value=set()
+            ) as mock_new_pks,
+            patch(
+                f"{_BASE}.pis_with_renewal_requests_pks", return_value=set()
+            ) as mock_renewal_pks,
+        ):
             SavioProjectExistingPIForm(
                 computing_allowance=Mock(),
                 allocation_period=Mock(),
@@ -212,6 +229,6 @@ class TestDisablePIChoicesCache:
         assert mock_new_pks.call_count == 0
         assert mock_renewal_pks.call_count == 0
         assert len(cache) == 1
-        (cache_key, cached_value), = cache.items()
-        assert cache_key[0] == 'disabled_pks'
+        ((cache_key, cached_value),) = cache.items()
+        assert cache_key[0] == "disabled_pks"
         assert cached_value == set()

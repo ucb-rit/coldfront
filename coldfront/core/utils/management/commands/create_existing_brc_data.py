@@ -1,92 +1,90 @@
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectStatusChoice
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserRoleChoice
-from coldfront.core.project.models import ProjectUserStatusChoice
-from coldfront.core.user.models import UserProfile
-from coldfront.core.utils.management.commands.utils import get_gspread_worksheet
-from coldfront.core.utils.management.commands.utils import get_gspread_worksheet_data
+import logging
+import os
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand
 from django.core.validators import validate_email
-from django.db.models import Q
-import logging
-import os
+
+from coldfront.core.project.models import (
+    Project,
+    ProjectStatusChoice,
+    ProjectUser,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
+from coldfront.core.user.models import UserProfile
+from coldfront.core.utils.management.commands.utils import (
+    get_gspread_worksheet,
+    get_gspread_worksheet_data,
+)
 
 """An admin command that creates existing users and accounts for BRC."""
 
 
-CLUSTERS = {'abc', 'cortex', 'savio', 'vector'}
+CLUSTERS = {"abc", "cortex", "savio", "vector"}
 
-PASSWD_FILE = '/tmp/passwd'
-ABC_PASSWD_FILE = '/tmp/passwd.abc'
+PASSWD_FILE = "/tmp/passwd"
+ABC_PASSWD_FILE = "/tmp/passwd.abc"
 
 PROJECT_ALLOWANCES = {
-    'ac_': 'allowance_has_recharge',
-    'co_': 'allowance_has_condo',
-    'fc_': 'allowance_has_pca',
-    'ic_': 'allowance_has_instructional',
-    'pc_': 'allowance_has_partner'
+    "ac_": "allowance_has_recharge",
+    "co_": "allowance_has_condo",
+    "fc_": "allowance_has_pca",
+    "ic_": "allowance_has_instructional",
+    "pc_": "allowance_has_partner",
 }
 
-PROJECT_PREFIXES = {
-    'abc', 'ac_', 'cortex', 'co_', 'fc_', 'ic_', 'pc_', 'vector_'}
+PROJECT_PREFIXES = {"abc", "ac_", "cortex", "co_", "fc_", "ic_", "pc_", "vector_"}
 
 PROJECT_PREFIXES_BY_CLUSTER = {
-    'abc': {'abc'},
-    'cortex': {'cortex'},
-    'savio': {'ac_', 'co_', 'fc_', 'ic_', 'pc_'},
-    'vector': {'vector_'}
+    "abc": {"abc"},
+    "cortex": {"cortex"},
+    "savio": {"ac_", "co_", "fc_", "ic_", "pc_"},
+    "vector": {"vector_"},
 }
 
 # Settings for the 'All-Projects' tab of the 'BRC-Projects' spreadsheet.
 PROJECT_SPREADSHEET_COLS = {
-    'NAME': 3,
-    'POC_NAMES': 4,
-    'POC_EMAILS': 5,
-    'PI_NAMES': 6,
-    'PI_EMAILS': 7
+    "NAME": 3,
+    "POC_NAMES": 4,
+    "POC_EMAILS": 5,
+    "PI_NAMES": 6,
+    "PI_EMAILS": 7,
 }
-PROJECT_SPREADSHEET_ID = '1N6VT5VHN07z4nXhea5AXQXRF8WUDoHbJwWL4PV3C66M'
+PROJECT_SPREADSHEET_ID = "1N6VT5VHN07z4nXhea5AXQXRF8WUDoHbJwWL4PV3C66M"
 PROJECT_SPREADSHEET_ROW_START = 2
-PROJECT_SPREADSHEET_TAB = 'All-Projects'
+PROJECT_SPREADSHEET_TAB = "All-Projects"
 
 # Settings for the 'All-Users' tab of the 'BRC-Users' spreadsheet.
-USER_SPREADSHEET_COLS = {
-    'USERNAME': 1,
-    'NAME': 2,
-    'EMAIL': 3,
-    'CLUSTERS': 4
-}
-USER_SPREADSHEET_ID = '1zvTLSbUNtoBoSQcMCdOlJTm8OvvwWnlfP2_0gQLibR8'
+USER_SPREADSHEET_COLS = {"USERNAME": 1, "NAME": 2, "EMAIL": 3, "CLUSTERS": 4}
+USER_SPREADSHEET_ID = "1zvTLSbUNtoBoSQcMCdOlJTm8OvvwWnlfP2_0gQLibR8"
 USER_SPREADSHEET_ROW_START = 2
-USER_SPREADSHEET_TAB = 'All-Users'
+USER_SPREADSHEET_TAB = "All-Users"
 
 # Settings for the 'Savio-users' tab of the 'BRC-Users' spreadsheet.
 SAVIO_USER_PROJECT_SPREADSHEET_COLS = {
-    'NAME': 1,
-    'EMAIL': 2,
-    'USERNAME': 3,
-    'PROJECTS': 4
+    "NAME": 1,
+    "EMAIL": 2,
+    "USERNAME": 3,
+    "PROJECTS": 4,
 }
 SAVIO_USER_PROJECT_SPREADSHEET_ROW_START = 2
-SAVIO_USER_PROJECT_SPREADSHEET_TAB = 'Savio-users'
+SAVIO_USER_PROJECT_SPREADSHEET_TAB = "Savio-users"
 
 # Settings for the 'ABC-users' tab of the 'BRC-Users' spreadsheet.
 ABC_USER_PROJECT_SPREADSHEET_COLS = {
-    'NAME': 1,
-    'EMAIL': 2,
-    'USERNAME': 3,
+    "NAME": 1,
+    "EMAIL": 2,
+    "USERNAME": 3,
 }
 ABC_USER_PROJECT_SPREADSHEET_ROW_START = 2
-ABC_USER_PROJECT_SPREADSHEET_TAB = 'ABC-users'
+ABC_USER_PROJECT_SPREADSHEET_TAB = "ABC-users"
 
 
 class Command(BaseCommand):
-
-    help = 'Creates users and accounts from the BRC spreadsheets.'
+    help = "Creates users and accounts from the BRC spreadsheets."
     logger = logging.getLogger(__name__)
 
     def add_arguments(self, parser):
@@ -113,7 +111,8 @@ class Command(BaseCommand):
         # already exist).
         abc_user_project_data = self.get_abc_user_project_data()
         valid_abc_user_projects = self.get_valid_abc_user_projects(
-            abc_user_project_data)
+            abc_user_project_data
+        )
         self.create_project_users(valid_abc_user_projects)
 
     def create_abc_project(self):
@@ -129,61 +128,65 @@ class Command(BaseCommand):
             - Exception, if any errors occur
         """
         # Create the project.
-        name = 'abc'
+        name = "abc"
         title = name
-        project_status = ProjectStatusChoice.objects.get(name='Active')
+        project_status = ProjectStatusChoice.objects.get(name="Active")
         project_kwargs = {
-            'title': title,
-            'status': project_status,
+            "title": title,
+            "status": project_status,
         }
         try:
             project = Project.objects.get(name=name)
         except Project.DoesNotExist:
             project = Project.objects.create(
-                name='abc', title='abc', status=project_status)
-            self.logger.info(f'Project {project.name} was created.')
+                name="abc", title="abc", status=project_status
+            )
+            self.logger.info(f"Project {project.name} was created.")
         else:
             for key, value in project_kwargs.items():
                 setattr(project, key, value)
             project.save()
 
         # Set its PI, which should already exist. If it does not, exit.
-        pi_email = 'sup@berkeley.edu'
+        pi_email = "sup@berkeley.edu"
         try:
             pi = User.objects.get(email=pi_email)
         except User.DoesNotExist:
             self.logger.error(
-                f'Expected PI ({pi_email}) for Project {project.name} does '
-                f'not exist.')
+                f"Expected PI ({pi_email}) for Project {project.name} does not exist."
+            )
             return
 
         # Set attributes in the PI's UserProfile.
         user_profile_kwargs = {
-            'user': pi,
-            'is_pi': True,
+            "user": pi,
+            "is_pi": True,
         }
         user_profile, created = UserProfile.objects.get_or_create(user=pi)
         if created:
-            self.logger.info(
-                f'UserProfile for user {pi.username} was created.')
+            self.logger.info(f"UserProfile for user {pi.username} was created.")
         for key, value in user_profile_kwargs.items():
             setattr(user_profile, key, value)
         user_profile.save()
 
         # Set the PI as a PI on the project.
-        principal_investigator_role = \
-            ProjectUserRoleChoice.objects.get(name='Principal Investigator')
-        project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Active')
+        principal_investigator_role = ProjectUserRoleChoice.objects.get(
+            name="Principal Investigator"
+        )
+        project_user_status = ProjectUserStatusChoice.objects.get(name="Active")
         try:
             project_user = ProjectUser.objects.get(user=pi, project=project)
         except ProjectUser.DoesNotExist:
             ProjectUser.objects.create(
-                user=pi, project=project, role=principal_investigator_role,
-                status=project_user_status)
+                user=pi,
+                project=project,
+                role=principal_investigator_role,
+                status=project_user_status,
+            )
             self.logger.info(
-                f'Created a ProjectUser between User {pi.username} and '
-                f'Project {project.name}.')
+                f"Created a ProjectUser between User {pi.username} and "
+                f"Project {project.name}."
+            )
         else:
             project_user.role = principal_investigator_role
             project_user.status = project_user_status
@@ -203,29 +206,30 @@ class Command(BaseCommand):
         Raises:
             - Exception, if any errors occur
         """
-        role = ProjectUserRoleChoice.objects.get(name='User')
-        status = ProjectUserStatusChoice.objects.get(name='Active')
+        role = ProjectUserRoleChoice.objects.get(name="User")
+        status = ProjectUserStatusChoice.objects.get(name="Active")
         for valid_user_project in valid_user_projects:
-            username = valid_user_project['username']
-            projects = valid_user_project['projects']
+            username = valid_user_project["username"]
+            projects = valid_user_project["projects"]
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
-                self.logger.error(f'User {username} does not exist.')
+                self.logger.error(f"User {username} does not exist.")
                 continue
-            for project_name in [name.strip() for name in projects.split(',')]:
+            for project_name in [name.strip() for name in projects.split(",")]:
                 try:
                     project = Project.objects.get(name=project_name)
                 except Project.DoesNotExist:
-                    self.logger.error(
-                        f'Project {project_name} does not exist.')
+                    self.logger.error(f"Project {project_name} does not exist.")
                     continue
                 if not ProjectUser.objects.filter(user=user, project=project):
                     ProjectUser.objects.create(
-                        user=user, project=project, role=role, status=status)
+                        user=user, project=project, role=role, status=status
+                    )
                     self.logger.info(
-                        f'Created a ProjectUser between User {user.username} '
-                        f'and Project {project.name}.')
+                        f"Created a ProjectUser between User {user.username} "
+                        f"and Project {project.name}."
+                    )
 
     def create_projects(self, valid_projects):
         """Create Project, User, and ProjectUser objects given a list of
@@ -240,19 +244,19 @@ class Command(BaseCommand):
         Raises:
             - Exception, if any errors occur
         """
-        project_status = ProjectStatusChoice.objects.get(name='Active')
-        principal_investigator_role = \
-            ProjectUserRoleChoice.objects.get(name='Principal Investigator')
-        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
-        project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Active')
+        project_status = ProjectStatusChoice.objects.get(name="Active")
+        principal_investigator_role = ProjectUserRoleChoice.objects.get(
+            name="Principal Investigator"
+        )
+        manager_role = ProjectUserRoleChoice.objects.get(name="Manager")
+        project_user_status = ProjectUserStatusChoice.objects.get(name="Active")
 
         for valid_project in valid_projects:
-            name = valid_project['name']
-            poc_names = valid_project['poc_names']
-            poc_emails = valid_project['poc_emails']
-            pi_names = valid_project['pi_names']
-            pi_emails = valid_project['pi_emails']
+            name = valid_project["name"]
+            poc_names = valid_project["poc_names"]
+            poc_emails = valid_project["poc_emails"]
+            pi_names = valid_project["pi_names"]
+            pi_emails = valid_project["pi_emails"]
 
             # Create User objects for faculty and grant them PI status.
             PIs = set()
@@ -267,28 +271,26 @@ class Command(BaseCommand):
                     username = pi_email
                 pi_split_names = self.get_first_middle_last_names(pi_names[i])
                 user_kwargs = {
-                    'email': pi_email,
-                    'first_name': pi_split_names['first'],
-                    'last_name': pi_split_names['last'],
+                    "email": pi_email,
+                    "first_name": pi_split_names["first"],
+                    "last_name": pi_split_names["last"],
                 }
                 pi, created = User.objects.get_or_create(username=username)
                 if created:
-                    self.logger.info(f'User {username} was created.')
+                    self.logger.info(f"User {username} was created.")
                 for key, value in user_kwargs.items():
                     setattr(pi, key, value)
                 pi.save()
                 PIs.add(pi)
 
                 user_profile_kwargs = {
-                    'user': pi,
-                    'middle_name': pi_split_names['middle'],
-                    'is_pi': True,
+                    "user": pi,
+                    "middle_name": pi_split_names["middle"],
+                    "is_pi": True,
                 }
-                user_profile, created = UserProfile.objects.get_or_create(
-                    user=pi)
+                user_profile, created = UserProfile.objects.get_or_create(user=pi)
                 if created:
-                    self.logger.info(
-                        f'UserProfile for user {pi.username} was created.')
+                    self.logger.info(f"UserProfile for user {pi.username} was created.")
                 for key, value in user_profile_kwargs.items():
                     setattr(user_profile, key, value)
                 user_profile.save()
@@ -299,15 +301,16 @@ class Command(BaseCommand):
 
             # Create the project.
             project_kwargs = {
-                'title': title,
-                'status': project_status,
+                "title": title,
+                "status": project_status,
             }
             try:
                 project = Project.objects.get(name=name)
             except Project.DoesNotExist:
                 project = Project.objects.create(
-                    name=name, title=title, status=project_status)
-                self.logger.info(f'Project {name} was created.')
+                    name=name, title=title, status=project_status
+                )
+                self.logger.info(f"Project {name} was created.")
             else:
                 for key, value in project_kwargs.items():
                     setattr(project, key, value)
@@ -316,16 +319,18 @@ class Command(BaseCommand):
             # Set faculty as PIs.
             for pi in PIs:
                 try:
-                    project_user = ProjectUser.objects.get(
-                        user=pi, project=project)
+                    project_user = ProjectUser.objects.get(user=pi, project=project)
                 except ProjectUser.DoesNotExist:
                     ProjectUser.objects.create(
-                        user=pi, project=project,
+                        user=pi,
+                        project=project,
                         role=principal_investigator_role,
-                        status=project_user_status)
+                        status=project_user_status,
+                    )
                     self.logger.info(
-                        f'Created a ProjectUser between User {pi.username} '
-                        f'and Project {project.name}.')
+                        f"Created a ProjectUser between User {pi.username} "
+                        f"and Project {project.name}."
+                    )
                 else:
                     project_user.role = principal_investigator_role
                     project_user.status = project_user_status
@@ -336,9 +341,9 @@ class Command(BaseCommand):
                 poc_split_name = self.get_first_middle_last_names(poc_name)
                 email = poc_emails[i].lower()
                 user_kwargs = {
-                    'email': email,
-                    'first_name': poc_split_name['first'],
-                    'last_name': poc_split_name['last']
+                    "email": email,
+                    "first_name": poc_split_name["first"],
+                    "last_name": poc_split_name["last"],
                 }
 
                 # If the user already exists, retrieve its username. Otherwise,
@@ -351,33 +356,36 @@ class Command(BaseCommand):
 
                 poc, created = User.objects.get_or_create(username=username)
                 if created:
-                    self.logger.info(f'User {username} was created.')
+                    self.logger.info(f"User {username} was created.")
                 for key, value in user_kwargs.items():
                     setattr(poc, key, value)
                 poc.save()
 
                 user_profile_kwargs = {
-                    'middle_name': poc_split_name['middle'],
+                    "middle_name": poc_split_name["middle"],
                 }
-                user_profile, created = UserProfile.objects.get_or_create(
-                    user=poc)
+                user_profile, created = UserProfile.objects.get_or_create(user=poc)
                 if created:
                     self.logger.info(
-                        f'UserProfile for user {poc.username} was created.')
+                        f"UserProfile for user {poc.username} was created."
+                    )
                 for key, value in user_profile_kwargs.items():
                     setattr(user_profile, key, value)
                 user_profile.save()
 
                 try:
-                    project_user = ProjectUser.objects.get(
-                        user=poc, project=project)
+                    project_user = ProjectUser.objects.get(user=poc, project=project)
                 except ProjectUser.DoesNotExist:
                     ProjectUser.objects.create(
-                        user=poc, project=project, role=manager_role,
-                        status=project_user_status)
+                        user=poc,
+                        project=project,
+                        role=manager_role,
+                        status=project_user_status,
+                    )
                     self.logger.info(
-                        f'Created a ProjectUser between User {poc.username} '
-                        f'and Project {project.name}.')
+                        f"Created a ProjectUser between User {poc.username} "
+                        f"and Project {project.name}."
+                    )
                 else:
                     if project_user.role != principal_investigator_role:
                         project_user.role = manager_role
@@ -398,35 +406,32 @@ class Command(BaseCommand):
             - Exception, if any errors occur
         """
         for valid_user in valid_users:
-            username = valid_user['username']
+            username = valid_user["username"]
             user_kwargs = {
-                'email': valid_user['email'].lower(),
-                'first_name': valid_user['first_name'],
-                'last_name': valid_user['last_name'],
+                "email": valid_user["email"].lower(),
+                "first_name": valid_user["first_name"],
+                "last_name": valid_user["last_name"],
             }
 
             users_with_username = User.objects.filter(username=username)
             if users_with_username.exists():
                 user = users_with_username.first()
             else:
-                user, created = User.objects.get_or_create(
-                    email=user_kwargs['email'])
+                user, created = User.objects.get_or_create(email=user_kwargs["email"])
                 user.username = username
                 if created:
-                    self.logger.info(f'User {username} was created.')
+                    self.logger.info(f"User {username} was created.")
             for key, value in user_kwargs.items():
                 setattr(user, key, value)
             user.save()
 
             user_profile_kwargs = {
-                'middle_name': valid_user['middle_name'],
-                'cluster_uid': valid_user['cluster_uid'],
+                "middle_name": valid_user["middle_name"],
+                "cluster_uid": valid_user["cluster_uid"],
             }
-            user_profile, created = UserProfile.objects.get_or_create(
-                user=user)
+            user_profile, created = UserProfile.objects.get_or_create(user=user)
             if created:
-                self.logger.info(
-                    f'UserProfile for user {user.username} was created.')
+                self.logger.info(f"UserProfile for user {user.username} was created.")
             for key, value in user_profile_kwargs.items():
                 setattr(user_profile, key, value)
             user_profile.save()
@@ -462,15 +467,19 @@ class Command(BaseCommand):
             - Exception, if any errors occur
         """
         worksheet = get_gspread_worksheet(
-            settings.GOOGLE_OAUTH2_KEY_FILE, USER_SPREADSHEET_ID,
-            ABC_USER_PROJECT_SPREADSHEET_TAB)
+            settings.GOOGLE_OAUTH2_KEY_FILE,
+            USER_SPREADSHEET_ID,
+            ABC_USER_PROJECT_SPREADSHEET_TAB,
+        )
         row_start = ABC_USER_PROJECT_SPREADSHEET_ROW_START
-        row_end = len(worksheet.col_values(
-            ABC_USER_PROJECT_SPREADSHEET_COLS['USERNAME']))
+        row_end = len(
+            worksheet.col_values(ABC_USER_PROJECT_SPREADSHEET_COLS["USERNAME"])
+        )
         col_start = 1
-        col_end = ABC_USER_PROJECT_SPREADSHEET_COLS['USERNAME']
+        col_end = ABC_USER_PROJECT_SPREADSHEET_COLS["USERNAME"]
         return get_gspread_worksheet_data(
-            worksheet, row_start, row_end, col_start, col_end)
+            worksheet, row_start, row_end, col_start, col_end
+        )
 
     @staticmethod
     def get_first_middle_last_names(full_name):
@@ -487,20 +496,16 @@ class Command(BaseCommand):
         Raises:
             - None
         """
-        names = {
-            'first': '',
-            'middle': '',
-            'last': ''
-        }
+        names = {"first": "", "middle": "", "last": ""}
         full_name = full_name.strip().split()
         if not full_name:
             return names
-        names['first'] = full_name[0]
+        names["first"] = full_name[0]
         if len(full_name) == 2:
-            names['last'] = full_name[-1]
+            names["last"] = full_name[-1]
         else:
-            names['middle'] = ' '.join(full_name[1:-1])
-            names['last'] = full_name[-1]
+            names["middle"] = " ".join(full_name[1:-1])
+            names["last"] = full_name[-1]
         return names
 
     @staticmethod
@@ -518,14 +523,17 @@ class Command(BaseCommand):
             - Exception, if any errors occur
         """
         worksheet = get_gspread_worksheet(
-            settings.GOOGLE_OAUTH2_KEY_FILE, PROJECT_SPREADSHEET_ID,
-            PROJECT_SPREADSHEET_TAB)
+            settings.GOOGLE_OAUTH2_KEY_FILE,
+            PROJECT_SPREADSHEET_ID,
+            PROJECT_SPREADSHEET_TAB,
+        )
         row_start = PROJECT_SPREADSHEET_ROW_START
-        row_end = len(worksheet.col_values(PROJECT_SPREADSHEET_COLS['NAME']))
+        row_end = len(worksheet.col_values(PROJECT_SPREADSHEET_COLS["NAME"]))
         col_start = 1
         col_end = worksheet.col_count
         return get_gspread_worksheet_data(
-            worksheet, row_start, row_end, col_start, col_end)
+            worksheet, row_start, row_end, col_start, col_end
+        )
 
     @staticmethod
     def get_user_data():
@@ -542,14 +550,15 @@ class Command(BaseCommand):
             - Exception, if any errors occur
         """
         worksheet = get_gspread_worksheet(
-            settings.GOOGLE_OAUTH2_KEY_FILE, USER_SPREADSHEET_ID,
-            USER_SPREADSHEET_TAB)
+            settings.GOOGLE_OAUTH2_KEY_FILE, USER_SPREADSHEET_ID, USER_SPREADSHEET_TAB
+        )
         row_start = USER_SPREADSHEET_ROW_START
-        row_end = len(worksheet.col_values(USER_SPREADSHEET_COLS['USERNAME']))
+        row_end = len(worksheet.col_values(USER_SPREADSHEET_COLS["USERNAME"]))
         col_start = 1
-        col_end = USER_SPREADSHEET_COLS['CLUSTERS']
+        col_end = USER_SPREADSHEET_COLS["CLUSTERS"]
         return get_gspread_worksheet_data(
-            worksheet, row_start, row_end, col_start, col_end)
+            worksheet, row_start, row_end, col_start, col_end
+        )
 
     def get_user_ids(self, password_file_path, user_data):
         """Parse the password file at the given path and update the
@@ -568,28 +577,24 @@ class Command(BaseCommand):
             - None
         """
         if self.file_exists(password_file_path):
-            with open(password_file_path, 'r') as password_file:
+            with open(password_file_path) as password_file:
                 for line in password_file:
-                    fields = [
-                        field.strip() for field in line.rstrip().split(':')]
+                    fields = [field.strip() for field in line.rstrip().split(":")]
                     if len(fields) != 7:
-                        self.logger.error(
-                            f'The user {fields} does not have 7 fields.')
+                        self.logger.error(f"The user {fields} does not have 7 fields.")
                         continue
                     user_username = fields[0].strip()
                     if not user_username:
-                        self.logger.error(
-                            f'The user {fields} is missing a username.')
+                        self.logger.error(f"The user {fields} is missing a username.")
                         continue
                     try:
                         user_id = int(fields[2].strip())
                         if user_id < 0:
-                            raise ValueError(
-                                f'The user_id {user_id} is invalid.')
+                            raise ValueError(f"The user_id {user_id} is invalid.")
                     except (TypeError, ValueError):
                         self.logger.error(
-                            f'The user {fields} has an invalid user ID: '
-                            f'{user_id}.')
+                            f"The user {fields} has an invalid user ID: {user_id}."
+                        )
                         continue
                     user_data[user_username] = user_id
 
@@ -608,15 +613,19 @@ class Command(BaseCommand):
             - Exception, if any errors occur
         """
         worksheet = get_gspread_worksheet(
-            settings.GOOGLE_OAUTH2_KEY_FILE, USER_SPREADSHEET_ID,
-            SAVIO_USER_PROJECT_SPREADSHEET_TAB)
+            settings.GOOGLE_OAUTH2_KEY_FILE,
+            USER_SPREADSHEET_ID,
+            SAVIO_USER_PROJECT_SPREADSHEET_TAB,
+        )
         row_start = SAVIO_USER_PROJECT_SPREADSHEET_ROW_START
-        row_end = len(worksheet.col_values(
-            SAVIO_USER_PROJECT_SPREADSHEET_COLS['USERNAME']))
+        row_end = len(
+            worksheet.col_values(SAVIO_USER_PROJECT_SPREADSHEET_COLS["USERNAME"])
+        )
         col_start = 1
-        col_end = SAVIO_USER_PROJECT_SPREADSHEET_COLS['PROJECTS']
+        col_end = SAVIO_USER_PROJECT_SPREADSHEET_COLS["PROJECTS"]
         return get_gspread_worksheet_data(
-            worksheet, row_start, row_end, col_start, col_end)
+            worksheet, row_start, row_end, col_start, col_end
+        )
 
     def get_valid_abc_user_projects(self, abc_user_project_data):
         """Return the subset of the given abc user project associations
@@ -635,7 +644,7 @@ class Command(BaseCommand):
         Raises:
             - None
         """
-        project_name = 'abc'
+        project_name = "abc"
         for row in abc_user_project_data:
             row.append(project_name)
         return self.get_valid_user_projects(abc_user_project_data)
@@ -655,26 +664,28 @@ class Command(BaseCommand):
         """
         valid, invalid = [], []
         for row in project_data:
-            name = row[PROJECT_SPREADSHEET_COLS['NAME'] - 1].strip()
-            poc_names = row[PROJECT_SPREADSHEET_COLS['POC_NAMES'] - 1].strip()
-            poc_emails = row[
-                PROJECT_SPREADSHEET_COLS['POC_EMAILS'] - 1].strip()
-            pi_names = row[PROJECT_SPREADSHEET_COLS['PI_NAMES'] - 1].strip()
-            pi_emails = row[PROJECT_SPREADSHEET_COLS['PI_EMAILS'] - 1].strip()
+            name = row[PROJECT_SPREADSHEET_COLS["NAME"] - 1].strip()
+            poc_names = row[PROJECT_SPREADSHEET_COLS["POC_NAMES"] - 1].strip()
+            poc_emails = row[PROJECT_SPREADSHEET_COLS["POC_EMAILS"] - 1].strip()
+            pi_names = row[PROJECT_SPREADSHEET_COLS["PI_NAMES"] - 1].strip()
+            pi_emails = row[PROJECT_SPREADSHEET_COLS["PI_EMAILS"] - 1].strip()
             row_dict = {
-                'name': name,
-                'poc_names': [],
-                'poc_emails': [],
-                'pi_names': [],
-                'pi_emails': [],
+                "name": name,
+                "poc_names": [],
+                "poc_emails": [],
+                "pi_names": [],
+                "pi_emails": [],
             }
 
-            if not name or len(name) < 3 or not name.startswith(
-                    tuple(PROJECT_PREFIXES)):
+            if (
+                not name
+                or len(name) < 3
+                or not name.startswith(tuple(PROJECT_PREFIXES))
+            ):
                 invalid.append(row_dict)
                 continue
 
-            poc_names = [poc_name.strip() for poc_name in poc_names.split(',')]
+            poc_names = [poc_name.strip() for poc_name in poc_names.split(",")]
             if not poc_names:
                 invalid.append(row_dict)
                 continue
@@ -686,10 +697,9 @@ class Command(BaseCommand):
             if not poc_names_valid:
                 invalid.append(row_dict)
                 continue
-            row_dict['poc_names'] = poc_names
+            row_dict["poc_names"] = poc_names
 
-            poc_emails = [
-                poc_email.strip() for poc_email in poc_emails.split(',')]
+            poc_emails = [poc_email.strip() for poc_email in poc_emails.split(",")]
             if not poc_emails:
                 invalid.append(row_dict)
                 continue
@@ -701,9 +711,9 @@ class Command(BaseCommand):
             if not poc_emails_valid:
                 invalid.append(row_dict)
                 continue
-            row_dict['poc_emails'] = poc_emails
+            row_dict["poc_emails"] = poc_emails
 
-            pi_names = [pi_name.strip() for pi_name in pi_names.split(',')]
+            pi_names = [pi_name.strip() for pi_name in pi_names.split(",")]
             if not pi_names:
                 invalid.append(row_dict)
                 continue
@@ -715,9 +725,9 @@ class Command(BaseCommand):
             if not pi_names_valid:
                 invalid.append(row_dict)
                 continue
-            row_dict['pi_names'] = pi_names
+            row_dict["pi_names"] = pi_names
 
-            pi_emails = [pi_email.strip() for pi_email in pi_emails.split(',')]
+            pi_emails = [pi_email.strip() for pi_email in pi_emails.split(",")]
             if not pi_emails:
                 invalid.append(row_dict)
                 continue
@@ -729,14 +739,14 @@ class Command(BaseCommand):
             if not pi_emails_valid:
                 invalid.append(row_dict)
                 continue
-            row_dict['pi_emails'] = pi_emails
+            row_dict["pi_emails"] = pi_emails
 
             valid.append(row_dict)
 
-        self.logger.info(f'Number of Valid Rows: {len(valid)}')
-        self.logger.info(f'Number of Invalid Rows: {len(invalid)}')
+        self.logger.info(f"Number of Valid Rows: {len(valid)}")
+        self.logger.info(f"Number of Invalid Rows: {len(invalid)}")
         for invalid_row in invalid:
-            self.logger.error(f'Invalid Row {invalid_row}.')
+            self.logger.error(f"Invalid Row {invalid_row}.")
 
         return valid
 
@@ -755,14 +765,9 @@ class Command(BaseCommand):
         """
         valid, invalid = [], []
         for row in user_project_data:
-            username = row[
-                SAVIO_USER_PROJECT_SPREADSHEET_COLS['USERNAME'] - 1].strip()
-            projects = row[
-                SAVIO_USER_PROJECT_SPREADSHEET_COLS['PROJECTS'] - 1].strip()
-            row_dict = {
-                'username': username,
-                'projects': projects
-            }
+            username = row[SAVIO_USER_PROJECT_SPREADSHEET_COLS["USERNAME"] - 1].strip()
+            projects = row[SAVIO_USER_PROJECT_SPREADSHEET_COLS["PROJECTS"] - 1].strip()
+            row_dict = {"username": username, "projects": projects}
             if not username:
                 invalid.append(row_dict)
                 continue
@@ -771,7 +776,7 @@ class Command(BaseCommand):
             except User.DoesNotExist:
                 invalid.append(row_dict)
                 continue
-            projects = [project.strip() for project in projects.split(',')]
+            projects = [project.strip() for project in projects.split(",")]
             if not projects:
                 invalid.append(row_dict)
                 continue
@@ -780,15 +785,15 @@ class Command(BaseCommand):
                 try:
                     Project.objects.get(name=project_name)
                 except Project.DoesNotExist:
-                    self.logger.error(f'Invalid Project {project_name}.')
+                    self.logger.error(f"Invalid Project {project_name}.")
                 else:
                     valid_projects.append(project_name)
-            row_dict['projects'] = ','.join(valid_projects)
+            row_dict["projects"] = ",".join(valid_projects)
             valid.append(row_dict)
-        self.logger.info(f'Number of Valid rows: {len(valid)}.')
-        self.logger.info(f'Number of Invalid rows: {len(invalid)}.')
+        self.logger.info(f"Number of Valid rows: {len(valid)}.")
+        self.logger.info(f"Number of Invalid rows: {len(invalid)}.")
         for invalid_row in invalid:
-            self.logger.error(f'Invalid row {invalid_row}.')
+            self.logger.error(f"Invalid row {invalid_row}.")
         return valid
 
     def get_valid_users(self, user_data):
@@ -809,18 +814,18 @@ class Command(BaseCommand):
         self.get_user_ids(ABC_PASSWD_FILE, user_ids)
         valid, invalid = [], []
         for row in user_data:
-            username = row[USER_SPREADSHEET_COLS['USERNAME'] - 1].strip()
-            name = row[USER_SPREADSHEET_COLS['NAME'] - 1].strip()
-            email = row[USER_SPREADSHEET_COLS['EMAIL'] - 1].strip()
-            clusters = row[USER_SPREADSHEET_COLS['CLUSTERS'] - 1].strip()
+            username = row[USER_SPREADSHEET_COLS["USERNAME"] - 1].strip()
+            name = row[USER_SPREADSHEET_COLS["NAME"] - 1].strip()
+            email = row[USER_SPREADSHEET_COLS["EMAIL"] - 1].strip()
+            clusters = row[USER_SPREADSHEET_COLS["CLUSTERS"] - 1].strip()
             row_dict = {
-                'username': username,
-                'first_name': '',
-                'middle_name': '',
-                'last_name': '',
-                'email': email,
-                'clusters': clusters,
-                'cluster_uid': None,
+                "username": username,
+                "first_name": "",
+                "middle_name": "",
+                "last_name": "",
+                "email": email,
+                "clusters": clusters,
+                "cluster_uid": None,
             }
             if not username:
                 invalid.append(row_dict)
@@ -830,13 +835,13 @@ class Command(BaseCommand):
                 continue
             else:
                 names = self.get_first_middle_last_names(name)
-                row_dict['first_name'] = names['first']
-                row_dict['middle_name'] = names['middle']
-                row_dict['last_name'] = names['last']
+                row_dict["first_name"] = names["first"]
+                row_dict["middle_name"] = names["middle"]
+                row_dict["last_name"] = names["last"]
             if not self.is_email_address_valid(email):
                 invalid.append(row_dict)
                 continue
-            clusters = [cluster.strip() for cluster in clusters.split(',')]
+            clusters = [cluster.strip() for cluster in clusters.split(",")]
             if not clusters:
                 invalid.append(row_dict)
                 continue
@@ -850,11 +855,11 @@ class Command(BaseCommand):
                 continue
             valid.append(row_dict)
             if username in user_ids:
-                row_dict['cluster_uid'] = user_ids[username]
-        self.logger.info(f'Number of Valid Rows: {len(valid)}')
-        self.logger.info(f'Number of Invalid Rows: {len(invalid)}')
+                row_dict["cluster_uid"] = user_ids[username]
+        self.logger.info(f"Number of Valid Rows: {len(valid)}")
+        self.logger.info(f"Number of Invalid Rows: {len(invalid)}")
         for invalid_row in invalid:
-            self.logger.error(f'Invalid Row {invalid_row}.')
+            self.logger.error(f"Invalid Row {invalid_row}.")
         return valid
 
     @staticmethod

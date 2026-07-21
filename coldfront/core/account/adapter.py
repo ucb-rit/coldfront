@@ -1,5 +1,4 @@
 from allauth.account.adapter import DefaultAccountAdapter
-
 from django.conf import settings
 
 from coldfront.core.utils.mail import dummy_email_address

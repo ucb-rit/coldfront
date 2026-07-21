@@ -1,11 +1,10 @@
+from allauth.account.models import EmailAddress
 from django.contrib.admin.sites import AdminSite
+from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
 from django.contrib.messages.storage import default_storage
-from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.http import HttpRequest
-
-from allauth.account.models import EmailAddress
 
 from coldfront.core.account.admin import EmailAddressAdmin
 from coldfront.core.user.tests.utils import TestUserBase
@@ -23,51 +22,43 @@ class TestEmailAddressAdmin(TestUserBase):
         self.app_admin = EmailAddressAdmin(EmailAddress, AdminSite())
 
         self.user1 = User.objects.create(
-            email='user1@email.com',
-            first_name='First',
-            last_name='Last',
-            username='user1')
+            email="user1@email.com",
+            first_name="First",
+            last_name="Last",
+            username="user1",
+        )
 
         self.user2 = User.objects.create(
-            email='user2@email.com',
-            first_name='First',
-            last_name='Last',
-            username='user2')
+            email="user2@email.com",
+            first_name="First",
+            last_name="Last",
+            username="user2",
+        )
 
         self.email1 = EmailAddress.objects.create(
-            user=self.user1,
-            email='email1@email.com',
-            verified=True,
-            primary=True)
+            user=self.user1, email="email1@email.com", verified=True, primary=True
+        )
 
         self.email2 = EmailAddress.objects.create(
-            user=self.user1,
-            email='email2@email.com',
-            verified=True,
-            primary=False)
+            user=self.user1, email="email2@email.com", verified=True, primary=False
+        )
 
         self.email3 = EmailAddress.objects.create(
-            user=self.user2,
-            email='email3@email.com',
-            verified=True,
-            primary=True)
+            user=self.user2, email="email3@email.com", verified=True, primary=True
+        )
 
         self.email4 = EmailAddress.objects.create(
-            user=self.user2,
-            email='email4@email.com',
-            verified=True,
-            primary=False)
+            user=self.user2, email="email4@email.com", verified=True, primary=False
+        )
 
         self.email5 = EmailAddress.objects.create(
-            user=self.user2,
-            email='email5@email.com',
-            verified=False,
-            primary=False)
+            user=self.user2, email="email5@email.com", verified=False, primary=False
+        )
 
         self.request = HttpRequest()
-        setattr(self.request, 'session', 'session')
+        self.request.session = "session"
         messages = default_storage(self.request)
-        setattr(self.request, '_messages', messages)
+        self.request._messages = messages
 
     def test_delete_model_primary_email(self):
         """
@@ -77,10 +68,12 @@ class TestEmailAddressAdmin(TestUserBase):
             self.app_admin.delete_model(self.request, self.email1)
         except ValidationError as e:
             self.assertIn(
-                f'Cannot delete primary email. Unset primary status in list '
-                f'display before deleting.', str(e))
+                "Cannot delete primary email. Unset primary status in list "
+                "display before deleting.",
+                str(e),
+            )
         else:
-            self.fail('A ValidationError should have been raised.')
+            self.fail("A ValidationError should have been raised.")
 
     def test_delete_model_non_primary_email(self):
         """
@@ -98,10 +91,11 @@ class TestEmailAddressAdmin(TestUserBase):
             query_set = EmailAddress.objects.all()
             self.app_admin.make_primary(self.request, query_set)
         except ValidationError as e:
-            self.assertIn(f'Cannot set more than one primary email address at '
-                          f'a time.', str(e))
+            self.assertIn(
+                "Cannot set more than one primary email address at a time.", str(e)
+            )
         else:
-            self.fail('A ValidationError should have been raised.')
+            self.fail("A ValidationError should have been raised.")
 
     def test_make_primary_single_unverified_email(self):
         """
@@ -111,10 +105,9 @@ class TestEmailAddressAdmin(TestUserBase):
             query_set = EmailAddress.objects.filter(pk=self.email5.pk)
             self.app_admin.make_primary(self.request, query_set)
         except ValidationError as e:
-            self.assertIn(f'Cannot set an unverified email address as '
-                          f'primary.', str(e))
+            self.assertIn("Cannot set an unverified email address as primary.", str(e))
         else:
-            self.fail('A ValidationError should have been raised.')
+            self.fail("A ValidationError should have been raised.")
 
     def test_make_primary_single_primary_email(self):
         """
@@ -127,9 +120,12 @@ class TestEmailAddressAdmin(TestUserBase):
 
         storage = list(get_messages(self.request))
         self.assertEqual(len(storage), 1)
-        self.assertEqual(f'Set User {self.email1.user.pk}\'s '
-                         f'primary EmailAddress to '
-                         f'{self.email1.email}.', str(storage[0]))
+        self.assertEqual(
+            f"Set User {self.email1.user.pk}'s "
+            f"primary EmailAddress to "
+            f"{self.email1.email}.",
+            str(storage[0]),
+        )
 
     def test_make_primary_single_non_primary_email(self):
         """
@@ -145,9 +141,12 @@ class TestEmailAddressAdmin(TestUserBase):
 
         storage = list(get_messages(self.request))
         self.assertEqual(len(storage), 1)
-        self.assertEqual(f'Set User {self.email2.user.pk}\'s '
-                         f'primary EmailAddress to '
-                         f'{self.email2.email}.', str(storage[0]))
+        self.assertEqual(
+            f"Set User {self.email2.user.pk}'s "
+            f"primary EmailAddress to "
+            f"{self.email2.email}.",
+            str(storage[0]),
+        )
 
     def test_make_delete_queryset_only_primary(self):
         """
@@ -162,10 +161,8 @@ class TestEmailAddressAdmin(TestUserBase):
 
         storage = list(get_messages(self.request))
         self.assertEqual(len(storage), 2)
-        self.assertEqual(f'Deleted 0 non-primary EmailAddresses.',
-                         str(storage[0]))
-        self.assertEqual(f'Skipped deleting 2 primary EmailAddresses.',
-                         str(storage[1]))
+        self.assertEqual("Deleted 0 non-primary EmailAddresses.", str(storage[0]))
+        self.assertEqual("Skipped deleting 2 primary EmailAddresses.", str(storage[1]))
 
     def test_make_delete_queryset_only_non_primary(self):
         """
@@ -182,8 +179,7 @@ class TestEmailAddressAdmin(TestUserBase):
 
         storage = list(get_messages(self.request))
         self.assertEqual(len(storage), 1)
-        self.assertEqual(f'Deleted 3 non-primary EmailAddresses.',
-                         str(storage[0]))
+        self.assertEqual("Deleted 3 non-primary EmailAddresses.", str(storage[0]))
 
     def test_make_delete_queryset_mixed(self):
         """
@@ -200,7 +196,5 @@ class TestEmailAddressAdmin(TestUserBase):
 
         storage = list(get_messages(self.request))
         self.assertEqual(len(storage), 2)
-        self.assertEqual(f'Deleted 2 non-primary EmailAddresses.',
-                         str(storage[0]))
-        self.assertEqual(f'Skipped deleting 1 primary EmailAddresses.',
-                         str(storage[1]))
+        self.assertEqual("Deleted 2 non-primary EmailAddresses.", str(storage[0]))
+        self.assertEqual("Skipped deleting 1 primary EmailAddresses.", str(storage[1]))

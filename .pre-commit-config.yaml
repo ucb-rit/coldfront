@@ -14,6 +14,12 @@ repos:
     -   id: debug-statements
     -   id: check-toml
     -   id: check-json
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.22
+    hooks:
+    -   id: ruff
+        args: ["--fix"]
+    -   id: ruff-format
 -   repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.4.0
     hooks:

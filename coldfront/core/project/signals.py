@@ -1,10 +1,10 @@
+import logging
+
+from django.dispatch import Signal, receiver
+
 from coldfront.core.allocation.models import AllocationRenewalRequest
 from coldfront.core.project.models import SavioProjectAllocationRequest
 from coldfront.core.project.utils_.renewal_utils import AllocationRenewalDenialRunner
-from django.dispatch import receiver
-from django.dispatch import Signal
-import logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -24,33 +24,36 @@ def deny_associated_allocation_renewal_request(sender, **kwargs):
         - **kwargs
             - request_id (int): The ID of the denied request
     """
-    request_id = kwargs['request_id']
+    request_id = kwargs["request_id"]
     try:
         new_project_request_obj = SavioProjectAllocationRequest.objects.get(
-            id=request_id)
+            id=request_id
+        )
     except SavioProjectAllocationRequest.DoesNotExist:
-        message = f'Invalid SavioProjectAllocationRequest ID {request_id}.'
+        message = f"Invalid SavioProjectAllocationRequest ID {request_id}."
         logger.error(message)
         return
 
     try:
         renewal_request_obj = AllocationRenewalRequest.objects.get(
-            new_project_request=new_project_request_obj)
+            new_project_request=new_project_request_obj
+        )
     except AllocationRenewalRequest.DoesNotExist:
         return
     except AllocationRenewalRequest.MultipleObjectsReturned:
         message = (
-            f'Unexpectedly found multiple AllocationRenewalRequests that '
-            f'reference SavioProjectAllocationRequest {request_id}.')
+            f"Unexpectedly found multiple AllocationRenewalRequests that "
+            f"reference SavioProjectAllocationRequest {request_id}."
+        )
         logger.error(message)
         return
 
     # Set the reason for the renewal request to be that of the new project
     # request.
     reason = new_project_request_obj.denial_reason()
-    renewal_request_obj.state['other'] = {
-        'justification': reason.justification,
-        'timestamp': reason.timestamp,
+    renewal_request_obj.state["other"] = {
+        "justification": reason.justification,
+        "timestamp": reason.timestamp,
     }
     renewal_request_obj.save()
 
@@ -59,16 +62,18 @@ def deny_associated_allocation_renewal_request(sender, **kwargs):
         runner.run()
     except Exception as e:
         message = (
-            f'Encountered unexpected exception when automatically denying '
-            f'AllocationRenewalRequest {renewal_request_obj.pk} after '
-            f'SavioProjectAllocationRequest {request_id} was denied. '
-            f'Details:')
+            f"Encountered unexpected exception when automatically denying "
+            f"AllocationRenewalRequest {renewal_request_obj.pk} after "
+            f"SavioProjectAllocationRequest {request_id} was denied. "
+            f"Details:"
+        )
         logger.error(message)
         logger.exception(e)
         return
 
     message = (
-        f'Automatically denied AllocationRenewalRequest '
-        f'{renewal_request_obj.pk} after SavioProjectAllocationRequest '
-        f'{request_id} was denied.')
+        f"Automatically denied AllocationRenewalRequest "
+        f"{renewal_request_obj.pk} after SavioProjectAllocationRequest "
+        f"{request_id} was denied."
+    )
     logger.info(message)

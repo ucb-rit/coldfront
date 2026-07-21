@@ -1,9 +1,9 @@
 """Unit tests for PIChoiceField.to_python() caching."""
 
-import pytest
 from unittest.mock import Mock, patch
 
 from django import forms
+import pytest
 
 from coldfront.core.project.forms_.new_project_forms.request_forms import (
     PIChoiceField,
@@ -30,8 +30,8 @@ class TestPIChoiceFieldToPythonCache:
         cache is consulted and super() is never called."""
         cache = {}
         field = _make_field(cache=cache)
-        with patch.object(forms.ModelChoiceField, 'to_python') as mock_super:
-            result = field.to_python('')
+        with patch.object(forms.ModelChoiceField, "to_python") as mock_super:
+            result = field.to_python("")
         assert result is None
         assert mock_super.call_count == 0
         assert not cache
@@ -45,18 +45,18 @@ class TestPIChoiceFieldToPythonCache:
         field = _make_field(cache={})
         user = Mock()
         with patch.object(
-                forms.ModelChoiceField, 'to_python',
-                return_value=user) as mock_super:
-            field.to_python('42')
+            forms.ModelChoiceField, "to_python", return_value=user
+        ) as mock_super:
+            field.to_python("42")
         assert mock_super.call_count == 1
 
     def test_cache_miss_stores_result(self):
         """The result of a cache miss is written to _to_python_cache."""
         field = _make_field(cache={})
         user = Mock()
-        with patch.object(forms.ModelChoiceField, 'to_python', return_value=user):
-            field.to_python('42')
-        assert field._to_python_cache['42'] is user
+        with patch.object(forms.ModelChoiceField, "to_python", return_value=user):
+            field.to_python("42")
+        assert field._to_python_cache["42"] is user
 
     # -------------------------------------------------------------------------
     # Cache hit: super() skipped
@@ -65,9 +65,9 @@ class TestPIChoiceFieldToPythonCache:
     def test_cache_hit_skips_super(self):
         """A pre-populated cache entry is returned without calling super()."""
         user = Mock()
-        field = _make_field(cache={'42': user})
-        with patch.object(forms.ModelChoiceField, 'to_python') as mock_super:
-            result = field.to_python('42')
+        field = _make_field(cache={"42": user})
+        with patch.object(forms.ModelChoiceField, "to_python") as mock_super:
+            result = field.to_python("42")
         assert mock_super.call_count == 0
         assert result is user
 
@@ -77,10 +77,10 @@ class TestPIChoiceFieldToPythonCache:
         field = _make_field(cache={})
         user = Mock()
         with patch.object(
-                forms.ModelChoiceField, 'to_python',
-                return_value=user) as mock_super:
-            r1 = field.to_python('42')
-            r2 = field.to_python('42')
+            forms.ModelChoiceField, "to_python", return_value=user
+        ) as mock_super:
+            r1 = field.to_python("42")
+            r2 = field.to_python("42")
         assert mock_super.call_count == 1
         assert r1 is user
         assert r2 is user
@@ -94,10 +94,10 @@ class TestPIChoiceFieldToPythonCache:
         field = _make_field(cache=None)
         user = Mock()
         with patch.object(
-                forms.ModelChoiceField, 'to_python',
-                return_value=user) as mock_super:
-            field.to_python('42')
-            field.to_python('42')
+            forms.ModelChoiceField, "to_python", return_value=user
+        ) as mock_super:
+            field.to_python("42")
+            field.to_python("42")
         assert mock_super.call_count == 2
 
     # -------------------------------------------------------------------------
@@ -109,9 +109,9 @@ class TestPIChoiceFieldToPythonCache:
         retries super() rather than returning a frozen None."""
         field = _make_field(cache={})
         with patch.object(
-                forms.ModelChoiceField, 'to_python',
-                return_value=None) as mock_super:
-            field.to_python('99')
-            field.to_python('99')
+            forms.ModelChoiceField, "to_python", return_value=None
+        ) as mock_super:
+            field.to_python("99")
+            field.to_python("99")
         assert mock_super.call_count == 2
-        assert '99' not in field._to_python_cache
+        assert "99" not in field._to_python_cache

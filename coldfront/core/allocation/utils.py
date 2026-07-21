@@ -1,47 +1,36 @@
-import os
 from datetime import datetime
 from decimal import Decimal
+import math
+from urllib.parse import urljoin
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
-from django.db.models import BooleanField
-from django.db.models import Case
-from django.db.models import Q
-from django.db.models import Value
-from django.db.models import When
+from django.db.models import BooleanField, Case, Q, Value, When
 from django.urls import reverse
-from urllib.parse import urljoin
+from flags.state import flag_enabled
+import pytz
 
-from coldfront.core.allocation.models import (AllocationAttributeType,
-                                              AllocationPeriod,
-                                              AllocationUser,
-                                              AllocationUserAttribute,
-                                              AllocationUserStatusChoice,
-                                              Allocation,
-                                              AllocationStatusChoice,
-                                              AllocationAttribute,
-                                              SecureDirAddUserRequest,
-                                              SecureDirAddUserRequestStatusChoice,
-                                              SecureDirRemoveUserRequest,
-                                              SecureDirRemoveUserRequestStatusChoice)
+from coldfront.core.allocation.models import (
+    AllocationAttributeType,
+    AllocationPeriod,
+    AllocationUser,
+    AllocationUserAttribute,
+    AllocationUserStatusChoice,
+)
 from coldfront.core.allocation.signals import allocation_activate_user
-from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource
 from coldfront.core.resource.utils import get_primary_compute_resource_name
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
-from coldfront.core.utils.common import display_time_zone_current_date
-from coldfront.core.utils.common import utc_now_offset_aware
-
-from flags.state import flag_enabled
-
-import math
-import pytz
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
+from coldfront.core.utils.common import (
+    display_time_zone_current_date,
+)
 
 
 def set_allocation_user_status_to_error(allocation_user_pk):
     allocation_user_obj = AllocationUser.objects.get(pk=allocation_user_pk)
-    error_status = AllocationUserStatusChoice.objects.get(name='Error')
+    error_status = AllocationUserStatusChoice.objects.get(name="Error")
     allocation_user_obj.status = error_status
     allocation_user_obj.save()
 
@@ -51,7 +40,7 @@ def generate_guauge_data_from_usage(name, value, usage):
     label = "%s: %.2f of %.2f" % (name, usage, value)
 
     try:
-        percent = (usage/value)*100
+        percent = (usage / value) * 100
     except ZeroDivisionError:
         percent = 0
 
@@ -66,25 +55,25 @@ def generate_guauge_data_from_usage(name, value, usage):
         "columns": [
             [label, percent],
         ],
-        "type": 'gauge',
-        "colors": {
-            label: color
-        }
+        "type": "gauge",
+        "colors": {label: color},
     }
 
     return usage_data
+
 
 def generate_user_su_pie_data(usage_data):
 
     pie_data = {
         "columns": [],
-        "type": 'pie',
+        "type": "pie",
     }
     for username, data in usage_data:
         label = "%s: %.2f" % (username, float(data))
-        if data != '0.00':
-            pie_data['columns'].append([label, data])
+        if data != "0.00":
+            pie_data["columns"].append([label, data])
     return pie_data
+
 
 def get_user_resources(user_obj):
 
@@ -92,11 +81,13 @@ def get_user_resources(user_obj):
         resources = Resource.objects.filter(is_allocatable=True)
     else:
         resources = Resource.objects.filter(
-            Q(is_allocatable=True) &
-            Q(is_available=True) &
-            (Q(is_public=True) |
-             Q(allowed_groups__in=user_obj.groups.all()) |
-             Q(allowed_users__in=[user_obj]))
+            Q(is_allocatable=True)
+            & Q(is_available=True)
+            & (
+                Q(is_public=True)
+                | Q(allowed_groups__in=user_obj.groups.all())
+                | Q(allowed_users__in=[user_obj])
+            )
         ).distinct()
 
     return resources
@@ -116,38 +107,43 @@ def annotate_queryset_with_allocation_period_not_started_bool(queryset):
     return queryset.annotate(
         allocation_period_not_started=Case(
             When(
-                Q(allocation_period__isnull=False) &
-                Q(allocation_period__start_date__gt=date),
-                then=Value(True)),
+                Q(allocation_period__isnull=False)
+                & Q(allocation_period__start_date__gt=date),
+                then=Value(True),
+            ),
             default=Value(False),
-            output_field=BooleanField()))
+            output_field=BooleanField(),
+        )
+    )
 
 
 def get_or_create_active_allocation_user(allocation_obj, user_obj):
-    allocation_user_status_choice = \
-        AllocationUserStatusChoice.objects.get(name='Active')
+    allocation_user_status_choice = AllocationUserStatusChoice.objects.get(
+        name="Active"
+    )
     if allocation_obj.allocationuser_set.filter(user=user_obj).exists():
-        allocation_user_obj = allocation_obj.allocationuser_set.get(
-            user=user_obj)
+        allocation_user_obj = allocation_obj.allocationuser_set.get(user=user_obj)
         allocation_user_obj.status = allocation_user_status_choice
         allocation_user_obj.save()
     else:
         allocation_user_obj = AllocationUser.objects.create(
-            allocation=allocation_obj, user=user_obj,
-            status=allocation_user_status_choice)
+            allocation=allocation_obj,
+            user=user_obj,
+            status=allocation_user_status_choice,
+        )
     allocation_activate_user.send(
-        sender=None, allocation_user_pk=allocation_user_obj.pk)
+        sender=None, allocation_user_pk=allocation_user_obj.pk
+    )
     return allocation_user_obj
 
 
 def set_allocation_user_attribute_value(allocation_user_obj, type_name, value):
-    allocation_attribute_type = AllocationAttributeType.objects.get(
-        name=type_name)
-    allocation_user_attribute, _ = \
-        AllocationUserAttribute.objects.get_or_create(
-            allocation_attribute_type=allocation_attribute_type,
-            allocation=allocation_user_obj.allocation,
-            allocation_user=allocation_user_obj)
+    allocation_attribute_type = AllocationAttributeType.objects.get(name=type_name)
+    allocation_user_attribute, _ = AllocationUserAttribute.objects.get_or_create(
+        allocation_attribute_type=allocation_attribute_type,
+        allocation=allocation_user_obj.allocation,
+        allocation_user=allocation_user_obj,
+    )
     allocation_user_attribute.value = value
     allocation_user_attribute.save()
     return allocation_user_attribute
@@ -162,17 +158,20 @@ def get_project_compute_resource_name(project_obj):
     project_name = project_obj.name
 
     computing_allowance_interface = get_computing_allowance_interface()
-    project_name_prefixes = tuple([
-        computing_allowance_interface.code_from_name(allowance.name)
-        for allowance in computing_allowance_interface.allowances()])
+    project_name_prefixes = tuple(
+        [
+            computing_allowance_interface.code_from_name(allowance.name)
+            for allowance in computing_allowance_interface.allowances()
+        ]
+    )
     if project_name.startswith(project_name_prefixes):
         return get_primary_compute_resource_name()
 
-    if flag_enabled('BRC_ONLY') and project_name.startswith('vector_'):
-        cluster_name = 'Vector'
+    if flag_enabled("BRC_ONLY") and project_name.startswith("vector_"):
+        cluster_name = "Vector"
     else:
         cluster_name = project_name.upper()
-    return f'{cluster_name} Compute'
+    return f"{cluster_name} Compute"
 
 
 def get_project_compute_allocation(project_obj):
@@ -207,13 +206,13 @@ def prorated_allocation_amount(amount, dt, allocation_period):
         range for allocations
     """
     if not isinstance(amount, Decimal):
-        raise TypeError(f'Invalid Decimal {amount}.')
+        raise TypeError(f"Invalid Decimal {amount}.")
     if not isinstance(dt, datetime):
-        raise TypeError(f'Invalid datetime {dt}.')
+        raise TypeError(f"Invalid datetime {dt}.")
     if not isinstance(allocation_period, AllocationPeriod):
-        raise TypeError(f'Invalid AllocationPeriod {allocation_period}.')
+        raise TypeError(f"Invalid AllocationPeriod {allocation_period}.")
     if not (settings.ALLOCATION_MIN < amount < settings.ALLOCATION_MAX):
-        raise ValueError(f'Invalid amount {amount}.')
+        raise ValueError(f"Invalid amount {amount}.")
     date = dt.astimezone(pytz.timezone(settings.DISPLAY_TIME_ZONE)).date()
     start, end = allocation_period.start_date, allocation_period.end_date
     if date < start:
@@ -227,11 +226,12 @@ def prorated_allocation_amount(amount, dt, allocation_period):
         amount = amount - amount_per_month * (month - start_month)
     else:
         amount = amount_per_month * (start_month - month)
-    return Decimal(f'{math.floor(amount):.2f}')
+    return Decimal(f"{math.floor(amount):.2f}")
 
 
-def calculate_service_units_to_allocate(computing_allowance,
-                                        request_time, allocation_period=None):
+def calculate_service_units_to_allocate(
+    computing_allowance, request_time, allocation_period=None
+):
     """Return the number of service units to allocate to a new project
     request or allowance renewal request with the given
     ComputingAllowance, if it were to be made at the given datetime. If
@@ -239,24 +239,27 @@ def calculate_service_units_to_allocate(computing_allowance,
     determine the number. Prorate as needed."""
     kwargs = {}
     if allocation_period is not None:
-        kwargs['is_timed'] = True
-        kwargs['allocation_period'] = allocation_period
+        kwargs["is_timed"] = True
+        kwargs["allocation_period"] = allocation_period
 
     computing_allowance_interface = get_computing_allowance_interface()
     num_service_units = Decimal(
         computing_allowance_interface.service_units_from_name(
-            computing_allowance.get_name(), **kwargs))
+            computing_allowance.get_name(), **kwargs
+        )
+    )
 
     if computing_allowance.are_service_units_prorated():
         num_service_units = prorated_allocation_amount(
-            num_service_units, request_time, allocation_period)
+            num_service_units, request_time, allocation_period
+        )
 
     return num_service_units
 
 
 def review_cluster_access_requests_url():
     domain = settings.CENTER_BASE_URL
-    view = reverse('allocation-cluster-account-request-list')
+    view = reverse("allocation-cluster-account-request-list")
     return urljoin(domain, view)
 
 
@@ -271,9 +274,10 @@ def has_cluster_access(user):
     - Bool: True if the user has cluster access and False otherwise
     """
     if not isinstance(user, User):
-        raise TypeError(f'Invalid User {user}.')
+        raise TypeError(f"Invalid User {user}.")
 
     return AllocationUserAttribute.objects.filter(
         allocation_user__user=user,
-        allocation_attribute_type__name='Cluster Account Status',
-        value='Active').exists()
+        allocation_attribute_type__name="Cluster Account Status",
+        value="Active",
+    ).exists()

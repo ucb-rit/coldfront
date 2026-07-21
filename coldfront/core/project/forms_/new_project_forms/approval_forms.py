@@ -1,11 +1,11 @@
-from coldfront.core.project.models import Project
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
-
 from django import forms
 from django.contrib.auth.models import User
-from django.core.validators import MinLengthValidator
-from django.core.validators import RegexValidator
+from django.core.validators import MinLengthValidator, RegexValidator
 
+from coldfront.core.project.models import Project
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
 
 # =============================================================================
 # BRC: SAVIO
@@ -15,93 +15,104 @@ from django.core.validators import RegexValidator
 class SavioProjectAllocationRequestSearchForm(forms.Form):
     project = forms.ModelChoiceField(
         queryset=Project.objects.none(),
-        label='Project',
+        label="Project",
         required=False,
     )
     pi = forms.ModelChoiceField(
         queryset=User.objects.none(),
-        label='PI',
+        label="PI",
         required=False,
     )
 
     def __init__(self, *args, request_queryset=None, **kwargs):
         super().__init__(*args, **kwargs)
         if request_queryset is not None:
-            self.fields['project'].queryset = Project.objects.filter(
-                pk__in=request_queryset.values('project')
-            ).order_by('name')
-            self.fields['pi'].queryset = User.objects.filter(
-                pk__in=request_queryset.values('pi')
-            ).order_by('username')
+            self.fields["project"].queryset = Project.objects.filter(
+                pk__in=request_queryset.values("project")
+            ).order_by("name")
+            self.fields["pi"].queryset = User.objects.filter(
+                pk__in=request_queryset.values("pi")
+            ).order_by("username")
 
 
 class SavioProjectReviewSetupForm(forms.Form):
-
     status = forms.ChoiceField(
         choices=(
-            ('', 'Select one.'),
-            ('Pending', 'Pending'),
-            ('Complete', 'Complete'),
+            ("", "Select one."),
+            ("Pending", "Pending"),
+            ("Complete", "Complete"),
         ),
         help_text='If you are unsure, leave the status as "Pending".',
-        label='Status',
-        required=True)
+        label="Status",
+        required=True,
+    )
     final_name = forms.CharField(
         help_text=(
-            'Update the name of the project, in case it needed to be '
-            'changed. It must begin with the correct prefix.'),
-        label='Final Name',
+            "Update the name of the project, in case it needed to be "
+            "changed. It must begin with the correct prefix."
+        ),
+        label="Final Name",
         # TODO: Project prefix names are assumed to have 3 characters.
         max_length=3 + 12,
         required=True,
         validators=[
             MinLengthValidator(3 + 4),
             RegexValidator(
-                r'^[0-9a-z_]+$',
+                r"^[0-9a-z_]+$",
                 message=(
-                    'Name must contain only lowercase letters, numbers, and '
-                    'underscores.'))
-        ])
+                    "Name must contain only lowercase letters, numbers, and "
+                    "underscores."
+                ),
+            ),
+        ],
+    )
     justification = forms.CharField(
         help_text=(
-            'Provide reasoning for your decision. This field is only required '
-            'when the name changes.'),
-        label='Justification',
+            "Provide reasoning for your decision. This field is only required "
+            "when the name changes."
+        ),
+        label="Justification",
         validators=[MinLengthValidator(10)],
         required=False,
-        widget=forms.Textarea(attrs={'rows': 3}))
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
     def __init__(self, *args, **kwargs):
-        self.project_pk = kwargs.pop('project_pk')
-        self.requested_name = kwargs.pop('requested_name')
-        self.computing_allowance = kwargs.pop('computing_allowance')
+        self.project_pk = kwargs.pop("project_pk")
+        self.requested_name = kwargs.pop("requested_name")
+        self.computing_allowance = kwargs.pop("computing_allowance")
         super().__init__(*args, **kwargs)
-        self.fields['final_name'].initial = self.requested_name
+        self.fields["final_name"].initial = self.requested_name
 
     def clean(self):
         cleaned_data = super().clean()
-        final_name = cleaned_data.get('final_name', '').lower()
+        final_name = cleaned_data.get("final_name", "").lower()
         # Require justification for name changes.
         if final_name != self.requested_name:
-            justification = cleaned_data.get('justification', '')
+            justification = cleaned_data.get("justification", "")
             if not justification.strip():
                 raise forms.ValidationError(
-                    'Please provide a justification for the name change.')
+                    "Please provide a justification for the name change."
+                )
         return cleaned_data
 
     def clean_final_name(self):
         cleaned_data = super().clean()
-        final_name = cleaned_data.get('final_name', '').lower()
+        final_name = cleaned_data.get("final_name", "").lower()
         expected_prefix = get_computing_allowance_interface().code_from_name(
-            self.computing_allowance.name)
+            self.computing_allowance.name
+        )
         if not final_name.startswith(expected_prefix):
             raise forms.ValidationError(
-                f'Final project name must begin with "{expected_prefix}".')
-        matching_projects = Project.objects.exclude(
-            pk=self.project_pk).filter(name=final_name)
+                f'Final project name must begin with "{expected_prefix}".'
+            )
+        matching_projects = Project.objects.exclude(pk=self.project_pk).filter(
+            name=final_name
+        )
         if matching_projects.exists():
             raise forms.ValidationError(
-                f'A project with name {final_name} already exists.')
+                f"A project with name {final_name} already exists."
+            )
         return final_name
 
 
@@ -109,68 +120,79 @@ class SavioProjectReviewSetupForm(forms.Form):
 # BRC: VECTOR
 # =============================================================================
 
-class VectorProjectReviewSetupForm(forms.Form):
 
+class VectorProjectReviewSetupForm(forms.Form):
     status = forms.ChoiceField(
         choices=(
-            ('', 'Select one.'),
-            ('Pending', 'Pending'),
-            ('Complete', 'Complete'),
+            ("", "Select one."),
+            ("Pending", "Pending"),
+            ("Complete", "Complete"),
         ),
         help_text='If you are unsure, leave the status as "Pending".',
-        label='Status',
-        required=True)
+        label="Status",
+        required=True,
+    )
     final_name = forms.CharField(
         help_text=(
-            'Update the name of the project, in case it needed to be '
-            'changed. It must begin with the correct prefix.'),
-        label='Final Name',
-        max_length=len('vector_') + 12,
+            "Update the name of the project, in case it needed to be "
+            "changed. It must begin with the correct prefix."
+        ),
+        label="Final Name",
+        max_length=len("vector_") + 12,
         required=True,
         validators=[
-            MinLengthValidator(len('vector_') + 4),
+            MinLengthValidator(len("vector_") + 4),
             RegexValidator(
-                r'^[0-9a-z_]+$',
+                r"^[0-9a-z_]+$",
                 message=(
-                    'Name must contain only lowercase letters, numbers, and '
-                    'underscores.'))
-        ])
+                    "Name must contain only lowercase letters, numbers, and "
+                    "underscores."
+                ),
+            ),
+        ],
+    )
     justification = forms.CharField(
         help_text=(
-            'Provide reasoning for your decision. This field is only required '
-            'when the name changes.'),
-        label='Justification',
+            "Provide reasoning for your decision. This field is only required "
+            "when the name changes."
+        ),
+        label="Justification",
         validators=[MinLengthValidator(10)],
         required=False,
-        widget=forms.Textarea(attrs={'rows': 3}))
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
     def __init__(self, *args, **kwargs):
-        self.project_pk = kwargs.pop('project_pk')
-        self.requested_name = kwargs.pop('requested_name')
+        self.project_pk = kwargs.pop("project_pk")
+        self.requested_name = kwargs.pop("requested_name")
         super().__init__(*args, **kwargs)
-        self.fields['final_name'].initial = self.requested_name
+        self.fields["final_name"].initial = self.requested_name
 
     def clean(self):
         cleaned_data = super().clean()
-        final_name = cleaned_data.get('final_name', '').lower()
+        final_name = cleaned_data.get("final_name", "").lower()
         # Require justification for name changes.
         if final_name != self.requested_name:
-            justification = cleaned_data.get('justification', '')
+            justification = cleaned_data.get("justification", "")
             if not justification.strip():
                 raise forms.ValidationError(
-                    'Please provide a justification for the name change.')
+                    "Please provide a justification for the name change."
+                )
         return cleaned_data
 
     def clean_final_name(self):
         cleaned_data = super().clean()
-        final_name = cleaned_data.get('final_name', '').lower()
-        expected_prefix = 'vector_'
+        final_name = cleaned_data.get("final_name", "").lower()
+        expected_prefix = "vector_"
         if not final_name.startswith(expected_prefix):
             raise forms.ValidationError(
-                f'Final project name must begin with "{expected_prefix}".')
-        matching_projects = Project.objects.exclude(
-            pk=self.project_pk).filter(name=final_name)
+                f'Final project name must begin with "{expected_prefix}".'
+            )
+        matching_projects = Project.objects.exclude(pk=self.project_pk).filter(
+            name=final_name
+        )
         if matching_projects.exists():
             raise forms.ValidationError(
-                f'A project with name {final_name} already exists.')
+                f"A project with name {final_name} already exists."
+            )
         return final_name

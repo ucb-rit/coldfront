@@ -1,8 +1,9 @@
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.resource.models import Resource
 from django.core.exceptions import ValidationError
 from django.db.models.signals import m2m_changed
 import django.dispatch
+
+from coldfront.core.allocation.models import Allocation
+from coldfront.core.resource.models import Resource
 
 allocation_activate_user = django.dispatch.Signal()
 allocation_remove_user = django.dispatch.Signal()
@@ -28,19 +29,21 @@ def allocation_resources_changed(sender, **kwargs):
         - ValidationError, if the Resource is unique-per-project and the
         Allocation's Project has an existing Allocation to it
     """
-    instance = kwargs.pop('instance', None)
-    pk_set = kwargs.pop('pk_set', None)
-    action = kwargs.pop('action', None)
-    if action == 'pre_add':
+    instance = kwargs.pop("instance", None)
+    pk_set = kwargs.pop("pk_set", None)
+    action = kwargs.pop("action", None)
+    if action == "pre_add":
         project = instance.project
         for pk in pk_set:
             resource = Resource.objects.get(pk=pk)
             if not resource.is_unique_per_project:
                 continue
-            allocations = project.allocation_set.exclude(
-                pk=instance.pk).filter(resources=resource)
+            allocations = project.allocation_set.exclude(pk=instance.pk).filter(
+                resources=resource
+            )
             if allocations.exists():
                 raise ValidationError(
-                    f'Project {project.pk} has an existing Allocation '
-                    f'({allocations.first().pk}) to unique-per-project '
-                    f'Resource {resource.pk}.')
+                    f"Project {project.pk} has an existing Allocation "
+                    f"({allocations.first().pk}) to unique-per-project "
+                    f"Resource {resource.pk}."
+                )
