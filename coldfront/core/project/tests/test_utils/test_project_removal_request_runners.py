@@ -1,6 +1,9 @@
+import datetime
+from decimal import Decimal
 from unittest.mock import patch
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core import mail
 from django.test import override_settings
 
@@ -8,8 +11,20 @@ from coldfront.api.statistics.utils import (
     create_project_allocation,
     create_user_project_allocation,
 )
-from coldfront.core.allocation.models import *
-from coldfront.core.project.models import *
+from coldfront.core.allocation.models import (
+    AllocationAttributeType,
+    AllocationUser,
+    AllocationUserAttribute,
+)
+from coldfront.core.project.models import (
+    Project,
+    ProjectStatusChoice,
+    ProjectUser,
+    ProjectUserRemovalRequest,
+    ProjectUserRemovalRequestStatusChoice,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
 from coldfront.core.project.utils_.removal_utils import (
     ProjectRemovalRequestProcessingRunner,
     ProjectRemovalRequestRunner,
@@ -17,7 +32,7 @@ from coldfront.core.project.utils_.removal_utils import (
 from coldfront.core.resource.utils_.allowance_utils.interface import (
     ComputingAllowanceInterface,
 )
-from coldfront.core.user.models import *
+from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.tests.test_base import TestBase
 
@@ -433,7 +448,7 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
         """
 
         # Create completed removal request
-        completed_removal_request = ProjectUserRemovalRequest.objects.create(
+        ProjectUserRemovalRequest.objects.create(
             project_user=self.project1.projectuser_set.get(user=self.user1),
             requester=self.pi1,
             completion_time=datetime.datetime.now(datetime.timezone.utc),
@@ -706,6 +721,22 @@ class TestProjectRemovalRequestRunner(TestRemovalRequestRunnerBase):
         self.assertFalse(email_to_set)
         for email in user_messages:
             self.assertIn(email_body, email.body)
+
+    def test_reason_stored_on_request(self):
+        """When a reason is provided, it is saved on the removal request."""
+        runner = ProjectRemovalRequestRunner(
+            self.pi1, self.user1, self.project1, reason="End of semester cleanup."
+        )
+        removal_request = runner.run()
+        self.assertIsNotNone(removal_request)
+        self.assertEqual(removal_request.reason, "End of semester cleanup.")
+
+    def test_reason_defaults_to_empty_string(self):
+        """When no reason is provided, the removal request reason is empty."""
+        runner = ProjectRemovalRequestRunner(self.pi1, self.user1, self.project1)
+        removal_request = runner.run()
+        self.assertIsNotNone(removal_request)
+        self.assertEqual(removal_request.reason, "")
 
 
 @override_settings(
