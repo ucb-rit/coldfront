@@ -30,10 +30,11 @@ class ProjectRemovalRequestRunner:
     """An object that performs necessary database changes when a new
     project removal request is made."""
 
-    def __init__(self, requester_obj, user_obj, proj_obj):
+    def __init__(self, requester_obj, user_obj, proj_obj, reason=""):
         self.requester_obj = requester_obj
         self.user_obj = user_obj
         self.proj_obj = proj_obj
+        self.reason = reason
         # A list of messages to display to the user.
         self.error_messages = []
         self.success_messages = []
@@ -93,11 +94,12 @@ class ProjectRemovalRequestRunner:
             flag = False
 
         if flag:
-            removal_request, created = ProjectUserRemovalRequest.objects.get_or_create(
+            removal_request, _created = ProjectUserRemovalRequest.objects.get_or_create(
                 project_user=self.proj_obj.projectuser_set.get(user=self.user_obj),
                 requester=self.requester_obj,
             )
 
+            removal_request.reason = self.reason
             removal_request.status = pending_status
             removal_request.save()
 

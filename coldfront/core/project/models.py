@@ -316,11 +316,7 @@ class ProjectUser(TimeStampedModel):
     history = HistoricalRecords()
 
     def __str__(self):
-        return "%s %s (%s)" % (
-            self.user.first_name,
-            self.user.last_name,
-            self.user.username,
-        )
+        return f"{self.user.first_name} {self.user.last_name} ({self.user.username})"
 
     class Meta:
         unique_together = ("user", "project")
@@ -650,6 +646,7 @@ class ProjectUserRemovalRequestStatusChoice(TimeStampedModel):
 class ProjectUserRemovalRequest(TimeStampedModel):
     project_user = models.ForeignKey(ProjectUser, on_delete=models.CASCADE)
     requester = models.ForeignKey(User, on_delete=models.CASCADE)
+    reason = models.TextField(blank=True)
     request_time = models.DateTimeField(auto_now_add=True)
     completion_time = models.DateTimeField(null=True)
     status = models.ForeignKey(
