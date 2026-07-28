@@ -4,19 +4,17 @@ These tests verify that signal handlers respond correctly to core application
 events and integrate properly with the DirectoryService.
 """
 
-import pytest
 from unittest.mock import Mock, patch
-import logging
 
-from coldfront.core.project.utils_.new_project_user_utils import (
-    project_user_activated
-)
-from coldfront.core.project.utils_.removal_utils import project_user_removed
+import pytest
+
 from coldfront.core.allocation.models import AllocationUser
+from coldfront.core.project.utils_.new_project_user_utils import project_user_activated
+from coldfront.core.project.utils_.removal_utils import project_user_removed
 from coldfront.plugins.faculty_storage_allocations.services import DirectoryService
 from coldfront.plugins.faculty_storage_allocations.signals import (
     add_project_user_to_faculty_storage_allocation,
-    remove_project_user_from_faculty_storage_allocation
+    remove_project_user_from_faculty_storage_allocation,
 )
 
 
@@ -30,7 +28,7 @@ class TestProjectUserActivatedSignal:
         """Test activating project user adds them to faculty storage
         allocation."""
         # Setup - create faculty storage allocation
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         allocation = directory_service.create_directory()
 
         # Create mock project_user
@@ -39,19 +37,15 @@ class TestProjectUserActivatedSignal:
         mock_project_user.user = test_user
 
         # Execute - send signal
-        project_user_activated.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_activated.send(sender=None, project_user=mock_project_user)
 
         # Assert - user was added to allocation
         allocation_users = AllocationUser.objects.filter(
-            allocation=allocation,
-            user=test_user
+            allocation=allocation, user=test_user
         )
         assert allocation_users.exists()
         assert allocation_users.count() == 1
-        assert allocation_users.first().status.name == 'Active'
+        assert allocation_users.first().status.name == "Active"
 
     def test_signal_is_idempotent(
         self, test_project, test_user, resource_faculty_storage_directory
@@ -59,7 +53,7 @@ class TestProjectUserActivatedSignal:
         """Test signal can be called multiple times for same user without
         error."""
         # Setup
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         allocation = directory_service.create_directory()
 
         mock_project_user = Mock()
@@ -67,19 +61,12 @@ class TestProjectUserActivatedSignal:
         mock_project_user.user = test_user
 
         # Execute - send signal twice
-        project_user_activated.send(
-            sender=None,
-            project_user=mock_project_user
-        )
-        project_user_activated.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_activated.send(sender=None, project_user=mock_project_user)
+        project_user_activated.send(sender=None, project_user=mock_project_user)
 
         # Assert - still only one AllocationUser
         allocation_users = AllocationUser.objects.filter(
-            allocation=allocation,
-            user=test_user
+            allocation=allocation, user=test_user
         )
         assert allocation_users.count() == 1
 
@@ -93,18 +80,13 @@ class TestProjectUserActivatedSignal:
         mock_project_user.user = test_user
 
         # Execute - send signal (should not raise error)
-        project_user_activated.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_activated.send(sender=None, project_user=mock_project_user)
 
         # Assert - no AllocationUser created
-        allocation_users = AllocationUser.objects.filter(
-            user=test_user
-        )
+        allocation_users = AllocationUser.objects.filter(user=test_user)
         assert allocation_users.count() == 0
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.DirectoryService')
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.DirectoryService")
     def test_signal_calls_directory_service(
         self, mock_directory_service_class, test_project, test_user
     ):
@@ -118,29 +100,21 @@ class TestProjectUserActivatedSignal:
         mock_project_user.user = test_user
 
         # Execute
-        project_user_activated.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_activated.send(sender=None, project_user=mock_project_user)
 
         # Assert
-        mock_directory_service_class.for_project.assert_called_once_with(
-            test_project
-        )
+        mock_directory_service_class.for_project.assert_called_once_with(test_project)
         mock_service.add_user_to_directory.assert_called_once_with(test_user)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.DirectoryService')
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.logger")
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.DirectoryService")
     def test_signal_handles_errors_gracefully(
-        self, mock_directory_service_class, mock_logger,
-        test_project, test_user
+        self, mock_directory_service_class, mock_logger, test_project, test_user
     ):
         """Test signal catches and logs errors without breaking activation."""
         # Setup - make DirectoryService raise an error
         mock_service = Mock()
-        mock_service.add_user_to_directory.side_effect = Exception(
-            'Test error'
-        )
+        mock_service.add_user_to_directory.side_effect = Exception("Test error")
         mock_directory_service_class.for_project.return_value = mock_service
 
         mock_project_user = Mock()
@@ -148,19 +122,14 @@ class TestProjectUserActivatedSignal:
         mock_project_user.user = test_user
 
         # Execute - should not raise
-        project_user_activated.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_activated.send(sender=None, project_user=mock_project_user)
 
         # Assert - error was logged
         mock_logger.exception.assert_called_once()
-        assert 'Error adding User' in str(mock_logger.exception.call_args)
+        assert "Error adding User" in str(mock_logger.exception.call_args)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
-    def test_signal_warns_if_missing_project(
-        self, mock_logger
-    ):
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.logger")
+    def test_signal_warns_if_missing_project(self, mock_logger):
         """Test signal warns if project_user has no project."""
         # Setup - project_user with no project
         mock_project_user = Mock()
@@ -169,20 +138,15 @@ class TestProjectUserActivatedSignal:
 
         # Execute
         add_project_user_to_faculty_storage_allocation(
-            sender=None,
-            project_user=mock_project_user
+            sender=None, project_user=mock_project_user
         )
 
         # Assert - warning logged
         mock_logger.warning.assert_called_once()
-        assert 'without project or user' in str(
-            mock_logger.warning.call_args
-        )
+        assert "without project or user" in str(mock_logger.warning.call_args)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
-    def test_signal_warns_if_missing_user(
-        self, mock_logger
-    ):
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.logger")
+    def test_signal_warns_if_missing_user(self, mock_logger):
         """Test signal warns if project_user has no user."""
         # Setup - project_user with no user
         mock_project_user = Mock()
@@ -191,24 +155,20 @@ class TestProjectUserActivatedSignal:
 
         # Execute
         add_project_user_to_faculty_storage_allocation(
-            sender=None,
-            project_user=mock_project_user
+            sender=None, project_user=mock_project_user
         )
 
         # Assert - warning logged
         mock_logger.warning.assert_called_once()
-        assert 'without project or user' in str(
-            mock_logger.warning.call_args
-        )
+        assert "without project or user" in str(mock_logger.warning.call_args)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.logger")
     def test_signal_logs_success(
-        self, mock_logger, test_project, test_user,
-        resource_faculty_storage_directory
+        self, mock_logger, test_project, test_user, resource_faculty_storage_directory
     ):
         """Test signal logs successful user addition."""
         # Setup
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         directory_service.create_directory()
 
         mock_project_user = Mock()
@@ -216,18 +176,15 @@ class TestProjectUserActivatedSignal:
         mock_project_user.user = test_user
 
         # Execute
-        project_user_activated.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_activated.send(sender=None, project_user=mock_project_user)
 
         # Assert - success logged
         mock_logger.info.assert_called_once()
-        assert 'Added User' in str(mock_logger.info.call_args)
+        assert "Added User" in str(mock_logger.info.call_args)
         assert test_user.username in str(mock_logger.info.call_args)
         assert test_project.name in str(mock_logger.info.call_args)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.logger")
     def test_signal_logs_debug_when_no_allocation(
         self, mock_logger, test_project, test_user
     ):
@@ -238,14 +195,11 @@ class TestProjectUserActivatedSignal:
         mock_project_user.user = test_user
 
         # Execute
-        project_user_activated.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_activated.send(sender=None, project_user=mock_project_user)
 
         # Assert - debug logged
         mock_logger.debug.assert_called_once()
-        assert 'does not have a faculty storage allocation' in str(
+        assert "does not have a faculty storage allocation" in str(
             mock_logger.debug.call_args
         )
 
@@ -255,20 +209,23 @@ class TestSignalIntegration:
     """Test signal integration with real workflow."""
 
     def test_adding_project_user_triggers_signal_and_adds_to_allocation(
-        self, test_project, test_user, test_pi, test_project_user_pi,
-        project_user_status_active, project_user_role_user,
-        resource_faculty_storage_directory
+        self,
+        test_project,
+        test_user,
+        test_pi,
+        test_project_user_pi,
+        project_user_status_active,
+        project_user_role_user,
+        resource_faculty_storage_directory,
     ):
         """Test complete workflow: create storage → add project user →
         automatic allocation user creation."""
         # Setup - create faculty storage allocation
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         allocation = directory_service.create_directory()
 
         # Initially no users in allocation
-        assert AllocationUser.objects.filter(
-            allocation=allocation
-        ).count() == 0
+        assert AllocationUser.objects.filter(allocation=allocation).count() == 0
 
         # Execute - create ProjectUser (this triggers the signal in real code)
         # For testing, we manually send the signal
@@ -278,52 +235,44 @@ class TestSignalIntegration:
             project=test_project,
             user=test_user,
             role=project_user_role_user,
-            status=project_user_status_active
+            status=project_user_status_active,
         )
 
         # Send signal manually (in real code, this would be triggered
         # automatically)
-        project_user_activated.send(
-            sender=ProjectUser,
-            project_user=project_user
-        )
+        project_user_activated.send(sender=ProjectUser, project_user=project_user)
 
         # Assert - user was automatically added to allocation
         allocation_users = AllocationUser.objects.filter(
-            allocation=allocation,
-            user=test_user
+            allocation=allocation, user=test_user
         )
         assert allocation_users.exists()
-        assert allocation_users.first().status.name == 'Active'
+        assert allocation_users.first().status.name == "Active"
 
     def test_signal_works_with_multiple_users(
-        self, test_project, test_pi, project_user_status_active,
-        project_user_role_user, resource_faculty_storage_directory
+        self,
+        test_project,
+        test_pi,
+        project_user_status_active,
+        project_user_role_user,
+        resource_faculty_storage_directory,
     ):
         """Test signal correctly handles multiple users being added to same
         project."""
         # Setup
-        from coldfront.core.project.models import ProjectUser
         from django.contrib.auth import get_user_model
+
+        from coldfront.core.project.models import ProjectUser
 
         User = get_user_model()
 
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         allocation = directory_service.create_directory()
 
         # Create 3 users
-        user1 = User.objects.create_user(
-            username='user1',
-            email='user1@test.com'
-        )
-        user2 = User.objects.create_user(
-            username='user2',
-            email='user2@test.com'
-        )
-        user3 = User.objects.create_user(
-            username='user3',
-            email='user3@test.com'
-        )
+        user1 = User.objects.create_user(username="user1", email="user1@test.com")
+        user2 = User.objects.create_user(username="user2", email="user2@test.com")
+        user3 = User.objects.create_user(username="user3", email="user3@test.com")
 
         # Execute - add all 3 users and trigger signals
         for user in [user1, user2, user3]:
@@ -331,17 +280,12 @@ class TestSignalIntegration:
                 project=test_project,
                 user=user,
                 role=project_user_role_user,
-                status=project_user_status_active
+                status=project_user_status_active,
             )
-            project_user_activated.send(
-                sender=ProjectUser,
-                project_user=project_user
-            )
+            project_user_activated.send(sender=ProjectUser, project_user=project_user)
 
         # Assert - all 3 users added to allocation
-        allocation_users = AllocationUser.objects.filter(
-            allocation=allocation
-        )
+        allocation_users = AllocationUser.objects.filter(allocation=allocation)
         assert allocation_users.count() == 3
 
         user_ids = {au.user.id for au in allocation_users}
@@ -360,12 +304,12 @@ class TestProjectUserRemovedSignal:
         """Test removing project user removes them from faculty storage
         allocation."""
         # Setup - create faculty storage allocation and add user
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         allocation = directory_service.create_directory()
         allocation_user = directory_service.add_user_to_directory(test_user)
 
         # Verify user is active initially
-        assert allocation_user.status.name == 'Active'
+        assert allocation_user.status.name == "Active"
 
         # Create mock project_user
         mock_project_user = Mock()
@@ -373,14 +317,11 @@ class TestProjectUserRemovedSignal:
         mock_project_user.user = test_user
 
         # Execute - send removal signal
-        project_user_removed.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_removed.send(sender=None, project_user=mock_project_user)
 
         # Assert - user was removed from allocation
         allocation_user.refresh_from_db()
-        assert allocation_user.status.name == 'Removed'
+        assert allocation_user.status.name == "Removed"
 
     def test_signal_is_idempotent(
         self, test_project, test_user, resource_faculty_storage_directory
@@ -388,7 +329,7 @@ class TestProjectUserRemovedSignal:
         """Test signal can be called multiple times for same user without
         error."""
         # Setup
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         allocation = directory_service.create_directory()
         allocation_user = directory_service.add_user_to_directory(test_user)
 
@@ -397,18 +338,12 @@ class TestProjectUserRemovedSignal:
         mock_project_user.user = test_user
 
         # Execute - send signal twice
-        project_user_removed.send(
-            sender=None,
-            project_user=mock_project_user
-        )
-        project_user_removed.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_removed.send(sender=None, project_user=mock_project_user)
+        project_user_removed.send(sender=None, project_user=mock_project_user)
 
         # Assert - user still removed
         allocation_user.refresh_from_db()
-        assert allocation_user.status.name == 'Removed'
+        assert allocation_user.status.name == "Removed"
 
     def test_signal_skips_if_no_storage_allocation_exists(
         self, test_project, test_user
@@ -420,10 +355,7 @@ class TestProjectUserRemovedSignal:
         mock_project_user.user = test_user
 
         # Execute - send signal (should not raise error)
-        project_user_removed.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_removed.send(sender=None, project_user=mock_project_user)
 
         # Assert - no errors, nothing to verify since there's no allocation
 
@@ -432,7 +364,7 @@ class TestProjectUserRemovedSignal:
     ):
         """Test signal handles case where user is not in the allocation."""
         # Setup - create allocation but don't add user
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         directory_service.create_directory()
 
         mock_project_user = Mock()
@@ -440,14 +372,11 @@ class TestProjectUserRemovedSignal:
         mock_project_user.user = test_user
 
         # Execute - send signal (should not raise error)
-        project_user_removed.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_removed.send(sender=None, project_user=mock_project_user)
 
         # Assert - no errors, user wasn't in allocation anyway
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.DirectoryService')
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.DirectoryService")
     def test_signal_calls_directory_service(
         self, mock_directory_service_class, test_project, test_user
     ):
@@ -461,29 +390,21 @@ class TestProjectUserRemovedSignal:
         mock_project_user.user = test_user
 
         # Execute
-        project_user_removed.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_removed.send(sender=None, project_user=mock_project_user)
 
         # Assert
-        mock_directory_service_class.for_project.assert_called_once_with(
-            test_project
-        )
+        mock_directory_service_class.for_project.assert_called_once_with(test_project)
         mock_service.remove_user_from_directory.assert_called_once_with(test_user)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.DirectoryService')
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.logger")
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.DirectoryService")
     def test_signal_handles_errors_gracefully(
-        self, mock_directory_service_class, mock_logger,
-        test_project, test_user
+        self, mock_directory_service_class, mock_logger, test_project, test_user
     ):
         """Test signal catches and logs errors without breaking removal."""
         # Setup - make DirectoryService raise an error
         mock_service = Mock()
-        mock_service.remove_user_from_directory.side_effect = Exception(
-            'Test error'
-        )
+        mock_service.remove_user_from_directory.side_effect = Exception("Test error")
         mock_directory_service_class.for_project.return_value = mock_service
 
         mock_project_user = Mock()
@@ -491,19 +412,14 @@ class TestProjectUserRemovedSignal:
         mock_project_user.user = test_user
 
         # Execute - should not raise
-        project_user_removed.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_removed.send(sender=None, project_user=mock_project_user)
 
         # Assert - error was logged
         mock_logger.exception.assert_called_once()
-        assert 'Error removing User' in str(mock_logger.exception.call_args)
+        assert "Error removing User" in str(mock_logger.exception.call_args)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
-    def test_signal_warns_if_missing_project(
-        self, mock_logger
-    ):
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.logger")
+    def test_signal_warns_if_missing_project(self, mock_logger):
         """Test signal warns if project_user has no project."""
         # Setup - project_user with no project
         mock_project_user = Mock()
@@ -512,20 +428,15 @@ class TestProjectUserRemovedSignal:
 
         # Execute
         remove_project_user_from_faculty_storage_allocation(
-            sender=None,
-            project_user=mock_project_user
+            sender=None, project_user=mock_project_user
         )
 
         # Assert - warning logged
         mock_logger.warning.assert_called_once()
-        assert 'without project or user' in str(
-            mock_logger.warning.call_args
-        )
+        assert "without project or user" in str(mock_logger.warning.call_args)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
-    def test_signal_warns_if_missing_user(
-        self, mock_logger
-    ):
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.logger")
+    def test_signal_warns_if_missing_user(self, mock_logger):
         """Test signal warns if project_user has no user."""
         # Setup - project_user with no user
         mock_project_user = Mock()
@@ -534,24 +445,20 @@ class TestProjectUserRemovedSignal:
 
         # Execute
         remove_project_user_from_faculty_storage_allocation(
-            sender=None,
-            project_user=mock_project_user
+            sender=None, project_user=mock_project_user
         )
 
         # Assert - warning logged
         mock_logger.warning.assert_called_once()
-        assert 'without project or user' in str(
-            mock_logger.warning.call_args
-        )
+        assert "without project or user" in str(mock_logger.warning.call_args)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.logger")
     def test_signal_logs_success(
-        self, mock_logger, test_project, test_user,
-        resource_faculty_storage_directory
+        self, mock_logger, test_project, test_user, resource_faculty_storage_directory
     ):
         """Test signal logs successful user removal."""
         # Setup
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         directory_service.create_directory()
         directory_service.add_user_to_directory(test_user)
 
@@ -560,18 +467,15 @@ class TestProjectUserRemovedSignal:
         mock_project_user.user = test_user
 
         # Execute
-        project_user_removed.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_removed.send(sender=None, project_user=mock_project_user)
 
         # Assert - success logged
         mock_logger.info.assert_called_once()
-        assert 'Removed User' in str(mock_logger.info.call_args)
+        assert "Removed User" in str(mock_logger.info.call_args)
         assert test_user.username in str(mock_logger.info.call_args)
         assert test_project.name in str(mock_logger.info.call_args)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.signals.logger')
+    @patch("coldfront.plugins.faculty_storage_allocations.signals.logger")
     def test_signal_logs_debug_when_no_allocation(
         self, mock_logger, test_project, test_user
     ):
@@ -582,14 +486,11 @@ class TestProjectUserRemovedSignal:
         mock_project_user.user = test_user
 
         # Execute
-        project_user_removed.send(
-            sender=None,
-            project_user=mock_project_user
-        )
+        project_user_removed.send(sender=None, project_user=mock_project_user)
 
         # Assert - debug logged
         mock_logger.debug.assert_called_once()
-        assert 'does not have a faculty storage allocation' in str(
+        assert "does not have a faculty storage allocation" in str(
             mock_logger.debug.call_args
         )
 
@@ -599,69 +500,72 @@ class TestSignalIntegrationWithRemoval:
     """Test signal integration for removal workflow."""
 
     def test_removing_project_user_triggers_signal_and_removes_from_allocation(
-        self, test_project, test_user, test_pi, test_project_user_pi,
-        project_user_status_active, project_user_status_removed,
-        project_user_role_user, resource_faculty_storage_directory
+        self,
+        test_project,
+        test_user,
+        test_pi,
+        test_project_user_pi,
+        project_user_status_active,
+        project_user_status_removed,
+        project_user_role_user,
+        resource_faculty_storage_directory,
     ):
         """Test complete workflow: create storage → add project user →
         remove project user → automatic allocation user removal."""
         # Setup - create faculty storage allocation and add user
         from coldfront.core.project.models import ProjectUser
 
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         allocation = directory_service.create_directory()
 
         project_user = ProjectUser.objects.create(
             project=test_project,
             user=test_user,
             role=project_user_role_user,
-            status=project_user_status_active
+            status=project_user_status_active,
         )
 
         # Manually trigger activation signal
-        project_user_activated.send(
-            sender=ProjectUser,
-            project_user=project_user
-        )
+        project_user_activated.send(sender=ProjectUser, project_user=project_user)
 
         # Verify user was added
         allocation_users = AllocationUser.objects.filter(
-            allocation=allocation,
-            user=test_user
+            allocation=allocation, user=test_user
         )
         assert allocation_users.exists()
-        assert allocation_users.first().status.name == 'Active'
+        assert allocation_users.first().status.name == "Active"
 
         # Execute - remove project user (trigger removal signal)
         project_user.status = project_user_status_removed
         project_user.save()
 
-        project_user_removed.send(
-            sender=ProjectUser,
-            project_user=project_user
-        )
+        project_user_removed.send(sender=ProjectUser, project_user=project_user)
 
         # Assert - user was automatically removed from allocation
         allocation_user = AllocationUser.objects.get(
-            allocation=allocation,
-            user=test_user
+            allocation=allocation, user=test_user
         )
-        assert allocation_user.status.name == 'Removed'
+        assert allocation_user.status.name == "Removed"
 
     def test_signal_works_with_multiple_users_removal(
-        self, test_project, test_pi, project_user_status_active,
-        project_user_status_removed, project_user_role_user,
-        resource_faculty_storage_directory
+        self,
+        test_project,
+        test_pi,
+        project_user_status_active,
+        project_user_status_removed,
+        project_user_role_user,
+        resource_faculty_storage_directory,
     ):
         """Test signal correctly handles multiple users being removed from
         same project."""
         # Setup
-        from coldfront.core.project.models import ProjectUser
         from django.contrib.auth import get_user_model
+
+        from coldfront.core.project.models import ProjectUser
 
         User = get_user_model()
 
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         allocation = directory_service.create_directory()
 
         # Create 3 users and add them
@@ -669,8 +573,7 @@ class TestSignalIntegrationWithRemoval:
         project_users = []
         for i in range(1, 4):
             user = User.objects.create_user(
-                username=f'remove_user{i}',
-                email=f'remove_user{i}@test.com'
+                username=f"remove_user{i}", email=f"remove_user{i}@test.com"
             )
             users.append(user)
 
@@ -678,19 +581,15 @@ class TestSignalIntegrationWithRemoval:
                 project=test_project,
                 user=user,
                 role=project_user_role_user,
-                status=project_user_status_active
+                status=project_user_status_active,
             )
             project_users.append(project_user)
 
-            project_user_activated.send(
-                sender=ProjectUser,
-                project_user=project_user
-            )
+            project_user_activated.send(sender=ProjectUser, project_user=project_user)
 
         # Verify all 3 users are active in allocation
         active_allocation_users = AllocationUser.objects.filter(
-            allocation=allocation,
-            status__name='Active'
+            allocation=allocation, status__name="Active"
         )
         assert active_allocation_users.count() == 3
 
@@ -699,15 +598,11 @@ class TestSignalIntegrationWithRemoval:
             project_user.status = project_user_status_removed
             project_user.save()
 
-            project_user_removed.send(
-                sender=ProjectUser,
-                project_user=project_user
-            )
+            project_user_removed.send(sender=ProjectUser, project_user=project_user)
 
         # Assert - all 3 users removed from allocation
         removed_allocation_users = AllocationUser.objects.filter(
-            allocation=allocation,
-            status__name='Removed'
+            allocation=allocation, status__name="Removed"
         )
         assert removed_allocation_users.count() == 3
 
@@ -716,60 +611,51 @@ class TestSignalIntegrationWithRemoval:
             assert user.id in removed_user_ids
 
     def test_activation_and_removal_cycle(
-        self, test_project, test_user, project_user_status_active,
-        project_user_status_removed, project_user_role_user,
-        resource_faculty_storage_directory
+        self,
+        test_project,
+        test_user,
+        project_user_status_active,
+        project_user_status_removed,
+        project_user_role_user,
+        resource_faculty_storage_directory,
     ):
         """Test user can be added and removed multiple times."""
         from coldfront.core.project.models import ProjectUser
 
-        directory_service = DirectoryService(test_project, 'fc_test_dir')
+        directory_service = DirectoryService(test_project, "fc_test_dir")
         allocation = directory_service.create_directory()
 
         project_user = ProjectUser.objects.create(
             project=test_project,
             user=test_user,
             role=project_user_role_user,
-            status=project_user_status_active
+            status=project_user_status_active,
         )
 
         # Cycle 1: Add
-        project_user_activated.send(
-            sender=ProjectUser,
-            project_user=project_user
-        )
+        project_user_activated.send(sender=ProjectUser, project_user=project_user)
         allocation_user = AllocationUser.objects.get(
-            allocation=allocation,
-            user=test_user
+            allocation=allocation, user=test_user
         )
-        assert allocation_user.status.name == 'Active'
+        assert allocation_user.status.name == "Active"
 
         # Cycle 1: Remove
         project_user.status = project_user_status_removed
         project_user.save()
-        project_user_removed.send(
-            sender=ProjectUser,
-            project_user=project_user
-        )
+        project_user_removed.send(sender=ProjectUser, project_user=project_user)
         allocation_user.refresh_from_db()
-        assert allocation_user.status.name == 'Removed'
+        assert allocation_user.status.name == "Removed"
 
         # Cycle 2: Re-activate
         project_user.status = project_user_status_active
         project_user.save()
-        project_user_activated.send(
-            sender=ProjectUser,
-            project_user=project_user
-        )
+        project_user_activated.send(sender=ProjectUser, project_user=project_user)
         allocation_user.refresh_from_db()
-        assert allocation_user.status.name == 'Active'
+        assert allocation_user.status.name == "Active"
 
         # Cycle 2: Remove again
         project_user.status = project_user_status_removed
         project_user.save()
-        project_user_removed.send(
-            sender=ProjectUser,
-            project_user=project_user
-        )
+        project_user_removed.send(sender=ProjectUser, project_user=project_user)
         allocation_user.refresh_from_db()
-        assert allocation_user.status.name == 'Removed'
+        assert allocation_user.status.name == "Removed"

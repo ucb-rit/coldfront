@@ -2,16 +2,25 @@ from decimal import Decimal
 
 from django.core.management import CommandError
 
-from coldfront.api.statistics.utils import create_project_allocation, \
-    create_user_project_allocation
+from coldfront.api.statistics.utils import (
+    create_project_allocation,
+    create_user_project_allocation,
+)
 from coldfront.core.allocation.models import Allocation
-from coldfront.core.project.models import Project, ProjectStatusChoice, \
-    ProjectUserStatusChoice, ProjectUserRoleChoice, ProjectUser
-from coldfront.core.project.tests.test_commands.test_service_units_base import \
-    TestSUBase
+from coldfront.core.project.models import (
+    Project,
+    ProjectStatusChoice,
+    ProjectUser,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
+from coldfront.core.project.tests.test_commands.test_service_units_base import (
+    TestSUBase,
+)
 from coldfront.core.resource.models import Resource
-from coldfront.core.resource.utils_.allowance_utils.interface import \
-    get_computing_allowance_interface
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
 from coldfront.core.utils.common import utc_now_offset_aware
 
 
@@ -22,55 +31,66 @@ class TestAddServiceUnitsToProject(TestSUBase):
         """Set up test data."""
         super().setUp()
 
-        self.reason = 'This is a test for add_service_units command'
+        self.reason = "This is a test for add_service_units command"
 
         # Create Projects and associate Users with them.
-        project_status = ProjectStatusChoice.objects.get(name='Active')
-        project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Active')
-        user_role = ProjectUserRoleChoice.objects.get(name='User')
-        manager_role = ProjectUserRoleChoice.objects.get(name='Manager')
+        project_status = ProjectStatusChoice.objects.get(name="Active")
+        project_user_status = ProjectUserStatusChoice.objects.get(name="Active")
+        user_role = ProjectUserRoleChoice.objects.get(name="User")
+        manager_role = ProjectUserRoleChoice.objects.get(name="Manager")
 
         computing_allowance_interface = get_computing_allowance_interface()
         predominant_allowance = self.get_predominant_computing_allowance()
         project_name_prefix = computing_allowance_interface.code_from_name(
-            predominant_allowance.name)
+            predominant_allowance.name
+        )
 
         for i in range(2):
             # Create a Project and ProjectUsers.
             project = Project.objects.create(
-                name=f'{project_name_prefix}project{i}', status=project_status)
-            setattr(self, f'project{i}', project)
+                name=f"{project_name_prefix}project{i}", status=project_status
+            )
+            setattr(self, f"project{i}", project)
             for j in range(2):
                 ProjectUser.objects.create(
-                    user=getattr(self, f'user{j}'), project=project,
-                    role=user_role, status=project_user_status)
+                    user=getattr(self, f"user{j}"),
+                    project=project,
+                    role=user_role,
+                    status=project_user_status,
+                )
             ProjectUser.objects.create(
-                user=self.pi, project=project, role=manager_role,
-                status=project_user_status)
+                user=self.pi,
+                project=project,
+                role=manager_role,
+                status=project_user_status,
+            )
 
             # Create a compute allocation for the Project.
-            allocation = Decimal(f'{i + 1}000.00')
+            allocation = Decimal(f"{i + 1}000.00")
             create_project_allocation(project, allocation)
 
             # Create a compute allocation for each User on the Project.
             for j in range(2):
                 create_user_project_allocation(
-                    getattr(self, f'user{j}'), project, allocation / 2)
+                    getattr(self, f"user{j}"), project, allocation / 2
+                )
 
     def test_dry_run(self):
         """Testing add_service_units_to_project dry run"""
         dry_run_message = (
-            f'Would add 1000 SUs for Project {self.project0.name} and its users, '
-            f'increasing its SUs from 1000.00 to 2000.00, with reason '
-            f'"{self.reason}".')
+            f"Would add 1000 SUs for Project {self.project0.name} and its users, "
+            f"increasing its SUs from 1000.00 to 2000.00, with reason "
+            f'"{self.reason}".'
+        )
 
-        with self.assertLogs('coldfront.commands', level='INFO') as cm:
-            self.call_command('add_service_units_to_project',
-                              f'--project_name={self.project0.name}',
-                              '--amount=1000',
-                              f'--reason={self.reason}',
-                              '--dry_run')
+        with self.assertLogs("coldfront.commands", level="INFO") as cm:
+            self.call_command(
+                "add_service_units_to_project",
+                f"--project_name={self.project0.name}",
+                "--amount=1000",
+                f"--reason={self.reason}",
+                "--dry_run",
+            )
         self.assertTrue(any(dry_run_message in r.message for r in cm.records))
 
     def test_creates_and_updates_objects_positive_SU(self):
@@ -80,24 +100,27 @@ class TestAddServiceUnitsToProject(TestSUBase):
         pre_time = utc_now_offset_aware()
         pre_length_dict = self.record_historical_objects_len(project)
 
-        self.allocation_values_test(project, '1000.00', '500.00')
+        self.allocation_values_test(project, "1000.00", "500.00")
 
         message = (
-            f'Added 1000 SUs for Project {project.name} and its users, increasing '
-            f'its SUs from 1000.00 to 2000.00, with reason "{self.reason}".')
+            f"Added 1000 SUs for Project {project.name} and its users, increasing "
+            f'its SUs from 1000.00 to 2000.00, with reason "{self.reason}".'
+        )
 
         # run command
-        with self.assertLogs('coldfront.commands', level='INFO') as cm:
-            self.call_command('add_service_units_to_project',
-                              f'--project_name={project.name}',
-                              '--amount=1000',
-                              f'--reason={self.reason}')
+        with self.assertLogs("coldfront.commands", level="INFO") as cm:
+            self.call_command(
+                "add_service_units_to_project",
+                f"--project_name={project.name}",
+                "--amount=1000",
+                f"--reason={self.reason}",
+            )
         self.assertTrue(any(message in r.message for r in cm.records))
 
         post_time = utc_now_offset_aware()
 
         # test allocation values after command
-        self.allocation_values_test(project, '2000.00', '2000.00')
+        self.allocation_values_test(project, "2000.00", "2000.00")
 
         # test ProjectTransaction created
         self.transactions_created(project, pre_time, post_time, 2000.00)
@@ -114,24 +137,27 @@ class TestAddServiceUnitsToProject(TestSUBase):
         pre_time = utc_now_offset_aware()
         pre_length_dict = self.record_historical_objects_len(project)
 
-        self.allocation_values_test(project, '1000.00', '500.00')
+        self.allocation_values_test(project, "1000.00", "500.00")
 
         message = (
-            f'Added -800 SUs for Project {project.name} and its users, decreasing '
-            f'its SUs from 1000.00 to 200.00, with reason "{self.reason}".')
+            f"Added -800 SUs for Project {project.name} and its users, decreasing "
+            f'its SUs from 1000.00 to 200.00, with reason "{self.reason}".'
+        )
 
         # run command
-        with self.assertLogs('coldfront.commands', level='INFO') as cm:
-            self.call_command('add_service_units_to_project',
-                              f'--project_name={project.name}',
-                              '--amount=-800',
-                              f'--reason={self.reason}')
+        with self.assertLogs("coldfront.commands", level="INFO") as cm:
+            self.call_command(
+                "add_service_units_to_project",
+                f"--project_name={project.name}",
+                "--amount=-800",
+                f"--reason={self.reason}",
+            )
         self.assertTrue(any(message in r.message for r in cm.records))
 
         post_time = utc_now_offset_aware()
 
         # test allocation values after command
-        self.allocation_values_test(project, '200.00', '200.00')
+        self.allocation_values_test(project, "200.00", "200.00")
 
         # test ProjectTransaction created
         self.transactions_created(project, pre_time, post_time, 200.00)
@@ -154,54 +180,66 @@ class TestAddServiceUnitsToProject(TestSUBase):
         self.assertEqual(allocation.resources.all().count(), 0)
 
         # add vector compute allocation
-        vector_resource = Resource.objects.get(name='Vector Compute')
+        vector_resource = Resource.objects.get(name="Vector Compute")
         allocation.resources.add(vector_resource)
         allocation.save()
         allocation.refresh_from_db()
         self.assertEqual(allocation.resources.all().count(), 1)
-        self.assertEqual(allocation.resources.first().name, 'Vector Compute')
+        self.assertEqual(allocation.resources.first().name, "Vector Compute")
 
         # The command should throw a CommandError because the allocation is not
         # to the primary compute Resource.
         with self.assertRaises(CommandError):
-            self.call_command('add_service_units_to_project',
-                              f'--project_name={project.name}',
-                              '--amount=1000',
-                              f'--reason={self.reason}')
+            self.call_command(
+                "add_service_units_to_project",
+                f"--project_name={project.name}",
+                "--amount=1000",
+                f"--reason={self.reason}",
+            )
 
         # testing a project that does not exist
         with self.assertRaises(CommandError):
-            self.call_command('add_service_units_to_project',
-                              '--project_name=project555',
-                              '--amount=1000',
-                              f'--reason={self.reason}')
+            self.call_command(
+                "add_service_units_to_project",
+                "--project_name=project555",
+                "--amount=1000",
+                f"--reason={self.reason}",
+            )
 
         # adding service units that results in allocation having less
         # than settings.ALLOCATION_MIN
         with self.assertRaises(CommandError):
-            self.call_command('add_service_units_to_project',
-                              f'--project_name={self.project0.name}',
-                              '--amount=-100000',
-                              f'--reason={self.reason}')
+            self.call_command(
+                "add_service_units_to_project",
+                f"--project_name={self.project0.name}",
+                "--amount=-100000",
+                f"--reason={self.reason}",
+            )
 
         # adding service units that results in allocation having more
         # than settings.ALLOCATION_MAX
         with self.assertRaises(CommandError):
-            self.call_command('add_service_units_to_project',
-                              f'--project_name={self.project0.name}',
-                              '--amount=99999500',
-                              f'--reason={self.reason}')
+            self.call_command(
+                "add_service_units_to_project",
+                f"--project_name={self.project0.name}",
+                "--amount=99999500",
+                f"--reason={self.reason}",
+            )
 
         # adding service units that are greater than settings.ALLOCATION_MAX
         with self.assertRaises(CommandError):
-            self.call_command('add_service_units_to_project',
-                              f'--project_name={self.project0.name}',
-                              '--amount=500000000',
-                              f'--reason={self.reason}')
+            self.call_command(
+                "add_service_units_to_project",
+                f"--project_name={self.project0.name}",
+                "--amount=500000000",
+                f"--reason={self.reason}",
+            )
 
         # reason is not long enough
         with self.assertRaises(CommandError):
-            self.call_command('add_service_units_to_project',
-                              f'--project_name={self.project0.name}',
-                              '--amount=1000',
-                              '--reason=notlong')
+            self.call_command(
+                "add_service_units_to_project",
+                f"--project_name={self.project0.name}",
+                "--amount=1000",
+                "--reason=notlong",
+            )

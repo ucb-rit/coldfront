@@ -16,7 +16,7 @@ def api_client():
 def authenticated_api_client(test_user, api_client):
     """Return an authenticated API client with token."""
     token, _ = ExpiringToken.objects.get_or_create(user=test_user)
-    api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+    api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
     return api_client
 
 
@@ -24,7 +24,7 @@ def authenticated_api_client(test_user, api_client):
 def staff_api_client(test_staff_user, api_client):
     """Return an authenticated staff API client with token."""
     token, _ = ExpiringToken.objects.get_or_create(user=test_staff_user)
-    api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+    api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
     return api_client
 
 
@@ -32,8 +32,8 @@ def staff_api_client(test_staff_user, api_client):
 def sample_api_request_payload():
     """Return a sample API request payload for creating a FSA request."""
     return {
-        'requested_amount_gb': 1000,
-        'justification': 'API test request',
+        "requested_amount_gb": 1000,
+        "justification": "API test request",
     }
 
 
@@ -41,6 +41,6 @@ def sample_api_request_payload():
 def sample_api_completion_payload():
     """Return a sample API payload for completing a FSA request."""
     return {
-        'directory_name': 'test_directory',
-        'setup_complete': True,
+        "directory_name": "test_directory",
+        "setup_complete": True,
     }

@@ -1,16 +1,12 @@
 from django.urls import path
 
-from .views import HardwareProcurementDetailView
-from .views import HardwareProcurementListView
-
+from .views import HardwareProcurementDetailView, HardwareProcurementListView
 
 urlpatterns = [
+    path("", HardwareProcurementListView.as_view(), name="hardware-procurement-list"),
     path(
-        '',
-        HardwareProcurementListView.as_view(),
-        name='hardware-procurement-list'),
-    path(
-        '<str:procurement_id>/',
+        "<str:procurement_id>/",
         HardwareProcurementDetailView.as_view(),
-        name='hardware-procurement-detail'),
+        name="hardware-procurement-detail",
+    ),
 ]

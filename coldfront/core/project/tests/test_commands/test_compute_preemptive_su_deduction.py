@@ -11,23 +11,22 @@ TestComputePreemptiveSuDeductionHandle
     replaced with unittest.mock objects so the tests are self-contained and
     fast.
 """
+
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from io import StringIO
 from unittest.mock import MagicMock, Mock, patch
 
-import pytest
-
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
+import pytest
 
 from coldfront.core.project.management.commands.compute_preemptive_su_deduction import (
-    Command,
     TIMESTAMP_THRESHOLD_SECONDS,
+    Command,
 )
-
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -71,7 +70,7 @@ def _make_usage_mock(ascending_entries, pre_reset_entry=None):
     descending_mock.first.return_value = pre_reset_entry
 
     def order_by_effect(*args):
-        if args and str(args[0]).startswith('-'):
+        if args and str(args[0]).startswith("-"):
             return descending_mock
         # ascending order — return plain list so list() and iteration work
         return ascending_entries
@@ -84,6 +83,7 @@ def _make_usage_mock(ascending_entries, pre_reset_entry=None):
 # ---------------------------------------------------------------------------
 # Unit tests for _compute_E (no database required)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestComputeE:
@@ -99,7 +99,7 @@ class TestComputeE:
 
     def test_no_boundary_jobs_returns_zero(self):
         E, e_per_job, ambiguous = self._compute_e([], [])
-        assert E == Decimal('0')
+        assert E == Decimal("0")
         assert e_per_job == {}
         assert ambiguous == []
 
@@ -108,17 +108,17 @@ class TestComputeE:
         entries = [
             _make_entry(100, CUTOFF - timedelta(hours=3)),
             _make_entry(100, CUTOFF - timedelta(hours=2)),  # diff = 0
-            _make_entry(90,  CUTOFF - timedelta(hours=1)),  # diff = -10
+            _make_entry(90, CUTOFF - timedelta(hours=1)),  # diff = -10
         ]
-        job = _make_job('111', CUTOFF - timedelta(hours=2))
+        job = _make_job("111", CUTOFF - timedelta(hours=2))
 
         E, e_per_job, ambiguous = self._compute_e(entries, [job])
 
-        assert E == Decimal('0')
-        assert e_per_job['111'] == Decimal('0')
+        assert E == Decimal("0")
+        assert e_per_job["111"] == Decimal("0")
         assert len(ambiguous) == 1
-        assert ambiguous[0][0] == '111'
-        assert 'no positive diffs' in ambiguous[0][1]
+        assert ambiguous[0][0] == "111"
+        assert "no positive diffs" in ambiguous[0][1]
 
     # --- single job, clean match ---
 
@@ -130,12 +130,12 @@ class TestComputeE:
             _make_entry(200, CUTOFF - timedelta(hours=5)),
             _make_entry(215, diff_date),  # diff = +15
         ]
-        job = _make_job('222', job_start, amount=12.0)
+        job = _make_job("222", job_start, amount=12.0)
 
         E, e_per_job, ambiguous = self._compute_e(entries, [job])
 
-        assert e_per_job['222'] == Decimal('15')
-        assert E == Decimal('15')
+        assert e_per_job["222"] == Decimal("15")
+        assert E == Decimal("15")
         assert ambiguous == []
 
     # --- single job, suspicious timestamp ---
@@ -148,15 +148,15 @@ class TestComputeE:
             _make_entry(100, CUTOFF - timedelta(hours=6)),
             _make_entry(120, diff_date),  # diff = +20
         ]
-        job = _make_job('333', job_start)
+        job = _make_job("333", job_start)
 
         E, e_per_job, ambiguous = self._compute_e(entries, [job])
 
-        assert e_per_job['333'] == Decimal('20')
-        assert E == Decimal('20')
+        assert e_per_job["333"] == Decimal("20")
+        assert E == Decimal("20")
         assert len(ambiguous) == 1
-        assert '333' in ambiguous[0][0]
-        assert 'threshold' in ambiguous[0][1]
+        assert "333" in ambiguous[0][0]
+        assert "threshold" in ambiguous[0][1]
 
     # --- competing jobs (shared diff entry) ---
 
@@ -168,17 +168,17 @@ class TestComputeE:
             _make_entry(350, diff_date),  # diff = +50
         ]
         # jobs close together on either side of diff_date
-        job_a = _make_job('aaa', diff_date - timedelta(seconds=5))
-        job_b = _make_job('bbb', diff_date + timedelta(seconds=5))
+        job_a = _make_job("aaa", diff_date - timedelta(seconds=5))
+        job_b = _make_job("bbb", diff_date + timedelta(seconds=5))
 
         E, e_per_job, ambiguous = self._compute_e(entries, [job_a, job_b])
 
-        assert E == Decimal('0')
-        assert e_per_job['aaa'] == Decimal('0')
-        assert e_per_job['bbb'] == Decimal('0')
+        assert E == Decimal("0")
+        assert e_per_job["aaa"] == Decimal("0")
+        assert e_per_job["bbb"] == Decimal("0")
         ambiguous_ids = {a[0] for a in ambiguous}
-        assert ambiguous_ids == {'aaa', 'bbb'}
-        assert all('shares diff entry' in a[1] for a in ambiguous)
+        assert ambiguous_ids == {"aaa", "bbb"}
+        assert all("shares diff entry" in a[1] for a in ambiguous)
 
     # --- two jobs, distinct diffs ---
 
@@ -188,18 +188,18 @@ class TestComputeE:
         t2 = CUTOFF - timedelta(hours=4)
         entries = [
             _make_entry(100, CUTOFF - timedelta(hours=9)),
-            _make_entry(130, t1 + timedelta(seconds=10)),   # diff = +30
-            _make_entry(110, t1 + timedelta(hours=1)),      # diff = -20
-            _make_entry(145, t2 + timedelta(seconds=20)),   # diff = +35
+            _make_entry(130, t1 + timedelta(seconds=10)),  # diff = +30
+            _make_entry(110, t1 + timedelta(hours=1)),  # diff = -20
+            _make_entry(145, t2 + timedelta(seconds=20)),  # diff = +35
         ]
-        job_a = _make_job('c1', t1, amount=25.0)
-        job_b = _make_job('c2', t2, amount=30.0)
+        job_a = _make_job("c1", t1, amount=25.0)
+        job_b = _make_job("c2", t2, amount=30.0)
 
         E, e_per_job, ambiguous = self._compute_e(entries, [job_a, job_b])
 
-        assert e_per_job['c1'] == Decimal('30')
-        assert e_per_job['c2'] == Decimal('35')
-        assert E == Decimal('65')
+        assert e_per_job["c1"] == Decimal("30")
+        assert e_per_job["c2"] == Decimal("35")
+        assert E == Decimal("65")
         assert ambiguous == []
 
 
@@ -207,20 +207,22 @@ class TestComputeE:
 # handle() tests (via call_command with mocked DB dependencies)
 # ---------------------------------------------------------------------------
 
-_HANDLE_TARGET = 'coldfront.core.project.management.commands.compute_preemptive_su_deduction'
+_HANDLE_TARGET = (
+    "coldfront.core.project.management.commands.compute_preemptive_su_deduction"
+)
 
 COMMON_ARGS = dict(
-    project_name='fc_singlecell',
+    project_name="fc_singlecell",
     previous_allowance=300000,
-    year_cutoff_date='2026-06-01',
+    year_cutoff_date="2026-06-01",
 )
 
 
 def _run_command(**kwargs):
     """Call compute_preemptive_su_deduction and return captured stdout."""
     out = StringIO()
-    opts = {**COMMON_ARGS, **kwargs, 'stdout': out}
-    call_command('compute_preemptive_su_deduction', **opts)
+    opts = {**COMMON_ARGS, **kwargs, "stdout": out}
+    call_command("compute_preemptive_su_deduction", **opts)
     return out.getvalue()
 
 
@@ -233,24 +235,26 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
         out = StringIO()
         with self.assertRaises(CommandError):
             call_command(
-                'compute_preemptive_su_deduction',
-                project_name='fc_singlecell',
+                "compute_preemptive_su_deduction",
+                project_name="fc_singlecell",
                 previous_allowance=300000,
-                year_cutoff_date='01-06-2026',  # wrong format
+                year_cutoff_date="01-06-2026",  # wrong format
                 stdout=out,
             )
 
-    @patch(f'{_HANDLE_TARGET}.Project')
+    @patch(f"{_HANDLE_TARGET}.Project")
     def test_nonexistent_project_raises_command_error(self, mock_project):
         mock_project.DoesNotExist = Exception
         mock_project.objects.get.side_effect = mock_project.DoesNotExist
         with self.assertRaises(CommandError):
             _run_command()
 
-    @patch(f'{_HANDLE_TARGET}.get_primary_compute_resource_name',
-           return_value='Savio Compute')
-    @patch(f'{_HANDLE_TARGET}.get_accounting_allocation_objects')
-    @patch(f'{_HANDLE_TARGET}.Project')
+    @patch(
+        f"{_HANDLE_TARGET}.get_primary_compute_resource_name",
+        return_value="Savio Compute",
+    )
+    @patch(f"{_HANDLE_TARGET}.get_accounting_allocation_objects")
+    @patch(f"{_HANDLE_TARGET}.Project")
     def test_no_active_allocation_raises_command_error(
         self, mock_project, mock_get_accounting, mock_resource_name
     ):
@@ -258,16 +262,15 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
         with self.assertRaises(CommandError):
             _run_command()
 
-    @patch(f'{_HANDLE_TARGET}.Job')
-    @patch(f'{_HANDLE_TARGET}.get_accounting_allocation_objects')
-    @patch(f'{_HANDLE_TARGET}.Project')
+    @patch(f"{_HANDLE_TARGET}.Job")
+    @patch(f"{_HANDLE_TARGET}.get_accounting_allocation_objects")
+    @patch(f"{_HANDLE_TARGET}.Project")
     def test_no_pre_reset_history_raises_command_error(
         self, mock_project, mock_get_accounting, mock_job
     ):
         accounting = MagicMock()
-        accounting.allocation_attribute.value = '300000'
-        accounting.allocation_attribute_usage.history \
-            .filter.return_value.order_by.return_value.first.return_value = None
+        accounting.allocation_attribute.value = "300000"
+        accounting.allocation_attribute_usage.history.filter.return_value.order_by.return_value.first.return_value = None
         mock_get_accounting.return_value = accounting
         mock_job.objects.filter.return_value.order_by.return_value = []
 
@@ -276,9 +279,9 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
 
     # --- deduction arithmetic: no boundary jobs ---
 
-    @patch(f'{_HANDLE_TARGET}.Job')
-    @patch(f'{_HANDLE_TARGET}.get_accounting_allocation_objects')
-    @patch(f'{_HANDLE_TARGET}.Project')
+    @patch(f"{_HANDLE_TARGET}.Job")
+    @patch(f"{_HANDLE_TARGET}.get_accounting_allocation_objects")
+    @patch(f"{_HANDLE_TARGET}.Project")
     def test_no_boundary_jobs_deduction_equals_u_minus_previous_allowance(
         self, mock_project, mock_get_accounting, mock_job
     ):
@@ -287,7 +290,7 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
 
         usage = _make_usage_mock([pre_reset])
         accounting = MagicMock()
-        accounting.allocation_attribute.value = '300000'
+        accounting.allocation_attribute.value = "300000"
         accounting.allocation_attribute_usage = Mock()
         accounting.allocation_attribute_usage.history = usage.history
         mock_get_accounting.return_value = accounting
@@ -297,13 +300,13 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
         output = _run_command()
 
         # deduction = max(350000 - 300000, 0) = 50000
-        assert '50000' in output
-        assert 'add_service_units_to_project' in output
-        assert '--amount -50000' in output
+        assert "50000" in output
+        assert "add_service_units_to_project" in output
+        assert "--amount -50000" in output
 
-    @patch(f'{_HANDLE_TARGET}.Job')
-    @patch(f'{_HANDLE_TARGET}.get_accounting_allocation_objects')
-    @patch(f'{_HANDLE_TARGET}.Project')
+    @patch(f"{_HANDLE_TARGET}.Job")
+    @patch(f"{_HANDLE_TARGET}.get_accounting_allocation_objects")
+    @patch(f"{_HANDLE_TARGET}.Project")
     def test_no_boundary_jobs_deduction_clamps_to_zero(
         self, mock_project, mock_get_accounting, mock_job
     ):
@@ -312,7 +315,7 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
 
         usage = _make_usage_mock([pre_reset])
         accounting = MagicMock()
-        accounting.allocation_attribute.value = '300000'
+        accounting.allocation_attribute.value = "300000"
         accounting.allocation_attribute_usage = Mock()
         accounting.allocation_attribute_usage.history = usage.history
         mock_get_accounting.return_value = accounting
@@ -321,13 +324,13 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
 
         output = _run_command()
 
-        assert '--amount -0' in output
+        assert "--amount -0" in output
 
     # --- deduction arithmetic: with boundary jobs ---
 
-    @patch(f'{_HANDLE_TARGET}.Job')
-    @patch(f'{_HANDLE_TARGET}.get_accounting_allocation_objects')
-    @patch(f'{_HANDLE_TARGET}.Project')
+    @patch(f"{_HANDLE_TARGET}.Job")
+    @patch(f"{_HANDLE_TARGET}.get_accounting_allocation_objects")
+    @patch(f"{_HANDLE_TARGET}.Project")
     def test_boundary_jobs_correct_arithmetic(
         self, mock_project, mock_get_accounting, mock_job
     ):
@@ -354,30 +357,30 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
         usage = _make_usage_mock(entries_ascending, pre_reset_entry=pre_reset)
 
         accounting = MagicMock()
-        accounting.allocation_attribute.value = '450000'  # current allowance
+        accounting.allocation_attribute.value = "450000"  # current allowance
         accounting.allocation_attribute_usage = Mock()
         accounting.allocation_attribute_usage.history = usage.history
         mock_get_accounting.return_value = accounting
 
-        boundary_job = _make_job('12345', job_start, amount=12000.0)
+        boundary_job = _make_job("12345", job_start, amount=12000.0)
         mock_job.objects.filter.return_value.order_by.return_value = [boundary_job]
 
         output = _run_command()
 
         # true_consumption = 364075 - (15000 - 12000) = 361075
         # deduction = 361075 - 300000 = 61075
-        assert '364075' in output   # U
-        assert '15000' in output    # E
-        assert '12000' in output    # A
-        assert '361075' in output   # true_consumption
-        assert '61075' in output    # deduction
-        assert '--amount -61075' in output
+        assert "364075" in output  # U
+        assert "15000" in output  # E
+        assert "12000" in output  # A
+        assert "361075" in output  # true_consumption
+        assert "61075" in output  # deduction
+        assert "--amount -61075" in output
 
     # --- floor vs round ---
 
-    @patch(f'{_HANDLE_TARGET}.Job')
-    @patch(f'{_HANDLE_TARGET}.get_accounting_allocation_objects')
-    @patch(f'{_HANDLE_TARGET}.Project')
+    @patch(f"{_HANDLE_TARGET}.Job")
+    @patch(f"{_HANDLE_TARGET}.get_accounting_allocation_objects")
+    @patch(f"{_HANDLE_TARGET}.Project")
     def test_deduction_is_floored_not_rounded(
         self, mock_project, mock_get_accounting, mock_job
     ):
@@ -388,7 +391,7 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
 
         usage = _make_usage_mock([pre_reset])
         accounting = MagicMock()
-        accounting.allocation_attribute.value = '300000'
+        accounting.allocation_attribute.value = "300000"
         accounting.allocation_attribute_usage = Mock()
         accounting.allocation_attribute_usage.history = usage.history
         mock_get_accounting.return_value = accounting
@@ -397,13 +400,13 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
 
         output = _run_command()
 
-        assert '--amount -0' in output
+        assert "--amount -0" in output
 
     # --- output structure ---
 
-    @patch(f'{_HANDLE_TARGET}.Job')
-    @patch(f'{_HANDLE_TARGET}.get_accounting_allocation_objects')
-    @patch(f'{_HANDLE_TARGET}.Project')
+    @patch(f"{_HANDLE_TARGET}.Job")
+    @patch(f"{_HANDLE_TARGET}.get_accounting_allocation_objects")
+    @patch(f"{_HANDLE_TARGET}.Project")
     def test_output_contains_project_name_and_add_su_command(
         self, mock_project, mock_get_accounting, mock_job
     ):
@@ -411,7 +414,7 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
 
         usage = _make_usage_mock([pre_reset])
         accounting = MagicMock()
-        accounting.allocation_attribute.value = '300000'
+        accounting.allocation_attribute.value = "300000"
         accounting.allocation_attribute_usage = Mock()
         accounting.allocation_attribute_usage.history = usage.history
         mock_get_accounting.return_value = accounting
@@ -419,7 +422,7 @@ class TestComputePreemptiveSuDeductionHandle(TestCase):
 
         output = _run_command()
 
-        assert 'fc_singlecell' in output
-        assert 'add_service_units_to_project' in output
-        assert '--project_name fc_singlecell' in output
-        assert '--reason' in output
+        assert "fc_singlecell" in output
+        assert "add_service_units_to_project" in output
+        assert "--project_name fc_singlecell" in output
+        assert "--reason" in output

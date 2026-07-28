@@ -1,20 +1,28 @@
-from coldfront.core.allocation.models import AllocationPeriod
-from coldfront.core.allocation.models import AllocationRenewalRequest
-from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
-from coldfront.core.project.tests.test_utils.test_renewal_utils.utils import TestRunnerMixinBase
-from coldfront.core.project.utils_.renewal_utils import AllocationRenewalApprovalRunner
-from coldfront.core.project.utils_.renewal_utils import get_next_allowance_year_period
-from coldfront.core.utils.common import display_time_zone_current_date
-from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 from decimal import Decimal
+
 from django.conf import settings
 from django.core import mail
-from django.test import override_settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
+from coldfront.core.allocation.models import (
+    AllocationPeriod,
+    AllocationRenewalRequest,
+    AllocationRenewalRequestStatusChoice,
+)
+from coldfront.core.project.tests.test_utils.test_renewal_utils.utils import (
+    TestRunnerMixinBase,
+)
+from coldfront.core.project.utils_.renewal_utils import (
+    AllocationRenewalApprovalRunner,
+    get_next_allowance_year_period,
+)
+from coldfront.core.utils.common import (
+    display_time_zone_current_date,
+    utc_now_offset_aware,
+)
+from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 
-TEST_PRIMARY_CLUSTER_NAME = 'Savio'
+TEST_PRIMARY_CLUSTER_NAME = "Savio"
 
 
 class TestRunnerMixin(TestRunnerMixinBase):
@@ -25,18 +33,16 @@ class TestRunnerMixin(TestRunnerMixinBase):
         AllocationPeriod must not have ended, or an exception will be
         raised."""
         allocation_period = AllocationPeriod.objects.filter(
-            name__startswith='Allowance Year',
-            end_date__lt=display_time_zone_current_date()).first()
+            name__startswith="Allowance Year",
+            end_date__lt=display_time_zone_current_date(),
+        ).first()
         self.request_obj.allocation_period = allocation_period
         self.request_obj.save()
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         try:
-            AllocationRenewalApprovalRunner(
-                self.request_obj, num_service_units)
+            AllocationRenewalApprovalRunner(self.request_obj, num_service_units)
         except AssertionError as e:
-            message = (
-                f'AllocationPeriod already ended on '
-                f'{allocation_period.end_date}.')
+            message = f"AllocationPeriod already ended on {allocation_period.end_date}."
             self.assertEqual(str(e), message)
 
     def test_request_allocation_period_started_not_enforced(self):
@@ -45,7 +51,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
         allocation_period = get_next_allowance_year_period()
         self.request_obj.allocation_period = allocation_period
         self.request_obj.save()
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         AllocationRenewalApprovalRunner(self.request_obj, num_service_units)
 
     def test_request_initial_under_review_status_enforced(self):
@@ -53,22 +59,20 @@ class TestRunnerMixin(TestRunnerMixinBase):
         the 'Under Review' state, or an exception will be raised."""
         statuses = AllocationRenewalRequestStatusChoice.objects.all()
         self.assertEqual(statuses.count(), 4)
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         for status in statuses:
             self.request_obj.status = status
-            if status.name == 'Under Review':
-                AllocationRenewalApprovalRunner(
-                    self.request_obj, num_service_units)
+            if status.name == "Under Review":
+                AllocationRenewalApprovalRunner(self.request_obj, num_service_units)
             else:
                 try:
-                    AllocationRenewalApprovalRunner(
-                        self.request_obj, num_service_units)
+                    AllocationRenewalApprovalRunner(self.request_obj, num_service_units)
                 except AssertionError as e:
-                    message = 'The request must have status \'Under Review\'.'
+                    message = "The request must have status 'Under Review'."
                     self.assertEqual(str(e), message)
                     continue
                 else:
-                    self.fail('An AssertionError should have been raised.')
+                    self.fail("An AssertionError should have been raised.")
 
     def test_runner_sends_emails_conditionally(self):
         """Test that the runner sends a notification email to the
@@ -80,16 +84,18 @@ class TestRunnerMixin(TestRunnerMixinBase):
         pi = request.pi
 
         # If not requested, an email should not be sent.
-        num_service_units = Decimal('0.00')
+        num_service_units = Decimal("0.00")
         runner = AllocationRenewalApprovalRunner(
-            request, num_service_units, email_strategy=DropEmailStrategy())
+            request, num_service_units, email_strategy=DropEmailStrategy()
+        )
         runner.run()
 
         self.assertEqual(len(mail.outbox), 0)
 
         request.refresh_from_db()
         request.status = AllocationRenewalRequestStatusChoice.objects.get(
-            name='Under Review')
+            name="Under Review"
+        )
         request.approved_time = None
         request.save()
 
@@ -100,17 +106,19 @@ class TestRunnerMixin(TestRunnerMixinBase):
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
 
-        expected_subject = (
-            f'{settings.EMAIL_SUBJECT_PREFIX} {str(request)} Approved')
+        expected_subject = f"{settings.EMAIL_SUBJECT_PREFIX} {request!s} Approved"
         self.assertEqual(expected_subject, email.subject)
 
         formatted_start_date = request.allocation_period.start_date.strftime(
-            '%B %-d, %Y')
+            "%B %-d, %Y"
+        )
         expected_body_snippets = [
-            (f'processed on {formatted_start_date}, {num_service_units} will '
-             f'be added to the project {project.name}'),
-            'will gain the permission to manage the project',
-            f'/project/{project.pk}/',
+            (
+                f"processed on {formatted_start_date}, {num_service_units} will "
+                f"be added to the project {project.name}"
+            ),
+            "will gain the permission to manage the project",
+            f"/project/{project.pk}/",
         ]
         for expected_body_snippet in expected_body_snippets:
             self.assertIn(expected_body_snippet, email.body)
@@ -124,19 +132,18 @@ class TestRunnerMixin(TestRunnerMixinBase):
     def test_runner_sets_status_and_approval_time(self):
         """Test that the runner sets the status of the request to
         'Approved' and its approval_time to the current time."""
-        self.assertEqual(self.request_obj.status.name, 'Under Review')
+        self.assertEqual(self.request_obj.status.name, "Under Review")
         self.assertFalse(self.request_obj.approval_time)
         pre_time = utc_now_offset_aware()
 
-        num_service_units = Decimal('0.00')
-        runner = AllocationRenewalApprovalRunner(
-            self.request_obj, num_service_units)
+        num_service_units = Decimal("0.00")
+        runner = AllocationRenewalApprovalRunner(self.request_obj, num_service_units)
         runner.run()
 
         post_time = utc_now_offset_aware()
         self.request_obj.refresh_from_db()
         approval_time = self.request_obj.approval_time
-        self.assertEqual(self.request_obj.status.name, 'Approved')
+        self.assertEqual(self.request_obj.status.name, "Approved")
         self.assertTrue(approval_time)
         self.assertTrue(pre_time <= approval_time <= post_time)
 
@@ -150,18 +157,19 @@ class TestUnpooledToUnpooled(TestRunnerMixin, TestCase):
         """Set up test data."""
         super().setUp()
         self.request_obj = self.create_request(
-            AllocationRenewalRequestStatusChoice.objects.get(
-                name='Under Review'),
+            AllocationRenewalRequestStatusChoice.objects.get(name="Under Review"),
             computing_allowance=self.computing_allowance,
             pi=self.pi0,
             pre_project=self.fc_unpooled_project0,
-            post_project=self.fc_unpooled_project0)
+            post_project=self.fc_unpooled_project0,
+        )
 
     def test_pooling_preference_case(self):
         """Test that the pooling preference case for the class' renewal
         request is 'unpooled_to_unpooled'."""
         self.assert_pooling_preference_case(
-            AllocationRenewalRequest.UNPOOLED_TO_UNPOOLED)
+            AllocationRenewalRequest.UNPOOLED_TO_UNPOOLED
+        )
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
@@ -173,18 +181,17 @@ class TestUnpooledToPooled(TestRunnerMixin, TestCase):
         """Set up test data."""
         super().setUp()
         self.request_obj = self.create_request(
-            AllocationRenewalRequestStatusChoice.objects.get(
-                name='Under Review'),
+            AllocationRenewalRequestStatusChoice.objects.get(name="Under Review"),
             computing_allowance=self.computing_allowance,
             pi=self.pi0,
             pre_project=self.fc_unpooled_project0,
-            post_project=self.fc_pooled_project1)
+            post_project=self.fc_pooled_project1,
+        )
 
     def test_pooling_preference_case(self):
         """Test that the pooling preference case for the class' renewal
         request is 'unpooled_to_pooled'."""
-        self.assert_pooling_preference_case(
-            AllocationRenewalRequest.UNPOOLED_TO_POOLED)
+        self.assert_pooling_preference_case(AllocationRenewalRequest.UNPOOLED_TO_POOLED)
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
@@ -196,18 +203,19 @@ class TestPooledToPooledSame(TestRunnerMixin, TestCase):
         """Set up test data."""
         super().setUp()
         self.request_obj = self.create_request(
-            AllocationRenewalRequestStatusChoice.objects.get(
-                name='Under Review'),
+            AllocationRenewalRequestStatusChoice.objects.get(name="Under Review"),
             computing_allowance=self.computing_allowance,
             pi=self.pi0,
             pre_project=self.fc_pooled_project0,
-            post_project=self.fc_pooled_project0)
+            post_project=self.fc_pooled_project0,
+        )
 
     def test_pooling_preference_case(self):
         """Test that the pooling preference case for the class' renewal
         request is 'pooled_to_pooled_same'."""
         self.assert_pooling_preference_case(
-            AllocationRenewalRequest.POOLED_TO_POOLED_SAME)
+            AllocationRenewalRequest.POOLED_TO_POOLED_SAME
+        )
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
@@ -219,18 +227,19 @@ class TestPooledToPooledDifferent(TestRunnerMixin, TestCase):
         """Set up test data."""
         super().setUp()
         self.request_obj = self.create_request(
-            AllocationRenewalRequestStatusChoice.objects.get(
-                name='Under Review'),
+            AllocationRenewalRequestStatusChoice.objects.get(name="Under Review"),
             computing_allowance=self.computing_allowance,
             pi=self.pi0,
             pre_project=self.fc_pooled_project0,
-            post_project=self.fc_pooled_project1)
+            post_project=self.fc_pooled_project1,
+        )
 
     def test_pooling_preference_case(self):
         """Test that the pooling preference case for the class' renewal
         request is 'pooled_to_pooled_different'."""
         self.assert_pooling_preference_case(
-            AllocationRenewalRequest.POOLED_TO_POOLED_DIFFERENT)
+            AllocationRenewalRequest.POOLED_TO_POOLED_DIFFERENT
+        )
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
@@ -242,18 +251,19 @@ class TestPooledToUnpooledOld(TestRunnerMixin, TestCase):
         """Set up test data."""
         super().setUp()
         self.request_obj = self.create_request(
-            AllocationRenewalRequestStatusChoice.objects.get(
-                name='Under Review'),
+            AllocationRenewalRequestStatusChoice.objects.get(name="Under Review"),
             computing_allowance=self.computing_allowance,
             pi=self.pi0,
             pre_project=self.fc_pooled_project0,
-            post_project=self.fc_unpooled_project0)
+            post_project=self.fc_unpooled_project0,
+        )
 
     def test_pooling_preference_case(self):
         """Test that the pooling preference case for the class' renewal
         request is 'pooled_to_unpooled_old'."""
         self.assert_pooling_preference_case(
-            AllocationRenewalRequest.POOLED_TO_UNPOOLED_OLD)
+            AllocationRenewalRequest.POOLED_TO_UNPOOLED_OLD
+        )
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
@@ -264,16 +274,15 @@ class TestPooledToUnpooledNew(TestRunnerMixin, TestCase):
     def setUp(self):
         """Set up test data."""
         super().setUp()
-        new_project_request = \
-            self.simulate_new_project_allocation_request_processing()
+        new_project_request = self.simulate_new_project_allocation_request_processing()
         self.request_obj = self.create_request(
-            AllocationRenewalRequestStatusChoice.objects.get(
-                name='Under Review'),
+            AllocationRenewalRequestStatusChoice.objects.get(name="Under Review"),
             computing_allowance=self.computing_allowance,
             pi=self.pi0,
             pre_project=self.fc_pooled_project0,
             post_project=new_project_request.project,
-            new_project_request=new_project_request)
+            new_project_request=new_project_request,
+        )
 
     def simulate_new_project_allocation_request_processing(self):
         """Create a new Project and simulate its processing. Return the
@@ -284,4 +293,5 @@ class TestPooledToUnpooledNew(TestRunnerMixin, TestCase):
         """Test that the pooling preference case for the class' renewal
         request is 'pooled_to_unpooled_new'."""
         self.assert_pooling_preference_case(
-            AllocationRenewalRequest.POOLED_TO_UNPOOLED_NEW)
+            AllocationRenewalRequest.POOLED_TO_UNPOOLED_NEW
+        )

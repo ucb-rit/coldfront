@@ -1,53 +1,56 @@
 import logging
 
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import UserPassesTestMixin
-from django.http import HttpResponse
-from django.http import FileResponse
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views import View
 from django.views.generic.edit import UpdateView
-from django.conf import settings
-
 from flags.state import flag_enabled
 
-from coldfront.core.allocation.models import AllocationAdditionRequest
-from coldfront.core.allocation.models import SecureDirRequest
+from coldfront.core.allocation.models import AllocationAdditionRequest, SecureDirRequest
 from coldfront.core.project.models import SavioProjectAllocationRequest
-from coldfront.core.project.utils_.permissions_utils import is_user_manager_or_pi_of_project
-from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-
-from coldfront.core.utils.common import build_absolute_url
-from coldfront.core.utils.common import utc_now_offset_aware
+from coldfront.core.project.utils_.permissions_utils import (
+    is_user_manager_or_pi_of_project,
+)
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import (
+    ComputingAllowance,
+)
+from coldfront.core.utils.common import build_absolute_url, utc_now_offset_aware
 from coldfront.core.utils.email import get_email_admin_notification_recipients
-from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
+from coldfront.core.utils.email.email_strategy import (
+    validate_email_strategy_or_get_default,
+)
 from coldfront.core.utils.forms.file_upload_forms import model_pdf_upload_form_factory
-from coldfront.core.utils.mou import get_mou_filename
 from coldfront.core.utils.mail import send_email_template
-
+from coldfront.core.utils.mou import get_mou_filename
 
 logger = logging.getLogger(__name__)
 
 
 class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
-
-    REQUEST_TYPES = \
-        {'new-project': ('New Project Request',
-                         SavioProjectAllocationRequest,
-                         'Memorandum of Understanding',
-                         'new-project-request-detail'),
-
-         'secure-dir': ('Secure Directory Request',
-                        SecureDirRequest,
-                        'Researcher Use Agreement',
-                        'secure-dir-request-detail'),
-
-         'service-units-purchase': ('Service Units Purchase Request',
-                                    AllocationAdditionRequest,
-                                    'Memorandum of Understanding',
-                                    'service-units-purchase-request-detail')}
+    REQUEST_TYPES = {
+        "new-project": (
+            "New Project Request",
+            SavioProjectAllocationRequest,
+            "Memorandum of Understanding",
+            "new-project-request-detail",
+        ),
+        "secure-dir": (
+            "Secure Directory Request",
+            SecureDirRequest,
+            "Researcher Use Agreement",
+            "secure-dir-request-detail",
+        ),
+        "service-units-purchase": (
+            "Service Units Purchase Request",
+            AllocationAdditionRequest,
+            "Memorandum of Understanding",
+            "service-units-purchase-request-detail",
+        ),
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -59,61 +62,66 @@ class BaseMOUView(LoginRequiredMixin, UserPassesTestMixin):
         """UserPassesTestMixin Tests"""
         if self.request.user.is_superuser:
             return True
-        if self.request.user.has_perm('project.can_view_all_projects'):
+        if self.request.user.has_perm("project.can_view_all_projects"):
             return True
         if self.request.user == self.request_obj.requester:
             return True
-        if self.request_type == 'service-units-purchase':
+        if self.request_type == "service-units-purchase":
             return is_user_manager_or_pi_of_project(
-                self.request.user, self.request_obj.project)
-        elif self.request_type == 'secure-dir':
+                self.request.user, self.request_obj.project
+            )
+        elif self.request_type == "secure-dir":
             return (
-                self.request.user == self.request_obj.requester or
-                self.request.user == self.request_obj.pi)
-        elif self.request_type == 'new-project':
+                self.request.user == self.request_obj.requester
+                or self.request.user == self.request_obj.pi
+            )
+        elif self.request_type == "new-project":
             return self.request.user == self.request_obj.pi
         return False
 
     def dispatch(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
+        pk = self.kwargs.get("pk")
         self.set_attributes(pk)
         return super().dispatch(request, *args, **kwargs)
 
     def set_attributes(self, pk):
         """Set this instance's request_obj to be the
         SavioProjectAllocationRequest with the given primary key."""
-        self.request_type = self.kwargs['request_type']
+        self.request_type = self.kwargs["request_type"]
 
-        self.request_type_long, self.request_class, self.mou_type = \
-            self.REQUEST_TYPES[self.request_type][:3]
+        self.request_type_long, self.request_class, self.mou_type = self.REQUEST_TYPES[
+            self.request_type
+        ][:3]
 
         self.request_obj = get_object_or_404(self.request_class, pk=pk)
 
     def get_success_url(self, **kwargs):
         ret = self.REQUEST_TYPES[self.request_type][3]
-        return reverse(ret, kwargs={'pk': self.kwargs.get('pk')})
+        return reverse(ret, kwargs={"pk": self.kwargs.get("pk")})
 
 
 class MOUUploadView(BaseMOUView, UpdateView):
-    template_name = 'upload_mou.html'
-    context_object_name = 'object'
+    template_name = "upload_mou.html"
+    context_object_name = "object"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._email_strategy = validate_email_strategy_or_get_default(
-            email_strategy=None)
+            email_strategy=None
+        )
 
     def form_valid(self, form):
         form.save()
 
-        file_name = form.cleaned_data['mou_file'].name
+        file_name = form.cleaned_data["mou_file"].name
 
-        message = f'Successfully uploaded file {file_name}.'
+        message = f"Successfully uploaded file {file_name}."
         messages.success(self.request, message)
 
         log_message = (
-            f'User {self.request.user} uploaded signed MOU file {file_name} '
-            f'for {self.request_class.__name__} {self.kwargs["pk"]}.')
+            f"User {self.request.user} uploaded signed MOU file {file_name} "
+            f"for {self.request_class.__name__} {self.kwargs['pk']}."
+        )
         logger.info(log_message)
 
         self._send_emails_safe()
@@ -122,17 +130,17 @@ class MOUUploadView(BaseMOUView, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['mou_type'] = self.mou_type
-        context['request_type'] = self.request_type
-        context['request_type_long'] = self.request_type_long
-        context['return_url'] = self.get_success_url()
+        context["mou_type"] = self.mou_type
+        context["request_type"] = self.request_type
+        context["request_type_long"] = self.request_type_long
+        context["return_url"] = self.get_success_url()
         return context
 
     def get_form_class(self):
         return model_pdf_upload_form_factory(self.request_class)
 
     def get_object(self, queryset=None):
-        return self.request_class.objects.get(pk=self.kwargs['pk'])
+        return self.request_class.objects.get(pk=self.kwargs["pk"])
 
     def get_queryset(self):
         return self.request_class.objects.all()
@@ -140,54 +148,61 @@ class MOUUploadView(BaseMOUView, UpdateView):
     def _get_email_admin_recipients(self):
         """Return a list of email addresses of administrators to send a
         notification email to."""
-        if self.request_type == 'new-project':
-            domain = 'new_project_requests'
-        elif self.request_type == 'secure-dir':
-            domain = 'secure_directory_requests'
-        elif self.request_type == 'service-units-purchase':
-            domain = 'service_units_purchase_requests'
+        if self.request_type == "new-project":
+            domain = "new_project_requests"
+        elif self.request_type == "secure-dir":
+            domain = "secure_directory_requests"
+        elif self.request_type == "service-units-purchase":
+            domain = "service_units_purchase_requests"
         else:
-            raise ValueError('Invalid request type')
+            raise ValueError("Invalid request type")
 
-        event = 'agreement_uploaded'
+        event = "agreement_uploaded"
         return get_email_admin_notification_recipients(domain, event)
 
     def _send_admin_notification_email(self):
         """Send a notification email to administrators that a signed
         agreement has been uploaded."""
-        if self.mou_type == 'Memorandum of Understanding':
-            mou_type_acronym = 'MOU'
+        if self.mou_type == "Memorandum of Understanding":
+            mou_type_acronym = "MOU"
         else:
-            mou_type_acronym = 'RUA'
+            mou_type_acronym = "RUA"
 
-        request_pk = self.kwargs['pk']
+        request_pk = self.kwargs["pk"]
 
         subject = (
-            f'Signed {mou_type_acronym} for {self.request_type_long} '
-            f'#{request_pk} Uploaded')
-        template_name = 'mou_uploaded_email.html'
+            f"Signed {mou_type_acronym} for {self.request_type_long} "
+            f"#{request_pk} Uploaded"
+        )
+        template_name = "mou_uploaded_email.html"
 
         request_url = build_absolute_url(self.get_success_url())
 
         uploader_str = (
-            f'{self.request.user.first_name} {self.request.user.last_name} '
-            f'({self.request.user.username})')
+            f"{self.request.user.first_name} {self.request.user.last_name} "
+            f"({self.request.user.username})"
+        )
 
         context = {
-            'mou_type': self.mou_type,
-            'mou_type_acronym': mou_type_acronym,
-            'request_url': request_url,
-            'request_type_long': self.request_type_long,
-            'request_pk': request_pk,
-            'uploader_str': uploader_str,
+            "mou_type": self.mou_type,
+            "mou_type_acronym": mou_type_acronym,
+            "request_url": request_url,
+            "request_type_long": self.request_type_long,
+            "request_pk": request_pk,
+            "uploader_str": uploader_str,
         }
 
         sender = settings.EMAIL_SENDER
         receiver_list = self._get_email_admin_recipients()
 
         send_email_template(
-            subject, template_name, context, sender,
-            receiver_list=receiver_list, html_template=template_name)
+            subject,
+            template_name,
+            context,
+            sender,
+            receiver_list=receiver_list,
+            html_template=template_name,
+        )
 
     def _send_emails(self):
         email_method = self._send_admin_notification_email
@@ -199,105 +214,118 @@ class MOUUploadView(BaseMOUView, UpdateView):
         try:
             self._send_emails()
         except Exception as e:
-            logger.exception(
-                f'Failed to send notification emails. Details:\n{e}')
+            logger.exception(f"Failed to send notification emails. Details:\n{e}")
 
 
 class MOUDownloadView(BaseMOUView, View):
-
     def get(self, request, *args, **kwargs):
         filename = get_mou_filename(self.request_obj)
         response = FileResponse(self.request_obj.mou_file)
-        response['Content-Type'] = 'application/pdf'
-        response['Content-Disposition'] = f'attachment;filename="{filename}"'
+        response["Content-Type"] = "application/pdf"
+        response["Content-Disposition"] = f'attachment;filename="{filename}"'
         return response
 
 
 class UnsignedMOUDownloadView(BaseMOUView, View):
-
     def get(self, request, *args, **kwargs):
-        request_type = ''
+        request_type = ""
         mou_kwargs = {}
-        if self.request_type == 'new-project' and ComputingAllowance(
-                       self.request_obj.computing_allowance).is_instructional():
-            request_type = 'instructional'
-            mou_kwargs['service_units'] = int(float(self.request_obj \
-                        .computing_allowance.get_attribute('Service Units')))
-            mou_kwargs['extra_fields'] = self.request_obj.extra_fields
+        if (
+            self.request_type == "new-project"
+            and ComputingAllowance(
+                self.request_obj.computing_allowance
+            ).is_instructional()
+        ):
+            request_type = "instructional"
+            mou_kwargs["service_units"] = int(
+                float(
+                    self.request_obj.computing_allowance.get_attribute("Service Units")
+                )
+            )
+            mou_kwargs["extra_fields"] = self.request_obj.extra_fields
             allowance_end = self.request_obj.allocation_period.end_date
-            mou_kwargs['allowance_end'] = allowance_end
-        elif self.request_type == 'service-units-purchase' or \
-                    (self.request_type == 'new-project' and ComputingAllowance(
-                        self.request_obj.computing_allowance).is_recharge()):
-            request_type = 'recharge'
-            mou_kwargs['extra_fields'] = self.request_obj.extra_fields
-            if self.request_type == 'service-units-purchase':
-                mou_kwargs['service_units'] = int(self.request_obj.num_service_units)
+            mou_kwargs["allowance_end"] = allowance_end
+        elif self.request_type == "service-units-purchase" or (
+            self.request_type == "new-project"
+            and ComputingAllowance(self.request_obj.computing_allowance).is_recharge()
+        ):
+            request_type = "recharge"
+            mou_kwargs["extra_fields"] = self.request_obj.extra_fields
+            if self.request_type == "service-units-purchase":
+                mou_kwargs["service_units"] = int(self.request_obj.num_service_units)
             else:
-                mou_kwargs['service_units'] = int(self.request_obj \
-                                            .extra_fields['num_service_units'])
-        elif self.request_type == 'secure-dir':
-            request_type = 'secure-dir'
-            mou_kwargs['department'] = self.request_obj.department
+                mou_kwargs["service_units"] = int(
+                    self.request_obj.extra_fields["num_service_units"]
+                )
+        elif self.request_type == "secure-dir":
+            request_type = "secure-dir"
+            mou_kwargs["department"] = self.request_obj.department
 
-        if self.request_type == 'new-project':
+        if self.request_type == "new-project":
             first_name = self.request_obj.pi.first_name
             last_name = self.request_obj.pi.last_name
-        elif self.request_type == 'secure-dir':
+        elif self.request_type == "secure-dir":
             first_name = self.request_obj.pi.first_name
             last_name = self.request_obj.pi.last_name
         else:
             first_name = self.request_obj.requester.first_name
             last_name = self.request_obj.requester.last_name
 
-        if flag_enabled('MOU_GENERATION_ENABLED'):
+        if flag_enabled("MOU_GENERATION_ENABLED"):
             from mou_generator import generate_pdf
+
             project_name = self.request_obj.project.name
             pdf = generate_pdf(
-                request_type, first_name, last_name, project_name, **mou_kwargs)
+                request_type, first_name, last_name, project_name, **mou_kwargs
+            )
         else:
-            pdf = b''
+            pdf = b""
 
         filename = get_mou_filename(self.request_obj)
-        response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
 
 class MOURequestNotifyPIViewMixIn:
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
-        context['notify_pi'] = True
+        context["notify_pi"] = True
         return context
 
     def _email_pi(self, subject, to_name, request_url, mou_type, mou_for, email):
         """Send an email to the PI."""
         try:
-            send_email_template(subject,
-                                'request_mou_email.html',
-                                {'to_name': to_name,
-                                 'savio_request': self.request_obj,
-                                 'request_url': request_url,
-                                 'mou_type': mou_type,
-                                 'mou_for': mou_for,
-                                 'base_url': settings.CENTER_BASE_URL,
-                                 'signature': settings.EMAIL_SIGNATURE, },
-                                settings.DEFAULT_FROM_EMAIL,
-                                [email])
+            send_email_template(
+                subject,
+                "request_mou_email.html",
+                {
+                    "to_name": to_name,
+                    "savio_request": self.request_obj,
+                    "request_url": request_url,
+                    "mou_type": mou_type,
+                    "mou_for": mou_for,
+                    "base_url": settings.CENTER_BASE_URL,
+                    "signature": settings.EMAIL_SIGNATURE,
+                },
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+            )
         except Exception as e:
             self.logger.error(
-                f'Failed to send email to PI {email} for request '
-                f'{self.request_obj.pk}: {e}')
-            message = 'Failed to send email to PI.'
+                f"Failed to send email to PI {email} for request "
+                f"{self.request_obj.pk}: {e}"
+            )
+            message = "Failed to send email to PI."
             messages.error(self.request, message)
 
     def form_valid(self, form):
         """Save the form."""
         self.email_pi()
         timestamp = utc_now_offset_aware().isoformat()
-        self.request_obj.state['notified'] = {
-            'status': 'Complete',
-            'timestamp': timestamp,
+        self.request_obj.state["notified"] = {
+            "status": "Complete",
+            "timestamp": timestamp,
         }
         self.request_obj.save()
         return super().form_valid(form)

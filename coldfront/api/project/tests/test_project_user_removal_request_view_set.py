@@ -6,25 +6,30 @@ from django.core import mail
 from django.test import override_settings
 
 from coldfront.api.project.tests.test_project_base import TestProjectBase
-from coldfront.api.project.tests.utils import assert_project_user_removal_request_serialization
+from coldfront.api.project.tests.utils import (
+    assert_project_user_removal_request_serialization,
+)
 from coldfront.core.allocation.models import AllocationUser
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserRemovalRequest
-from coldfront.core.project.models import ProjectUserRemovalRequestStatusChoice
-from coldfront.core.project.utils_.removal_utils import ProjectRemovalRequestProcessingRunner
+from coldfront.core.project.models import (
+    ProjectUser,
+    ProjectUserRemovalRequest,
+    ProjectUserRemovalRequestStatusChoice,
+)
+from coldfront.core.project.utils_.removal_utils import (
+    ProjectRemovalRequestProcessingRunner,
+)
 from coldfront.core.utils.common import utc_now_offset_aware
 
 """A test suite for the /project_user_removal_requests/ endpoints, divided
 by method."""
 
-SERIALIZER_FIELDS = (
-    'id', 'completion_time', 'status', 'project_user')
-BASE_URL = '/api/project_user_removal_requests/'
+SERIALIZER_FIELDS = ("id", "completion_time", "status", "project_user")
+BASE_URL = "/api/project_user_removal_requests/"
 
 
 def raise_exception(*args, **kwargs):
     """Raise an exception."""
-    raise Exception('Test exception.')
+    raise Exception("Test exception.")
 
 
 class TestProjectUserRemovalRequestsBase(TestProjectBase):
@@ -40,24 +45,24 @@ class TestProjectUserRemovalRequestsBase(TestProjectBase):
         status_choices = ProjectUserRemovalRequestStatusChoice.objects.all()
         for i in range(6):
             kwargs = {
-                'project_user': ProjectUser.objects.get(user__username=f'user{i%3}',
-                                                        project__name=f'fc_project{i%2}'),
-                'requester': self.pi,
-                'request_time': utc_now_offset_aware(),
+                "project_user": ProjectUser.objects.get(
+                    user__username=f"user{i % 3}", project__name=f"fc_project{i % 2}"
+                ),
+                "requester": self.pi,
+                "request_time": utc_now_offset_aware(),
             }
             if i % 3 == 0:
-                kwargs['status'] = status_choices.get(name='Pending')
+                kwargs["status"] = status_choices.get(name="Pending")
             elif i % 3 == 1:
-                kwargs['status'] = status_choices.get(name='Processing')
+                kwargs["status"] = status_choices.get(name="Processing")
             else:
-                kwargs['status'] = status_choices.get(name='Complete')
-                kwargs['completion_time'] = utc_now_offset_aware()
+                kwargs["status"] = status_choices.get(name="Complete")
+                kwargs["completion_time"] = utc_now_offset_aware()
             request = ProjectUserRemovalRequest.objects.create(**kwargs)
-            setattr(self, f'request{i}', request)
+            setattr(self, f"request{i}", request)
 
         # Run the client as the superuser.
-        self.client.credentials(
-            HTTP_AUTHORIZATION=f'Token {self.superuser_token.key}')
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.superuser_token.key}")
 
 
 class TestListProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase):
@@ -66,24 +71,20 @@ class TestListProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase):
     def test_authorization_token_required(self):
         """Test that an authorization token is required."""
         url = BASE_URL
-        method = 'GET'
+        method = "GET"
         self.assert_authorization_token_required(url, method)
 
     def test_permissions_by_role(self):
         """Test permissions for regular users, staff, and superusers."""
         url = BASE_URL
-        method = 'GET'
-        users = [
-            (self.user0, False),
-            (self.staff_user, True),
-            (self.superuser, True)
-        ]
+        method = "GET"
+        users = [(self.user0, False), (self.staff_user, True), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)
 
     def test_result_order(self):
         """Test that the results are sorted by ID in ascending order."""
         url = BASE_URL
-        self.assert_result_order(url, 'id', ascending=True)
+        self.assert_result_order(url, "id", ascending=True)
 
     def test_no_filters(self):
         """Test that all results are returned when no query filters are
@@ -91,28 +92,30 @@ class TestListProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase):
         url = BASE_URL
         response = self.client.get(url)
         json = response.json()
-        self.assertEqual(json['count'], ProjectUserRemovalRequest.objects.count())
-        self.assertIsNone(json['next'])
-        self.assertIsNone(json['previous'])
-        for result in json['results']:
-            project_user_removal_request = \
-                ProjectUserRemovalRequest.objects.get(pk=result['id'])
+        self.assertEqual(json["count"], ProjectUserRemovalRequest.objects.count())
+        self.assertIsNone(json["next"])
+        self.assertIsNone(json["previous"])
+        for result in json["results"]:
+            project_user_removal_request = ProjectUserRemovalRequest.objects.get(
+                pk=result["id"]
+            )
             assert_project_user_removal_request_serialization(
-                project_user_removal_request, result, SERIALIZER_FIELDS)
+                project_user_removal_request, result, SERIALIZER_FIELDS
+            )
 
     def test_status_filter(self):
         """Test that querying by status filters results properly."""
         url = BASE_URL
         self.assertEqual(ProjectUserRemovalRequest.objects.count(), 6)
-        for status in ('Pending', 'Processing', 'Complete'):
+        for status in ("Pending", "Processing", "Complete"):
             query_parameters = {
-                'status': status,
+                "status": status,
             }
             response = self.client.get(url, query_parameters)
             json = response.json()
-            self.assertEqual(json['count'], 2)
-            for result in json['results']:
-                self.assertEqual(result['status'], status)
+            self.assertEqual(json["count"], 2)
+            for result in json["results"]:
+                self.assertEqual(result["status"], status)
 
 
 class TestRetrieveProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase):
@@ -121,19 +124,15 @@ class TestRetrieveProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase)
 
     def test_authorization_token_required(self):
         """Test that an authorization token is required."""
-        url = self.pk_url(BASE_URL, '1')
-        method = 'GET'
+        url = self.pk_url(BASE_URL, "1")
+        method = "GET"
         self.assert_authorization_token_required(url, method)
 
     def test_permissions_by_role(self):
         """Test permissions for regular users, staff, and superusers."""
-        url = self.pk_url(BASE_URL, '1')
-        method = 'GET'
-        users = [
-            (self.user0, False),
-            (self.staff_user, True),
-            (self.superuser, True)
-        ]
+        url = self.pk_url(BASE_URL, "1")
+        method = "GET"
+        users = [(self.user0, False), (self.staff_user, True), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)
 
     def test_response_format(self):
@@ -151,7 +150,8 @@ class TestRetrieveProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         json = response.json()
         assert_project_user_removal_request_serialization(
-            project_user_removal_request, json, SERIALIZER_FIELDS)
+            project_user_removal_request, json, SERIALIZER_FIELDS
+        )
 
     def test_invalid_pk(self):
         """Test that the response for a nonexistent or unassociated
@@ -163,8 +163,11 @@ class TestRetrieveProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase)
 
 @override_settings(
     EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
-        'project_user_removal_requests': {
-            'completed': ['admin0@example.com', 'admin1@example.com']}})
+        "project_user_removal_requests": {
+            "completed": ["admin0@example.com", "admin1@example.com"]
+        }
+    }
+)
 class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase):
     """A class for testing PATCH /project_user_removal_requests/
     {project_user_removal_request_id}/."""
@@ -174,14 +177,18 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
         super().setUp()
 
         self.request_obj = ProjectUserRemovalRequest.objects.filter(
-            status__name='Pending').first()
+            status__name="Pending"
+        ).first()
         self.project_user_obj = self.request_obj.project_user
         self.allocation_user_obj = AllocationUser.objects.get(
             allocation__project=self.project_user_obj.project,
-            user=self.project_user_obj.user)
-        self.allocation_user_attribute_obj = \
+            user=self.project_user_obj.user,
+        )
+        self.allocation_user_attribute_obj = (
             self.allocation_user_obj.allocationuserattribute_set.get(
-                allocation_attribute_type__name='Cluster Account Status')
+                allocation_attribute_type__name="Cluster Account Status"
+            )
+        )
 
     def _assert_emails_sent(self):
         """Assert that emails are sent from the expected sender to the
@@ -198,15 +205,16 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
             expected_to.add(project_user.user.email)
 
         # Also sent to admin list
-        admin_list = ['admin0@example.com', 'admin1@example.com']
+        admin_list = ["admin0@example.com", "admin1@example.com"]
 
-        user_name = f'{user.first_name} {user.last_name}'
-        requester_name = f'{requester.first_name} {requester.last_name}'
+        user_name = f"{user.first_name} {user.last_name}"
+        requester_name = f"{requester.first_name} {requester.last_name}"
         project_name = project.name
         expected_body = (
-            f'The request to remove {user_name} of Project {project_name} '
-            f'initiated by {requester_name} has been completed. {user_name} '
-            f'is no longer a user of Project {project_name}.')
+            f"The request to remove {user_name} of Project {project_name} "
+            f"initiated by {requester_name} has been completed. {user_name} "
+            f"is no longer a user of Project {project_name}."
+        )
 
         # Should have one email per unique recipient, plus one email to admins
         self.assertEqual(len(mail.outbox), len(expected_to) + 1)
@@ -234,10 +242,10 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
         assuming that the runner has run successfully. In particular,
         assert that the request's completion_time the given one."""
         self._refresh_objects()
-        self.assertEqual(self.project_user_obj.status.name, 'Removed')
-        self.assertEqual(self.allocation_user_obj.status.name, 'Removed')
-        self.assertEqual(self.allocation_user_attribute_obj.value, 'Denied')
-        self.assertEqual(self.request_obj.status.name, 'Complete')
+        self.assertEqual(self.project_user_obj.status.name, "Removed")
+        self.assertEqual(self.allocation_user_obj.status.name, "Removed")
+        self.assertEqual(self.allocation_user_attribute_obj.value, "Denied")
+        self.assertEqual(self.request_obj.status.name, "Complete")
         self.assertEqual(self.request_obj.completion_time, completion_time)
 
     def _assert_pre_state(self):
@@ -245,10 +253,10 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
         assuming that the runner has either not run or not run
         successfully."""
         self._refresh_objects()
-        self.assertEqual(self.project_user_obj.status.name, 'Active')
-        self.assertEqual(self.allocation_user_obj.status.name, 'Active')
-        self.assertEqual(self.allocation_user_attribute_obj.value, 'Active')
-        self.assertEqual(self.request_obj.status.name, 'Pending')
+        self.assertEqual(self.project_user_obj.status.name, "Active")
+        self.assertEqual(self.allocation_user_obj.status.name, "Active")
+        self.assertEqual(self.allocation_user_attribute_obj.value, "Active")
+        self.assertEqual(self.request_obj.status.name, "Pending")
         self.assertFalse(self.request_obj.completion_time)
 
     def _refresh_objects(self):
@@ -260,8 +268,8 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
 
     def test_authorization_token_required(self):
         """Test that an authorization token is required."""
-        url = self.pk_url(BASE_URL, '1')
-        method = 'PATCH'
+        url = self.pk_url(BASE_URL, "1")
+        method = "PATCH"
         self.assert_authorization_token_required(url, method)
 
     def test_exception_causes_rollback(self):
@@ -272,18 +280,18 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
         url = self.pk_url(BASE_URL, self.request_obj.pk)
         completion_time = utc_now_offset_aware()
         data = {
-            'completion_time': completion_time.isoformat(),
-            'status': 'Complete',
+            "completion_time": completion_time.isoformat(),
+            "status": "Complete",
         }
         with patch.object(
-                ProjectRemovalRequestProcessingRunner, 'run', raise_exception):
+            ProjectRemovalRequestProcessingRunner, "run", raise_exception
+        ):
             response = self.client.patch(url, data)
 
-        self.assertEqual(
-            response.status_code, HTTPStatus.INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.status_code, HTTPStatus.INTERNAL_SERVER_ERROR)
         json = response.json()
-        self.assertIn('detail', json)
-        self.assertEqual(json['detail'], 'Internal server error.')
+        self.assertIn("detail", json)
+        self.assertEqual(json["detail"], "Internal server error.")
 
         self._assert_pre_state()
 
@@ -292,32 +300,26 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
     def test_invalid_data(self):
         """Test that updating an object with invalid PATCH data
         fails."""
-        project_user_removal_request = \
-            ProjectUserRemovalRequest.objects.first()
+        project_user_removal_request = ProjectUserRemovalRequest.objects.first()
         url = self.pk_url(BASE_URL, project_user_removal_request.pk)
         data = {
-            'completion_time': 'Invalid',
-            'status': 'Invalid',
+            "completion_time": "Invalid",
+            "status": "Invalid",
         }
         response = self.client.patch(url, data)
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         json = response.json()
 
-        self.assertIn('completion_time', json)
-        self.assertIn('Datetime has wrong format.', json['completion_time'][0])
-        self.assertIn('status', json)
-        self.assertEqual(
-            json['status'], ['Object with name=Invalid does not exist.'])
+        self.assertIn("completion_time", json)
+        self.assertIn("Datetime has wrong format.", json["completion_time"][0])
+        self.assertIn("status", json)
+        self.assertEqual(json["status"], ["Object with name=Invalid does not exist."])
 
     def test_permissions_by_role(self):
         """Test permissions for regular users, staff, and superusers."""
-        url = self.pk_url(BASE_URL, '1')
-        method = 'PATCH'
-        users = [
-            (self.user0, False),
-            (self.staff_user, False),
-            (self.superuser, True)
-        ]
+        url = self.pk_url(BASE_URL, "1")
+        method = "PATCH"
+        users = [(self.user0, False), (self.staff_user, False), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)
 
     def test_read_only_fields_ignored(self):
@@ -327,53 +329,59 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
         pre_project_user_removal_request = ProjectUserRemovalRequest.objects.first()
         url = self.pk_url(BASE_URL, pre_project_user_removal_request.pk)
         data = {
-            'id': pre_project_user_removal_request.id + 1,
-            'status': 'Complete',
-            'completion_time': utc_now_offset_aware(),
-            'project_user': {'id': 7,
-                             'user': 'user2',
-                             'project': 'fc_project1',
-                             'role': 'User',
-                             'status': 'Active'}
+            "id": pre_project_user_removal_request.id + 1,
+            "status": "Complete",
+            "completion_time": utc_now_offset_aware(),
+            "project_user": {
+                "id": 7,
+                "user": "user2",
+                "project": "fc_project1",
+                "role": "User",
+                "status": "Active",
+            },
         }
-        response = self.client.patch(url, data, format='json')
+        response = self.client.patch(url, data, format="json")
 
         self.assertEqual(response.status_code, HTTPStatus.OK)
         json = response.json()
         post_project_user_removal_request = ProjectUserRemovalRequest.objects.get(
-            pk=pre_project_user_removal_request.id)
+            pk=pre_project_user_removal_request.id
+        )
         assert_project_user_removal_request_serialization(
-            post_project_user_removal_request, json, SERIALIZER_FIELDS)
+            post_project_user_removal_request, json, SERIALIZER_FIELDS
+        )
 
-        self.assertEqual(pre_project_user_removal_request.id,
-                         post_project_user_removal_request.id)
-        self.assertEqual(pre_project_user_removal_request.status.name,
-                         'Pending')
-        self.assertEqual(pre_project_user_removal_request.project_user,
-                         post_project_user_removal_request.project_user)
-        self.assertEqual(post_project_user_removal_request.status.name,
-                         'Complete')
+        self.assertEqual(
+            pre_project_user_removal_request.id, post_project_user_removal_request.id
+        )
+        self.assertEqual(pre_project_user_removal_request.status.name, "Pending")
+        self.assertEqual(
+            pre_project_user_removal_request.project_user,
+            post_project_user_removal_request.project_user,
+        )
+        self.assertEqual(post_project_user_removal_request.status.name, "Complete")
         self.assertIsNone(pre_project_user_removal_request.completion_time)
-        self.assertTrue(pre_time <
-                        post_project_user_removal_request.completion_time <
-                        utc_now_offset_aware())
+        self.assertTrue(
+            pre_time
+            < post_project_user_removal_request.completion_time
+            < utc_now_offset_aware()
+        )
 
     def test_set_to_complete_without_time(self):
         """Test that attempting to set the status to 'Complete' without
         providing a completion_time fails."""
-        project_user_removal_request = \
-            ProjectUserRemovalRequest.objects.first()
+        project_user_removal_request = ProjectUserRemovalRequest.objects.first()
         url = self.pk_url(BASE_URL, project_user_removal_request.pk)
         data = {
-            'status': 'Complete',
+            "status": "Complete",
         }
         response = self.client.patch(url, data)
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         json = response.json()
 
         self.assertEqual(
-            json.get('non_field_errors', []),
-            ['No completion_time is given.'])
+            json.get("non_field_errors", []), ["No completion_time is given."]
+        )
 
     def test_valid_data_complete(self):
         """Test that updating an object with valid PATCH data
@@ -384,8 +392,8 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
         url = self.pk_url(BASE_URL, self.request_obj.pk)
         completion_time = utc_now_offset_aware()
         data = {
-            'completion_time': completion_time.isoformat(),
-            'status': 'Complete',
+            "completion_time": completion_time.isoformat(),
+            "status": "Complete",
         }
         response = self.client.patch(url, data)
 
@@ -403,19 +411,20 @@ class TestUpdatePatchProjectUserRemovalRequests(TestProjectUserRemovalRequestsBa
 
         url = self.pk_url(BASE_URL, self.request_obj.pk)
         data = {
-            'status': 'Processing',
+            "status": "Processing",
         }
         response = self.client.patch(url, data)
 
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
         self.request_obj.refresh_from_db()
-        self.assertEqual(self.request_obj.status.name, data['status'])
+        self.assertEqual(self.request_obj.status.name, data["status"])
 
         # Set the status back so that the helper method may be used for
         # checking that other objects were not changed.
-        self.request_obj.status = \
-            ProjectUserRemovalRequestStatusChoice.objects.get(name='Pending')
+        self.request_obj.status = ProjectUserRemovalRequestStatusChoice.objects.get(
+            name="Pending"
+        )
         self.request_obj.save()
         self._assert_pre_state()
 
@@ -428,25 +437,21 @@ class TestDestroyProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase):
 
     def test_authorization_token_required(self):
         """Test that an authorization token is required."""
-        url = self.pk_url(BASE_URL, '1')
-        method = 'DELETE'
+        url = self.pk_url(BASE_URL, "1")
+        method = "DELETE"
         self.assert_authorization_token_required(url, method)
 
     def test_method_not_allowed(self):
         """Test that this method is not allowed."""
-        url = self.pk_url(BASE_URL, '1')
+        url = self.pk_url(BASE_URL, "1")
         response = self.client.delete(url)
         self.assertEqual(response.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
 
     def test_permissions_by_role(self):
         """Test permissions for regular users, staff, and superusers."""
-        url = self.pk_url(BASE_URL, '1')
-        method = 'DELETE'
-        users = [
-            (self.user0, False),
-            (self.staff_user, False),
-            (self.superuser, True)
-        ]
+        url = self.pk_url(BASE_URL, "1")
+        method = "DELETE"
+        users = [(self.user0, False), (self.staff_user, False), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)
 
 
@@ -456,25 +461,21 @@ class TestUpdatePutProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase
 
     def test_authorization_token_required(self):
         """Test that an authorization token is required."""
-        url = self.pk_url(BASE_URL, '1')
-        method = 'PUT'
+        url = self.pk_url(BASE_URL, "1")
+        method = "PUT"
         self.assert_authorization_token_required(url, method)
 
     def test_method_not_allowed(self):
         """Test that this method is not allowed."""
-        url = self.pk_url(BASE_URL, '1')
+        url = self.pk_url(BASE_URL, "1")
         response = self.client.put(url)
         self.assertEqual(response.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
 
     def test_permissions_by_role(self):
         """Test permissions for regular users, staff, and superusers."""
-        url = self.pk_url(BASE_URL, '1')
-        method = 'PUT'
-        users = [
-            (self.user0, False),
-            (self.staff_user, False),
-            (self.superuser, True)
-        ]
+        url = self.pk_url(BASE_URL, "1")
+        method = "PUT"
+        users = [(self.user0, False), (self.staff_user, False), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)
 
 
@@ -484,7 +485,7 @@ class TestCreateProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase):
     def test_authorization_token_required(self):
         """Test that an authorization token is required."""
         url = BASE_URL
-        method = 'POST'
+        method = "POST"
         self.assert_authorization_token_required(url, method)
 
     def test_method_not_allowed(self):
@@ -496,10 +497,6 @@ class TestCreateProjectUserRemovalRequests(TestProjectUserRemovalRequestsBase):
     def test_permissions_by_role(self):
         """Test permissions for regular users, staff, and superusers."""
         url = BASE_URL
-        method = 'POST'
-        users = [
-            (self.user0, False),
-            (self.staff_user, False),
-            (self.superuser, True)
-        ]
+        method = "POST"
+        users = [(self.user0, False), (self.staff_user, False), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)

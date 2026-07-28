@@ -1,9 +1,9 @@
 """Fixtures specific to view tests."""
 
-import pytest
-from django.test import Client, RequestFactory
-from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.messages.middleware import MessageMiddleware
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.test import Client, RequestFactory
+import pytest
 
 
 @pytest.fixture
@@ -31,13 +31,14 @@ def request_factory():
 @pytest.fixture
 def request_with_session(request_factory):
     """Return a factory for creating requests with session support."""
-    def _create_request(method='GET', path='/', user=None, **kwargs):
-        if method.upper() == 'GET':
+
+    def _create_request(method="GET", path="/", user=None, **kwargs):
+        if method.upper() == "GET":
             request = request_factory.get(path, **kwargs)
-        elif method.upper() == 'POST':
+        elif method.upper() == "POST":
             request = request_factory.post(path, **kwargs)
         else:
-            raise ValueError(f'Unsupported method: {method}')
+            raise ValueError(f"Unsupported method: {method}")
 
         # Add session support
         middleware = SessionMiddleware(lambda x: x)

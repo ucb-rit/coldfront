@@ -1,48 +1,60 @@
-from coldfront.api.statistics.utils import set_project_user_allocation_value
-from coldfront.core.allocation.management.commands.audit_allocation_period import AuditFailure
-from coldfront.core.allocation.models import AllocationAttribute
-from coldfront.core.allocation.models import AllocationAttributeType
-from coldfront.core.allocation.models import AllocationPeriod
-from coldfront.core.allocation.models import AllocationRenewalRequest
-from coldfront.core.allocation.models import AllocationRenewalRequestStatusChoice
-from coldfront.core.allocation.models import AllocationStatusChoice
-from coldfront.core.allocation.utils import get_project_compute_allocation
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectAllocationRequestStatusChoice
-from coldfront.core.project.models import ProjectStatusChoice
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserRoleChoice
-from coldfront.core.project.models import SavioProjectAllocationRequest
-from coldfront.core.project.utils_.request_processing_utils import create_project_users
-from coldfront.core.resource.models import Resource
-from coldfront.core.resource.utils_.allowance_utils.computing_allowance import ComputingAllowance
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
-from coldfront.core.statistics.models import ProjectTransaction
-from coldfront.core.statistics.models import ProjectUserTransaction
-from coldfront.core.utils.common import build_absolute_url
-from coldfront.core.utils.common import display_time_zone_current_date
-from coldfront.core.utils.common import import_from_settings
-from coldfront.core.utils.common import project_detail_url
-from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.utils.common import validate_num_service_units
-from coldfront.core.utils.email import get_email_admin_notification_recipients
-from coldfront.core.utils.email.email_strategy import validate_email_strategy_or_get_default
-from coldfront.core.utils.mail import send_email_template
-
 from collections import namedtuple
 from decimal import Decimal
+import io
+import logging
+import os
+from urllib.parse import urljoin
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.db import transaction
 from django.db.models import Q
 from django.urls import reverse
-from urllib.parse import urljoin
 
-import io
-import logging
-import os
-
+from coldfront.api.statistics.utils import set_project_user_allocation_value
+from coldfront.core.allocation.management.commands.audit_allocation_period import (
+    AuditFailure,
+)
+from coldfront.core.allocation.models import (
+    AllocationAttribute,
+    AllocationAttributeType,
+    AllocationPeriod,
+    AllocationRenewalRequest,
+    AllocationRenewalRequestStatusChoice,
+    AllocationStatusChoice,
+)
+from coldfront.core.allocation.utils import get_project_compute_allocation
+from coldfront.core.project.models import (
+    Project,
+    ProjectAllocationRequestStatusChoice,
+    ProjectStatusChoice,
+    ProjectUser,
+    ProjectUserRoleChoice,
+    SavioProjectAllocationRequest,
+)
+from coldfront.core.project.utils_.request_processing_utils import create_project_users
+from coldfront.core.resource.models import Resource
+from coldfront.core.resource.utils_.allowance_utils.computing_allowance import (
+    ComputingAllowance,
+)
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
+from coldfront.core.statistics.models import ProjectTransaction, ProjectUserTransaction
+from coldfront.core.utils.common import (
+    build_absolute_url,
+    display_time_zone_current_date,
+    import_from_settings,
+    project_detail_url,
+    utc_now_offset_aware,
+    validate_num_service_units,
+)
+from coldfront.core.utils.email import get_email_admin_notification_recipients
+from coldfront.core.utils.email.email_strategy import (
+    validate_email_strategy_or_get_default,
+)
+from coldfront.core.utils.mail import send_email_template
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +76,8 @@ def get_current_allowance_year_period():
     """
     date = display_time_zone_current_date()
     return AllocationPeriod.objects.get(
-        name__startswith='Allowance Year',
-        start_date__lte=date,
-        end_date__gte=date)
+        name__startswith="Allowance Year", start_date__lte=date, end_date__gte=date
+    )
 
 
 def get_next_allowance_year_period():
@@ -84,8 +95,8 @@ def get_next_allowance_year_period():
     """
     date = display_time_zone_current_date()
     return AllocationPeriod.objects.filter(
-        name__startswith='Allowance Year',
-        start_date__gt=date).first()
+        name__startswith="Allowance Year", start_date__gt=date
+    ).first()
 
 
 def get_previous_allowance_year_period():
@@ -103,15 +114,14 @@ def get_previous_allowance_year_period():
     """
     date = display_time_zone_current_date()
     allocation_periods = AllocationPeriod.objects.filter(
-        name__startswith='Allowance Year',
-        end_date__lt=date)
+        name__startswith="Allowance Year", end_date__lt=date
+    )
     if not allocation_periods.exists():
         return None
-    return allocation_periods.latest('end_date')
+    return allocation_periods.latest("end_date")
 
 
-def get_pi_active_unique_project(pi_user, computing_allowance,
-                                 allocation_period):
+def get_pi_active_unique_project(pi_user, computing_allowance, allocation_period):
     """Given a User object representing a PI, return its active, unique
     Project having the given allowance during the given period.
 
@@ -149,58 +159,64 @@ def get_pi_active_unique_project(pi_user, computing_allowance,
 
     # Check AllocationRenewalRequests.
     renewal_request_status = AllocationRenewalRequestStatusChoice.objects.get(
-        name='Complete')
+        name="Complete"
+    )
     renewal_requests = AllocationRenewalRequest.objects.filter(
         computing_allowance=allowance_resource,
         allocation_period=allocation_period,
         pi=pi_user,
-        status=renewal_request_status)
+        status=renewal_request_status,
+    )
     if renewal_requests.exists():
         if renewal_requests.count() > 1:
             message = (
-                f'PI {pi_user.username} unexpectedly has more than one '
-                f'completed AllocationRenewalRequest for allowance '
+                f"PI {pi_user.username} unexpectedly has more than one "
+                f"completed AllocationRenewalRequest for allowance "
                 f'"{allowance_name}" during AllocationPeriod '
-                f'"{allocation_period.name}".')
+                f'"{allocation_period.name}".'
+            )
             logger.error(message)
             raise AllocationRenewalRequest.MultipleObjectsReturned(message)
         project = renewal_requests.first().post_project
 
     # Check new project requests.
-    new_project_request_status = \
-        ProjectAllocationRequestStatusChoice.objects.get(
-            name='Approved - Complete')
+    new_project_request_status = ProjectAllocationRequestStatusChoice.objects.get(
+        name="Approved - Complete"
+    )
     new_project_requests = SavioProjectAllocationRequest.objects.filter(
         computing_allowance=allowance_resource,
         allocation_period=allocation_period,
         pi=pi_user,
-        status=new_project_request_status)
+        status=new_project_request_status,
+    )
     if new_project_requests.exists():
         if new_project_requests.count() > 1:
             message = (
-                f'PI {pi_user.username} unexpectedly has more than one '
-                f'completed new project request for allowance '
+                f"PI {pi_user.username} unexpectedly has more than one "
+                f"completed new project request for allowance "
                 f'"{allowance_name}" during AllocationPeriod '
-                f'"{allocation_period.name}".')
+                f'"{allocation_period.name}".'
+            )
             logger.error(message)
-            raise SavioProjectAllocationRequest.MultipleObjectsReturned(
-                message)
+            raise SavioProjectAllocationRequest.MultipleObjectsReturned(message)
         # The PI should not have both a completed renewal request and a
         # completed new project request.
         if project:
             message = (
-                f'PI {pi_user.username} unexpectedly has both a completed '
-                f'AllocationRenewalRequest and a completed new project '
+                f"PI {pi_user.username} unexpectedly has both a completed "
+                f"AllocationRenewalRequest and a completed new project "
                 f'request for allowance "{allowance_name}" during '
-                f'AllocationPeriod "{allocation_period.name}".')
+                f'AllocationPeriod "{allocation_period.name}".'
+            )
             raise Exception(message)
         project = new_project_requests.first().project
 
     if not project:
         message = (
-            f'PI {pi_user.username} has no active Project with allowance '
+            f"PI {pi_user.username} has no active Project with allowance "
             f'"{allowance_name}" during AllocationPeriod '
-            f'"{allocation_period.name}".')
+            f'"{allocation_period.name}".'
+        )
         raise Project.DoesNotExist(message)
 
     return project
@@ -210,15 +226,13 @@ def has_non_denied_renewal_request(pi, allocation_period):
     """Return whether the given PI User has a non-"Denied"
     AllocationRenewalRequest for the given AllocationPeriod."""
     if not isinstance(pi, User):
-        raise TypeError(f'{pi} is not a User object.')
+        raise TypeError(f"{pi} is not a User object.")
     if not isinstance(allocation_period, AllocationPeriod):
-        raise TypeError(
-            f'{allocation_period} is not an AllocationPeriod object.')
-    status_names = ['Under Review', 'Approved', 'Complete']
+        raise TypeError(f"{allocation_period} is not an AllocationPeriod object.")
+    status_names = ["Under Review", "Approved", "Complete"]
     return AllocationRenewalRequest.objects.filter(
-        pi=pi,
-        allocation_period=allocation_period,
-        status__name__in=status_names).exists()
+        pi=pi, allocation_period=allocation_period, status__name__in=status_names
+    ).exists()
 
 
 def is_any_project_pi_renewable(project, allocation_period):
@@ -234,12 +248,12 @@ def is_any_project_pi_renewable(project, allocation_period):
 def non_denied_renewal_request_statuses():
     """Return a queryset of AllocationRenewalRequestStatusChoices that
     do not have the name 'Denied'."""
-    return AllocationRenewalRequestStatusChoice.objects.filter(
-        ~Q(name='Denied'))
+    return AllocationRenewalRequestStatusChoice.objects.filter(~Q(name="Denied"))
 
 
-def pis_with_renewal_requests_pks(allocation_period, computing_allowance=None,
-                                  request_status_names=[]):
+def pis_with_renewal_requests_pks(
+    allocation_period, computing_allowance=None, request_status_names=[]
+):
     """Return a list of primary keys of PIs of allocation renewal
     requests for the given AllocationPeriod that match the given filters.
 
@@ -269,60 +283,65 @@ def pis_with_renewal_requests_pks(allocation_period, computing_allowance=None,
     if request_status_names:
         f = f & Q(status__name__in=request_status_names)
     return set(
-        AllocationRenewalRequest.objects.filter(
-            f).values_list('pi__pk', flat=True))
+        AllocationRenewalRequest.objects.filter(f).values_list("pi__pk", flat=True)
+    )
 
 
-def send_allocation_renewal_available_email(project,
-                                            computing_allowance_name_long,
-                                            computing_allowance_name_short,
-                                            current_allocation_period,
-                                            next_allocation_period,
-                                            num_service_units):
+def send_allocation_renewal_available_email(
+    project,
+    computing_allowance_name_long,
+    computing_allowance_name_short,
+    current_allocation_period,
+    next_allocation_period,
+    num_service_units,
+):
     """Send a notification email to applicable project managers and PIs
     of the given Project, notifying them that the project's computing
     allowance (with the given long and short names), which is active
     under the given current AllocationPeriod, will expire soon, and will
     need to be renewed for the given next AllocationPeriod, which will
     grant the given number of service units."""
-    email_enabled = import_from_settings('EMAIL_ENABLED', False)
+    email_enabled = import_from_settings("EMAIL_ENABLED", False)
     if not email_enabled:
         return
 
-    subject = (
-        f'Action Required: Renew {project.name} '
-        f'{computing_allowance_name_long}')
+    subject = f"Action Required: Renew {project.name} {computing_allowance_name_long}"
 
     context = {
-        'project_name': project.name,
-        'computing_allowance_name_short': computing_allowance_name_short,
-        'computing_allowance_name_long': computing_allowance_name_long,
-        'current_allocation_period_end_date': \
-            current_allocation_period.end_date,
-        'next_allocation_period_start_date': next_allocation_period.start_date,
-        'next_allocation_period_end_date': next_allocation_period.end_date,
-        'next_allocation_period_name': next_allocation_period.name,
-        'project_detail_url': build_absolute_url(project_detail_url(project)),
-        'num_service_units': num_service_units,
-        'requests_url': build_absolute_url(reverse('request-hub')),
-        'general_renewal_url': build_absolute_url(
-            reverse('renew-pi-allocation-landing')),
-        'support_email': settings.CENTER_HELP_EMAIL,
-        'signature': settings.EMAIL_SIGNATURE,
-        'signature_html': settings.EMAIL_SIGNATURE.replace('\n', '<br>'),
+        "project_name": project.name,
+        "computing_allowance_name_short": computing_allowance_name_short,
+        "computing_allowance_name_long": computing_allowance_name_long,
+        "current_allocation_period_end_date": current_allocation_period.end_date,
+        "next_allocation_period_start_date": next_allocation_period.start_date,
+        "next_allocation_period_end_date": next_allocation_period.end_date,
+        "next_allocation_period_name": next_allocation_period.name,
+        "project_detail_url": build_absolute_url(project_detail_url(project)),
+        "num_service_units": num_service_units,
+        "requests_url": build_absolute_url(reverse("request-hub")),
+        "general_renewal_url": build_absolute_url(
+            reverse("renew-pi-allocation-landing")
+        ),
+        "support_email": settings.CENTER_HELP_EMAIL,
+        "signature": settings.EMAIL_SIGNATURE,
+        "signature_html": settings.EMAIL_SIGNATURE.replace("\n", "<br>"),
     }
 
     sender = settings.EMAIL_SENDER
     receiver_list = project.managers_and_pis_emails()
 
-    template_dir = 'email/project_renewal'
-    template_base_name = 'project_renewal_available'
-    template_name = os.path.join(template_dir, f'{template_base_name}.txt')
-    html_template = os.path.join(template_dir, f'{template_base_name}.html')
+    template_dir = "email/project_renewal"
+    template_base_name = "project_renewal_available"
+    template_name = os.path.join(template_dir, f"{template_base_name}.txt")
+    html_template = os.path.join(template_dir, f"{template_base_name}.html")
 
     send_email_template(
-        subject, template_name, context, sender, receiver_list,
-        html_template=html_template)
+        subject,
+        template_name,
+        context,
+        sender,
+        receiver_list,
+        html_template=html_template,
+    )
 
 
 def send_allocation_renewal_request_approval_email(request, num_service_units):
@@ -330,125 +349,119 @@ def send_allocation_renewal_request_approval_email(request, num_service_units):
     the given AllocationRenewalRequest stating that the request has been
     approved, and the given number of service units will be added when
     the request is processed."""
-    email_enabled = import_from_settings('EMAIL_ENABLED', False)
+    email_enabled = import_from_settings("EMAIL_ENABLED", False)
     if not email_enabled:
         return
 
-    subject = f'{str(request)} Approved'
-    template_name = (
-        'email/project_renewal/project_renewal_request_approved.txt')
+    subject = f"{request!s} Approved"
+    template_name = "email/project_renewal/project_renewal_request_approved.txt"
 
     context = {
-        'allocation_period': request.allocation_period,
-        'center_name': settings.CENTER_NAME,
-        'num_service_units': str(num_service_units),
-        'pi_name': f'{request.pi.first_name} {request.pi.last_name}',
-        'requested_project_name': request.post_project.name,
-        'requested_project_url': project_detail_url(request.post_project),
-        'signature': settings.EMAIL_SIGNATURE,
-        'support_email': settings.CENTER_HELP_EMAIL,
+        "allocation_period": request.allocation_period,
+        "center_name": settings.CENTER_NAME,
+        "num_service_units": str(num_service_units),
+        "pi_name": f"{request.pi.first_name} {request.pi.last_name}",
+        "requested_project_name": request.post_project.name,
+        "requested_project_url": project_detail_url(request.post_project),
+        "signature": settings.EMAIL_SIGNATURE,
+        "support_email": settings.CENTER_HELP_EMAIL,
     }
 
     sender = settings.EMAIL_SENDER
     receiver_list = [request.requester.email, request.pi.email]
 
-    send_email_template(
-        subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list)
 
 
 def send_allocation_renewal_request_denial_email(request):
     """Send a notification email to the requester and PI associated with
     the given AllocationRenewalRequest stating that the request has been
     denied."""
-    email_enabled = import_from_settings('EMAIL_ENABLED', False)
+    email_enabled = import_from_settings("EMAIL_ENABLED", False)
     if not email_enabled:
         return
 
-    subject = f'{str(request)} Denied'
-    template_name = 'email/project_renewal/project_renewal_request_denied.txt'
+    subject = f"{request!s} Denied"
+    template_name = "email/project_renewal/project_renewal_request_denied.txt"
     reason = allocation_renewal_request_denial_reason(request)
 
     context = {
-        'center_name': settings.CENTER_NAME,
-        'current_project_name': (
-            request.pre_project.name if request.pre_project else 'N/A'),
-        'pi_name': f'{request.pi.first_name} {request.pi.last_name}',
-        'reason_category': reason.category,
-        'reason_justification': reason.justification,
-        'requested_project_name': request.post_project.name,
-        'signature': settings.EMAIL_SIGNATURE,
-        'support_email': settings.CENTER_HELP_EMAIL,
+        "center_name": settings.CENTER_NAME,
+        "current_project_name": (
+            request.pre_project.name if request.pre_project else "N/A"
+        ),
+        "pi_name": f"{request.pi.first_name} {request.pi.last_name}",
+        "reason_category": reason.category,
+        "reason_justification": reason.justification,
+        "requested_project_name": request.post_project.name,
+        "signature": settings.EMAIL_SIGNATURE,
+        "support_email": settings.CENTER_HELP_EMAIL,
     }
 
     sender = settings.EMAIL_SENDER
     receiver_list = [request.requester.email, request.pi.email]
 
-    send_email_template(
-        subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list)
 
 
-def send_allocation_renewal_request_processing_email(request,
-                                                     num_service_units):
+def send_allocation_renewal_request_processing_email(request, num_service_units):
     """Send a notification email to the requester and PI associated with
     the given AllocationRenewalRequest stating that the request has been
     processed, and the given number of service units have been added."""
-    email_enabled = import_from_settings('EMAIL_ENABLED', False)
+    email_enabled = import_from_settings("EMAIL_ENABLED", False)
     if not email_enabled:
         return
 
-    subject = f'{str(request)} Processed'
-    template_name = (
-        'email/project_renewal/project_renewal_request_processed.txt')
+    subject = f"{request!s} Processed"
+    template_name = "email/project_renewal/project_renewal_request_processed.txt"
 
     context = {
-        'center_name': settings.CENTER_NAME,
-        'num_service_units': str(num_service_units),
-        'pi_name': f'{request.pi.first_name} {request.pi.last_name}',
-        'requested_project_name': request.post_project.name,
-        'requested_project_url': project_detail_url(request.post_project),
-        'signature': settings.EMAIL_SIGNATURE,
-        'support_email': settings.CENTER_HELP_EMAIL,
+        "center_name": settings.CENTER_NAME,
+        "num_service_units": str(num_service_units),
+        "pi_name": f"{request.pi.first_name} {request.pi.last_name}",
+        "requested_project_name": request.post_project.name,
+        "requested_project_url": project_detail_url(request.post_project),
+        "signature": settings.EMAIL_SIGNATURE,
+        "support_email": settings.CENTER_HELP_EMAIL,
     }
 
     sender = settings.EMAIL_SENDER
     receiver_list = [request.requester.email, request.pi.email]
 
-    send_email_template(
-        subject, template_name, context, sender, receiver_list)
+    send_email_template(subject, template_name, context, sender, receiver_list)
 
 
 def send_new_allocation_renewal_request_admin_notification_email(request):
     """Send an email to admins notifying them of a new
     AllocationRenewalRequest."""
-    email_enabled = import_from_settings('EMAIL_ENABLED', False)
+    email_enabled = import_from_settings("EMAIL_ENABLED", False)
     if not email_enabled:
         return
 
-    subject = 'New Allocation Renewal Request'
-    template_name = (
-        'email/project_renewal/admins_new_project_renewal_request.txt')
+    subject = "New Allocation Renewal Request"
+    template_name = "email/project_renewal/admins_new_project_renewal_request.txt"
 
     requester = request.requester
-    requester_str = (
-        f'{requester.first_name} {requester.last_name} ({requester.email})')
+    requester_str = f"{requester.first_name} {requester.last_name} ({requester.email})"
 
     pi = request.pi
-    pi_str = f'{pi.first_name} {pi.last_name} ({pi.email})'
+    pi_str = f"{pi.first_name} {pi.last_name} ({pi.email})"
 
-    detail_view_name = 'pi-allocation-renewal-request-detail'
+    detail_view_name = "pi-allocation-renewal-request-detail"
     review_url = urljoin(
-        settings.CENTER_BASE_URL,
-        reverse(detail_view_name, kwargs={'pk': request.pk}))
+        settings.CENTER_BASE_URL, reverse(detail_view_name, kwargs={"pk": request.pk})
+    )
 
     context = {
-        'pi_str': pi_str,
-        'requester_str': requester_str,
-        'review_url': review_url,
+        "pi_str": pi_str,
+        "requester_str": requester_str,
+        "review_url": review_url,
     }
 
     sender = settings.EMAIL_SENDER
     receiver_list = get_email_admin_notification_recipients(
-        'allocation_renewal_requests', 'created')
+        "allocation_renewal_requests", "created"
+    )
 
     send_email_template(subject, template_name, context, sender, receiver_list)
 
@@ -460,35 +473,35 @@ def send_new_allocation_renewal_request_pi_notification_email(request):
     It is the caller's responsibility to ensure that the requester and
     PI are different (so the PI does not get a notification for their
     own request)."""
-    email_enabled = import_from_settings('EMAIL_ENABLED', False)
+    email_enabled = import_from_settings("EMAIL_ENABLED", False)
     if not email_enabled:
         return
 
-    subject = 'New Allocation Renewal Request under Your Name'
-    template_name = 'email/project_renewal/pi_new_project_renewal_request.txt'
+    subject = "New Allocation Renewal Request under Your Name"
+    template_name = "email/project_renewal/pi_new_project_renewal_request.txt"
 
     requester = request.requester
-    requester_str = (
-        f'{requester.first_name} {requester.last_name} ({requester.email})')
+    requester_str = f"{requester.first_name} {requester.last_name} ({requester.email})"
 
     pi = request.pi
-    pi_str = f'{pi.first_name} {pi.last_name}'
+    pi_str = f"{pi.first_name} {pi.last_name}"
 
-    detail_view_name = 'pi-allocation-renewal-request-detail'
+    detail_view_name = "pi-allocation-renewal-request-detail"
     center_base_url = settings.CENTER_BASE_URL
     review_url = urljoin(
-        center_base_url, reverse(detail_view_name, kwargs={'pk': request.pk}))
-    login_url = urljoin(center_base_url, reverse('login'))
+        center_base_url, reverse(detail_view_name, kwargs={"pk": request.pk})
+    )
+    login_url = urljoin(center_base_url, reverse("login"))
 
     context = {
-        'PORTAL_NAME': settings.PORTAL_NAME,
-        'login_url': login_url,
-        'pi_str': pi_str,
-        'requested_project_name': request.post_project.name,
-        'requester_str': requester_str,
-        'review_url': review_url,
-        'support_email': settings.CENTER_HELP_EMAIL,
-        'signature': settings.EMAIL_SIGNATURE,
+        "PORTAL_NAME": settings.PORTAL_NAME,
+        "login_url": login_url,
+        "pi_str": pi_str,
+        "requested_project_name": request.post_project.name,
+        "requester_str": requester_str,
+        "review_url": review_url,
+        "support_email": settings.CENTER_HELP_EMAIL,
+        "signature": settings.EMAIL_SIGNATURE,
     }
 
     sender = settings.EMAIL_SENDER
@@ -501,30 +514,28 @@ def send_new_allocation_renewal_request_pooling_notification_email(request):
     """Send a notification email to the managers and PIs of the project
     being requested to pool with stating that someone is attempting to
     pool."""
-    email_enabled = import_from_settings('EMAIL_ENABLED', False)
+    email_enabled = import_from_settings("EMAIL_ENABLED", False)
     if not email_enabled:
         return
 
-    subject = (
-        f'New request to pool with your project {request.post_project.name}')
+    subject = f"New request to pool with your project {request.post_project.name}"
     template_name = (
-        'email/project_renewal/'
-        'managers_new_pooled_project_renewal_request.txt')
+        "email/project_renewal/managers_new_pooled_project_renewal_request.txt"
+    )
 
     requester = request.requester
-    requester_str = (
-        f'{requester.first_name} {requester.last_name} ({requester.email})')
+    requester_str = f"{requester.first_name} {requester.last_name} ({requester.email})"
 
     pi = request.pi
-    pi_str = f'{pi.first_name} {pi.last_name} ({pi.email})'
+    pi_str = f"{pi.first_name} {pi.last_name} ({pi.email})"
 
     context = {
-        'center_name': settings.CENTER_NAME,
-        'requested_project_name': request.post_project.name,
-        'requester_str': requester_str,
-        'pi_str': pi_str,
-        'support_email': settings.CENTER_HELP_EMAIL,
-        'signature': settings.EMAIL_SIGNATURE,
+        "center_name": settings.CENTER_NAME,
+        "requested_project_name": request.post_project.name,
+        "requester_str": requester_str,
+        "pi_str": pi_str,
+        "support_email": settings.CENTER_HELP_EMAIL,
+        "signature": settings.EMAIL_SIGNATURE,
     }
 
     sender = settings.EMAIL_SENDER
@@ -538,36 +549,35 @@ def allocation_renewal_request_denial_reason(request):
     denied, based on its 'state' field and/or an associated
     SavioProjectAllocationRequest."""
     if not isinstance(request, AllocationRenewalRequest):
-        raise TypeError(
-            f'Provided request has unexpected type {type(request)}.')
+        raise TypeError(f"Provided request has unexpected type {type(request)}.")
 
     state = request.state
-    eligibility = state['eligibility']
-    other = state['other']
+    eligibility = state["eligibility"]
+    other = state["other"]
 
-    DenialReason = namedtuple(
-        'DenialReason', 'category justification timestamp')
+    DenialReason = namedtuple("DenialReason", "category justification timestamp")
 
     new_project_request = request.new_project_request
 
-    if other['timestamp']:
-        category = 'Other'
-        justification = other['justification']
-        timestamp = other['timestamp']
-    elif eligibility['status'] == 'Denied':
-        category = 'PI Ineligible'
-        justification = eligibility['justification']
-        timestamp = eligibility['timestamp']
-    elif new_project_request and new_project_request.status.name == 'Denied':
+    if other["timestamp"]:
+        category = "Other"
+        justification = other["justification"]
+        timestamp = other["timestamp"]
+    elif eligibility["status"] == "Denied":
+        category = "PI Ineligible"
+        justification = eligibility["justification"]
+        timestamp = eligibility["timestamp"]
+    elif new_project_request and new_project_request.status.name == "Denied":
         reason = new_project_request.denial_reason()
         category = reason.category
         justification = reason.justification
         timestamp = reason.timestamp
     else:
-        raise ValueError('Provided request has an unexpected state.')
+        raise ValueError("Provided request has an unexpected state.")
 
     return DenialReason(
-        category=category, justification=justification, timestamp=timestamp)
+        category=category, justification=justification, timestamp=timestamp
+    )
 
 
 def allocation_renewal_request_latest_update_timestamp(request):
@@ -577,13 +587,12 @@ def allocation_renewal_request_latest_update_timestamp(request):
     The expected values are ISO 8601 strings, or the empty string, so
     taking the maximum should provide the correct output."""
     if not isinstance(request, AllocationRenewalRequest):
-        raise TypeError(
-            f'Provided request has unexpected type {type(request)}.')
+        raise TypeError(f"Provided request has unexpected type {type(request)}.")
 
     state = request.state
-    max_timestamp = ''
+    max_timestamp = ""
     for field in state:
-        max_timestamp = max(max_timestamp, state[field].get('timestamp', ''))
+        max_timestamp = max(max_timestamp, state[field].get("timestamp", ""))
 
     new_project_request = request.new_project_request
     if new_project_request:
@@ -607,38 +616,36 @@ def allocation_renewal_request_state_status(request):
           processed.
     """
     if not isinstance(request, AllocationRenewalRequest):
-        raise TypeError(
-            f'Provided request has unexpected type {type(request)}.')
+        raise TypeError(f"Provided request has unexpected type {type(request)}.")
 
     state = request.state
-    eligibility = state['eligibility']
-    other = state['other']
+    eligibility = state["eligibility"]
+    other = state["other"]
 
-    denied_status = AllocationRenewalRequestStatusChoice.objects.get(
-        name='Denied')
+    denied_status = AllocationRenewalRequestStatusChoice.objects.get(name="Denied")
 
     # The request was denied for some other non-listed reason.
-    if other['timestamp']:
+    if other["timestamp"]:
         return denied_status
 
     new_project_request = request.new_project_request
     if new_project_request:
         # The request was for a new Project, which was denied.
         status_name = new_project_request.status.name
-        if status_name == 'Denied':
+        if status_name == "Denied":
             return denied_status
     else:
         # The PI was ineligible.
-        if eligibility['status'] == 'Denied':
+        if eligibility["status"] == "Denied":
             return denied_status
 
     # The request has not been denied, so it is under review.
-    return AllocationRenewalRequestStatusChoice.objects.get(
-        name='Under Review')
+    return AllocationRenewalRequestStatusChoice.objects.get(name="Under Review")
 
 
-def set_allocation_renewal_request_eligibility(request, status, justification,
-                                               timestamp=None):
+def set_allocation_renewal_request_eligibility(
+    request, status, justification, timestamp=None
+):
     """Update the given AllocationRenewalRequest to note whether the PI
     of the request is eligible for renewal, with the following:
         - A str 'status' denoting eligibility (one of 'Pending',
@@ -655,21 +662,26 @@ def set_allocation_renewal_request_eligibility(request, status, justification,
         assert isinstance(timestamp, str)
     else:
         timestamp = utc_now_offset_aware().isoformat()
-    request.state['eligibility'] = {
-        'status': status,
-        'justification': justification,
-        'timestamp': timestamp,
+    request.state["eligibility"] = {
+        "status": status,
+        "justification": justification,
+        "timestamp": timestamp,
     }
     request.status = allocation_renewal_request_state_status(request)
     request.save()
 
 
-class AllowanceRenewalAvailableEmailSender(object):
+class AllowanceRenewalAvailableEmailSender:
     """A class that sends emails to eligible project owners, notifying
     them that allowance renewal is available."""
 
-    def __init__(self, current_allocation_period, next_allocation_period,
-                 computing_allowance, email_strategy=None):
+    def __init__(
+        self,
+        current_allocation_period,
+        next_allocation_period,
+        computing_allowance,
+        email_strategy=None,
+    ):
         assert isinstance(current_allocation_period, AllocationPeriod)
         assert isinstance(next_allocation_period, AllocationPeriod)
         assert isinstance(computing_allowance, ComputingAllowance)
@@ -685,16 +697,22 @@ class AllowanceRenewalAvailableEmailSender(object):
 
         self._computing_allowance_interface = get_computing_allowance_interface()
         self._allowance_name_long = self._computing_allowance.get_name()
-        self._allowance_name_short = \
+        self._allowance_name_short = (
             self._computing_allowance_interface.name_short_from_name(
-                self._allowance_name_long)
-        self._num_service_units = \
+                self._allowance_name_long
+            )
+        )
+        self._num_service_units = (
             self._computing_allowance_interface.service_units_from_name(
-                self._allowance_name_long, is_timed=True,
-                allocation_period=self._next_allocation_period)
+                self._allowance_name_long,
+                is_timed=True,
+                allocation_period=self._next_allocation_period,
+            )
+        )
 
         self._email_strategy = validate_email_strategy_or_get_default(
-            email_strategy=email_strategy)
+            email_strategy=email_strategy
+        )
 
     def run(self):
         """Gather a list of relevant Projects, and send emails to them
@@ -705,13 +723,18 @@ class AllowanceRenewalAvailableEmailSender(object):
         for project in eligible_projects:
             try:
                 self._process_email(
-                    project, self._allowance_name_long,
-                    self._allowance_name_short, self._current_allocation_period,
-                    self._next_allocation_period, self._num_service_units)
+                    project,
+                    self._allowance_name_long,
+                    self._allowance_name_short,
+                    self._current_allocation_period,
+                    self._next_allocation_period,
+                    self._num_service_units,
+                )
             except Exception as e:
                 logger.exception(
-                    f'Failed to process allowance renewal reminder email for '
-                    f'Project {project.name} ({project.pk}). Details:\n{e}')
+                    f"Failed to process allowance renewal reminder email for "
+                    f"Project {project.name} ({project.pk}). Details:\n{e}"
+                )
                 failures.append(project)
         return failures
 
@@ -720,8 +743,11 @@ class AllowanceRenewalAvailableEmailSender(object):
         is not ready."""
         try:
             call_command(
-                'audit_allocation_period', self._next_allocation_period.name,
-                stdout=io.StringIO(), stderr=io.StringIO())
+                "audit_allocation_period",
+                self._next_allocation_period.name,
+                stdout=io.StringIO(),
+                stderr=io.StringIO(),
+            )
         except AuditFailure as e:
             raise e
 
@@ -729,29 +755,38 @@ class AllowanceRenewalAvailableEmailSender(object):
         """Return a list of Projects that are eligible to receive a
         reminder email: currently "Active" ones that have the
         computing allowance."""
-        project_name_prefix = \
-            self._computing_allowance_interface.code_from_name(
-                self._computing_allowance.get_name())
+        project_name_prefix = self._computing_allowance_interface.code_from_name(
+            self._computing_allowance.get_name()
+        )
         active_projects_with_allowance = Project.objects.filter(
-            name__startswith=project_name_prefix,
-            status__name='Active')
+            name__startswith=project_name_prefix, status__name="Active"
+        )
         return active_projects_with_allowance
 
-    def _process_email(self, project, computing_allowance_name_long,
-                       computing_allowance_name_short,
-                       current_allocation_period, next_allocation_period,
-                       num_service_units):
+    def _process_email(
+        self,
+        project,
+        computing_allowance_name_long,
+        computing_allowance_name_short,
+        current_allocation_period,
+        next_allocation_period,
+        num_service_units,
+    ):
         """Process, via the email strategy, an email for the given
         Project."""
         email_method = send_allocation_renewal_available_email
         email_args = (
-            project, computing_allowance_name_long,
-            computing_allowance_name_short, current_allocation_period,
-            next_allocation_period, num_service_units)
+            project,
+            computing_allowance_name_long,
+            computing_allowance_name_short,
+            current_allocation_period,
+            next_allocation_period,
+            num_service_units,
+        )
         self._email_strategy.process_email(email_method, *email_args)
 
 
-class AllocationRenewalRunnerBase(object):
+class AllocationRenewalRunnerBase:
     """A base class that Runners for handling AllocationRenewalsRequests
     should inherit from."""
 
@@ -762,26 +797,22 @@ class AllocationRenewalRunnerBase(object):
         self.computing_allowance = self.request_obj.computing_allowance
 
     def run(self):
-        raise NotImplementedError('This method is not implemented.')
+        raise NotImplementedError("This method is not implemented.")
 
     def assert_request_not_status(self, unexpected_status):
         """Raise an assertion error if the request has the given
         unexpected status."""
-        if not isinstance(
-                unexpected_status, AllocationRenewalRequestStatusChoice):
-            raise TypeError(
-                'Status is not an AllocationRenewalRequestStatusChoice.')
-        message = f'The request must not have status \'{unexpected_status}\'.'
+        if not isinstance(unexpected_status, AllocationRenewalRequestStatusChoice):
+            raise TypeError("Status is not an AllocationRenewalRequestStatusChoice.")
+        message = f"The request must not have status '{unexpected_status}'."
         assert self.request_obj.status != unexpected_status, message
 
     def assert_request_status(self, expected_status):
         """Raise an assertion error if the request does not have the
         given expected status."""
-        if not isinstance(
-                expected_status, AllocationRenewalRequestStatusChoice):
-            raise TypeError(
-                'Status is not an AllocationRenewalRequestStatusChoice.')
-        message = f'The request must have status \'{expected_status}\'.'
+        if not isinstance(expected_status, AllocationRenewalRequestStatusChoice):
+            raise TypeError("Status is not an AllocationRenewalRequestStatusChoice.")
+        message = f"The request must have status '{expected_status}'."
         assert self.request_obj.status == expected_status, message
 
     def handle_by_preference(self):
@@ -792,12 +823,13 @@ class AllocationRenewalRunnerBase(object):
         is_pooled_post = post_project.is_pooled()
 
         def log_message():
-            pre_str = 'non-pooling' if not is_pooled_pre else 'pooling'
-            post_str = 'non-pooling' if not is_pooled_post else 'pooling'
+            pre_str = "non-pooling" if not is_pooled_pre else "pooling"
+            post_str = "non-pooling" if not is_pooled_post else "pooling"
             return (
-                f'AllocationRenewalRequest {request.pk}: {pre_str} in '
-                f'pre-project {pre_project.name if pre_project else None} to '
-                f'{post_str} in post-project {post_project.name}.')
+                f"AllocationRenewalRequest {request.pk}: {pre_str} in "
+                f"pre-project {pre_project.name if pre_project else None} to "
+                f"{post_str} in post-project {post_project.name}."
+            )
 
         try:
             preference_case = request.get_pooling_preference_case()
@@ -825,32 +857,32 @@ class AllocationRenewalRunnerBase(object):
 
     def handle_unpooled_to_unpooled(self):
         """Handle the case when the preference is to stay unpooled."""
-        raise NotImplementedError('This method is not implemented.')
+        raise NotImplementedError("This method is not implemented.")
 
     def handle_unpooled_to_pooled(self):
         """Handle the case when the preference is to start pooling."""
-        raise NotImplementedError('This method is not implemented.')
+        raise NotImplementedError("This method is not implemented.")
 
     def handle_pooled_to_pooled_same(self):
         """Handle the case when the preference is to stay pooled with
         the same project."""
-        raise NotImplementedError('This method is not implemented.')
+        raise NotImplementedError("This method is not implemented.")
 
     def handle_pooled_to_pooled_different(self):
         """Handle the case when the preference is to stop pooling with
         the current project and start pooling with a different
         project."""
-        raise NotImplementedError('This method is not implemented.')
+        raise NotImplementedError("This method is not implemented.")
 
     def handle_pooled_to_unpooled_old(self):
         """Handle the case when the preference is to stop pooling and
         reuse another existing project owned by the PI."""
-        raise NotImplementedError('This method is not implemented.')
+        raise NotImplementedError("This method is not implemented.")
 
     def handle_pooled_to_unpooled_new(self):
         """Handle the case when the preference is to stop pooling and
         create a new project."""
-        raise NotImplementedError('This method is not implemented.')
+        raise NotImplementedError("This method is not implemented.")
 
 
 class AllocationRenewalApprovalRunner(AllocationRenewalRunnerBase):
@@ -861,12 +893,14 @@ class AllocationRenewalApprovalRunner(AllocationRenewalRunnerBase):
         super().__init__(request_obj)
         self.request_obj.allocation_period.assert_not_ended()
         expected_status = AllocationRenewalRequestStatusChoice.objects.get(
-            name='Under Review')
+            name="Under Review"
+        )
         self.assert_request_status(expected_status)
         validate_num_service_units(num_service_units)
         self.num_service_units = num_service_units
         self._email_strategy = validate_email_strategy_or_get_default(
-            email_strategy=email_strategy)
+            email_strategy=email_strategy
+        )
 
     def run(self):
         with transaction.atomic():
@@ -876,8 +910,9 @@ class AllocationRenewalApprovalRunner(AllocationRenewalRunnerBase):
     def approve_request(self):
         """Set the status of the request to 'Approved' and set its
         approval_time."""
-        self.request_obj.status = \
-            AllocationRenewalRequestStatusChoice.objects.get(name='Approved')
+        self.request_obj.status = AllocationRenewalRequestStatusChoice.objects.get(
+            name="Approved"
+        )
         self.request_obj.approval_time = utc_now_offset_aware()
         self.request_obj.save()
 
@@ -918,8 +953,7 @@ class AllocationRenewalApprovalRunner(AllocationRenewalRunnerBase):
             email_args = (request, self.num_service_units)
             self._email_strategy.process_email(email_method, *email_args)
         except Exception as e:
-            logger.exception(
-                f'Failed to send notification email. Details:\n{e}')
+            logger.exception(f"Failed to send notification email. Details:\n{e}")
 
 
 class AllocationRenewalDenialRunner(AllocationRenewalRunnerBase):
@@ -929,7 +963,8 @@ class AllocationRenewalDenialRunner(AllocationRenewalRunnerBase):
     def __init__(self, request_obj):
         super().__init__(request_obj)
         unexpected_status = AllocationRenewalRequestStatusChoice.objects.get(
-            name='Complete')
+            name="Complete"
+        )
         self.assert_request_not_status(unexpected_status)
 
     def run(self):
@@ -941,14 +976,15 @@ class AllocationRenewalDenialRunner(AllocationRenewalRunnerBase):
     def deny_post_project(self):
         """Set the post_project's status to 'Denied'."""
         project = self.request_obj.post_project
-        project.status = ProjectStatusChoice.objects.get(name='Denied')
+        project.status = ProjectStatusChoice.objects.get(name="Denied")
         project.save()
         return project
 
     def deny_request(self):
         """Set the status of the request to 'Denied'."""
-        self.request_obj.status = \
-            AllocationRenewalRequestStatusChoice.objects.get(name='Denied')
+        self.request_obj.status = AllocationRenewalRequestStatusChoice.objects.get(
+            name="Denied"
+        )
         self.request_obj.save()
 
     def handle_unpooled_to_unpooled(self):
@@ -985,9 +1021,8 @@ class AllocationRenewalDenialRunner(AllocationRenewalRunnerBase):
         request = self.request_obj
         try:
             send_allocation_renewal_request_denial_email(request)
-        except Exception as e:
-            logger.exception(
-                'Failed to send notification email. Details:\n{e}')
+        except Exception:
+            logger.exception("Failed to send notification email. Details:\n{e}")
 
 
 class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
@@ -999,13 +1034,15 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
         self.request_obj.allocation_period.assert_started()
         self.request_obj.allocation_period.assert_not_ended()
         expected_status = AllocationRenewalRequestStatusChoice.objects.get(
-            name='Approved')
+            name="Approved"
+        )
         self.assert_request_status(expected_status)
         validate_num_service_units(num_service_units)
         self.num_service_units = num_service_units
 
         self._email_strategy = validate_email_strategy_or_get_default(
-            email_strategy=email_strategy)
+            email_strategy=email_strategy
+        )
 
     def run(self):
         request = self.request_obj
@@ -1020,8 +1057,12 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
             self.update_existing_user_allocations(new_value)
 
             create_project_users(
-                post_project, request.requester, request.pi,
-                AllocationRenewalRequest, email_strategy=self._email_strategy)
+                post_project,
+                request.requester,
+                request.pi,
+                AllocationRenewalRequest,
+                email_strategy=self._email_strategy,
+            )
 
             self.update_pre_projects_of_future_period_requests()
 
@@ -1034,7 +1075,7 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
     @staticmethod
     def activate_project(project):
         """Set the given Project's status to 'Active'."""
-        status = ProjectStatusChoice.objects.get(name='Active')
+        status = ProjectStatusChoice.objects.get(name="Active")
         project.status = status
         project.save()
         return project
@@ -1042,8 +1083,9 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
     def complete_request(self, num_service_units):
         """Set the status of the request to 'Complete', set its number
         of service units, and set its completion_time."""
-        self.request_obj.status = \
-            AllocationRenewalRequestStatusChoice.objects.get(name='Complete')
+        self.request_obj.status = AllocationRenewalRequestStatusChoice.objects.get(
+            name="Complete"
+        )
         self.request_obj.num_service_units = num_service_units
         self.request_obj.completion_time = utc_now_offset_aware()
         self.request_obj.save()
@@ -1058,31 +1100,31 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
         pre_project = request.pre_project
         if not pre_project:
             logger.info(
-                f'AllocationRenewalRequest {request.pk} has no pre-Project. '
-                f'Skipping demotion.')
+                f"AllocationRenewalRequest {request.pk} has no pre-Project. "
+                f"Skipping demotion."
+            )
             return
         if pre_project.pis().count() > 1:
             try:
                 pi_project_user = pre_project.projectuser_set.get(user=pi)
             except ProjectUser.DoesNotExist:
                 message = (
-                    f'No ProjectUser exists for PI {pi.username} of Project '
-                    f'{pre_project.name}, for which the PI has '
-                    f'AllocationRenewalRequest {request.pk} to stop pooling '
-                    f'under it.')
+                    f"No ProjectUser exists for PI {pi.username} of Project "
+                    f"{pre_project.name}, for which the PI has "
+                    f"AllocationRenewalRequest {request.pk} to stop pooling "
+                    f"under it."
+                )
                 logger.error(message)
             else:
-                pi_project_user.role = ProjectUserRoleChoice.objects.get(
-                    name='User')
+                pi_project_user.role = ProjectUserRoleChoice.objects.get(name="User")
                 pi_project_user.save()
                 message = (
-                    f'Demoted {pi.username} from \'Principal Investigator\' '
-                    f'to \'User\' on Project {pre_project.name}.')
+                    f"Demoted {pi.username} from 'Principal Investigator' "
+                    f"to 'User' on Project {pre_project.name}."
+                )
                 logger.info(message)
         else:
-            message = (
-                f'Project {pre_project.name} only has one PI. Skipping '
-                f'demotion.')
+            message = f"Project {pre_project.name} only has one PI. Skipping demotion."
             logger.info(message)
 
     def handle_unpooled_to_unpooled(self):
@@ -1121,8 +1163,7 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
             email_args = (self.request_obj, self.num_service_units)
             self._email_strategy.process_email(email_method, *email_args)
         except Exception as e:
-            logger.exception(
-                f'Failed to send notification email. Details:\n{e}')
+            logger.exception(f"Failed to send notification email. Details:\n{e}")
 
     def update_allocation(self, old_project_status):
         """Perform allocation-related handling. Use the given
@@ -1132,25 +1173,27 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
         allocation_period = self.request_obj.allocation_period
 
         allocation = get_project_compute_allocation(project)
-        allocation.status = AllocationStatusChoice.objects.get(name='Active')
+        allocation.status = AllocationStatusChoice.objects.get(name="Active")
         # For the start and end dates, if the Project is not 'Active' or the
         # date is not set, set it.
-        if old_project_status.name != 'Active' or not allocation.start_date:
+        if old_project_status.name != "Active" or not allocation.start_date:
             allocation.start_date = display_time_zone_current_date()
-        if old_project_status.name != 'Active' or not allocation.end_date:
-            allocation.end_date = getattr(allocation_period, 'end_date', None)
+        if old_project_status.name != "Active" or not allocation.end_date:
+            allocation.end_date = getattr(allocation_period, "end_date", None)
         allocation.save()
 
         # Increase the allocation's service units.
         allocation_attribute_type = AllocationAttributeType.objects.get(
-            name='Service Units')
-        allocation_attribute, _ = \
-            AllocationAttribute.objects.get_or_create(
-                allocation_attribute_type=allocation_attribute_type,
-                allocation=allocation)
+            name="Service Units"
+        )
+        allocation_attribute, _ = AllocationAttribute.objects.get_or_create(
+            allocation_attribute_type=allocation_attribute_type, allocation=allocation
+        )
         existing_value = (
-            Decimal(allocation_attribute.value) if allocation_attribute.value
-            else settings.ALLOCATION_MIN)
+            Decimal(allocation_attribute.value)
+            if allocation_attribute.value
+            else settings.ALLOCATION_MIN
+        )
         new_value = existing_value + self.num_service_units
         validate_num_service_units(new_value)
         allocation_attribute.value = str(new_value)
@@ -1160,7 +1203,8 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
         ProjectTransaction.objects.create(
             project=project,
             date_time=utc_now_offset_aware(),
-            allocation=Decimal(new_value))
+            allocation=Decimal(new_value),
+        )
 
         return allocation, new_value
 
@@ -1174,13 +1218,13 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
         date_time = utc_now_offset_aware()
         for project_user in project.projectuser_set.all():
             user = project_user.user
-            allocation_updated = set_project_user_allocation_value(
-                user, project, value)
+            allocation_updated = set_project_user_allocation_value(user, project, value)
             if allocation_updated:
                 ProjectUserTransaction.objects.create(
                     project_user=project_user,
                     date_time=date_time,
-                    allocation=Decimal(value))
+                    allocation=Decimal(value),
+                )
 
     def upgrade_pi_user(self):
         """Set the is_pi field of the request's PI UserProfile to
@@ -1212,23 +1256,26 @@ class AllocationRenewalProcessingRunner(AllocationRenewalRunnerBase):
         post_project = self.request_obj.post_project
 
         future_period_requests = AllocationRenewalRequest.objects.filter(
-            ~Q(pk=request_pk) &
-            ~Q(status__name__in=['Complete', 'Denied']) &
-            Q(computing_allowance=self.computing_allowance) &
-            Q(allocation_period__start_date__gt=self.current_display_tz_date) &
-            Q(pi=pi) &
-            ~Q(pre_project=post_project))
+            ~Q(pk=request_pk)
+            & ~Q(status__name__in=["Complete", "Denied"])
+            & Q(computing_allowance=self.computing_allowance)
+            & Q(allocation_period__start_date__gt=self.current_display_tz_date)
+            & Q(pi=pi)
+            & ~Q(pre_project=post_project)
+        )
         if future_period_requests.exists():
             message_template = (
-                f'Updated AllocationRenewalRequest {{0}}\'s pre_project from '
-                f'{{1}} to {post_project.pk} since AllocationRenewalRequest '
-                f'{request_pk} updated PI {pi.username}\'s active '
+                f"Updated AllocationRenewalRequest {{0}}'s pre_project from "
+                f"{{1}} to {post_project.pk} since AllocationRenewalRequest "
+                f"{request_pk} updated PI {pi.username}'s active "
                 f'"{self.computing_allowance.name}" Project to '
-                f'{post_project.name}.')
+                f"{post_project.name}."
+            )
             for future_period_request in future_period_requests:
                 tmp_pre_project = future_period_request.pre_project
                 future_period_request.pre_project = post_project
                 future_period_request.save()
                 message = message_template.format(
-                    future_period_request.pk, tmp_pre_project.pk)
+                    future_period_request.pk, tmp_pre_project.pk
+                )
                 logger.info(message)

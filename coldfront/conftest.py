@@ -1,10 +1,10 @@
+from io import StringIO
 import os
 import sys
-from io import StringIO
 
-import pytest
 from django.core.management import call_command
 from flags.state import enable_flag
+import pytest
 
 
 def pytest_configure(config):
@@ -16,12 +16,12 @@ def pytest_configure(config):
     from django.conf import settings
 
     # Ensure FLAGS setting exists
-    if not hasattr(settings, 'FLAGS'):
+    if not hasattr(settings, "FLAGS"):
         settings.FLAGS = {}
 
     # Enable feature flags needed for URL registration
-    settings.FLAGS['SERVICE_UNITS_PURCHASABLE'] = [
-        {'condition': 'boolean', 'value': True}
+    settings.FLAGS["SERVICE_UNITS_PURCHASABLE"] = [
+        {"condition": "boolean", "value": True}
     ]
 
 
@@ -38,14 +38,17 @@ def pytest_ignore_collect(collection_path, config):
     path_str = str(collection_path)
 
     # Skip faculty_storage_allocations plugin tests if not installed
-    if 'faculty_storage_allocations' in path_str:
-        if 'coldfront.plugins.faculty_storage_allocations' not in settings.INSTALLED_APPS:
+    if "faculty_storage_allocations" in path_str:
+        if (
+            "coldfront.plugins.faculty_storage_allocations"
+            not in settings.INSTALLED_APPS
+        ):
             return True
 
     return False
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def django_db_setup(django_db_setup, django_db_blocker):
     """Set up the test database with required objects.
 
@@ -59,24 +62,24 @@ def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         # FLAGS in settings were enabled in pytest_configure hook above
         # Now enable flags for runtime checks (requires database access)
-        enable_flag('SERVICE_UNITS_PURCHASABLE', create_boolean_condition=True)
+        enable_flag("SERVICE_UNITS_PURCHASABLE", create_boolean_condition=True)
 
         # Suppress command output
         out, err = StringIO(), StringIO()
-        sys.stdout = open(os.devnull, 'w')
+        sys.stdout = open(os.devnull, "w")
 
         # Run setup commands in order
         commands = [
-            'add_resource_defaults',
-            'add_allocation_defaults',
-            'add_accounting_defaults',
-            'create_allocation_periods',
-            'add_allowance_defaults',
-            'import_field_of_science_data',
-            'add_default_project_choices',
-            'create_staff_group',
-            'add_default_user_choices',
-            'add_directory_defaults',
+            "add_resource_defaults",
+            "add_allocation_defaults",
+            "add_accounting_defaults",
+            "create_allocation_periods",
+            "add_allowance_defaults",
+            "import_field_of_science_data",
+            "add_default_project_choices",
+            "create_staff_group",
+            "add_default_user_choices",
+            "add_directory_defaults",
         ]
 
         for command in commands:
@@ -84,8 +87,9 @@ def django_db_setup(django_db_setup, django_db_blocker):
 
         # Add faculty_storage_allocations plugin defaults if the plugin is installed
         from django.conf import settings
-        if 'coldfront.plugins.faculty_storage_allocations' in settings.INSTALLED_APPS:
-            call_command('add_faculty_directory_defaults', stdout=out, stderr=err)
+
+        if "coldfront.plugins.faculty_storage_allocations" in settings.INSTALLED_APPS:
+            call_command("add_faculty_directory_defaults", stdout=out, stderr=err)
 
         # Restore stdout
         sys.stdout = sys.__stdout__
@@ -94,6 +98,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
 # ============================================================================
 # Common Helper Fixtures (based on TestBase methods)
 # ============================================================================
+
 
 @pytest.fixture
 def create_active_project_with_pi(db):
@@ -106,28 +111,25 @@ def create_active_project_with_pi(db):
         project = create_active_project_with_pi('fc_test', pi_user)
     """
     from coldfront.core.project.models import (
-        Project, ProjectStatusChoice, ProjectUser,
-        ProjectUserRoleChoice, ProjectUserStatusChoice
+        Project,
+        ProjectStatusChoice,
+        ProjectUser,
+        ProjectUserRoleChoice,
+        ProjectUserStatusChoice,
     )
 
     def _create(project_name, pi_user):
-        active_project_status = ProjectStatusChoice.objects.get(name='Active')
+        active_project_status = ProjectStatusChoice.objects.get(name="Active")
         project = Project.objects.create(
-            name=project_name,
-            title=project_name,
-            status=active_project_status
+            name=project_name, title=project_name, status=active_project_status
         )
-        pi_role = ProjectUserRoleChoice.objects.get(
-            name='Principal Investigator'
-        )
-        active_project_user_status = ProjectUserStatusChoice.objects.get(
-            name='Active'
-        )
+        pi_role = ProjectUserRoleChoice.objects.get(name="Principal Investigator")
+        active_project_user_status = ProjectUserStatusChoice.objects.get(name="Active")
         ProjectUser.objects.create(
             project=project,
             role=pi_role,
             status=active_project_user_status,
-            user=pi_user
+            user=pi_user,
         )
         return project
 
@@ -167,7 +169,7 @@ def password():
 
     Mimics TestBase.password attribute.
     """
-    return 'password'
+    return "password"
 
 
 def pytest_collection_modifyitems(items):

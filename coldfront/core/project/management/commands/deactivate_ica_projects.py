@@ -7,9 +7,13 @@ from coldfront.api.statistics.utils import get_accounting_allocation_objects
 from coldfront.core.project.models import Project
 from coldfront.core.project.utils import deactivate_project_and_allocation
 from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
-from coldfront.core.utils.common import add_argparse_dry_run_argument
-from coldfront.core.utils.common import display_time_zone_current_date
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
+from coldfront.core.utils.common import (
+    add_argparse_dry_run_argument,
+    display_time_zone_current_date,
+)
 from coldfront.core.utils.mail import send_email_template
 
 """An admin command that performs deactivation steps for ICA Projects
@@ -17,72 +21,73 @@ whose end dates have passed."""
 
 
 class Command(BaseCommand):
-
     help = (
-        'Expire ICA projects whose end dates have passed. Optionally notify '
-        'project owners')
-    logger = logging.getLogger('coldfront.commands')
+        "Expire ICA projects whose end dates have passed. Optionally notify "
+        "project owners"
+    )
+    logger = logging.getLogger("coldfront.commands")
 
     def add_arguments(self, parser):
         add_argparse_dry_run_argument(parser)
         parser.add_argument(
-            '--send_emails',
-            action='store_true',
+            "--send_emails",
+            action="store_true",
             default=False,
-            help='Send emails to PIs/managers about project deactivation.')
+            help="Send emails to PIs/managers about project deactivation.",
+        )
 
     def handle(self, *args, **options):
         """Deactivate ICA projects whose end_dates have passed, by:
-            - Setting the Project's status to 'Inactive'.
-            - Setting the Allocation's status to 'Expired'.
-            - Setting the Allocation's start_date to the current date
-              and its end_date to None.
-            - Resetting the Service Units for the Allocation and its
-             AllocationUsers to zero.
+        - Setting the Project's status to 'Inactive'.
+        - Setting the Allocation's status to 'Expired'.
+        - Setting the Allocation's start_date to the current date
+          and its end_date to None.
+        - Resetting the Service Units for the Allocation and its
+         AllocationUsers to zero.
         """
-        dry_run = options['dry_run']
-        send_emails = options['send_emails']
+        dry_run = options["dry_run"]
+        send_emails = options["send_emails"]
 
         current_date = display_time_zone_current_date()
 
         project_name_prefix = get_computing_allowance_interface().code_from_name(
-            BRCAllowances.ICA)
+            BRCAllowances.ICA
+        )
 
-        for project in Project.objects.filter(
-                name__startswith=project_name_prefix):
-            accounting_allocation_objects = get_accounting_allocation_objects(
-                project)
+        for project in Project.objects.filter(name__startswith=project_name_prefix):
+            accounting_allocation_objects = get_accounting_allocation_objects(project)
             allocation = accounting_allocation_objects.allocation
             expiry_date = allocation.end_date
 
             if expiry_date and expiry_date < current_date:
                 self.perform_deactivation(
-                    project, accounting_allocation_objects, dry_run)
+                    project, accounting_allocation_objects, dry_run
+                )
                 if send_emails:
                     self.send_emails(project, expiry_date, dry_run)
 
-    def perform_deactivation(self, project, accounting_allocation_objects,
-                             dry_run):
+    def perform_deactivation(self, project, accounting_allocation_objects, dry_run):
         """Given a Project and an associated AccountingAllocationObjects
         objects, perform deactivation steps. Optionally display updates
         instead of performing them."""
         allocation = accounting_allocation_objects.allocation
-        current_allowance = \
-            accounting_allocation_objects.allocation_attribute.value
+        current_allowance = accounting_allocation_objects.allocation_attribute.value
         updated_allowance = settings.ALLOCATION_MIN
 
         if dry_run:
             message = (
-                f'Would deactivate Project {project.name} ({project.pk}), '
-                f'update Allocation {allocation.pk}, and update Service Units '
-                f'from {current_allowance} to {updated_allowance}.')
-            self.logger.info(f'DRY RUN: {message}')
+                f"Would deactivate Project {project.name} ({project.pk}), "
+                f"update Allocation {allocation.pk}, and update Service Units "
+                f"from {current_allowance} to {updated_allowance}."
+            )
+            self.logger.info(f"DRY RUN: {message}")
         else:
             deactivate_project_and_allocation(project)
             message = (
-                f'Deactivated Project {project.name} ({project.pk}), updated '
-                f'Allocation {allocation.pk}, and updated Service Units from '
-                f'{current_allowance} to {updated_allowance}.')
+                f"Deactivated Project {project.name} ({project.pk}), updated "
+                f"Allocation {allocation.pk}, and updated Service Units from "
+                f"{current_allowance} to {updated_allowance}."
+            )
             self.logger.info(message)
 
     def send_emails(self, project, expiry_date, dry_run):
@@ -90,32 +95,28 @@ class Command(BaseCommand):
         Optionally display updates instead of performing them."""
         recipients = project.managers_and_pis_emails()
         num_recipients = len(recipients)
-        recipients_noun = (
-            f'{num_recipients} user' + int(num_recipients > 1) * 's')
+        recipients_noun = f"{num_recipients} user" + int(num_recipients > 1) * "s"
 
         if dry_run:
-            message = (
-                f'DRY RUN: Would send a notification email to '
-                f'{recipients_noun}.')
+            message = f"DRY RUN: Would send a notification email to {recipients_noun}."
             self.logger.info(message)
             return
 
-        subject = 'Expired ICA Project Deactivation'
-        template_name = 'email/expired_ica_project.txt'
+        subject = "Expired ICA Project Deactivation"
+        template_name = "email/expired_ica_project.txt"
         context = {
-            'project_name': project.name,
-            'expiry_date': expiry_date.strftime('%m-%d-%Y'),
-            'support_email': settings.CENTER_HELP_EMAIL,
-            'signature': settings.EMAIL_SIGNATURE,
+            "project_name": project.name,
+            "expiry_date": expiry_date.strftime("%m-%d-%Y"),
+            "support_email": settings.CENTER_HELP_EMAIL,
+            "signature": settings.EMAIL_SIGNATURE,
         }
         sender = settings.EMAIL_SENDER
 
         try:
-            send_email_template(
-                subject, template_name, context, sender, recipients)
+            send_email_template(subject, template_name, context, sender, recipients)
         except Exception as e:
-            message = f'Failed to send notification email. Details:\n{e}'
+            message = f"Failed to send notification email. Details:\n{e}"
             self.logger.exception(e)
         else:
-            message = f'Sent a notification email to {recipients_noun}.'
+            message = f"Sent a notification email to {recipients_noun}."
             self.logger.info(message)

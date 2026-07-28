@@ -3,17 +3,17 @@ import logging
 from django.core.management.base import BaseCommand
 
 from coldfront.core.project.models import SavioProjectAllocationRequest
-from coldfront.core.resource.utils_.allowance_utils.interface import get_computing_allowance_interface
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    get_computing_allowance_interface,
+)
 from coldfront.core.utils.common import add_argparse_dry_run_argument
-
 
 """An admin command that sets the computing allowances (Resources) for
 SavioProjectAllocationRequests."""
 
 
 class Command(BaseCommand):
-
-    help = 'Set computing allowances for SavioProjectAllocationRequests.'
+    help = "Set computing allowances for SavioProjectAllocationRequests."
 
     logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """Set the computing_allowance field for each request based on
         the value of the allocation_type field."""
-        dry_run = options['dry_run']
+        dry_run = options["dry_run"]
         for request in SavioProjectAllocationRequest.objects.all():
             self.set_computing_allowance_for_request(request, dry_run=dry_run)
 
@@ -40,16 +40,17 @@ class Command(BaseCommand):
         allocation_type = request.allocation_type
         allowance = self.interface.allowance_from_name_short(allocation_type)
         message_template = (
-            f'{{0}} computing allowance for SavioProjectAllocationRequest '
-            f'{request.id} ({request.project.name}) to Resource '
-            f'{allowance.pk} ({allowance.name}), based on allocation_type '
-            f'{allocation_type}.')
+            f"{{0}} computing allowance for SavioProjectAllocationRequest "
+            f"{request.id} ({request.project.name}) to Resource "
+            f"{allowance.pk} ({allowance.name}), based on allocation_type "
+            f"{allocation_type}."
+        )
         if dry_run:
-            message = message_template.format('Would update')
+            message = message_template.format("Would update")
             self.stdout.write(self.style.WARNING(message))
         else:
             request.computing_allowance = allowance
             request.save()
-            message = message_template.format('Updated')
+            message = message_template.format("Updated")
             self.stdout.write(self.style.SUCCESS(message))
             self.logger.info(message)

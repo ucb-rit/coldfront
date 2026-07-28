@@ -1,6 +1,8 @@
 from coldfront.core.billing.tests.test_billing_base import TestBillingBase
 from coldfront.core.billing.utils.validation.backends.dummy import DummyValidatorBackend
-from coldfront.core.billing.utils.validation.backends.permissive import PermissiveValidatorBackend
+from coldfront.core.billing.utils.validation.backends.permissive import (
+    PermissiveValidatorBackend,
+)
 
 
 class TestValidatorBackendBase(TestBillingBase):
@@ -28,13 +30,13 @@ class TestDummyValidatorBackend(TestValidatorBackendBase):
     def test_evens_valid(self):
         """Test that the validator treats billing IDs whose last digit
         is even as valid."""
-        for billing_id in ('123456-788', '123456-790', '123456-792'):
+        for billing_id in ("123456-788", "123456-790", "123456-792"):
             self.assert_valid(self.validator, billing_id)
 
     def test_odds_invalid(self):
         """Test that the validator treats billing IDs whose last digit
         is odd as invalid."""
-        for billing_id in ('123456-789', '123456-791', '123456-793'):
+        for billing_id in ("123456-789", "123456-791", "123456-793"):
             self.assert_valid(self.validator, billing_id, negate=True)
 
 
@@ -48,12 +50,12 @@ class TestPermissiveValidatorBackend(TestValidatorBackendBase):
     def test_all_valid(self):
         """Test that the validator treats all billing IDs as valid."""
         billing_ids = (
-            '123456-788',
-            '123456-789',
-            '123456-790',
-            '123456-791',
-            '123456-792',
-            '123456-793',
+            "123456-788",
+            "123456-789",
+            "123456-790",
+            "123456-791",
+            "123456-792",
+            "123456-793",
         )
         for billing_id in billing_ids:
             self.assert_valid(self.validator, billing_id)

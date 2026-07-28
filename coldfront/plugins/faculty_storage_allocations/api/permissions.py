@@ -31,10 +31,10 @@ class IsSuperuserOrHasManagePermission(IsAuthenticated):
             return True
 
         # Users with the manage permission have full access
-        if user.has_perm('faculty_storage_allocations.can_manage_fsa_requests'):
+        if user.has_perm("faculty_storage_allocations.can_manage_fsa_requests"):
             return True
 
         return False
 
 
-__all__ = ['IsSuperuserOrHasManagePermission']
+__all__ = ["IsSuperuserOrHasManagePermission"]

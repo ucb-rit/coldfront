@@ -1,15 +1,15 @@
-from django.contrib.auth.backends import BaseBackend
-from django.contrib.auth.models import User
+import logging
 
 from allauth.account.models import EmailAddress
+from django.contrib.auth.backends import BaseBackend
+from django.contrib.auth.models import User
 from sesame.backends import ModelBackend as BaseSesameBackend
 
 from coldfront.core.user.utils import send_email_verification_email
-from coldfront.core.user.utils_.link_login_utils import UserLoginLinkIneligible
-from coldfront.core.user.utils_.link_login_utils import validate_user_eligible_for_login_link
-
-import logging
-
+from coldfront.core.user.utils_.link_login_utils import (
+    UserLoginLinkIneligible,
+    validate_user_eligible_for_login_link,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +23,9 @@ class EmailAddressBackend(BaseBackend):
             return None
         username = username.lower()
         try:
-            email_address = EmailAddress.objects.select_related(
-                'user').get(email=username)
+            email_address = EmailAddress.objects.select_related("user").get(
+                email=username
+            )
         except EmailAddress.DoesNotExist:
             return None
         user = email_address.user
@@ -36,7 +37,7 @@ class EmailAddressBackend(BaseBackend):
             try:
                 send_email_verification_email(email_address)
             except Exception as e:
-                message = 'Failed to send verification email. Details:'
+                message = "Failed to send verification email. Details:"
                 logger.error(message)
                 logger.exception(e)
             return None
@@ -61,8 +62,9 @@ class SesameBackend(BaseSesameBackend):
             validate_user_eligible_for_login_link(user)
         except UserLoginLinkIneligible as e:
             message = (
-                f'User {user.username} was blocked from Sesame authentication '
-                f'because: {str(e)}')
+                f"User {user.username} was blocked from Sesame authentication "
+                f"because: {e!s}"
+            )
             logger.info(message)
             return False
         return True

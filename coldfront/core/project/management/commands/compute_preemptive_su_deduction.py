@@ -11,8 +11,7 @@ from coldfront.core.project.models import Project
 from coldfront.core.resource.utils import get_primary_compute_resource_name
 from coldfront.core.statistics.models import Job
 
-
-PACIFIC = ZoneInfo('America/Los_Angeles')
+PACIFIC = ZoneInfo("America/Los_Angeles")
 
 # Maximum seconds between a job's startdate and the nearest positive usage-history
 # diff before we flag the match as suspicious.
@@ -75,45 +74,45 @@ class Command(BaseCommand):
     """
 
     help = (
-        'Compute the SU deduction for a project that received a preemptive '
-        'allocation from the current allowance year. Prints supporting '
-        'evidence and the add_service_units_to_project invocation to apply '
-        'the deduction. Read-only.'
+        "Compute the SU deduction for a project that received a preemptive "
+        "allocation from the current allowance year. Prints supporting "
+        "evidence and the add_service_units_to_project invocation to apply "
+        "the deduction. Read-only."
     )
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--project_name',
+            "--project_name",
             required=True,
             type=str,
-            help='Name of the project to compute the deduction for.',
+            help="Name of the project to compute the deduction for.",
         )
         parser.add_argument(
-            '--previous_allowance',
+            "--previous_allowance",
             required=True,
             type=int,
             help=(
                 "The project's normal SU grant for the previous year, "
-                'before the preemptive addition was made. Only consumption '
-                'above this amount is charged to the current year.'
+                "before the preemptive addition was made. Only consumption "
+                "above this amount is charged to the current year."
             ),
         )
         parser.add_argument(
-            '--year_cutoff_date',
+            "--year_cutoff_date",
             required=True,
             type=str,
             help=(
-                'Date (YYYY-MM-DD) on which the allowance year reset ran, '
-                'in US/Pacific local time. Midnight on this date is used as '
-                'the exclusive upper bound for the previous year. '
+                "Date (YYYY-MM-DD) on which the allowance year reset ran, "
+                "in US/Pacific local time. Midnight on this date is used as "
+                "the exclusive upper bound for the previous year. "
                 'Example: "2026-06-01"'
             ),
         )
 
     def handle(self, *args, **options):
-        project_name = options['project_name']
-        previous_allowance = Decimal(options['previous_allowance'])
-        year_cutoff_date_str = options['year_cutoff_date']
+        project_name = options["project_name"]
+        previous_allowance = Decimal(options["previous_allowance"])
+        year_cutoff_date_str = options["year_cutoff_date"]
 
         try:
             cutoff_date = date.fromisoformat(year_cutoff_date_str)
@@ -147,14 +146,13 @@ class Command(BaseCommand):
 
         # U: last usage value before the year reset
         pre_reset_entry = (
-            allocation_attribute_usage.history
-            .filter(history_date__lt=year_cutoff)
-            .order_by('-history_date', '-history_id')
+            allocation_attribute_usage.history.filter(history_date__lt=year_cutoff)
+            .order_by("-history_date", "-history_id")
             .first()
         )
         if pre_reset_entry is None:
             raise CommandError(
-                f'No usage history found before {year_cutoff_date_str} for '
+                f"No usage history found before {year_cutoff_date_str} for "
                 f'project "{project_name}".'
             )
         U = Decimal(str(pre_reset_entry.value))
@@ -165,12 +163,12 @@ class Command(BaseCommand):
                 accountid=project,
                 startdate__lt=year_cutoff,
                 enddate__gte=year_cutoff,
-            ).order_by('startdate')
+            ).order_by("startdate")
         )
 
         A = sum(
             (Decimal(str(job.amount)) for job in boundary_jobs),
-            Decimal('0'),
+            Decimal("0"),
         )
 
         E, e_per_job, ambiguous_jobs = self._compute_E(
@@ -178,72 +176,81 @@ class Command(BaseCommand):
         )
 
         true_consumption = U - (E - A)
-        deduction = max(true_consumption - previous_allowance, Decimal('0'))
+        deduction = max(true_consumption - previous_allowance, Decimal("0"))
         deduction_int = int(deduction)  # truncates toward zero (floor for positive)
 
         # --- Output ---
         out = self.stdout.write
-        out('')
-        out(f'Project:             {project_name}')
-        out(f'Year cutoff:         {year_cutoff_date_str}')
-        out(f'Previous allowance:  {previous_allowance:.2f} SUs  (normal grant before preemptive addition)')
-        out(f'Current allowance:   {current_allowance:.2f} SUs')
-        out('')
+        out("")
+        out(f"Project:             {project_name}")
+        out(f"Year cutoff:         {year_cutoff_date_str}")
         out(
-            f'U (usage at '
-            f'{pre_reset_entry.history_date.strftime("%Y-%m-%d %H:%M:%S %Z")}): '
-            f'{U:.2f} SUs'
+            f"Previous allowance:  {previous_allowance:.2f} SUs  (normal grant before preemptive addition)"
         )
-        out('')
+        out(f"Current allowance:   {current_allowance:.2f} SUs")
+        out("")
+        out(
+            f"U (usage at "
+            f"{pre_reset_entry.history_date.strftime('%Y-%m-%d %H:%M:%S %Z')}): "
+            f"{U:.2f} SUs"
+        )
+        out("")
 
         if boundary_jobs:
-            out(f'Boundary jobs ({len(boundary_jobs)}):')
-            col = '  {:<20}  {:<26}  {:<26}  {:>12}  {:>12}'
-            out(col.format('Job ID', 'Start (UTC)', 'End (UTC)',
-                           'E_i (est.)', 'A_i (actual)'))
-            out('  ' + '-' * 102)
+            out(f"Boundary jobs ({len(boundary_jobs)}):")
+            col = "  {:<20}  {:<26}  {:<26}  {:>12}  {:>12}"
+            out(
+                col.format(
+                    "Job ID", "Start (UTC)", "End (UTC)", "E_i (est.)", "A_i (actual)"
+                )
+            )
+            out("  " + "-" * 102)
             for job in boundary_jobs:
-                e_i = e_per_job.get(job.jobslurmid, Decimal('0'))
+                e_i = e_per_job.get(job.jobslurmid, Decimal("0"))
                 a_i = Decimal(str(job.amount))
-                out(col.format(
-                    job.jobslurmid,
-                    str(job.startdate),
-                    str(job.enddate),
-                    f'{e_i:.2f}',
-                    f'{a_i:.2f}',
-                ))
-            out('')
+                out(
+                    col.format(
+                        job.jobslurmid,
+                        str(job.startdate),
+                        str(job.enddate),
+                        f"{e_i:.2f}",
+                        f"{a_i:.2f}",
+                    )
+                )
+            out("")
             if ambiguous_jobs:
-                out(self.style.WARNING(
-                    'WARNING: E_i is uncertain for the following jobs. '
-                    'Verify manually before applying the deduction.'
-                ))
+                out(
+                    self.style.WARNING(
+                        "WARNING: E_i is uncertain for the following jobs. "
+                        "Verify manually before applying the deduction."
+                    )
+                )
                 for job_id, note in ambiguous_jobs:
-                    out(self.style.WARNING(f'  {job_id}: {note}'))
-                out('')
+                    out(self.style.WARNING(f"  {job_id}: {note}"))
+                out("")
         else:
-            out('Boundary jobs: none')
-            out('')
+            out("Boundary jobs: none")
+            out("")
 
         w = 12
-        out(f'E (total estimated boundary SUs):    {E:>{w}.2f}')
-        out(f'A (total actual boundary SUs):       {A:>{w}.2f}')
-        out('')
-        out(f'Prev. year consumption (U - (E-A)):  {true_consumption:>{w}.2f}')
-        out(f'Normal grant (previous_allowance):  -{previous_allowance:>{w}.2f}')
-        out('                                    ' + '-' * (w + 1))
-        out(f'Consumed from preemptive allocation: {deduction:>{w}.2f}')
-        out(f'Deduction (floored to int):          {deduction_int:>{w}d}')
-        out('')
-        out('To apply the deduction, run:')
-        out('')
+        out(f"E (total estimated boundary SUs):    {E:>{w}.2f}")
+        out(f"A (total actual boundary SUs):       {A:>{w}.2f}")
+        out("")
+        out(f"Prev. year consumption (U - (E-A)):  {true_consumption:>{w}.2f}")
+        out(f"Normal grant (previous_allowance):  -{previous_allowance:>{w}.2f}")
+        out("                                    " + "-" * (w + 1))
+        out(f"Consumed from preemptive allocation: {deduction:>{w}.2f}")
+        out(f"Deduction (floored to int):          {deduction_int:>{w}d}")
+        out("")
+        out("To apply the deduction, run:")
+        out("")
         out(
-            f'  python manage.py add_service_units_to_project \\\n'
-            f'    --project_name {project_name} \\\n'
-            f'    --amount -{deduction_int} \\\n'
+            f"  python manage.py add_service_units_to_project \\\n"
+            f"    --project_name {project_name} \\\n"
+            f"    --amount -{deduction_int} \\\n"
             f'    --reason "<your reason here>"'
         )
-        out('')
+        out("")
 
     def _compute_E(self, allocation_attribute_usage, boundary_jobs, year_cutoff):
         """Estimate E_i for each boundary job from pre-reset usage history diffs.
@@ -254,13 +261,13 @@ class Command(BaseCommand):
             ambiguous   list     — [(jobslurmid, note)] for uncertain matches
         """
         if not boundary_jobs:
-            return Decimal('0'), {}, []
+            return Decimal("0"), {}, []
 
         # All pre-reset history entries in ascending chronological order
         entries = list(
-            allocation_attribute_usage.history
-            .filter(history_date__lt=year_cutoff)
-            .order_by('history_date', 'history_id')
+            allocation_attribute_usage.history.filter(
+                history_date__lt=year_cutoff
+            ).order_by("history_date", "history_id")
         )
 
         # Positive diffs correspond to job submissions (usage increased by E_i).
@@ -276,12 +283,14 @@ class Command(BaseCommand):
 
         if not positive_diffs:
             for job in boundary_jobs:
-                ambiguous.append((
-                    job.jobslurmid,
-                    'no positive diffs found in pre-reset usage history',
-                ))
-                e_per_job[job.jobslurmid] = Decimal('0')
-            return Decimal('0'), e_per_job, ambiguous
+                ambiguous.append(
+                    (
+                        job.jobslurmid,
+                        "no positive diffs found in pre-reset usage history",
+                    )
+                )
+                e_per_job[job.jobslurmid] = Decimal("0")
+            return Decimal("0"), e_per_job, ambiguous
 
         def closest_idx(job):
             return min(
@@ -303,29 +312,31 @@ class Command(BaseCommand):
             idx = job_to_idx[job.jobslurmid]
             diff_date, diff_value = positive_diffs[idx]
             delta_s = abs((diff_date - job.startdate).total_seconds())
-            competing = [
-                j for j in idx_to_jobs[idx] if j.jobslurmid != job.jobslurmid
-            ]
+            competing = [j for j in idx_to_jobs[idx] if j.jobslurmid != job.jobslurmid]
 
             if competing:
-                names = ', '.join(j.jobslurmid for j in competing)
-                ambiguous.append((
-                    job.jobslurmid,
-                    f'shares diff entry ({diff_date}, +{diff_value:.2f} SUs) '
-                    f'with job(s) {names}; cannot split automatically — '
-                    f'E_i set to 0, inspect history manually',
-                ))
-                e_per_job[job.jobslurmid] = Decimal('0')
+                names = ", ".join(j.jobslurmid for j in competing)
+                ambiguous.append(
+                    (
+                        job.jobslurmid,
+                        f"shares diff entry ({diff_date}, +{diff_value:.2f} SUs) "
+                        f"with job(s) {names}; cannot split automatically — "
+                        f"E_i set to 0, inspect history manually",
+                    )
+                )
+                e_per_job[job.jobslurmid] = Decimal("0")
             elif delta_s > TIMESTAMP_THRESHOLD_SECONDS:
-                ambiguous.append((
-                    job.jobslurmid,
-                    f'nearest positive diff is {delta_s:.0f}s from startdate '
-                    f'(threshold {TIMESTAMP_THRESHOLD_SECONDS}s); '
-                    f'using ({diff_date}, +{diff_value:.2f} SUs) — verify',
-                ))
+                ambiguous.append(
+                    (
+                        job.jobslurmid,
+                        f"nearest positive diff is {delta_s:.0f}s from startdate "
+                        f"(threshold {TIMESTAMP_THRESHOLD_SECONDS}s); "
+                        f"using ({diff_date}, +{diff_value:.2f} SUs) — verify",
+                    )
+                )
                 e_per_job[job.jobslurmid] = diff_value
             else:
                 e_per_job[job.jobslurmid] = diff_value
 
-        E = sum(e_per_job.values(), Decimal('0'))
+        E = sum(e_per_job.values(), Decimal("0"))
         return E, e_per_job, ambiguous

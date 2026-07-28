@@ -2,31 +2,39 @@ import os
 
 from django.conf import settings
 from django.contrib.auth.models import Group, User
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 base_dir = settings.BASE_DIR
 
 
 class Command(BaseCommand):
-
     def handle(self, *args, **options):
-        print('Adding users ...')
-        file_path = os.path.join(base_dir, 'local_data', 'users.tsv')
+        print("Adding users ...")
+        file_path = os.path.join(base_dir, "local_data", "users.tsv")
         User.objects.all().delete()
         Group.objects.all().delete()
-        with open(file_path, 'r') as fp:
+        with open(file_path) as fp:
             for line in fp:
-                if line.startswith('#'):
+                if line.startswith("#"):
                     continue
-                username, first_name, last_name, email, is_active, is_staff, is_superuser, *groups = line.strip().split('\t')
+                (
+                    username,
+                    first_name,
+                    last_name,
+                    email,
+                    is_active,
+                    is_staff,
+                    is_superuser,
+                    *groups,
+                ) = line.strip().split("\t")
 
                 if groups:
                     groups = groups[0]
                 else:
-                    groups = ''
+                    groups = ""
                 # print(username, first_name, last_name, email, is_active, is_staff, is_superuser, groups)
                 group_objs = []
-                for group in groups.split(','):
+                for group in groups.split(","):
                     group_obj, _ = Group.objects.get_or_create(name=group.strip())
                     group_objs.append(group_obj)
 
@@ -41,10 +49,10 @@ class Command(BaseCommand):
                 )
                 if group_objs:
                     user_obj.groups.add(*group_objs)
-                if 'pi' in groups.split(','):
+                if "pi" in groups.split(","):
                     user_obj.is_pi = True
                 user_obj.save()
 
                 # print(user_obj)
 
-        print('Finished adding users.')
+        print("Finished adding users.")

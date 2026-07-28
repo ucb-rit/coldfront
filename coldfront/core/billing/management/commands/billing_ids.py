@@ -5,34 +5,34 @@ from django.core.management import CommandError
 from django.core.management.base import BaseCommand
 
 from coldfront.core.billing.models import BillingActivity
-from coldfront.core.billing.utils import ProjectBillingActivityManager
-from coldfront.core.billing.utils import ProjectUserBillingActivityManager
-from coldfront.core.billing.utils import UserBillingActivityManager
-from coldfront.core.billing.utils.queries import get_billing_activity_from_full_id
-from coldfront.core.billing.utils.queries import get_billing_id_usages
-from coldfront.core.billing.utils.queries import get_or_create_billing_activity_from_full_id
-from coldfront.core.billing.utils.queries import is_billing_id_well_formed
+from coldfront.core.billing.utils import (
+    ProjectBillingActivityManager,
+    ProjectUserBillingActivityManager,
+    UserBillingActivityManager,
+)
+from coldfront.core.billing.utils.queries import (
+    get_billing_activity_from_full_id,
+    get_billing_id_usages,
+    get_or_create_billing_activity_from_full_id,
+    is_billing_id_well_formed,
+)
 from coldfront.core.billing.utils.validation import is_billing_id_valid
-from coldfront.core.project.models import Project
-from coldfront.core.project.models import ProjectUser
+from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.utils.common import add_argparse_dry_run_argument
-
 
 """An admin command for creating and setting billing IDs."""
 
 
 class Command(BaseCommand):
+    help = "Create, set, or validate billing IDs."
 
-    help = 'Create, set, or validate billing IDs.'
-
-    logger = logging.getLogger('coldfront.commands')
+    logger = logging.getLogger("coldfront.commands")
 
     def add_arguments(self, parser):
         """Define subcommands with different functions."""
         subparsers = parser.add_subparsers(
-            dest='subcommand',
-            help='The subcommand to run.',
-            title='subcommands')
+            dest="subcommand", help="The subcommand to run.", title="subcommands"
+        )
         subparsers.required = True
         self._add_create_subparser(subparsers)
         self._add_list_subparser(subparsers)
@@ -41,14 +41,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Call the handler for the provided subcommand."""
-        subcommand = options['subcommand']
-        handler = getattr(self, f'_handle_{subcommand}')
+        subcommand = options["subcommand"]
+        handler = getattr(self, f"_handle_{subcommand}")
         handler(*args, **options)
 
     @staticmethod
     def _add_create_subparser(parsers):
         """Add a subparser for the 'create' subcommand."""
-        parser = parsers.add_parser('create', help='Create a billing ID.')
+        parser = parsers.add_parser("create", help="Create a billing ID.")
         add_billing_id_argument(parser)
         add_ignore_invalid_argument(parser)
         add_argparse_dry_run_argument(parser)
@@ -56,8 +56,7 @@ class Command(BaseCommand):
     @staticmethod
     def _add_list_subparser(parsers):
         """Add a subparser for the 'list' command."""
-        parser = parsers.add_parser(
-            'list', help='List billing IDs matching filters.')
+        parser = parsers.add_parser("list", help="List billing IDs matching filters.")
         add_billing_id_argument(parser, is_optional=True)
         add_project_name_argument(parser, is_optional=True)
         add_username_argument(parser, is_optional=True)
@@ -66,29 +65,32 @@ class Command(BaseCommand):
     def _add_set_subparser(parsers):
         """Add a subparser for the 'set' subcommand."""
         parser = parsers.add_parser(
-            'set', help='Set a billing ID for a particular entity.')
+            "set", help="Set a billing ID for a particular entity."
+        )
         subparsers = parser.add_subparsers(
-            dest='set_subcommand',
-            help='The subcommand to run.',
-            title='set_subcommands')
+            dest="set_subcommand",
+            help="The subcommand to run.",
+            title="set_subcommands",
+        )
         subparsers.required = True
 
         project_default_parser = subparsers.add_parser(
-            'project_default',
-            help=(
-                'Set the default billing ID for the Project with the given '
-                'name.'))
+            "project_default",
+            help=("Set the default billing ID for the Project with the given name."),
+        )
         add_project_name_argument(project_default_parser)
         add_billing_id_argument(project_default_parser)
         add_ignore_invalid_argument(project_default_parser)
         add_argparse_dry_run_argument(project_default_parser)
 
         recharge_parser = subparsers.add_parser(
-            'recharge',
+            "recharge",
             help=(
-                'Set the billing ID to be used for the Recharge fee for the '
-                'given User with the given user on the Project with the given '
-                'name.'))
+                "Set the billing ID to be used for the Recharge fee for the "
+                "given User with the given user on the Project with the given "
+                "name."
+            ),
+        )
         add_project_name_argument(recharge_parser)
         add_username_argument(recharge_parser)
         add_billing_id_argument(recharge_parser)
@@ -96,10 +98,12 @@ class Command(BaseCommand):
         add_argparse_dry_run_argument(recharge_parser)
 
         user_account_parser = subparsers.add_parser(
-            'user_account',
+            "user_account",
             help=(
-                'Set the billing ID to tbe used for the user account fee for '
-                'the User with the given username.'))
+                "Set the billing ID to tbe used for the user account fee for "
+                "the User with the given username."
+            ),
+        )
         add_username_argument(user_account_parser)
         add_billing_id_argument(user_account_parser)
         add_ignore_invalid_argument(user_account_parser)
@@ -108,14 +112,15 @@ class Command(BaseCommand):
     @staticmethod
     def _add_validate_subparser(parsers):
         parser = parsers.add_parser(
-            'validate', help=(
-                'Check whether one or more billing IDs are valid.'))
+            "validate", help=("Check whether one or more billing IDs are valid.")
+        )
 
         parser.add_argument(
-            'billing_ids',
-            help=('A space-separated list of billing IDs.'),
-            nargs='+',
-            type=str)
+            "billing_ids",
+            help=("A space-separated list of billing IDs."),
+            nargs="+",
+            type=str,
+        )
 
     @staticmethod
     def _get_billing_activity_or_error(full_id):
@@ -123,10 +128,10 @@ class Command(BaseCommand):
         fully-formed billing ID, if it exists, else raise a
         CommandError."""
         if not is_billing_id_well_formed(full_id):
-            raise CommandError(f'Billing ID {full_id} is malformed.')
+            raise CommandError(f"Billing ID {full_id} is malformed.")
         billing_activity = get_billing_activity_from_full_id(full_id)
         if not isinstance(billing_activity, BillingActivity):
-            raise CommandError(f'Billing ID {full_id} does not exist.')
+            raise CommandError(f"Billing ID {full_id} does not exist.")
         return billing_activity
 
     @staticmethod
@@ -136,8 +141,7 @@ class Command(BaseCommand):
         try:
             return Project.objects.get(name=project_name)
         except Project.DoesNotExist:
-            raise CommandError(
-                f'Project with name "{project_name}" does not exist.')
+            raise CommandError(f'Project with name "{project_name}" does not exist.')
 
     @staticmethod
     def _get_project_user_or_error(project, user):
@@ -147,8 +151,9 @@ class Command(BaseCommand):
             return ProjectUser.objects.get(project=project, user=user)
         except ProjectUser.DoesNotExist:
             raise CommandError(
-                f'ProjectUser for Project {project.name} and User '
-                f'{user.username} does not exist.')
+                f"ProjectUser for Project {project.name} and User "
+                f"{user.username} does not exist."
+            )
 
     @staticmethod
     def _get_user_or_error(username):
@@ -157,51 +162,48 @@ class Command(BaseCommand):
         try:
             return User.objects.get(username=username)
         except User.DoesNotExist:
-            raise CommandError(
-                f'User with username "{username}" does not exist.')
+            raise CommandError(f'User with username "{username}" does not exist.')
 
     def _handle_create(self, *args, **options):
         """Handle the 'create' subcommand."""
-        full_id = options['billing_id']
+        full_id = options["billing_id"]
         if not is_billing_id_well_formed(full_id):
-            raise CommandError(f'Billing ID {full_id} is malformed.')
+            raise CommandError(f"Billing ID {full_id} is malformed.")
         billing_activity = get_billing_activity_from_full_id(full_id)
         if isinstance(billing_activity, BillingActivity):
-            raise CommandError(f'Billing ID {full_id} already exists.')
-        self._validate_billing_id(
-            full_id, invalid_allowed=options['ignore_invalid'])
+            raise CommandError(f"Billing ID {full_id} already exists.")
+        self._validate_billing_id(full_id, invalid_allowed=options["ignore_invalid"])
 
-        dry_run = options['dry_run']
+        dry_run = options["dry_run"]
         if dry_run:
-            message = (
-                f'Would create a BillingActivity for billing ID {full_id}.')
+            message = f"Would create a BillingActivity for billing ID {full_id}."
             self.stdout.write(self.style.WARNING(message))
         else:
             try:
-                billing_activity = get_or_create_billing_activity_from_full_id(
-                    full_id)
+                billing_activity = get_or_create_billing_activity_from_full_id(full_id)
             except Exception as e:
                 self.logger.exception(e)
                 raise CommandError(e)
             else:
                 message = (
-                    f'Created BillingActivity {billing_activity.pk} for '
-                    f'billing ID {full_id}.')
+                    f"Created BillingActivity {billing_activity.pk} for "
+                    f"billing ID {full_id}."
+                )
             self.stdout.write(self.style.SUCCESS(message))
             self.logger.info(message)
 
     def _handle_list(self, *args, **options):
         """Handle the 'list' subcommand."""
-        kwargs = {'full_id': None, 'project_obj': None, 'user_obj': None}
-        billing_id = options['billing_id']
+        kwargs = {"full_id": None, "project_obj": None, "user_obj": None}
+        billing_id = options["billing_id"]
         if billing_id is not None:
-            kwargs['full_id'] = billing_id
-        project_name = options['project_name']
+            kwargs["full_id"] = billing_id
+        project_name = options["project_name"]
         if project_name is not None:
-            kwargs['project_obj'] = self._get_project_or_error(project_name)
-        username = options['username']
+            kwargs["project_obj"] = self._get_project_or_error(project_name)
+        username = options["username"]
         if username is not None:
-            kwargs['user_obj'] = self._get_user_or_error(username)
+            kwargs["user_obj"] = self._get_user_or_error(username)
         usages = get_billing_id_usages(**kwargs)
 
         full_id_by_billing_activity_pk = {}
@@ -216,13 +218,16 @@ class Command(BaseCommand):
                 full_id = BillingActivity.objects.get(pk=pk).full_id()
                 full_id_by_billing_activity_pk[pk] = full_id
             project_name = allocation_attribute.allocation.project.name
-            line = f'project_default,{project_name},{full_id}'
+            line = f"project_default,{project_name},{full_id}"
             self.stdout.write(line)
 
         # Only display a Recharge entry if the user has one of the following
         # statuses on the project.
         relevant_project_user_status_names = [
-            'Active', 'Pending - Add', 'Pending - Remove']
+            "Active",
+            "Pending - Add",
+            "Pending - Remove",
+        ]
         for allocation_user_attribute in usages.recharge:
             pk = int(allocation_user_attribute.value)
             if billing_id:
@@ -238,89 +243,83 @@ class Command(BaseCommand):
             user_has_relevant_status_on_project = ProjectUser.objects.filter(
                 project=allocation_user_attribute.allocation.project,
                 user=allocation_user_attribute.allocation_user.user,
-                status__name__in=relevant_project_user_status_names).exists()
+                status__name__in=relevant_project_user_status_names,
+            ).exists()
             if not user_has_relevant_status_on_project:
                 continue
 
-            line = f'recharge,{project_name},{username},{full_id}'
+            line = f"recharge,{project_name},{username},{full_id}"
             self.stdout.write(line)
 
         for user_profile in usages.user_account:
             full_id = user_profile.billing_activity.full_id()
             username = user_profile.user.username
-            line = f'user_account,{username},{full_id}'
+            line = f"user_account,{username},{full_id}"
             self.stdout.write(line)
 
     def _handle_set(self, *args, **options):
         """Handle the 'set' subcommand."""
-        billing_activity = self._get_billing_activity_or_error(
-            options['billing_id'])
+        billing_activity = self._get_billing_activity_or_error(options["billing_id"])
         self._validate_billing_id(
-            billing_activity.full_id(),
-            invalid_allowed=options['ignore_invalid'])
+            billing_activity.full_id(), invalid_allowed=options["ignore_invalid"]
+        )
 
-        dry_run = options['dry_run']
-        set_subcommand = options['set_subcommand']
-        if set_subcommand == 'project_default':
-            project = self._get_project_or_error(options['project_name'])
-            self._handle_set_project_default(
-                project, billing_activity, dry_run=dry_run)
-        elif set_subcommand == 'recharge':
-            project = self._get_project_or_error(options['project_name'])
-            user = self._get_user_or_error(options['username'])
+        dry_run = options["dry_run"]
+        set_subcommand = options["set_subcommand"]
+        if set_subcommand == "project_default":
+            project = self._get_project_or_error(options["project_name"])
+            self._handle_set_project_default(project, billing_activity, dry_run=dry_run)
+        elif set_subcommand == "recharge":
+            project = self._get_project_or_error(options["project_name"])
+            user = self._get_user_or_error(options["username"])
             project_user = self._get_project_user_or_error(project, user)
-            self._handle_set_recharge(
-                project_user, billing_activity, dry_run=dry_run)
-        elif set_subcommand == 'user_account':
-            user = self._get_user_or_error(options['username'])
-            self._handle_set_user_account(
-                user, billing_activity, dry_run=dry_run)
+            self._handle_set_recharge(project_user, billing_activity, dry_run=dry_run)
+        elif set_subcommand == "user_account":
+            user = self._get_user_or_error(options["username"])
+            self._handle_set_user_account(user, billing_activity, dry_run=dry_run)
 
     def _handle_validate(self, *args, **options):
         """Handle the 'validate' subcommand."""
-        for full_id in options['billing_ids']:
+        for full_id in options["billing_ids"]:
             if is_billing_id_well_formed(full_id):
                 if is_billing_id_valid(full_id):
-                    self.stdout.write(self.style.SUCCESS(full_id + ': Valid'))
+                    self.stdout.write(self.style.SUCCESS(full_id + ": Valid"))
                 else:
-                    self.stderr.write(self.style.ERROR(full_id + ': Invalid'))
+                    self.stderr.write(self.style.ERROR(full_id + ": Invalid"))
             else:
-                self.stderr.write(self.style.ERROR(full_id + ': Malformed'))
+                self.stderr.write(self.style.ERROR(full_id + ": Malformed"))
 
-    def _handle_set_project_default(self, project, billing_activity,
-                                    dry_run=False):
+    def _handle_set_project_default(self, project, billing_activity, dry_run=False):
         """Handle the 'project_default' subcommand of the 'set'
         subcommand."""
         entity = Entity(
             project,
-            f'Project {project.name} ({project.pk})',
-            ProjectBillingActivityManager)
-        self._set_billing_activity_for_entity(
-            entity, billing_activity, dry_run=dry_run)
+            f"Project {project.name} ({project.pk})",
+            ProjectBillingActivityManager,
+        )
+        self._set_billing_activity_for_entity(entity, billing_activity, dry_run=dry_run)
 
-    def _handle_set_recharge(self, project_user, billing_activity,
-                             dry_run=False):
+    def _handle_set_recharge(self, project_user, billing_activity, dry_run=False):
         """Handle the 'recharge' subcommand of the 'set' subcommand."""
         entity = Entity(
             project_user,
-            (f'ProjectUser {project_user.project.name}-'
-             f'{project_user.user.username} ({project_user.pk})'),
-            ProjectUserBillingActivityManager)
-        self._set_billing_activity_for_entity(
-            entity, billing_activity, dry_run=dry_run)
+            (
+                f"ProjectUser {project_user.project.name}-"
+                f"{project_user.user.username} ({project_user.pk})"
+            ),
+            ProjectUserBillingActivityManager,
+        )
+        self._set_billing_activity_for_entity(entity, billing_activity, dry_run=dry_run)
 
     def _handle_set_user_account(self, user, billing_activity, dry_run=False):
         """Handle the 'user_account' subcommand of the 'set'
         subcommand."""
         entity = Entity(
-            user,
-            f'User {user.username} ({user.pk})',
-            UserBillingActivityManager)
-        self._set_billing_activity_for_entity(
-            entity, billing_activity, dry_run=dry_run)
+            user, f"User {user.username} ({user.pk})", UserBillingActivityManager
+        )
+        self._set_billing_activity_for_entity(entity, billing_activity, dry_run=dry_run)
 
-    def _set_billing_activity_for_entity(self, entity, billing_activity,
-                                         dry_run=False):
+    def _set_billing_activity_for_entity(self, entity, billing_activity, dry_run=False):
         """Set the BillingActivity for the given Entity to the given
         one. Optionally display updates instead of performing them."""
         instance = entity.instance
@@ -331,15 +330,15 @@ class Command(BaseCommand):
 
         previous = manager.billing_activity
         previous_str = (
-            previous.full_id() if isinstance(previous, BillingActivity)
-            else None)
+            previous.full_id() if isinstance(previous, BillingActivity) else None
+        )
         new_str = billing_activity.full_id()
 
         if dry_run:
-            phrase = 'Would update'
+            phrase = "Would update"
             style = self.style.WARNING
         else:
-            phrase = 'Updated'
+            phrase = "Updated"
             style = self.style.SUCCESS
             try:
                 manager.billing_activity = billing_activity
@@ -347,8 +346,8 @@ class Command(BaseCommand):
                 self.logger.exception(e)
                 raise CommandError(e)
         message = (
-            f'{phrase} billing ID for {instance_str} from {previous_str} to '
-            f'{new_str}.')
+            f"{phrase} billing ID for {instance_str} from {previous_str} to {new_str}."
+        )
         self.stdout.write(style(message))
         if not dry_run:
             self.logger.info(message)
@@ -358,9 +357,9 @@ class Command(BaseCommand):
         If not, raise a CommandError or write a warning to stdout based
         on whether invalidity is allowed."""
         if not is_billing_id_valid(billing_id):
-            message = f'Billing ID {billing_id} is invalid.'
+            message = f"Billing ID {billing_id} is invalid."
             if invalid_allowed:
-                message += ' Proceeding anyway.'
+                message += " Proceeding anyway."
                 self.stdout.write(self.style.WARNING(message))
             else:
                 raise CommandError(message)
@@ -370,8 +369,8 @@ def add_billing_id_argument(parser, is_optional=False):
     """Add an argument 'billing_id' to the given argparse parser to
     accept a billing ID. Optionally make it an option rather than a
     positional argument."""
-    name = int(is_optional) * '--' + 'billing_id'
-    parser.add_argument(name, help='A billing ID (e.g., 123456-789).', type=str)
+    name = int(is_optional) * "--" + "billing_id"
+    parser.add_argument(name, help="A billing ID (e.g., 123456-789).", type=str)
 
 
 def add_ignore_invalid_argument(parser):
@@ -379,28 +378,29 @@ def add_ignore_invalid_argument(parser):
     parser to indicate that an action involving a billing ID should be
     taken, even if the ID is invalid."""
     parser.add_argument(
-        '--ignore_invalid',
-        action='store_true',
-        help='Allow the billing ID to be invalid.')
+        "--ignore_invalid",
+        action="store_true",
+        help="Allow the billing ID to be invalid.",
+    )
 
 
 def add_project_name_argument(parser, is_optional=False):
     """Add an argument 'project_name' to the given argparse parser to
     accept the name of a Project. Optionally make it an option rather
     than a positional argument."""
-    name = int(is_optional) * '--' + 'project_name'
-    parser.add_argument(name, help='The name of a project.', type=str)
+    name = int(is_optional) * "--" + "project_name"
+    parser.add_argument(name, help="The name of a project.", type=str)
 
 
 def add_username_argument(parser, is_optional=False):
     """Add an argument 'username' to the given argparse parser to accept
     the username of a User. Optionally make it an option rather than a
     positional argument."""
-    name = int(is_optional) * '--' + 'username'
-    parser.add_argument(name, help='The username of a user.', type=str)
+    name = int(is_optional) * "--" + "username"
+    parser.add_argument(name, help="The username of a user.", type=str)
 
 
-class Entity(object):
+class Entity:
     """A wrapper for storing details of a database object to set a
     BillingActivity for."""
 

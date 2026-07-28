@@ -8,7 +8,6 @@ from coldfront.core.resource.utils_.allowance_utils.interface import (
     get_computing_allowance_interface,
 )
 
-
 # ---------------------------------------------------------------------------
 # ComputingAllowanceInterface
 # ---------------------------------------------------------------------------
@@ -17,7 +16,6 @@ from coldfront.core.resource.utils_.allowance_utils.interface import (
 @pytest.mark.component
 @pytest.mark.django_db
 class TestComputingAllowanceInterface:
-
     def test_allowances_returns_non_empty_list(self):
         interface = ComputingAllowanceInterface()
         allowances = interface.allowances()
@@ -36,7 +34,7 @@ class TestComputingAllowanceInterface:
             except ComputingAllowanceInterfaceError:
                 pass
         if not tested_any:
-            pytest.skip('No allowances with codes found in test database')
+            pytest.skip("No allowances with codes found in test database")
 
     def test_name_short_round_trip(self):
         """name_short_from_name → allowance_from_name_short round-trips back."""
@@ -50,7 +48,7 @@ class TestComputingAllowanceInterface:
             except ComputingAllowanceInterfaceError:
                 pass
         if not tested_any:
-            pytest.skip('No allowances with name_short found in test database')
+            pytest.skip("No allowances with name_short found in test database")
 
     def test_allowance_from_project_uses_name_prefix(self):
         """allowance_from_project reads the first 3 chars of project.name as a code."""
@@ -62,27 +60,27 @@ class TestComputingAllowanceInterface:
                 continue
 
             class _FakeProject:
-                name = f'{code}_testproject'
+                name = f"{code}_testproject"
 
             assert interface.allowance_from_project(_FakeProject()) is allowance
             return  # one successful case is enough
 
-        pytest.skip('No allowances with codes found in test database')
+        pytest.skip("No allowances with codes found in test database")
 
     def test_allowance_from_code_raises_on_unknown_code(self):
         interface = ComputingAllowanceInterface()
         with pytest.raises(ComputingAllowanceInterfaceError):
-            interface.allowance_from_code('__nonexistent_code__')
+            interface.allowance_from_code("__nonexistent_code__")
 
     def test_allowance_from_name_short_raises_on_unknown(self):
         interface = ComputingAllowanceInterface()
         with pytest.raises(ComputingAllowanceInterfaceError):
-            interface.allowance_from_name_short('__nonexistent__')
+            interface.allowance_from_name_short("__nonexistent__")
 
     def test_code_from_name_raises_on_unknown_name(self):
         interface = ComputingAllowanceInterface()
         with pytest.raises(ComputingAllowanceInterfaceError):
-            interface.code_from_name('__nonexistent_allowance_name__')
+            interface.code_from_name("__nonexistent_allowance_name__")
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +91,6 @@ class TestComputingAllowanceInterface:
 @pytest.mark.component
 @pytest.mark.django_db
 class TestGetComputingAllowanceInterface:
-
     def test_returns_computing_allowance_interface_instance(self):
         result = get_computing_allowance_interface()
         assert isinstance(result, ComputingAllowanceInterface)

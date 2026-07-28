@@ -1,14 +1,13 @@
 from django.conf import settings
 from django.utils.module_loading import import_string
 
-
 """Methods relating to billing ID validation. This module is modeled
 after django.core.mail."""
 
 
 __all__ = [
-    'get_validator',
-    'is_billing_id_valid',
+    "get_validator",
+    "is_billing_id_valid",
 ]
 
 

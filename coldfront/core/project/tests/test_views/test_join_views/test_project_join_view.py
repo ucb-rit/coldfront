@@ -1,10 +1,15 @@
 from django.contrib.auth.models import User
-
-from coldfront.core.project.models import Project, ProjectUser, \
-    ProjectUserRoleChoice, ProjectUserStatusChoice, ProjectUserJoinRequest
-from coldfront.core.project.models import ProjectStatusChoice
-from coldfront.core.utils.tests.test_base import TestBase
 from django.urls import reverse
+
+from coldfront.core.project.models import (
+    Project,
+    ProjectStatusChoice,
+    ProjectUser,
+    ProjectUserJoinRequest,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
+from coldfront.core.utils.tests.test_base import TestBase
 
 
 class TestProjectJoinView(TestBase):
@@ -21,27 +26,25 @@ class TestProjectJoinView(TestBase):
     def project_join_url(pk):
         """Return the URL for joining the Project with the given primary
         key."""
-        return reverse('project-join', kwargs={'pk': pk})
+        return reverse("project-join", kwargs={"pk": pk})
 
     def test_new_archived_inactive_projects_not_joinable(self):
         """Test that Projects with the 'Inactive', 'Archived', or 'New' status
         cannot be joined."""
-        statuses = ['Inactive', 'Archived', 'New']
+        statuses = ["Inactive", "Archived", "New"]
         for status in statuses:
-            name = f'{status.lower()}_project'
+            name = f"{status.lower()}_project"
             status_obj = ProjectStatusChoice.objects.get(name=status)
-            project = Project.objects.create(
-                name=name, title=name, status=status_obj)
+            project = Project.objects.create(name=name, title=name, status=status_obj)
 
             url = self.project_join_url(project.pk)
             data = {
-                'reason': 'This is a test reason for joining the project.',
+                "reason": "This is a test reason for joining the project.",
             }
             response = self.client.post(url, data)
 
-            expected = \
-                f'Project {name} is {status}, and may not be joined.'
-            messages = list(response.context['messages'])
+            expected = f"Project {name} is {status}, and may not be joined."
+            messages = list(response.context["messages"])
             self.assertEqual(len(messages), 1)
             actual = messages[0].message
             self.assertEqual(expected, actual)
@@ -51,64 +54,59 @@ class TestProjectJoinView(TestBase):
         ProjectUserJoinRequest if a host user is passed."""
         # Create PI to set as host user.
         pi = User.objects.create(
-            email='pi@@lbl.gov',
-            first_name='PI',
-            last_name='User',
-            username='pi')
+            email="pi@@lbl.gov", first_name="PI", last_name="User", username="pi"
+        )
         pi.set_password(self.password)
         pi.save()
 
         # Create test project.
-        active_status = ProjectStatusChoice.objects.get(name='Active')
+        active_status = ProjectStatusChoice.objects.get(name="Active")
         project0 = Project.objects.create(
-            name='project0', title='project0', status=active_status)
+            name="project0", title="project0", status=active_status
+        )
         ProjectUser.objects.create(
             project=project0,
             user=pi,
-            status=ProjectUserStatusChoice.objects.get(name='Active'),
-            role=ProjectUserRoleChoice.objects.get(name='Principal Investigator')
+            status=ProjectUserStatusChoice.objects.get(name="Active"),
+            role=ProjectUserRoleChoice.objects.get(name="Principal Investigator"),
         )
 
         url = self.project_join_url(project0.pk)
         data = {
-            'reason': 'This is a test reason for joining the project '
-                      'with a host.',
-            'host_user': 'pi'
+            "reason": "This is a test reason for joining the project with a host.",
+            "host_user": "pi",
         }
         response = self.client.post(url, data)
 
-        join_request = ProjectUserJoinRequest.objects.filter(project_user__user=self.user,
-                                                             project_user__project=project0)
+        join_request = ProjectUserJoinRequest.objects.filter(
+            project_user__user=self.user, project_user__project=project0
+        )
         self.assertTrue(join_request.exists())
         self.assertEqual(join_request.first().host_user, pi)
-        self.assertEqual(join_request.first().reason, data['reason'])
+        self.assertEqual(join_request.first().reason, data["reason"])
 
     def test_no_host_user(self):
         """Test that ProjectJoinView does not set the host user in
         ProjectUserJoinRequest if a host user is not passed."""
         # Create PI to set as host user.
         pi = User.objects.create(
-            email='pi@@lbl.gov',
-            first_name='PI',
-            last_name='User',
-            username='pi')
+            email="pi@@lbl.gov", first_name="PI", last_name="User", username="pi"
+        )
         pi.set_password(self.password)
         pi.save()
 
         # Create test project.
-        project0 = self.create_active_project_with_pi('project0', pi)
+        project0 = self.create_active_project_with_pi("project0", pi)
 
         url = self.project_join_url(project0.pk)
-        data = {
-            'reason': 'This is a test reason for joining the project '
-                      'with a host.'
-        }
+        data = {"reason": "This is a test reason for joining the project with a host."}
         response = self.client.post(url, data)
 
-        join_request = ProjectUserJoinRequest.objects.filter(project_user__user=self.user,
-                                                             project_user__project=project0)
+        join_request = ProjectUserJoinRequest.objects.filter(
+            project_user__user=self.user, project_user__project=project0
+        )
         self.assertTrue(join_request.exists())
         self.assertIsNone(join_request.first().host_user)
-        self.assertEqual(join_request.first().reason, data['reason'])
+        self.assertEqual(join_request.first().reason, data["reason"])
 
     # TODO

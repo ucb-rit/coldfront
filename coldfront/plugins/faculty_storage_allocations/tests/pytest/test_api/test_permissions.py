@@ -1,7 +1,8 @@
 """Unit tests for API permission classes."""
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 from coldfront.plugins.faculty_storage_allocations.api.permissions import (
     IsSuperuserOrHasManagePermission,
@@ -44,7 +45,7 @@ class TestIsSuperuserOrHasManagePermission:
 
         # Check that has_perm was called with correct permission
         request.user.has_perm.assert_called_once_with(
-            'faculty_storage_allocations.can_manage_fsa_requests'
+            "faculty_storage_allocations.can_manage_fsa_requests"
         )
         assert result is True
 

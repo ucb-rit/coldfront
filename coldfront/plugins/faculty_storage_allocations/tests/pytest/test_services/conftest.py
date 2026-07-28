@@ -1,7 +1,8 @@
 """Fixtures specific to service tests."""
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 
 @pytest.fixture
@@ -11,8 +12,8 @@ def mock_allocation():
     allocation.id = 1
     allocation.project = Mock()
     allocation.project.id = 1
-    allocation.project.name = 'fc_test'
-    allocation.project.title = 'Test Project'
+    allocation.project.name = "fc_test"
+    allocation.project.title = "Test Project"
     return allocation
 
 
@@ -51,12 +52,10 @@ def mock_request_service():
 def mock_eligibility_service():
     """Return a mock FSARequestEligibilityService."""
     service = Mock()
-    service.check_pi_eligibility = Mock(return_value={
-        'is_eligible': True,
-        'reason': ''
-    })
-    service.check_project_eligibility = Mock(return_value={
-        'is_eligible': True,
-        'reason': ''
-    })
+    service.check_pi_eligibility = Mock(
+        return_value={"is_eligible": True, "reason": ""}
+    )
+    service.check_project_eligibility = Mock(
+        return_value={"is_eligible": True, "reason": ""}
+    )
     return service

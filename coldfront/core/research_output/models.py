@@ -1,6 +1,6 @@
+from django.contrib.auth.models import User
 from django.core.validators import MinLengthValidator
 from django.db import models
-from django.contrib.auth.models import User
 from model_utils.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
@@ -36,7 +36,7 @@ class ResearchOutput(TimeStampedModel):
             # populated by the code that adds the ResearchOutput to the
             # database
             if not self.created_by:
-                raise ValueError('Model INSERT must set a created_by User')
+                raise ValueError("Model INSERT must set a created_by User")
 
         # since title is optional, we want to simplify and standardize "no title" entries
         # we do this at the model layer to ensure as consistent behavior as possible

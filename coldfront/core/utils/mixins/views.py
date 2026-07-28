@@ -21,11 +21,11 @@ class ListFilterMixin:
 
     paginate_by = 25
 
-    def get_order_by(self, default='-id'):
+    def get_order_by(self, default="-id"):
         """Return the queryset order_by string derived from GET params."""
-        order_by = self.request.GET.get('order_by')
+        order_by = self.request.GET.get("order_by")
         if order_by:
-            direction = '' if self.request.GET.get('direction') == 'asc' else '-'
+            direction = "" if self.request.GET.get("direction") == "asc" else "-"
             return direction + order_by
         return default
 
@@ -36,17 +36,17 @@ class ListFilterMixin:
         ``ModelChoiceField``) are serialized as their PK. QuerySets (from
         ``ModelMultipleChoiceField``) emit one ``key=pk`` pair per element.
         """
-        result = ''
+        result = ""
         for k, v in data.items():
             if not v and v != 0:
                 continue
             if isinstance(v, Model):
-                result += f'{k}={v.pk}&'
+                result += f"{k}={v.pk}&"
             elif isinstance(v, QuerySet):
                 for ele in v:
-                    result += f'{k}={ele.pk}&'
+                    result += f"{k}={ele.pk}&"
             else:
-                result += f'{k}={v}&'
+                result += f"{k}={v}&"
         return result
 
     def paginate(self, queryset, context):
@@ -56,15 +56,15 @@ class ListFilterMixin:
         returns the current ``Page`` object.
         """
         paginator = Paginator(queryset, self.paginate_by)
-        page = self.request.GET.get('page')
+        page = self.request.GET.get("page")
         try:
             page_obj = paginator.page(page)
         except PageNotAnInteger:
             page_obj = paginator.page(1)
         except EmptyPage:
             page_obj = paginator.page(paginator.num_pages)
-        context['page_obj'] = page_obj
-        context['is_paginated'] = paginator.num_pages > 1
+        context["page_obj"] = page_obj
+        context["is_paginated"] = paginator.num_pages > 1
         return page_obj
 
 
@@ -82,46 +82,50 @@ class SnakeCaseTemplateNameMixin:
             # it should work in the majority of cases, even allowing us to change app/class/etc. names
             # but cases like DOIDisplay (or similar, using multiple caps in a row) would fail
 
-            return string[0].lower() + re.sub('([A-Z])', r'_\1', string[1:]).lower()
+            return string[0].lower() + re.sub("([A-Z])", r"_\1", string[1:]).lower()
 
         app_label = self.model._meta.app_label
         model_name = self.model.__name__
 
-        return ['{}/{}{}.html'.format(app_label, to_snake(model_name), self.template_name_suffix)]
+        return [f"{app_label}/{to_snake(model_name)}{self.template_name_suffix}.html"]
 
 
 class ProjectInContextMixin:
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
-        context['project'] = get_object_or_404(
-            Project, pk=self.kwargs.get('project_pk'))
+        context["project"] = get_object_or_404(
+            Project, pk=self.kwargs.get("project_pk")
+        )
 
         return context
 
 
 class ChangesOnlyOnActiveProjectMixin:
     def dispatch(self, request, *args, **kwargs):
-        project_obj = get_object_or_404(
-            Project, pk=self.kwargs.get('project_pk'))
-        if project_obj.status.name not in ['Active', 'New', ]:
-            messages.error(
-                request, 'You cannot modify an archived project.')
-            return HttpResponseRedirect(reverse('project-detail', kwargs={'pk': project_obj.pk}))
+        project_obj = get_object_or_404(Project, pk=self.kwargs.get("project_pk"))
+        if project_obj.status.name not in [
+            "Active",
+            "New",
+        ]:
+            messages.error(request, "You cannot modify an archived project.")
+            return HttpResponseRedirect(
+                reverse("project-detail", kwargs={"pk": project_obj.pk})
+            )
         else:
             return super().dispatch(request, *args, **kwargs)
 
 
 class UserActiveManagerOrHigherMixin(LoginRequiredMixin, UserPassesTestMixin):
     def test_func(self):
-        """ UserPassesTestMixin Tests"""
+        """UserPassesTestMixin Tests"""
         if self.request.user.is_superuser:
             return True
 
-        project_obj = get_object_or_404(
-            Project, pk=self.kwargs.get('project_pk'))
+        project_obj = get_object_or_404(Project, pk=self.kwargs.get("project_pk"))
 
         if project_obj.projectuser_set.filter(
-                user=self.request.user,
-                role__name__in=['Manager', 'Principal Investigator'],
-                status__name='Active').exists():
+            user=self.request.user,
+            role__name__in=["Manager", "Principal Investigator"],
+            status__name="Active",
+        ).exists():
             return True

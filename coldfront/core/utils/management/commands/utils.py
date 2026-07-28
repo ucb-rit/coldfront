@@ -1,5 +1,5 @@
-from oauth2client.service_account import ServiceAccountCredentials
 import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 """Utility methods for management commands."""
 
@@ -23,14 +23,14 @@ def get_gspread_worksheet(oauth2_key_file, spreadsheet_id, worksheet_id):
     """
     scopes = ["https://spreadsheets.google.com/feeds"]
     credentials = ServiceAccountCredentials.from_json_keyfile_name(
-        oauth2_key_file, scopes)
+        oauth2_key_file, scopes
+    )
     c = gspread.authorize(credentials)
     spreadsheet = c.open_by_key(spreadsheet_id)
     return spreadsheet.worksheet(worksheet_id)
 
 
-def get_gspread_worksheet_data(worksheet, row_start, row_end, col_start,
-                               col_end):
+def get_gspread_worksheet_data(worksheet, row_start, row_end, col_start, col_end):
     """Return a list of lists, where each row corresponds to a row in
     the given gspread worksheet. The lists are constrained by the row
     and column limits.
@@ -55,6 +55,7 @@ def get_gspread_worksheet_data(worksheet, row_start, row_end, col_start,
     index = 0
     for i in range(num_rows):
         data.append(
-            [cell.value.strip() for cell in cell_list[index:index + num_cols]])
+            [cell.value.strip() for cell in cell_list[index : index + num_cols]]
+        )
         index = index + num_cols
     return data

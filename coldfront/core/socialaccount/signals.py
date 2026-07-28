@@ -1,17 +1,13 @@
 from collections import deque
 import logging
 
+from allauth.account.models import EmailAddress
+from allauth.socialaccount.models import SocialLogin
+from allauth.socialaccount.signals import social_account_added, social_account_updated
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.dispatch import receiver
-
-from allauth.account.models import EmailAddress
-from allauth.socialaccount.models import SocialLogin
-from allauth.socialaccount.providers.base import AuthProcess
-from allauth.socialaccount.signals import social_account_added
-from allauth.socialaccount.signals import social_account_updated
-
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +24,16 @@ def handle_social_account_added_or_updated(sender, **kwargs):
     However, they are not created/updated when connecting SocialAccounts
     to existing users (using AuthProcess.CONNECT or by manually calling
     SocialLogin.connect), so they are created/updated here."""
-    request = kwargs['request']
-    social_login = kwargs['sociallogin']
+    request = kwargs["request"]
+    social_login = kwargs["sociallogin"]
     try:
         set_verified_email_addresses_from_social_login(social_login)
-    except Exception as e:
+    except Exception:
         message = (
-            'Failed to automatically create verified email addresses '
-            'from the connected account. Please do so in the User '
-            'Profile.')
+            "Failed to automatically create verified email addresses "
+            "from the connected account. Please do so in the User "
+            "Profile."
+        )
         messages.error(request, message)
 
 
@@ -64,8 +61,7 @@ def set_verified_email_addresses_from_social_login(social_login):
 
     existent, nonexistent = [], []
     for email_address in email_addresses:
-        matching_objs = EmailAddress.objects.filter(
-            email__iexact=email_address.email)
+        matching_objs = EmailAddress.objects.filter(email__iexact=email_address.email)
         if matching_objs.exists():
             existent.append(matching_objs.first())
         else:
@@ -74,15 +70,17 @@ def set_verified_email_addresses_from_social_login(social_login):
     for email_address in existent:
         if email_address.user != user:
             message = (
-                f'Account connection of User {user.pk} and provider '
-                f'{account.provider} failed because one of the provided email '
-                f'addresses ({email_address.pk}) is already associated with a '
-                f'different user ({email_address.user.pk}).')
+                f"Account connection of User {user.pk} and provider "
+                f"{account.provider} failed because one of the provided email "
+                f"addresses ({email_address.pk}) is already associated with a "
+                f"different user ({email_address.user.pk})."
+            )
             logger.error(message)
             raise Exception(
-                f'Account connection failed due to a provided email address '
-                f'({email_address.email}) already being associated with a '
-                f'different user.')
+                f"Account connection failed due to a provided email address "
+                f"({email_address.email}) already being associated with a "
+                f"different user."
+            )
 
     # A list of tuples of the form (logging_method_name, message_to_log).
     log_queue = deque()
@@ -94,24 +92,23 @@ def set_verified_email_addresses_from_social_login(social_login):
                     email_address.verified = True
                     email_address.save()
                     message = (
-                        f'Verified EmailAddress {email_address.pk} '
-                        f'({email_address.email}) when connecting an account '
-                        f'for User {user.pk}.')
-                    log_queue.append(('info', message))
+                        f"Verified EmailAddress {email_address.pk} "
+                        f"({email_address.email}) when connecting an account "
+                        f"for User {user.pk}."
+                    )
+                    log_queue.append(("info", message))
             for email_address in nonexistent:
                 created_address = EmailAddress.objects.create(
-                    user=user,
-                    email=email_address.email,
-                    verified=True,
-                    primary=False)
+                    user=user, email=email_address.email, verified=True, primary=False
+                )
                 message = (
-                    f'Created verified EmailAddress {created_address.pk} '
-                    f'({created_address.email}) when connecting an account '
-                    f'for User {user.pk}.')
-                log_queue.append(('info', message))
+                    f"Created verified EmailAddress {created_address.pk} "
+                    f"({created_address.email}) when connecting an account "
+                    f"for User {user.pk}."
+                )
+                log_queue.append(("info", message))
     except Exception as e:
-        logger.exception(
-            f'Failed to set EmailAddresses as verified. Details:\n{e}')
+        logger.exception(f"Failed to set EmailAddresses as verified. Details:\n{e}")
         raise e
     else:
         while log_queue:

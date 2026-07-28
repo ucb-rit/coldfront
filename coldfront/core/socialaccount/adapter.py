@@ -1,3 +1,6 @@
+from collections import defaultdict
+import logging
+
 from allauth.account.internal.emailkit import valid_email_or_none
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_email as user_email_func
@@ -5,19 +8,16 @@ from allauth.account.utils import user_username
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.providers.base import AuthProcess
-from coldfront.core.account.utils.login_activity import LoginActivityVerifier
-from coldfront.core.utils.context_processors import portal_and_program_names
-from collections import defaultdict
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.http import HttpResponseBadRequest
-from django.http import HttpResponseServerError
+from django.http import HttpResponseBadRequest, HttpResponseServerError
 from django.template.loader import render_to_string
 from django.urls import reverse
 from flags.state import flag_enabled
-import logging
 
+from coldfront.core.account.utils.login_activity import LoginActivityVerifier
+from coldfront.core.utils.context_processors import portal_and_program_names
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,8 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._flag_multiple_email_addresses_allowed = flag_enabled(
-            'MULTIPLE_EMAIL_ADDRESSES_ALLOWED')
+            "MULTIPLE_EMAIL_ADDRESSES_ALLOWED"
+        )
 
     def populate_user(self, request, sociallogin, data):
         """Handle logins using the CILogon provider differently. In
@@ -38,12 +39,13 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         user = super().populate_user(request, sociallogin, data)
 
         provider = sociallogin.account.provider
-        if provider == 'cilogon':
+        if provider == "cilogon":
             validated_email = valid_email_or_none(user.email)
             if not validated_email:
                 log_message = (
-                    f'Provider {provider} did not provide an email address for '
-                    f'user with UID {sociallogin.account.uid}.')
+                    f"Provider {provider} did not provide an email address for "
+                    f"user with UID {sociallogin.account.uid}."
+                )
                 logger.error(log_message)
                 self._raise_server_error(self._get_auth_error_message())
             validated_email = validated_email.lower()
@@ -58,9 +60,9 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         connecting a social account.
         """
         if self._flag_multiple_email_addresses_allowed:
-            url = reverse('socialaccount_connections')
+            url = reverse("socialaccount_connections")
         else:
-            url = reverse('home')
+            url = reverse("home")
         return url
 
     def pre_social_login(self, request, sociallogin):
@@ -91,7 +93,7 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         user_email = sociallogin.user.email
 
         # Do nothing if the provider is not CILogon.
-        if provider != 'cilogon':
+        if provider != "cilogon":
             return
 
         # If users are not allowed to have multiple emails, block new
@@ -108,7 +110,8 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         # information given by the provider, along with the identifying
         # addresses.
         user, addresses = self._identify_user_and_email_addresses(
-            sociallogin, provider, user_email, user_uid)
+            sociallogin, provider, user_email, user_uid
+        )
 
         # No single User could be identified. Proceed with sign up.
         if user is None:
@@ -118,62 +121,71 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         # so were unverified. Block the login and request email verification.
         if not any([a.verified for a in addresses]):
             self._block_login_for_verification(
-                request, sociallogin, provider, user, user_email, user_uid,
-                addresses)
+                request, sociallogin, provider, user, user_email, user_uid, addresses
+            )
 
         # A single User could be identified from at least one verified email
         # address. Connect to that User.
-        self._connect_user(
-            request, sociallogin, provider, user, user_email, user_uid)
+        self._connect_user(request, sociallogin, provider, user, user_email, user_uid)
 
-    def _block_login_for_verification(self, request, sociallogin, provider,
-                                      user, user_email, user_uid,
-                                      email_addresses):
+    def _block_login_for_verification(
+        self,
+        request,
+        sociallogin,
+        provider,
+        user,
+        user_email,
+        user_uid,
+        email_addresses,
+    ):
         """Block the login attempt and send verification emails to the
         given EmailAddresses."""
         log_message = (
-            f'Found only unverified email addresses associated with local User '
-            f'{user.pk} matching those given by provider {provider} for user '
-            f'with email {user_email} and UID {user_uid}.')
+            f"Found only unverified email addresses associated with local User "
+            f"{user.pk} matching those given by provider {provider} for user "
+            f"with email {user_email} and UID {user_uid}."
+        )
         logger.warning(log_message)
 
         try:
-            cilogon_idp = sociallogin.serialize()[
-                'account']['extra_data']['idp_name']
-            request_login_method_str = f'CILogon - {cilogon_idp}'
+            cilogon_idp = sociallogin.serialize()["account"]["extra_data"]["idp_name"]
+            request_login_method_str = f"CILogon - {cilogon_idp}"
         except Exception as e:
-            logger.exception(f'Failed to determine CILogon IDP. Details:\n{e}')
-            request_login_method_str = 'CILogon'
+            logger.exception(f"Failed to determine CILogon IDP. Details:\n{e}")
+            request_login_method_str = "CILogon"
         for email_address in email_addresses:
             verifier = LoginActivityVerifier(
-                request, email_address, request_login_method_str)
+                request, email_address, request_login_method_str
+            )
             verifier.send_email()
 
         message = (
-            'You are attempting to log in using an email address associated '
-            'with an existing user, but it is unverified. Please check the '
-            'address for a verification email.')
+            "You are attempting to log in using an email address associated "
+            "with an existing user, but it is unverified. Please check the "
+            "address for a verification email."
+        )
         self._raise_client_error(message)
 
     def _block_social_account_connection(self, sociallogin):
         """Raise a client error if the user is attempting to connect
         another SocialAccount to their account (as opposed to logging in
         with an existing one)."""
-        if sociallogin.state.get('process', None) == AuthProcess.CONNECT:
+        if sociallogin.state.get("process", None) == AuthProcess.CONNECT:
             message = (
-                'You may not connect more than one third-party account to your '
-                'portal account.')
+                "You may not connect more than one third-party account to your "
+                "portal account."
+            )
             self._raise_client_error(message)
 
     @staticmethod
-    def _connect_user(request, sociallogin, provider, user, user_email,
-                      user_uid):
+    def _connect_user(request, sociallogin, provider, user, user_email, user_uid):
         """Connect the provider account to the User's account in the
         database."""
         sociallogin.connect(request, user)
         log_message = (
-            f'Successfully connected data for user with email {user_email} and '
-            f'UID {user_uid} from provider {provider} to local User {user.pk}.')
+            f"Successfully connected data for user with email {user_email} and "
+            f"UID {user_uid} from provider {provider} to local User {user.pk}."
+        )
         logger.info(log_message)
 
     @staticmethod
@@ -181,28 +193,32 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         """Return the generic message the user should receive if
         authentication-related errors occur."""
         return (
-            f'Unexpected authentication error. Please contact '
-            f'{settings.CENTER_HELP_EMAIL} for further assistance.')
+            f"Unexpected authentication error. Please contact "
+            f"{settings.CENTER_HELP_EMAIL} for further assistance."
+        )
 
-    def _identify_user_and_email_addresses(self, sociallogin, provider,
-                                           user_email, user_uid):
+    def _identify_user_and_email_addresses(
+        self, sociallogin, provider, user_email, user_uid
+    ):
         """Attempt to identify a single existing User from
         provider-given email information. If able, return the User and a
         list of EmailAddress objects used to identify it, else (None,
         None). Raise a server error in some unexpected cases."""
-        user_by_email, user_by_email_email_addresses = \
-            self._identify_user_by_email(
-                sociallogin, provider, user_email, user_uid)
-        user_by_eppn, user_by_eppn_email_addresses = \
-            self._identify_user_by_eppn(sociallogin)
+        user_by_email, user_by_email_email_addresses = self._identify_user_by_email(
+            sociallogin, provider, user_email, user_uid
+        )
+        user_by_eppn, user_by_eppn_email_addresses = self._identify_user_by_eppn(
+            sociallogin
+        )
 
         if user_by_email and user_by_eppn:
             if user_by_email.pk != user_by_eppn.pk:
                 log_message = (
-                    f'Found two different local Users from information '
-                    f'provided by provider {provider} for user with email '
-                    f'{user_email} and UID {user_uid} (email lookup: '
-                    f'{user_by_email.pk}, eppn lookup: {user_by_eppn.pk}).')
+                    f"Found two different local Users from information "
+                    f"provided by provider {provider} for user with email "
+                    f"{user_email} and UID {user_uid} (email lookup: "
+                    f"{user_by_email.pk}, eppn lookup: {user_by_eppn.pk})."
+                )
                 logger.error(log_message)
                 self._raise_server_error(self._get_auth_error_message())
             else:
@@ -211,22 +227,24 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
                 all_email_addresses = list(
                     set.union(
                         set(user_by_email_email_addresses),
-                        set(user_by_eppn_email_addresses)))
+                        set(user_by_eppn_email_addresses),
+                    )
+                )
                 return user_by_email, all_email_addresses
         elif user_by_email:
             return user_by_email, user_by_email_email_addresses
         elif user_by_eppn:
             eppn = user_by_eppn_email_addresses[0].email
             log_message = (
-                f'Found a local User ({user_by_eppn.pk}) from eppn ({eppn}), '
-                f'and not from emails, provided by provider {provider} for '
-                f'user with email {user_email} and UID {user_uid}.')
+                f"Found a local User ({user_by_eppn.pk}) from eppn ({eppn}), "
+                f"and not from emails, provided by provider {provider} for "
+                f"user with email {user_email} and UID {user_uid}."
+            )
             logger.warning(log_message)
             return user_by_eppn, user_by_eppn_email_addresses
         return None, None
 
-    def _identify_user_by_email(self, sociallogin, provider, user_email,
-                                user_uid):
+    def _identify_user_by_email(self, sociallogin, provider, user_email, user_uid):
         """Attempt to identify a User using provider-given EmailAddress
         objects.
             - 0 identified: return None, None.
@@ -234,15 +252,15 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
               EmailAddress objects.
             - 2+ identified: raise a server error."""
         verified_provider_addresses = self._validate_provider_email_addresses(
-            sociallogin, provider, user_email, user_uid)
+            sociallogin, provider, user_email, user_uid
+        )
 
         # Fetch EmailAddresses matching those given by the provider, divided by
         # the associated User.
         matching_addresses_by_user = defaultdict(set)
         for address in verified_provider_addresses:
             try:
-                email_address = EmailAddress.objects.get(
-                    email__iexact=address.email)
+                email_address = EmailAddress.objects.get(email__iexact=address.email)
             except EmailAddress.DoesNotExist:
                 continue
             matching_addresses_by_user[email_address.user].add(email_address)
@@ -256,10 +274,11 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         else:
             user_pks = sorted([user.pk for user in matching_addresses_by_user])
             log_message = (
-                f'Unexpectedly found multiple Users ([{", ".join(user_pks)}]) '
-                f'that had email addresses matching those provided by '
-                f'provider {provider} for user with email {user_email} and '
-                f'UID {user_uid}.')
+                f"Unexpectedly found multiple Users ([{', '.join(user_pks)}]) "
+                f"that had email addresses matching those provided by "
+                f"provider {provider} for user with email {user_email} and "
+                f"UID {user_uid}."
+            )
             logger.error(log_message)
             self._raise_server_error(self._get_auth_error_message())
 
@@ -275,10 +294,10 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         address, even if it is in the format of an email address. Only
         if it matches an existing EmailAddress object can it be assumed
         that it is a valid address."""
-        login_extra_data = sociallogin.serialize()['account']['extra_data']
-        if 'eppn' not in login_extra_data:
+        login_extra_data = sociallogin.serialize()["account"]["extra_data"]
+        if "eppn" not in login_extra_data:
             return None, None
-        eppn = login_extra_data['eppn'].lower()
+        eppn = login_extra_data["eppn"].lower()
 
         try:
             validate_email(eppn)
@@ -302,8 +321,8 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         """Raise an ImmediateHttpResponse with an error HttpResponse
         class (e.g., HttpResponseBadRequest or HttpResponseServerError)
         error and the given message."""
-        template = 'error_with_message.html'
-        context = {'message': message, **portal_and_program_names(None)}
+        template = "error_with_message.html"
+        context = {"message": message, **portal_and_program_names(None)}
         html = render_to_string(template, context=context)
         response = response_class(html)
         raise ImmediateHttpResponse(response)
@@ -313,8 +332,9 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         given message."""
         self._raise_error(HttpResponseServerError, message)
 
-    def _validate_provider_email_addresses(self, sociallogin, provider,
-                                           user_email, user_uid):
+    def _validate_provider_email_addresses(
+        self, sociallogin, provider, user_email, user_uid
+    ):
         """Process email addresses given by the provider. Raise a server
         error if none are given, or if none are verified. Raise a list
         of verified addresses."""
@@ -323,8 +343,9 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         # If the provider does not provide any addresses, raise an error.
         if num_provider_addresses == 0:
             log_message = (
-                f'Provider {provider} did not provide any email addresses for '
-                f'User with email {user_email} and UID {user_uid}.')
+                f"Provider {provider} did not provide any email addresses for "
+                f"User with email {user_email} and UID {user_uid}."
+            )
             logger.error(log_message)
             self._raise_server_error(self._get_auth_error_message())
         # In general, it is expected that a provider will only give one address.
@@ -333,20 +354,23 @@ class CILogonAccountAdapter(DefaultSocialAccountAdapter):
         # a warning.
         elif num_provider_addresses > 1:
             log_message = (
-                f'Provider {provider} provided more than one email address for '
-                f'User with email {user_email} and UID {user_uid}: '
-                f'{", ".join(provider_addresses)}.')
+                f"Provider {provider} provided more than one email address for "
+                f"User with email {user_email} and UID {user_uid}: "
+                f"{', '.join(provider_addresses)}."
+            )
             logger.warning(log_message)
 
         # SOCIALACCOUNT_PROVIDERS['cilogon']['VERIFIED_EMAIL'] should be True,
         # so all provider-given addresses should be interpreted as verified.
         verified_provider_addresses = [
-            address for address in provider_addresses if address.verified]
+            address for address in provider_addresses if address.verified
+        ]
         # If, for whatever reason, they are not, raise an error.
         if not verified_provider_addresses:
             log_message = (
-                f'None of the email addresses in '
-                f'[{", ".join(provider_addresses)}] are verified.')
+                f"None of the email addresses in "
+                f"[{', '.join(provider_addresses)}] are verified."
+            )
             logger.error(log_message)
             self._raise_server_error(self._get_auth_error_message())
 

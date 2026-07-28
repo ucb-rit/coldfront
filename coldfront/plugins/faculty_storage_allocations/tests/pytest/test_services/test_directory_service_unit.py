@@ -4,14 +4,15 @@ Tests business logic by mocking database calls. For tests with real database
 access, see test_directory_service_integration.py.
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from coldfront.core.project.models import Project
 from coldfront.plugins.faculty_storage_allocations.services import DirectoryService
 
 
-def create_mock_project(name='fc_test'):
+def create_mock_project(name="fc_test"):
     """Helper to create a mock Project that passes isinstance checks."""
     mock_project = Mock(spec=Project)
     mock_project.name = name
@@ -22,13 +23,15 @@ def create_mock_project(name='fc_test'):
 class TestDirectoryServiceInit:
     """Unit tests for DirectoryService initialization."""
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
     def test_init_with_project_and_directory_name(self, mock_resource):
         """Test DirectoryService initializes with project and directory name."""
         # Setup
         mock_project = create_mock_project()
-        directory_name = 'test_dir'
+        directory_name = "test_dir"
 
         # Mock the resource lookup
         mock_faculty_storage = Mock()
@@ -36,9 +39,8 @@ class TestDirectoryServiceInit:
 
         # Mock the path attribute
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Execute
         service = DirectoryService(mock_project, directory_name)
@@ -46,22 +48,33 @@ class TestDirectoryServiceInit:
         # Assert
         assert service.project == mock_project
         assert service.directory_name == directory_name
-        assert service._directory_path == '/global/scratch/fsa/test_dir'
+        assert service._directory_path == "/global/scratch/fsa/test_dir"
         mock_resource.objects.get.assert_called_once_with(
-            name='Scratch Faculty Storage Directory'
+            name="Scratch Faculty Storage Directory"
         )
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttribute')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttributeType')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttribute"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttributeType"
+    )
     def test_for_project_class_method_finds_existing_allocation(
-        self, mock_attr_type_model, mock_attr_model, mock_allocation_model,
-        mock_resource_model
+        self,
+        mock_attr_type_model,
+        mock_attr_model,
+        mock_allocation_model,
+        mock_resource_model,
     ):
         """Test for_project() finds existing directory allocation."""
         # Setup
@@ -73,9 +86,8 @@ class TestDirectoryServiceInit:
 
         # Mock path resource attribute
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation exists
         mock_allocation = Mock()
@@ -87,11 +99,10 @@ class TestDirectoryServiceInit:
 
         # Mock allocation attribute lookup
         mock_allocation_attr_type = Mock()
-        mock_attr_type_model.objects.get.return_value = \
-            mock_allocation_attr_type
+        mock_attr_type_model.objects.get.return_value = mock_allocation_attr_type
 
         mock_directory_attr = Mock()
-        mock_directory_attr.value = '/global/scratch/fsa/my_test_dir'
+        mock_directory_attr.value = "/global/scratch/fsa/my_test_dir"
         mock_attr_model.objects.get.return_value = mock_directory_attr
 
         # Execute
@@ -99,13 +110,17 @@ class TestDirectoryServiceInit:
 
         # Assert
         assert service is not None
-        assert service.directory_name == 'my_test_dir'
+        assert service.directory_name == "my_test_dir"
         assert service.project == mock_project
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
     def test_for_project_returns_none_if_not_found(
         self, mock_allocation_model, mock_resource_model
     ):
@@ -128,10 +143,14 @@ class TestDirectoryServiceInit:
         # Assert
         assert service is None
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
     def test_get_directory_name_raises_on_multiple_allocations(
         self, mock_allocation_model, mock_resource_model
     ):
@@ -151,7 +170,7 @@ class TestDirectoryServiceInit:
         mock_allocation_model.objects.filter.return_value = mock_queryset
 
         # Execute & Assert
-        with pytest.raises(ValueError, match='multiple faculty storage'):
+        with pytest.raises(ValueError, match="multiple faculty storage"):
             DirectoryService.get_directory_name_for_project(mock_project)
 
 
@@ -159,23 +178,43 @@ class TestDirectoryServiceInit:
 class TestDirectoryServiceDirectoryOperations:
     """Unit tests for directory creation and management."""
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.transaction')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationStatusChoice')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttributeType')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttribute')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.display_time_zone_current_date')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.transaction"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationStatusChoice"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttributeType"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttribute"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.display_time_zone_current_date"
+    )
     def test_create_directory_creates_allocation_when_not_exists(
-        self, mock_date, mock_attr_model, mock_attr_type, mock_status,
-        mock_allocation_model, mock_resource, mock_transaction
+        self,
+        mock_date,
+        mock_attr_model,
+        mock_attr_type,
+        mock_status,
+        mock_allocation_model,
+        mock_resource,
+        mock_transaction,
     ):
         """Test create_directory() creates new allocation when none exists."""
         # Setup
@@ -189,53 +228,54 @@ class TestDirectoryServiceDirectoryOperations:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock status
         mock_active_status = Mock()
         mock_status.objects.get.return_value = mock_active_status
 
         # Mock date
-        mock_date.return_value = '2025-01-15'
+        mock_date.return_value = "2025-01-15"
 
         # Mock allocation doesn't exist initially - need real exception class
-        mock_allocation_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
-        mock_allocation_model.objects.get.side_effect = \
+        mock_allocation_model.DoesNotExist = type("DoesNotExist", (Exception,), {})
+        mock_allocation_model.objects.get.side_effect = (
             mock_allocation_model.DoesNotExist
+        )
 
         # Mock creating new allocation
         mock_new_allocation = Mock()
-        mock_allocation_model.objects.create.return_value = \
-            mock_new_allocation
+        mock_allocation_model.objects.create.return_value = mock_new_allocation
 
         # Mock attribute type
         mock_path_attr_type = Mock()
         mock_attr_type.objects.get.return_value = mock_path_attr_type
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         result = service.create_directory()
 
         # Assert
         mock_allocation_model.objects.create.assert_called_once_with(
-            project=mock_project,
-            start_date='2025-01-15',
-            status=mock_active_status
+            project=mock_project, start_date="2025-01-15", status=mock_active_status
         )
-        mock_new_allocation.resources.add.assert_called_once_with(
-            mock_faculty_storage
-        )
+        mock_new_allocation.resources.add.assert_called_once_with(mock_faculty_storage)
         mock_attr_model.objects.create.assert_called_once()
         assert result == mock_new_allocation
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationStatusChoice')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationStatusChoice"
+    )
     def test_create_directory_is_idempotent(
         self, mock_status, mock_allocation_model, mock_resource
     ):
@@ -247,9 +287,8 @@ class TestDirectoryServiceDirectoryOperations:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock status
         mock_active_status = Mock()
@@ -257,12 +296,11 @@ class TestDirectoryServiceDirectoryOperations:
 
         # Mock allocation already exists
         mock_existing_allocation = Mock()
-        mock_existing_allocation.start_date = '2025-01-01'
-        mock_allocation_model.objects.get.return_value = \
-            mock_existing_allocation
+        mock_existing_allocation.start_date = "2025-01-01"
+        mock_allocation_model.objects.get.return_value = mock_existing_allocation
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         result = service.create_directory()
 
         # Assert - should update, not create
@@ -271,10 +309,14 @@ class TestDirectoryServiceDirectoryOperations:
         mock_existing_allocation.save.assert_called_once()
         assert result == mock_existing_allocation
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
     def test_directory_exists_returns_true_when_found(
         self, mock_allocation_model, mock_resource
     ):
@@ -286,9 +328,8 @@ class TestDirectoryServiceDirectoryOperations:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation exists
         mock_queryset = Mock()
@@ -296,16 +337,20 @@ class TestDirectoryServiceDirectoryOperations:
         mock_allocation_model.objects.filter.return_value = mock_queryset
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         exists = service.directory_exists()
 
         # Assert
         assert exists is True
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
     def test_directory_exists_returns_false_when_not_found(
         self, mock_allocation_model, mock_resource
     ):
@@ -317,9 +362,8 @@ class TestDirectoryServiceDirectoryOperations:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation doesn't exist
         mock_queryset = Mock()
@@ -327,7 +371,7 @@ class TestDirectoryServiceDirectoryOperations:
         mock_allocation_model.objects.filter.return_value = mock_queryset
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         exists = service.directory_exists()
 
         # Assert
@@ -338,17 +382,24 @@ class TestDirectoryServiceDirectoryOperations:
 class TestDirectoryServiceQuotaOperations:
     """Unit tests for quota management."""
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttributeType')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttribute')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttributeType"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttribute"
+    )
     def test_get_current_quota_gb_returns_quota(
-        self, mock_attr_model, mock_attr_type, mock_allocation_model,
-        mock_resource
+        self, mock_attr_model, mock_attr_type, mock_allocation_model, mock_resource
     ):
         """Test get_current_quota_gb() retrieves quota from allocation."""
         # Setup
@@ -358,9 +409,8 @@ class TestDirectoryServiceQuotaOperations:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation exists
         mock_allocation = Mock()
@@ -372,30 +422,35 @@ class TestDirectoryServiceQuotaOperations:
 
         # Mock quota attribute
         mock_quota_attr = Mock()
-        mock_quota_attr.value = '5000'
+        mock_quota_attr.value = "5000"
         mock_attr_model.objects.get.return_value = mock_quota_attr
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         quota = service.get_current_quota_gb()
 
         # Assert
         assert quota == 5000
-        mock_attr_type.objects.get.assert_called_once_with(
-            name='Storage Quota (GB)'
-        )
+        mock_attr_type.objects.get.assert_called_once_with(name="Storage Quota (GB)")
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttributeType')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttribute')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttributeType"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttribute"
+    )
     def test_get_current_quota_gb_returns_zero_when_no_allocation(
-        self, mock_attr_model, mock_attr_type, mock_allocation_model,
-        mock_resource
+        self, mock_attr_model, mock_attr_type, mock_allocation_model, mock_resource
     ):
         """Test get_current_quota_gb() returns 0 when no allocation exists."""
         # Setup
@@ -405,33 +460,40 @@ class TestDirectoryServiceQuotaOperations:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation doesn't exist - need real exception class
-        mock_allocation_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
-        mock_allocation_model.objects.get.side_effect = \
+        mock_allocation_model.DoesNotExist = type("DoesNotExist", (Exception,), {})
+        mock_allocation_model.objects.get.side_effect = (
             mock_allocation_model.DoesNotExist
+        )
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         quota = service.get_current_quota_gb()
 
         # Assert
         assert quota == 0
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttributeType')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttribute')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttributeType"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttribute"
+    )
     def test_get_current_quota_gb_returns_zero_when_no_quota_attr(
-        self, mock_attr_model, mock_attr_type, mock_allocation_model,
-        mock_resource
+        self, mock_attr_model, mock_attr_type, mock_allocation_model, mock_resource
     ):
         """Test get_current_quota_gb() returns 0 when allocation has no
         quota."""
@@ -442,9 +504,8 @@ class TestDirectoryServiceQuotaOperations:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation exists
         mock_allocation = Mock()
@@ -455,28 +516,34 @@ class TestDirectoryServiceQuotaOperations:
         mock_attr_type.objects.get.return_value = mock_quota_attr_type
 
         # Mock quota attribute doesn't exist - need real exception class
-        mock_attr_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
-        mock_attr_model.objects.get.side_effect = \
-            mock_attr_model.DoesNotExist
+        mock_attr_model.DoesNotExist = type("DoesNotExist", (Exception,), {})
+        mock_attr_model.objects.get.side_effect = mock_attr_model.DoesNotExist
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         quota = service.get_current_quota_gb()
 
         # Assert
         assert quota == 0
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttributeType')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttribute')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttributeType"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttribute"
+    )
     def test_set_directory_quota_updates_quota(
-        self, mock_attr_model, mock_attr_type, mock_allocation_model,
-        mock_resource
+        self, mock_attr_model, mock_attr_type, mock_allocation_model, mock_resource
     ):
         """Test set_directory_quota() sets quota attribute."""
         # Setup
@@ -486,9 +553,8 @@ class TestDirectoryServiceQuotaOperations:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation exists
         mock_allocation = Mock()
@@ -499,20 +565,24 @@ class TestDirectoryServiceQuotaOperations:
         mock_attr_type.objects.get.return_value = mock_quota_attr_type
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         service.set_directory_quota(5000)
 
         # Assert
         mock_attr_model.objects.update_or_create.assert_called_once_with(
             allocation_attribute_type=mock_quota_attr_type,
             allocation=mock_allocation,
-            defaults={'value': '5000'}
+            defaults={"value": "5000"},
         )
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
     def test_set_directory_quota_raises_when_no_allocation(
         self, mock_allocation_model, mock_resource
     ):
@@ -525,31 +595,38 @@ class TestDirectoryServiceQuotaOperations:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation doesn't exist - need real exception class
-        mock_allocation_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
-        mock_allocation_model.objects.get.side_effect = \
+        mock_allocation_model.DoesNotExist = type("DoesNotExist", (Exception,), {})
+        mock_allocation_model.objects.get.side_effect = (
             mock_allocation_model.DoesNotExist
+        )
 
         # Execute & Assert
-        service = DirectoryService(mock_project, 'test_dir')
-        with pytest.raises(ValueError, match='Cannot set quota'):
+        service = DirectoryService(mock_project, "test_dir")
+        with pytest.raises(ValueError, match="Cannot set quota"):
             service.set_directory_quota(5000)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttributeType')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationAttribute')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttributeType"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationAttribute"
+    )
     def test_add_to_directory_quota_adds_to_existing(
-        self, mock_attr_model, mock_attr_type, mock_allocation_model,
-        mock_resource
+        self, mock_attr_model, mock_attr_type, mock_allocation_model, mock_resource
     ):
         """Test add_to_directory_quota() adds to current quota."""
         # Setup
@@ -559,9 +636,8 @@ class TestDirectoryServiceQuotaOperations:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation exists
         mock_allocation = Mock()
@@ -573,18 +649,18 @@ class TestDirectoryServiceQuotaOperations:
 
         # Mock existing quota of 1000 GB
         mock_quota_attr = Mock()
-        mock_quota_attr.value = '1000'
+        mock_quota_attr.value = "1000"
         mock_attr_model.objects.get.return_value = mock_quota_attr
 
         # Execute - add 500 GB
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         service.add_to_directory_quota(500)
 
         # Assert - should set to 1500 GB
         mock_attr_model.objects.update_or_create.assert_called_once_with(
             allocation_attribute_type=mock_quota_attr_type,
             allocation=mock_allocation,
-            defaults={'value': '1500'}
+            defaults={"value": "1500"},
         )
 
 
@@ -592,12 +668,18 @@ class TestDirectoryServiceQuotaOperations:
 class TestDirectoryServiceUserManagement:
     """Unit tests for adding users to directories."""
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.get_or_create_active_allocation_user')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.get_or_create_active_allocation_user"
+    )
     def test_add_user_to_directory_creates_allocation_user(
         self, mock_get_or_create, mock_allocation_model, mock_resource
     ):
@@ -610,9 +692,8 @@ class TestDirectoryServiceUserManagement:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation exists
         mock_allocation = Mock()
@@ -623,19 +704,21 @@ class TestDirectoryServiceUserManagement:
         mock_get_or_create.return_value = mock_allocation_user
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         result = service.add_user_to_directory(mock_user)
 
         # Assert
-        mock_get_or_create.assert_called_once_with(
-            mock_allocation, mock_user
-        )
+        mock_get_or_create.assert_called_once_with(mock_allocation, mock_user)
         assert result == mock_allocation_user
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
     def test_add_user_to_directory_raises_when_no_allocation(
         self, mock_allocation_model, mock_resource
     ):
@@ -649,33 +732,47 @@ class TestDirectoryServiceUserManagement:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation doesn't exist - need real exception class
-        mock_allocation_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
-        mock_allocation_model.objects.get.side_effect = \
+        mock_allocation_model.DoesNotExist = type("DoesNotExist", (Exception,), {})
+        mock_allocation_model.objects.get.side_effect = (
             mock_allocation_model.DoesNotExist
+        )
 
         # Execute & Assert
-        service = DirectoryService(mock_project, 'test_dir')
-        with pytest.raises(ValueError, match='Cannot add user'):
+        service = DirectoryService(mock_project, "test_dir")
+        with pytest.raises(ValueError, match="Cannot add user"):
             service.add_user_to_directory(mock_user)
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.transaction')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.ProjectUser')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.get_or_create_active_allocation_user')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.transaction"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.ProjectUser"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.get_or_create_active_allocation_user"
+    )
     def test_add_project_users_to_directory_adds_all_active_users(
-        self, mock_get_or_create, mock_project_user_model,
-        mock_allocation_model, mock_resource, mock_transaction
+        self,
+        mock_get_or_create,
+        mock_project_user_model,
+        mock_allocation_model,
+        mock_resource,
+        mock_transaction,
     ):
         """Test add_project_users_to_directory() adds all active project
         users."""
@@ -690,9 +787,8 @@ class TestDirectoryServiceUserManagement:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation exists
         mock_allocation = Mock()
@@ -707,9 +803,7 @@ class TestDirectoryServiceUserManagement:
         mock_pu3.user = Mock()
 
         mock_queryset = Mock()
-        mock_queryset.__iter__ = Mock(return_value=iter([
-            mock_pu1, mock_pu2, mock_pu3
-        ]))
+        mock_queryset.__iter__ = Mock(return_value=iter([mock_pu1, mock_pu2, mock_pu3]))
         mock_project_user_model.objects.filter.return_value = mock_queryset
 
         # Mock allocation user creation
@@ -719,7 +813,7 @@ class TestDirectoryServiceUserManagement:
         mock_get_or_create.side_effect = [mock_au1, mock_au2, mock_au3]
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         result = service.add_project_users_to_directory()
 
         # Assert
@@ -727,12 +821,18 @@ class TestDirectoryServiceUserManagement:
         assert result == [mock_au1, mock_au2, mock_au3]
         assert mock_get_or_create.call_count == 3
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.ProjectUser')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.ProjectUser"
+    )
     def test_add_project_users_to_directory_raises_when_no_allocation(
         self, mock_project_user_model, mock_allocation_model, mock_resource
     ):
@@ -745,26 +845,32 @@ class TestDirectoryServiceUserManagement:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation doesn't exist - need real exception class
-        mock_allocation_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
-        mock_allocation_model.objects.get.side_effect = \
+        mock_allocation_model.DoesNotExist = type("DoesNotExist", (Exception,), {})
+        mock_allocation_model.objects.get.side_effect = (
             mock_allocation_model.DoesNotExist
+        )
 
         # Execute & Assert
-        service = DirectoryService(mock_project, 'test_dir')
-        with pytest.raises(ValueError, match='Cannot add users'):
+        service = DirectoryService(mock_project, "test_dir")
+        with pytest.raises(ValueError, match="Cannot add users"):
             service.add_project_users_to_directory()
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationUserStatusChoice')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationUserStatusChoice"
+    )
     def test_remove_user_from_directory_sets_status_to_removed(
         self, mock_status, mock_allocation_model, mock_resource
     ):
@@ -777,9 +883,8 @@ class TestDirectoryServiceUserManagement:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation exists
         mock_allocation = Mock()
@@ -796,7 +901,7 @@ class TestDirectoryServiceUserManagement:
         mock_status.objects.get.return_value = mock_removed_status
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         result = service.remove_user_from_directory(mock_user)
 
         # Assert
@@ -804,12 +909,18 @@ class TestDirectoryServiceUserManagement:
         assert mock_allocation_user.status == mock_removed_status
         mock_allocation_user.save.assert_called_once()
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.AllocationUser')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.AllocationUser"
+    )
     def test_remove_user_from_directory_returns_none_when_user_not_found(
         self, mock_allocation_user_model, mock_allocation_model, mock_resource
     ):
@@ -823,31 +934,34 @@ class TestDirectoryServiceUserManagement:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation exists
         mock_allocation = Mock()
         mock_allocation_model.objects.get.return_value = mock_allocation
 
         # Mock allocation user doesn't exist - need real exception class
-        mock_allocation_user_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
+        mock_allocation_user_model.DoesNotExist = type("DoesNotExist", (Exception,), {})
         mock_queryset = Mock()
         mock_queryset.get.side_effect = mock_allocation_user_model.DoesNotExist
         mock_allocation.allocationuser_set = mock_queryset
 
         # Execute
-        service = DirectoryService(mock_project, 'test_dir')
+        service = DirectoryService(mock_project, "test_dir")
         result = service.remove_user_from_directory(mock_user)
 
         # Assert
         assert result is None
 
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Resource')
-    @patch('coldfront.plugins.faculty_storage_allocations.services.'
-           'directory_service.Allocation')
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Resource"
+    )
+    @patch(
+        "coldfront.plugins.faculty_storage_allocations.services."
+        "directory_service.Allocation"
+    )
     def test_remove_user_from_directory_raises_when_no_allocation(
         self, mock_allocation_model, mock_resource
     ):
@@ -861,16 +975,16 @@ class TestDirectoryServiceUserManagement:
         mock_faculty_storage = Mock()
         mock_resource.objects.get.return_value = mock_faculty_storage
         mock_path_attr = Mock()
-        mock_path_attr.value = '/global/scratch/fsa'
-        mock_faculty_storage.resourceattribute_set.get.return_value = \
-            mock_path_attr
+        mock_path_attr.value = "/global/scratch/fsa"
+        mock_faculty_storage.resourceattribute_set.get.return_value = mock_path_attr
 
         # Mock allocation doesn't exist - need real exception class
-        mock_allocation_model.DoesNotExist = type('DoesNotExist', (Exception,), {})
-        mock_allocation_model.objects.get.side_effect = \
+        mock_allocation_model.DoesNotExist = type("DoesNotExist", (Exception,), {})
+        mock_allocation_model.objects.get.side_effect = (
             mock_allocation_model.DoesNotExist
+        )
 
         # Execute & Assert
-        service = DirectoryService(mock_project, 'test_dir')
-        with pytest.raises(ValueError, match='Cannot remove user'):
+        service = DirectoryService(mock_project, "test_dir")
+        with pytest.raises(ValueError, match="Cannot remove user"):
             service.remove_user_from_directory(mock_user)

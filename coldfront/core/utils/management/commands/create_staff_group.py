@@ -1,44 +1,47 @@
 from django.contrib.auth.models import Group, Permission
 from django.core.management.base import BaseCommand
-
 from flags.state import flag_enabled
 
 
 class Command(BaseCommand):
-    help = 'Create group for staff with all necessary permissions.'
+    help = "Create group for staff with all necessary permissions."
 
     def handle(self, *args, **options):
-        new_group, created = Group.objects.get_or_create(name='staff_group')
+        new_group, created = Group.objects.get_or_create(name="staff_group")
 
         if not created:
             new_group.permissions.clear()
 
         perm_codename_lst = [
-            'view_allocationadditionrequest',
-            'view_allocationrenewalrequest',
-            'view_vectorprojectallocationrequest',
-            'view_savioprojectallocationrequest',
-            'can_review_cluster_account_requests',
-            'can_review_pending_project_reviews',
-            'can_view_all_allocations',
-            'can_view_all_projects',
-            'view_projectuserjoinrequest',
-            'view_projectuserremovalrequest',
-            'view_job',
-            'view_securediradduserrequest',
-            'view_securedirremoveuserrequest',
-            'view_securedirrequest',
+            "view_allocationadditionrequest",
+            "view_allocationrenewalrequest",
+            "view_vectorprojectallocationrequest",
+            "view_savioprojectallocationrequest",
+            "can_review_cluster_account_requests",
+            "can_review_pending_project_reviews",
+            "can_view_all_allocations",
+            "can_view_all_projects",
+            "view_projectuserjoinrequest",
+            "view_projectuserremovalrequest",
+            "view_job",
+            "view_securediradduserrequest",
+            "view_securedirremoveuserrequest",
+            "view_securedirrequest",
         ]
 
-        if flag_enabled('FACULTY_STORAGE_ALLOCATIONS_ENABLED'):
-            perm_codename_lst.extend([
-                'can_view_all_fsa_requests',
-            ])
+        if flag_enabled("FACULTY_STORAGE_ALLOCATIONS_ENABLED"):
+            perm_codename_lst.extend(
+                [
+                    "can_view_all_fsa_requests",
+                ]
+            )
 
         for perm_codename in perm_codename_lst:
             try:
                 permission = Permission.objects.get(codename=perm_codename)
                 new_group.permissions.add(permission)
             except Permission.DoesNotExist:
-                raise LookupError('Queried permission does not exist. Examine '
-                                  'core/utils/management/commands/create_staff_group.py')
+                raise LookupError(
+                    "Queried permission does not exist. Examine "
+                    "core/utils/management/commands/create_staff_group.py"
+                )

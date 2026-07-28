@@ -1,30 +1,25 @@
-import importlib
-
 from copy import deepcopy
 from http import HTTPStatus
+import importlib
 from urllib.parse import urlparse
 
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import get_user
 from django.contrib.auth.models import User
 from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
-
-from allauth.account.models import EmailAddress
-
 from flags.state import flag_enabled
-
 from sesame import settings as sesame_settings
 
 from coldfront.core.user.utils_.link_login_utils import login_token_url
 from coldfront.core.user.views_.link_login_views import RequestLoginLinkView
 from coldfront.core.utils.tests.test_base import TestBase
 
-
 FLAGS_COPY = deepcopy(settings.FLAGS)
-FLAGS_COPY['BASIC_AUTH_ENABLED'] = [{'condition': 'boolean', 'value': True}]
-FLAGS_COPY['LINK_LOGIN_ENABLED'] = [{'condition': 'boolean', 'value': True}]
+FLAGS_COPY["BASIC_AUTH_ENABLED"] = [{"condition": "boolean", "value": True}]
+FLAGS_COPY["LINK_LOGIN_ENABLED"] = [{"condition": "boolean", "value": True}]
 
 
 @override_settings(FLAGS=FLAGS_COPY)
@@ -37,19 +32,18 @@ class TestLoginLinkViews(TestBase):
         super().setUp()
 
         self.user = User.objects.create(
-            email='user@email.com',
-            first_name='First',
-            last_name='Last',
-            username='user',
-            is_active=True)
+            email="user@email.com",
+            first_name="First",
+            last_name="Last",
+            username="user",
+            is_active=True,
+        )
         self.user.set_password(self.password)
         self.user.save()
 
         self.email_address = EmailAddress.objects.create(
-            email=self.user.email,
-            user=self.user,
-            primary=True,
-            verified=True)
+            email=self.user.email, user=self.user, primary=True, verified=True
+        )
 
         self.assertEqual(len(mail.outbox), 0)
 
@@ -65,14 +59,14 @@ class TestLoginLinkViews(TestBase):
         noting that the provided login link is invalid or expired."""
         messages = self.get_message_strings(response)
         self.assertTrue(messages)
-        self.assertIn('Invalid or expired login link.', messages)
+        self.assertIn("Invalid or expired login link.", messages)
 
     def _assert_email_confirmed_message_sent(self, response, email):
         """Assert that a message was sent as part of the given response
         noting that the given email address (str) has been confirmed."""
         messages = self.get_message_strings(response)
         self.assertTrue(messages)
-        self.assertIn(f'You have confirmed {email}.', messages)
+        self.assertIn(f"You have confirmed {email}.", messages)
 
     def _assert_signed_in_message_sent(self, response, username):
         """Assert that a message was sent as part of the given response
@@ -80,7 +74,7 @@ class TestLoginLinkViews(TestBase):
         successfully been signed in."""
         messages = self.get_message_strings(response)
         self.assertTrue(messages)
-        self.assertIn(f'Successfully signed in as {username}.', messages)
+        self.assertIn(f"Successfully signed in as {username}.", messages)
 
     def _request_login_link(self, email, client=None):
         """Make a POST request to the view to request a login link for
@@ -88,30 +82,30 @@ class TestLoginLinkViews(TestBase):
         if client is None:
             client = self.client
         url = self._view_url()
-        data = {'email': email}
-        return client.post(url, data, format='json')
+        data = {"email": email}
+        return client.post(url, data, format="json")
 
     @staticmethod
     def _view_url():
-        return reverse('request-login-link')
+        return reverse("request-login-link")
 
     def test_expected_flags_enabled(self):
         """Test that, in this test (and by extension every other test in
         the class), the expected authentication-related feature flags
         are enabled."""
-        self.assertTrue(flag_enabled('BASIC_AUTH_ENABLED'))
-        self.assertTrue(flag_enabled('LINK_LOGIN_ENABLED'))
+        self.assertTrue(flag_enabled("BASIC_AUTH_ENABLED"))
+        self.assertTrue(flag_enabled("LINK_LOGIN_ENABLED"))
 
     def test_views_inaccessible_if_flag_disabled(self):
         """Test that the views are inaccessible if the
         LINK_LOGIN_ENABLED flag is disabled."""
-        flag_name = 'LINK_LOGIN_ENABLED'
+        flag_name = "LINK_LOGIN_ENABLED"
 
         response = self.client.get(self._view_url())
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
         response = self.client.get(login_token_url(self.user))
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse("home"))
         client_user = get_user(self.client)
         self.assertTrue(client_user.is_authenticated)
         self._assert_signed_in_message_sent(response, self.user.username)
@@ -119,7 +113,7 @@ class TestLoginLinkViews(TestBase):
         self.client.logout()
 
         flags_copy = deepcopy(settings.FLAGS)
-        flags_copy[flag_name] = [{'condition': 'boolean', 'value': False}]
+        flags_copy[flag_name] = [{"condition": "boolean", "value": False}]
         with override_settings(FLAGS=flags_copy):
             self.assertFalse(flag_enabled(flag_name))
             response = self.client.get(self._view_url())
@@ -133,10 +127,10 @@ class TestLoginLinkViews(TestBase):
         self.client.login(username=self.user.username, password=self.password)
 
         response = self.client.get(self._view_url())
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse("home"))
 
         response = self._request_login_link(self.user.email)
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse("home"))
 
     def test_nonexistent_email_address(self):
         """Test that, when the input email does not correspond to an
@@ -188,11 +182,10 @@ class TestLoginLinkViews(TestBase):
         # The user, who is active, clicks on the link, logging them in.
         self.assertTrue(self.user.is_active)
         response = self.client.get(login_url)
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse("home"))
         client_user = get_user(self.client)
         self.assertTrue(client_user.is_authenticated)
-        self._assert_email_confirmed_message_sent(
-            response, self.email_address.email)
+        self._assert_email_confirmed_message_sent(response, self.email_address.email)
         self._assert_signed_in_message_sent(response, self.user.username)
 
     def test_verified_email_address_user_ineligible(self):
@@ -206,14 +199,14 @@ class TestLoginLinkViews(TestBase):
         self.user.save()
 
         user_fields = (
-            ('is_staff', True),
-            ('is_superuser', True),
-            ('is_active', False),
+            ("is_staff", True),
+            ("is_superuser", True),
+            ("is_active", False),
         )
         expected_reason_strs = (
-            'portal staff are disallowed',
-            'portal staff are disallowed',
-            'Inactive users are disallowed',
+            "portal staff are disallowed",
+            "portal staff are disallowed",
+            "Inactive users are disallowed",
         )
         for i, user_field in enumerate(user_fields):
             user_field_key, user_field_value = user_field
@@ -227,7 +220,7 @@ class TestLoginLinkViews(TestBase):
             # address.
             self.assertEqual(len(mail.outbox), i + 1)
             body = mail.outbox[i].body
-            self.assertIn('ineligible to receive a link', body)
+            self.assertIn("ineligible to receive a link", body)
             self.assertIn(expected_reason_strs[i], body)
 
             setattr(self.user, user_field_key, not user_field_value)
@@ -245,7 +238,7 @@ class TestLoginLinkViews(TestBase):
 
         # The user clicks on the link, logging them in.
         response = self.client.get(login_url)
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse("home"))
         client_user = get_user(self.client)
         self.assertTrue(client_user.is_authenticated)
         self._assert_signed_in_message_sent(response, self.user.username)
@@ -268,7 +261,7 @@ class TestLoginLinkViews(TestBase):
         # The user, who is active, clicks on the link, logging them in.
         self.assertTrue(self.user.is_active)
         response = self.client.get(login_url)
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse("home"))
         client_user = get_user(self.client)
         self.assertTrue(client_user.is_authenticated)
         self._assert_signed_in_message_sent(response, self.user.username)
@@ -313,10 +306,9 @@ class TestLoginLinkViews(TestBase):
 
         # Reverse the token in the URL so that it is invalid.
         parsed_url = urlparse(login_url)
-        token = parsed_url.query.split('=')[1]
-        modified_token = ''.join(list(reversed(token)))
-        modified_url = parsed_url._replace(
-            query=f'sesame={modified_token}').geturl()
+        token = parsed_url.query.split("=")[1]
+        modified_token = "".join(list(reversed(token)))
+        modified_url = parsed_url._replace(query=f"sesame={modified_token}").geturl()
 
         # The user clicks on the link, but is not authenticated.
         response = self.client.get(modified_url)
@@ -335,9 +327,9 @@ class TestLoginLinkViews(TestBase):
         self.user.save()
 
         user_fields = (
-            ('is_staff', True),
-            ('is_superuser', True),
-            ('is_active', False),
+            ("is_staff", True),
+            ("is_superuser", True),
+            ("is_active", False),
         )
         for i, user_field in enumerate(user_fields):
             user_field_key, user_field_value = user_field
@@ -355,7 +347,7 @@ class TestLoginLinkViews(TestBase):
         # All causes of ineligibility are removed. The user clicks on the link,
         # logging them in.
         response = self.client.get(login_url)
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse("home"))
         client_user = get_user(self.client)
         self.assertTrue(client_user.is_authenticated)
         self._assert_signed_in_message_sent(response, self.user.username)

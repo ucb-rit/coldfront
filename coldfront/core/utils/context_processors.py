@@ -1,32 +1,37 @@
-from coldfront.core.allocation.models import (AllocationRenewalRequest,
-                                              AllocationAdditionRequest,
-                                              SecureDirAddUserRequest,
-                                              SecureDirRemoveUserRequest,
-                                              SecureDirRequest,
-                                              ClusterAccessRequest)
-from coldfront.core.project.models import (ProjectUserRemovalRequest,
-                                           SavioProjectAllocationRequest,
-                                           VectorProjectAllocationRequest,
-                                           ProjectUserJoinRequest,
-                                           ProjectUser)
-from coldfront.core.project.utils_.renewal_utils import get_current_allowance_year_period
+import logging
 
 from constance import config
 from django.conf import settings
 from django.db.models import Q
 from flags.state import flag_enabled
 
-import logging
-
+from coldfront.core.allocation.models import (
+    AllocationAdditionRequest,
+    AllocationRenewalRequest,
+    ClusterAccessRequest,
+    SecureDirAddUserRequest,
+    SecureDirRemoveUserRequest,
+    SecureDirRequest,
+)
+from coldfront.core.project.models import (
+    ProjectUser,
+    ProjectUserJoinRequest,
+    ProjectUserRemovalRequest,
+    SavioProjectAllocationRequest,
+    VectorProjectAllocationRequest,
+)
+from coldfront.core.project.utils_.renewal_utils import (
+    get_current_allowance_year_period,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def allocation_navbar_visibility(request):
     """Set the following context variables:
-        - ALLOCATION_VISIBLE: Whether the allocation tab should be
-          visible to the requesting user."""
-    allocation_key = 'ALLOCATION_VISIBLE'
+    - ALLOCATION_VISIBLE: Whether the allocation tab should be
+      visible to the requesting user."""
+    allocation_key = "ALLOCATION_VISIBLE"
     context = {
         allocation_key: False,
     }
@@ -41,16 +46,17 @@ def allocation_navbar_visibility(request):
 
     # Allocation list view should be visible to active PIs and Managers.
     project_user = ProjectUser.objects.filter(
-        Q(role__name__in=['Manager', 'Principal Investigator']) &
-        Q(status__name='Active') &
-        Q(user=request.user))
+        Q(role__name__in=["Manager", "Principal Investigator"])
+        & Q(status__name="Active")
+        & Q(user=request.user)
+    )
     context[allocation_key] = project_user.exists()
 
     return context
 
 
 def constance_config(request):
-    return {'CONSTANCE_CONFIG': config}
+    return {"CONSTANCE_CONFIG": config}
 
 
 def current_allowance_year_allocation_period(request):
@@ -59,90 +65,100 @@ def current_allowance_year_allocation_period(request):
         allocation_period = get_current_allowance_year_period()
     except Exception as e:
         message = (
-            f'Failed to retrieve current Allowance Year AllocationPeriod. '
-            f'Details:\n'
-            f'{e}')
+            f"Failed to retrieve current Allowance Year AllocationPeriod. Details:\n{e}"
+        )
         logger.exception(message)
     else:
-        context['CURRENT_ALLOWANCE_YEAR_ALLOCATION_PERIOD'] = allocation_period
+        context["CURRENT_ALLOWANCE_YEAR_ALLOCATION_PERIOD"] = allocation_period
     return context
 
 
 def display_time_zone(request):
-    return {'DISPLAY_TIME_ZONE': settings.DISPLAY_TIME_ZONE}
+    return {"DISPLAY_TIME_ZONE": settings.DISPLAY_TIME_ZONE}
 
 
 def portal_and_program_names(request):
     return {
-        'PORTAL_NAME': settings.PORTAL_NAME,
-        'PROGRAM_NAME_LONG': settings.PROGRAM_NAME_LONG,
-        'PROGRAM_NAME_SHORT': settings.PROGRAM_NAME_SHORT,
+        "PORTAL_NAME": settings.PORTAL_NAME,
+        "PROGRAM_NAME_LONG": settings.PROGRAM_NAME_LONG,
+        "PROGRAM_NAME_SHORT": settings.PROGRAM_NAME_SHORT,
     }
 
 
 def primary_cluster_name(request):
     return {
-        'PRIMARY_CLUSTER_NAME': settings.PRIMARY_CLUSTER_NAME,
+        "PRIMARY_CLUSTER_NAME": settings.PRIMARY_CLUSTER_NAME,
     }
 
 
 def request_alert_counts(request):
     if request.user.is_superuser or request.user.is_staff:
         context = {
-            'cluster_account_req_count':
-                ClusterAccessRequest.objects.filter(
-                    status__name__in=['Pending - Add', 'Processing']).count(),
-            'project_removal_req_count':
-                ProjectUserRemovalRequest.objects.filter(
-                    status__name__in=['Pending', 'Processing']).count(),
-            'savio_project_req_count':
-                SavioProjectAllocationRequest.objects.filter(
-                    status__name__in=[
-                        'Under Review', 'Approved - Processing']).count(),
-            'project_join_req_count': ProjectUserJoinRequest.objects.filter(
-                project_user__status__name='Pending - Add').count(),
-            'project_renewal_req_count':
-                AllocationRenewalRequest.objects.filter(
-                    status__name__in=['Under Review']).count(),
-            'secure_dir_join_req_count': SecureDirAddUserRequest.objects.filter(
-                status__name__in=['Pending', 'Processing']).count(),
-            'secure_dir_remove_req_count':
-                SecureDirRemoveUserRequest.objects.filter(
-                    status__name__in=['Pending', 'Processing']).count(),
-            'secure_dir_req_count': SecureDirRequest.objects.filter(
-                status__name__in=[
-                    'Under Review', 'Approved - Processing']).count(),
-            }
+            "cluster_account_req_count": ClusterAccessRequest.objects.filter(
+                status__name__in=["Pending - Add", "Processing"]
+            ).count(),
+            "project_removal_req_count": ProjectUserRemovalRequest.objects.filter(
+                status__name__in=["Pending", "Processing"]
+            ).count(),
+            "savio_project_req_count": SavioProjectAllocationRequest.objects.filter(
+                status__name__in=["Under Review", "Approved - Processing"]
+            ).count(),
+            "project_join_req_count": ProjectUserJoinRequest.objects.filter(
+                project_user__status__name="Pending - Add"
+            ).count(),
+            "project_renewal_req_count": AllocationRenewalRequest.objects.filter(
+                status__name__in=["Under Review"]
+            ).count(),
+            "secure_dir_join_req_count": SecureDirAddUserRequest.objects.filter(
+                status__name__in=["Pending", "Processing"]
+            ).count(),
+            "secure_dir_remove_req_count": SecureDirRemoveUserRequest.objects.filter(
+                status__name__in=["Pending", "Processing"]
+            ).count(),
+            "secure_dir_req_count": SecureDirRequest.objects.filter(
+                status__name__in=["Under Review", "Approved - Processing"]
+            ).count(),
+        }
 
-        if flag_enabled('FACULTY_STORAGE_ALLOCATIONS_ENABLED'):
-            from coldfront.plugins.faculty_storage_allocations.models import FacultyStorageAllocationRequest
-            context['faculty_storage_allocations_req_count'] = \
+        if flag_enabled("FACULTY_STORAGE_ALLOCATIONS_ENABLED"):
+            from coldfront.plugins.faculty_storage_allocations.models import (
+                FacultyStorageAllocationRequest,
+            )
+
+            context["faculty_storage_allocations_req_count"] = (
                 FacultyStorageAllocationRequest.objects.filter(
                     status__name__in=[
-                        'Under Review',
-                        'Approved - Queued',
-                        'Approved - Processing',
-                    ]).count()
+                        "Under Review",
+                        "Approved - Queued",
+                        "Approved - Processing",
+                    ]
+                ).count()
+            )
 
-        if flag_enabled('HARDWARE_PROCUREMENTS_ENABLED'):
-            from coldfront.plugins.hardware_procurements.utils.data_sources import fetch_hardware_procurements
-            context['hardware_procurement_req_count'] = len(
-                list(fetch_hardware_procurements(status='Pending')))
+        if flag_enabled("HARDWARE_PROCUREMENTS_ENABLED"):
+            from coldfront.plugins.hardware_procurements.utils.data_sources import (
+                fetch_hardware_procurements,
+            )
 
-        if flag_enabled('SERVICE_UNITS_PURCHASABLE'):
-            context['su_purchase_req_count'] = \
-                AllocationAdditionRequest.objects.filter(
-                    status__name__in=['Under Review']).count()
+            context["hardware_procurement_req_count"] = len(
+                list(fetch_hardware_procurements(status="Pending"))
+            )
 
-        if flag_enabled('BRC_ONLY'):
-            context['vector_project_req_count'] = \
+        if flag_enabled("SERVICE_UNITS_PURCHASABLE"):
+            context["su_purchase_req_count"] = AllocationAdditionRequest.objects.filter(
+                status__name__in=["Under Review"]
+            ).count()
+
+        if flag_enabled("BRC_ONLY"):
+            context["vector_project_req_count"] = (
                 VectorProjectAllocationRequest.objects.filter(
-                    status__name__in=[
-                        'Under Review', 'Approved - Processing']).count()
+                    status__name__in=["Under Review", "Approved - Processing"]
+                ).count()
+            )
 
-        context = {k: v for k,v in context.items() if v > 0}
+        context = {k: v for k, v in context.items() if v > 0}
         req_count_sum = sum(context.values())
-        context['request_counts'] = req_count_sum
+        context["request_counts"] = req_count_sum
 
         return context
     else:

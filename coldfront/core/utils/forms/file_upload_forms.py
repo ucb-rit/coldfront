@@ -1,6 +1,5 @@
 from django import forms
-from django.core.validators import FileExtensionValidator
-from django.core.validators import MinLengthValidator
+from django.core.validators import FileExtensionValidator, MinLengthValidator
 
 
 def file_size_validator(file):
@@ -8,7 +7,8 @@ def file_size_validator(file):
     limit_bytes = limit_mebibytes * 1024 * 1024
     if file.size > limit_bytes:
         raise forms.ValidationError(
-            f'File too large. Size should not exceed {limit_mebibytes} MiB.')
+            f"File too large. Size should not exceed {limit_mebibytes} MiB."
+        )
 
 
 def model_pdf_upload_form_factory(model_class):
@@ -18,14 +18,15 @@ def model_pdf_upload_form_factory(model_class):
     class ModelPDFUploadForm(forms.ModelForm):
         class Meta:
             model = model_class
-            fields = ['mou_file']
+            fields = ["mou_file"]
 
         mou_file = forms.FileField(
-            label='File',
+            label="File",
             validators=[
                 MinLengthValidator(1),
-                FileExtensionValidator(['pdf']),
+                FileExtensionValidator(["pdf"]),
                 file_size_validator,
-            ])
+            ],
+        )
 
     return ModelPDFUploadForm

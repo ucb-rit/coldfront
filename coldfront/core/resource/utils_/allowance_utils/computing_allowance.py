@@ -1,13 +1,14 @@
 from django.db.models import Q
-
 from flags.state import flag_enabled
 
 from coldfront.core.resource.models import Resource
-from coldfront.core.resource.utils_.allowance_utils.constants import BRCAllowances
-from coldfront.core.resource.utils_.allowance_utils.constants import LRCAllowances
+from coldfront.core.resource.utils_.allowance_utils.constants import (
+    BRCAllowances,
+    LRCAllowances,
+)
 
 
-class ComputingAllowance(object):
+class ComputingAllowance:
     """A wrapper class around a Resource representing a computing
     allowance, with helper methods."""
 
@@ -20,10 +21,10 @@ class ComputingAllowance(object):
         """Return whether the allowance's service units should be
         prorated."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.FCA)
             allowance_names.append(BRCAllowances.PCA)
-        elif flag_enabled('LRC_ONLY'):
+        elif flag_enabled("LRC_ONLY"):
             allowance_names.append(LRCAllowances.PCA)
         return self._name in allowance_names
 
@@ -31,7 +32,7 @@ class ComputingAllowance(object):
         """Return whether the allowance's service units are specified by
         the user."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.RECHARGE)
         return self._name in allowance_names
 
@@ -39,9 +40,9 @@ class ComputingAllowance(object):
         """Return whether the allowance has an effectively-infinite
         number of service units (i.e., there is no limit)."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.CO)
-        elif flag_enabled('LRC_ONLY'):
+        elif flag_enabled("LRC_ONLY"):
             allowance_names.append(LRCAllowances.LR)
             allowance_names.append(LRCAllowances.RECHARGE)
         return self._name in allowance_names
@@ -49,26 +50,26 @@ class ComputingAllowance(object):
     def is_condo(self):
         """Return whether the allowance is a condo allocation."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.CO)
-        if flag_enabled('LRC_ONLY'):
+        if flag_enabled("LRC_ONLY"):
             allowance_names.append(LRCAllowances.LR)
         return self._name in allowance_names
 
     def is_instructional(self):
         """Return whether the allowance is for a course."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.ICA)
         return self._name in allowance_names
 
     def is_one_per_pi(self):
         """Return whether a PI may have at most one of the allowance."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.FCA)
             allowance_names.append(BRCAllowances.PCA)
-        elif flag_enabled('LRC_ONLY'):
+        elif flag_enabled("LRC_ONLY"):
             allowance_names.append(LRCAllowances.PCA)
         return self._name in allowance_names
 
@@ -76,11 +77,11 @@ class ComputingAllowance(object):
         """Return whether the allowance is limited to a specific
         AllocationPeriod."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.FCA)
             allowance_names.append(BRCAllowances.ICA)
             allowance_names.append(BRCAllowances.PCA)
-        elif flag_enabled('LRC_ONLY'):
+        elif flag_enabled("LRC_ONLY"):
             allowance_names.append(LRCAllowances.PCA)
         return self._name in allowance_names
 
@@ -88,19 +89,19 @@ class ComputingAllowance(object):
         """Return whether the allowance may be pooled with another of
         the same type."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.FCA)
             allowance_names.append(BRCAllowances.PCA)
-        elif flag_enabled('LRC_ONLY'):
+        elif flag_enabled("LRC_ONLY"):
             allowance_names.append(LRCAllowances.PCA)
         return self._name in allowance_names
 
     def is_recharge(self):
         """Return whether the allowance is paid for."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.RECHARGE)
-        elif flag_enabled('LRC_ONLY'):
+        elif flag_enabled("LRC_ONLY"):
             allowance_names.append(LRCAllowances.RECHARGE)
         return self._name in allowance_names
 
@@ -108,7 +109,7 @@ class ComputingAllowance(object):
         """Return whether the recharge allowance is paid for after
         usage."""
         allowance_names = []
-        if flag_enabled('LRC_ONLY'):
+        if flag_enabled("LRC_ONLY"):
             allowance_names.append(LRCAllowances.RECHARGE)
         return self._name in allowance_names
 
@@ -116,7 +117,7 @@ class ComputingAllowance(object):
         """Return whether the recharge allowance is paid for in
         advance."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.RECHARGE)
         return self._name in allowance_names
 
@@ -128,9 +129,9 @@ class ComputingAllowance(object):
         """Return whether there is UI support for renewing the
         allowance."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.FCA)
-        elif flag_enabled('LRC_ONLY'):
+        elif flag_enabled("LRC_ONLY"):
             allowance_names.append(LRCAllowances.PCA)
         return self._name in allowance_names
 
@@ -138,10 +139,10 @@ class ComputingAllowance(object):
         """Return whether the allowance conforms to the allowance
         year."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.FCA)
             allowance_names.append(BRCAllowances.PCA)
-        elif flag_enabled('LRC_ONLY'):
+        elif flag_enabled("LRC_ONLY"):
             allowance_names.append(LRCAllowances.PCA)
         return self._name in allowance_names
 
@@ -155,17 +156,18 @@ class ComputingAllowance(object):
 
         If none are applicable, return None.
         """
-        yearly_q = Q(name__startswith='Allowance Year')
-        if flag_enabled('BRC_ONLY'):
+        yearly_q = Q(name__startswith="Allowance Year")
+        if flag_enabled("BRC_ONLY"):
             if self.is_yearly():
                 return yearly_q
             elif self.is_instructional():
                 instructional_q = (
-                    Q(name__startswith='Fall Semester') |
-                    Q(name__startswith='Spring Semester') |
-                    Q(name__startswith='Summer Sessions'))
+                    Q(name__startswith="Fall Semester")
+                    | Q(name__startswith="Spring Semester")
+                    | Q(name__startswith="Summer Sessions")
+                )
                 return instructional_q
-        if flag_enabled('LRC_ONLY'):
+        if flag_enabled("LRC_ONLY"):
             if self.is_yearly():
                 return yearly_q
         return None
@@ -178,7 +180,7 @@ class ComputingAllowance(object):
         """Return whether the allowance requires extra user-specified
         information."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.ICA)
             allowance_names.append(BRCAllowances.RECHARGE)
         return self._name in allowance_names
@@ -186,7 +188,7 @@ class ComputingAllowance(object):
     def requires_memorandum_of_understanding(self):
         """Return whether the allowance requires an MOU to be signed."""
         allowance_names = []
-        if flag_enabled('BRC_ONLY'):
+        if flag_enabled("BRC_ONLY"):
             allowance_names.append(BRCAllowances.ICA)
             allowance_names.append(BRCAllowances.RECHARGE)
         return self._name in allowance_names

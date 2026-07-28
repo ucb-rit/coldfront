@@ -1,21 +1,21 @@
 import logging
 
+from allauth.account.models import EmailAddress
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.views.generic.edit import FormView
-
-from allauth.account.models import EmailAddress
 from sesame.views import LoginView
 
 from coldfront.core.account.utils.login_activity import LoginActivityVerifier
 from coldfront.core.user.forms_.link_login_forms import RequestLoginLinkForm
-from coldfront.core.user.utils_.link_login_utils import send_login_link_email
-from coldfront.core.user.utils_.link_login_utils import send_login_link_ineligible_email
-from coldfront.core.user.utils_.link_login_utils import UserLoginLinkIneligible
-from coldfront.core.user.utils_.link_login_utils import validate_user_eligible_for_login_link
+from coldfront.core.user.utils_.link_login_utils import (
+    UserLoginLinkIneligible,
+    send_login_link_email,
+    send_login_link_ineligible_email,
+    validate_user_eligible_for_login_link,
+)
 from coldfront.core.utils.common import import_from_settings
-
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +25,11 @@ class RequestLoginLinkView(FormView):
     email address, if any."""
 
     form_class = RequestLoginLinkForm
-    template_name = 'user/request_login_link.html'
+    template_name = "user/request_login_link.html"
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            return redirect(reverse('home'))
+            return redirect(reverse("home"))
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -38,13 +38,14 @@ class RequestLoginLinkView(FormView):
 
         In all cases, display an acknowledging message with the same
         text, to avoid leaking information."""
-        email = form.cleaned_data.get('email')
+        email = form.cleaned_data.get("email")
         email_address = self._validate_email_address(email)
         if email_address:
             if not email_address.verified:
-                request_login_method_str = 'Link Login Request'
+                request_login_method_str = "Link Login Request"
                 verifier = LoginActivityVerifier(
-                    self.request, email_address, request_login_method_str)
+                    self.request, email_address, request_login_method_str
+                )
                 verifier.send_email()
             else:
                 try:
@@ -61,17 +62,17 @@ class RequestLoginLinkView(FormView):
     def ack_message():
         """Return an acknowledging message explaining that a link or
         further instructions were (conditionally) sent."""
-        login_link_max_age_minutes = (
-            import_from_settings('SESAME_MAX_AGE') // 60)
+        login_link_max_age_minutes = import_from_settings("SESAME_MAX_AGE") // 60
         return (
-            f'If the email address you entered corresponds to an existing '
-            f'user, please check the address for a login link or further '
-            f'instructions. Note that this link will expire in '
-            f'{login_link_max_age_minutes} minutes.')
+            f"If the email address you entered corresponds to an existing "
+            f"user, please check the address for a login link or further "
+            f"instructions. Note that this link will expire in "
+            f"{login_link_max_age_minutes} minutes."
+        )
 
     @staticmethod
     def get_success_url():
-        return reverse('request-login-link')
+        return reverse("request-login-link")
 
     def _send_ack_message(self):
         """Send an acknowledging message to the user."""
@@ -87,10 +88,9 @@ class RequestLoginLinkView(FormView):
             return None
         except EmailAddress.MultipleObjectsReturned:
             logger.error(
-                f'Unexpectedly found multiple EmailAddresses for email '
-                f'{email}.')
-            message = (
-                'Unexpected server error. Please contact an administrator.')
+                f"Unexpectedly found multiple EmailAddresses for email {email}."
+            )
+            message = "Unexpected server error. Please contact an administrator."
             messages.error(self.request, message)
             return None
 
@@ -101,10 +101,11 @@ class LinkLoginView(LoginView):
     def login_failed(self):
         """Send an error message to the user and write to the log before
         deferring to parent logic."""
-        message = 'Invalid or expired login link.'
+        message = "Invalid or expired login link."
         messages.error(self.request, message)
         logger.warning(
-            'A user failed to log in using an invalid or expired login link.')
+            "A user failed to log in using an invalid or expired login link."
+        )
         return super().login_failed()
 
     def login_success(self):
@@ -115,9 +116,10 @@ class LinkLoginView(LoginView):
         users do not have a path to reactivation.
         """
         user = self.request.user
-        message = f'Successfully signed in as {user.username}.'
+        message = f"Successfully signed in as {user.username}."
         messages.success(self.request, message)
         logger.warning(
-            f'User {user.pk} ({user.username}) logged in using a login link.')
+            f"User {user.pk} ({user.username}) logged in using a login link."
+        )
 
         return super().login_success()

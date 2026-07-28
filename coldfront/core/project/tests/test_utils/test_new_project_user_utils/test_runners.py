@@ -8,42 +8,55 @@ from django.db import transaction
 from django.test import override_settings
 
 from coldfront.api.statistics.utils import create_project_allocation
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.models import AllocationAttribute
-from coldfront.core.allocation.models import AllocationAttributeType
-from coldfront.core.allocation.models import AllocationStatusChoice
-from coldfront.core.allocation.models import AllocationUser
-from coldfront.core.allocation.models import AllocationUserAttribute
-from coldfront.core.allocation.models import AllocationUserStatusChoice
-from coldfront.core.allocation.models import ClusterAccessRequest
+from coldfront.core.allocation.models import (
+    Allocation,
+    AllocationAttribute,
+    AllocationAttributeType,
+    AllocationStatusChoice,
+    AllocationUser,
+    AllocationUserAttribute,
+    AllocationUserStatusChoice,
+    ClusterAccessRequest,
+)
 from coldfront.core.allocation.utils import get_project_compute_resource_name
-from coldfront.core.allocation.utils_.cluster_access_utils import ClusterAccessRequestRunnerValidationError
-from coldfront.core.allocation.utils_.cluster_access_utils import send_new_cluster_access_request_notification_email
-from coldfront.core.billing.models import BillingActivity
-from coldfront.core.billing.models import BillingProject
-from coldfront.core.project.models import ProjectUser
-from coldfront.core.project.models import ProjectUserRoleChoice
-from coldfront.core.project.models import ProjectUserStatusChoice
-from coldfront.core.project.utils import send_added_to_project_notification_email
-from coldfront.core.project.utils import send_project_join_request_approval_email
-from coldfront.core.project.utils_.new_project_user_utils import BRCNewProjectUserRunner
-from coldfront.core.project.utils_.new_project_user_utils import LRCNewProjectUserRunner
-from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunner
-from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserRunnerFactory
-from coldfront.core.project.utils_.new_project_user_utils import NewProjectUserSource
-from coldfront.core.project.models import ProjectUserJoinRequest
+from coldfront.core.allocation.utils_.cluster_access_utils import (
+    ClusterAccessRequestRunnerValidationError,
+    send_new_cluster_access_request_notification_email,
+)
+from coldfront.core.billing.models import BillingActivity, BillingProject
+from coldfront.core.project.models import (
+    ProjectUser,
+    ProjectUserJoinRequest,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
+from coldfront.core.project.utils import (
+    send_added_to_project_notification_email,
+    send_project_join_request_approval_email,
+)
+from coldfront.core.project.utils_.new_project_user_utils import (
+    BRCNewProjectUserRunner,
+    LRCNewProjectUserRunner,
+    NewProjectUserRunner,
+    NewProjectUserRunnerFactory,
+    NewProjectUserSource,
+)
 from coldfront.core.resource.models import Resource
-from coldfront.core.resource.utils_.allowance_utils.interface import ComputingAllowanceInterface
+from coldfront.core.resource.utils_.allowance_utils.interface import (
+    ComputingAllowanceInterface,
+)
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.email.email_strategy import EnqueueEmailStrategy
-from coldfront.core.utils.tests.test_base import enable_deployment
-from coldfront.core.utils.tests.test_base import LRCTestBase
-from coldfront.core.utils.tests.test_base import TestBase
+from coldfront.core.utils.tests.test_base import (
+    LRCTestBase,
+    TestBase,
+    enable_deployment,
+)
 
 
 def raise_exception(*args, **kwargs):
     """Raise an exception."""
-    raise Exception('Test exception.')
+    raise Exception("Test exception.")
 
 
 class TestNewProjectUserRunner(TestBase):
@@ -54,7 +67,7 @@ class TestNewProjectUserRunner(TestBase):
         instantiated."""
         with self.assertRaises(TypeError) as cm:
             NewProjectUserRunner(None, None)
-        self.assertIn('Can\'t instantiate', str(cm.exception))
+        self.assertIn("Can't instantiate", str(cm.exception))
 
 
 class TestRunnerBase(TestBase):
@@ -68,15 +81,16 @@ class TestRunnerBase(TestBase):
 
         computing_allowance_interface = ComputingAllowanceInterface()
         computing_allowance = self.get_predominant_computing_allowance()
-        prefix = computing_allowance_interface.code_from_name(
-            computing_allowance.name)
+        prefix = computing_allowance_interface.code_from_name(computing_allowance.name)
 
         # Create a Project with a computing allowance, along with an 'Active'
         # ProjectUser.
         self.project = self.create_active_project_with_pi(
-            f'{prefix}_project', self.user)
+            f"{prefix}_project", self.user
+        )
         accounting_allocation_objects = create_project_allocation(
-            self.project, Decimal('0.00'))
+            self.project, Decimal("0.00")
+        )
         self.allocation = accounting_allocation_objects.allocation
         self.project_user = self.project.projectuser_set.get(user=self.user)
 
@@ -92,20 +106,21 @@ class LRCTestRunnerBase(LRCTestBase):
 
         computing_allowance_interface = ComputingAllowanceInterface()
         computing_allowance = self.get_predominant_computing_allowance()
-        prefix = computing_allowance_interface.code_from_name(
-            computing_allowance.name)
+        prefix = computing_allowance_interface.code_from_name(computing_allowance.name)
 
         # Create a Project with a computing allowance, along with an 'Active'
         # ProjectUser.
         self.project = self.create_active_project_with_pi(
-            f'{prefix}_project', self.user)
+            f"{prefix}_project", self.user
+        )
         accounting_allocation_objects = create_project_allocation(
-            self.project, Decimal('0.00'))
+            self.project, Decimal("0.00")
+        )
         self.allocation = accounting_allocation_objects.allocation
         self.project_user = self.project.projectuser_set.get(user=self.user)
 
 
-class TestCommonRunnerMixin(object):
+class TestCommonRunnerMixin:
     """A mixin for testing functionality common to all concrete runner
     classes."""
 
@@ -118,11 +133,13 @@ class TestCommonRunnerMixin(object):
         """Assert that the relevant objects have the expected state,
         assuming that the runner has run successfully."""
         active_allocation_users = AllocationUser.objects.filter(
-            allocation=self.allocation, user=self.user, status__name='Active')
+            allocation=self.allocation, user=self.user, status__name="Active"
+        )
         self.assertEqual(active_allocation_users.count(), 1)
 
         cluster_access_requests = ClusterAccessRequest.objects.filter(
-            allocation_user__user=self.user, status__name='Pending - Add')
+            allocation_user__user=self.user, status__name="Pending - Add"
+        )
         self.assertEqual(cluster_access_requests.count(), 1)
 
     def _assert_pre_state(self):
@@ -130,18 +147,21 @@ class TestCommonRunnerMixin(object):
         assuming that the runner has either not run or not run
         successfully."""
         active_allocation_users = AllocationUser.objects.filter(
-            allocation=self.allocation, user=self.user, status__name='Active')
+            allocation=self.allocation, user=self.user, status__name="Active"
+        )
         self.assertEqual(active_allocation_users.count(), 0)
 
         cluster_access_requests = ClusterAccessRequest.objects.filter(
-            allocation_user__user=self.user)
+            allocation_user__user=self.user
+        )
         self.assertFalse(cluster_access_requests.exists())
 
     def _rollback_changes(self):
         """Roll back changes made by the runner so that it may be run
         again."""
         AllocationUser.objects.filter(
-            allocation=self.allocation, user=self.project_user.user).delete()
+            allocation=self.allocation, user=self.project_user.user
+        ).delete()
 
     def test_cluster_access_not_requested_based_on_source(self):
         """Test that no attempt is made to request cluster access for
@@ -153,17 +173,15 @@ class TestCommonRunnerMixin(object):
         for source in NewProjectUserSource:
             email_strategy = EnqueueEmailStrategy()
             args = (self.project_user, source)
-            kwargs = {'email_strategy': email_strategy}
+            kwargs = {"email_strategy": email_strategy}
             with enable_deployment(self._deployment_name):
-                _class = self._runner_factory.get_runner(
-                    *args, **kwargs).__class__
-                with patch.object(
-                        _class, '_request_cluster_access', raise_exception):
+                _class = self._runner_factory.get_runner(*args, **kwargs).__class__
+                with patch.object(_class, "_request_cluster_access", raise_exception):
                     runner = self._runner_factory.get_runner(*args, **kwargs)
                     if source not in excluded_sources:
                         with self.assertRaises(Exception) as cm:
                             runner.run()
-                        self.assertEqual(str(cm.exception), 'Test exception.')
+                        self.assertEqual(str(cm.exception), "Test exception.")
                     else:
                         runner.run()
                         self._rollback_changes()
@@ -176,7 +194,8 @@ class TestCommonRunnerMixin(object):
 
         with enable_deployment(self._deployment_name):
             runner = self._runner_factory.get_runner(
-                self.project_user, NewProjectUserSource.ADDED)
+                self.project_user, NewProjectUserSource.ADDED
+            )
         runner.run()
 
         self.assertEqual(len(mail.outbox), 2)
@@ -184,7 +203,7 @@ class TestCommonRunnerMixin(object):
         # Additionally, test that the correct email is sent for the source.
         added_email_found = False
         for email in mail.outbox:
-            if f'Added to Project {self.project.name}' in email.subject:
+            if f"Added to Project {self.project.name}" in email.subject:
                 added_email_found = True
                 break
         self.assertTrue(added_email_found)
@@ -198,8 +217,10 @@ class TestCommonRunnerMixin(object):
         email_strategy = EnqueueEmailStrategy()
         with enable_deployment(self._deployment_name):
             runner = self._runner_factory.get_runner(
-                self.project_user, NewProjectUserSource.JOINED,
-                email_strategy=email_strategy)
+                self.project_user,
+                NewProjectUserSource.JOINED,
+                email_strategy=email_strategy,
+            )
         runner.run()
 
         self.assertEqual(len(mail.outbox), 0)
@@ -212,7 +233,7 @@ class TestCommonRunnerMixin(object):
         # Additionally, test that the correct email is sent for the source.
         join_approval_email_found = False
         for email in mail.outbox:
-            if f'Join {self.project.name} Approved' in email.subject:
+            if f"Join {self.project.name} Approved" in email.subject:
                 join_approval_email_found = True
                 break
         self.assertTrue(join_approval_email_found)
@@ -222,20 +243,17 @@ class TestCommonRunnerMixin(object):
         about cluster access) are only sent for particular
         NewProjectUserSources."""
         expected_email_methods_by_source = {
-            NewProjectUserSource.ADDED: (
-                send_added_to_project_notification_email),
-            NewProjectUserSource.JOINED: (
-                send_project_join_request_approval_email),
-            NewProjectUserSource.AUTO_ADDED: (
-                send_added_to_project_notification_email),
+            NewProjectUserSource.ADDED: (send_added_to_project_notification_email),
+            NewProjectUserSource.JOINED: (send_project_join_request_approval_email),
+            NewProjectUserSource.AUTO_ADDED: (send_added_to_project_notification_email),
         }
-        cluster_access_email_method = \
-            send_new_cluster_access_request_notification_email
+        cluster_access_email_method = send_new_cluster_access_request_notification_email
         for source in NewProjectUserSource:
             email_strategy = EnqueueEmailStrategy()
             with enable_deployment(self._deployment_name):
                 runner = self._runner_factory.get_runner(
-                    self.project_user, source, email_strategy=email_strategy)
+                    self.project_user, source, email_strategy=email_strategy
+                )
             runner.run()
 
             self.assertEqual(len(mail.outbox), 0)
@@ -284,12 +302,13 @@ class TestCommonRunnerMixin(object):
 
         with enable_deployment(self._deployment_name):
             _class = self._runner_factory.get_runner(*args).__class__
-            with patch.object(_class, '_run_extra_steps', raise_exception):
+            with patch.object(_class, "_run_extra_steps", raise_exception):
                 runner = self._runner_factory.get_runner(
-                    *args, email_strategy=email_strategy)
+                    *args, email_strategy=email_strategy
+                )
                 with self.assertRaises(Exception) as cm:
                     runner.run()
-                self.assertEqual(str(cm.exception), 'Test exception.')
+                self.assertEqual(str(cm.exception), "Test exception.")
 
         self._assert_pre_state()
 
@@ -300,14 +319,15 @@ class TestCommonRunnerMixin(object):
         self.assertEqual(len(queue), 1)
         email_method, _, _ = queue.popleft()
         self.assertEqual(
-            email_method, send_new_cluster_access_request_notification_email)
+            email_method, send_new_cluster_access_request_notification_email
+        )
 
-        with patch.object(_class, '_run_extra_steps', raise_exception):
+        with patch.object(_class, "_run_extra_steps", raise_exception):
             with enable_deployment(self._deployment_name):
                 runner = self._runner_factory.get_runner(*args)
             with self.assertRaises(Exception) as cm:
                 runner.run()
-            self.assertEqual(str(cm.exception), 'Test exception.')
+            self.assertEqual(str(cm.exception), "Test exception.")
 
         self._assert_pre_state()
 
@@ -315,7 +335,7 @@ class TestCommonRunnerMixin(object):
         # request should be sent, even though the enclosing transaction failed.
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
-        self.assertIn('New Cluster Access Request', email.subject)
+        self.assertIn("New Cluster Access Request", email.subject)
 
     def test_preexisting_cluster_access_allowed_based_on_source(self):
         """Test that, when the user already has access to the cluster,
@@ -329,21 +349,24 @@ class TestCommonRunnerMixin(object):
             NewProjectUserSource.AUTO_ADDED,
         }
 
-        active_status = AllocationUserStatusChoice.objects.get(name='Active')
+        active_status = AllocationUserStatusChoice.objects.get(name="Active")
         allocation_user = AllocationUser.objects.create(
-            allocation=self.allocation, user=self.user, status=active_status)
+            allocation=self.allocation, user=self.user, status=active_status
+        )
         AllocationUserAttribute.objects.create(
             allocation_attribute_type=AllocationAttributeType.objects.get(
-                name='Cluster Account Status'),
+                name="Cluster Account Status"
+            ),
             allocation=self.allocation,
             allocation_user=allocation_user,
-            value='Pending - Add')
+            value="Pending - Add",
+        )
 
         expected_exception = ClusterAccessRequestRunnerValidationError
         for source in NewProjectUserSource:
             email_strategy = EnqueueEmailStrategy()
             args = (self.project_user, source)
-            kwargs = {'email_strategy': email_strategy}
+            kwargs = {"email_strategy": email_strategy}
             with enable_deployment(self._deployment_name):
                 runner = self._runner_factory.get_runner(*args, **kwargs)
                 if source not in allowed_sources:
@@ -358,7 +381,8 @@ class TestCommonRunnerMixin(object):
 
         with enable_deployment(self._deployment_name):
             runner = self._runner_factory.get_runner(
-                self.project_user, NewProjectUserSource.ADDED)
+                self.project_user, NewProjectUserSource.ADDED
+            )
         runner.run()
 
         self._assert_post_state()
@@ -367,17 +391,16 @@ class TestCommonRunnerMixin(object):
         """Test that the project_user_activated signal is sent when the
         runner runs successfully."""
         from coldfront.core.project.utils_.new_project_user_utils import (
-            project_user_activated
+            project_user_activated,
         )
 
         signal_received = []
 
         def signal_handler(sender, **kwargs):
             """Capture signal data."""
-            signal_received.append({
-                'sender': sender,
-                'project_user': kwargs.get('project_user')
-            })
+            signal_received.append(
+                {"sender": sender, "project_user": kwargs.get("project_user")}
+            )
 
         # Connect the signal handler
         project_user_activated.connect(signal_handler)
@@ -387,14 +410,15 @@ class TestCommonRunnerMixin(object):
 
             with enable_deployment(self._deployment_name):
                 runner = self._runner_factory.get_runner(
-                    self.project_user, NewProjectUserSource.ADDED)
+                    self.project_user, NewProjectUserSource.ADDED
+                )
             runner.run()
 
             # Assert signal was sent
             self.assertEqual(len(signal_received), 1)
             signal_data = signal_received[0]
-            self.assertEqual(signal_data['sender'], runner.__class__)
-            self.assertEqual(signal_data['project_user'], self.project_user)
+            self.assertEqual(signal_data["sender"], runner.__class__)
+            self.assertEqual(signal_data["project_user"], self.project_user)
 
             self._assert_post_state()
         finally:
@@ -406,17 +430,19 @@ class TestCommonRunnerMixin(object):
         already exists."""
         self._assert_pre_state()
 
-        removed_status = AllocationUserStatusChoice.objects.get(name='Removed')
+        removed_status = AllocationUserStatusChoice.objects.get(name="Removed")
         allocation_user = AllocationUser.objects.create(
-            allocation=self.allocation, user=self.user, status=removed_status)
+            allocation=self.allocation, user=self.user, status=removed_status
+        )
 
         with enable_deployment(self._deployment_name):
             runner = self._runner_factory.get_runner(
-                self.project_user, NewProjectUserSource.ADDED)
+                self.project_user, NewProjectUserSource.ADDED
+            )
         runner.run()
 
         allocation_user.refresh_from_db()
-        active_status = AllocationUserStatusChoice.objects.get(name='Active')
+        active_status = AllocationUserStatusChoice.objects.get(name="Active")
         self.assertEqual(allocation_user.status, active_status)
 
         self._assert_post_state()
@@ -424,209 +450,221 @@ class TestCommonRunnerMixin(object):
 
 @override_settings(
     EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
-        'cluster_access_requests': {
-            'created': ['admin@example.com'],
+        "cluster_access_requests": {
+            "created": ["admin@example.com"],
         },
     }
 )
 class TestBRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
     """A class for testing BRCNewProjectUserRunner."""
 
-    @enable_deployment('BRC')
+    @enable_deployment("BRC")
     def setUp(self):
         """Set up test data."""
         super().setUp()
-        self._deployment_name = 'BRC'
+        self._deployment_name = "BRC"
 
-    @override_settings(SAVIO_PROJECT_FOR_VECTOR_USERS='co_project')
-    @enable_deployment('BRC')
+    @override_settings(SAVIO_PROJECT_FOR_VECTOR_USERS="co_project")
+    @enable_deployment("BRC")
     def test_add_vector_user_to_designated_savio_project_failure(self):
         """Test that, if adding a Vector user to the designated Savio
         project on Savio fails, the already-made changes are not rolled
         back."""
         # Create a PI.
-        pi = User.objects.create(username='pi0', email='pi0@nonexistent.com')
+        pi = User.objects.create(username="pi0", email="pi0@nonexistent.com")
         user_profile = UserProfile.objects.get(user=pi)
         user_profile.is_pi = True
         user_profile.save()
 
         savio_project_name = settings.SAVIO_PROJECT_FOR_VECTOR_USERS
-        savio_project = self.create_active_project_with_pi(
-            savio_project_name, pi)
+        savio_project = self.create_active_project_with_pi(savio_project_name, pi)
         savio_project_allocation = create_project_allocation(
-            savio_project, Decimal('0.00')).allocation
+            savio_project, Decimal("0.00")
+        ).allocation
 
-        vector_project = self.create_active_project_with_pi(
-            'vector_project', self.user)
+        vector_project = self.create_active_project_with_pi("vector_project", self.user)
         vector_project_allocation = Allocation.objects.create(
-            project=vector_project, status=savio_project_allocation.status)
+            project=vector_project, status=savio_project_allocation.status
+        )
         vector_project_allocation.resources.add(
-            Resource.objects.get(name='Vector Compute'))
+            Resource.objects.get(name="Vector Compute")
+        )
         project_user = vector_project.projectuser_set.get(user=self.user)
 
         self.assertEqual(len(mail.outbox), 0)
 
         method_to_patch = (
-            'coldfront.core.project.utils_.new_project_user_utils.'
-            'add_vector_user_to_designated_savio_project')
+            "coldfront.core.project.utils_.new_project_user_utils."
+            "add_vector_user_to_designated_savio_project"
+        )
         with patch(method_to_patch) as patched_method:
             patched_method.side_effect = raise_exception
             runner = self._runner_factory.get_runner(
-                project_user, NewProjectUserSource.ADDED)
+                project_user, NewProjectUserSource.ADDED
+            )
             runner.run()
 
-        self.assertIn(
-            'Failed to automatically add', runner.get_warning_messages()[0])
+        self.assertIn("Failed to automatically add", runner.get_warning_messages()[0])
 
         # There should be one ClusterAccessRequest, for the Vector project.
         cluster_access_requests = ClusterAccessRequest.objects.filter(
-            allocation_user__user=self.user)
+            allocation_user__user=self.user
+        )
         self.assertEqual(cluster_access_requests.count(), 1)
         vector_request = cluster_access_requests.get(
-            allocation_user__allocation=vector_project_allocation)
-        self.assertEqual(vector_request.status.name, 'Pending - Add')
+            allocation_user__allocation=vector_project_allocation
+        )
+        self.assertEqual(vector_request.status.name, "Pending - Add")
 
         self.assertEqual(len(mail.outbox), 2)
 
-    @override_settings(SAVIO_PROJECT_FOR_VECTOR_USERS='co_project')
-    @enable_deployment('BRC')
+    @override_settings(SAVIO_PROJECT_FOR_VECTOR_USERS="co_project")
+    @enable_deployment("BRC")
     def test_add_vector_user_to_designated_savio_project_success(self):
         """Test that, for a Vector project, the user is also added to
         the designated project on Savio, if they are not already
         present."""
         # Create a PI.
-        pi = User.objects.create(username='pi0', email='pi0@nonexistent.com')
+        pi = User.objects.create(username="pi0", email="pi0@nonexistent.com")
         user_profile = UserProfile.objects.get(user=pi)
         user_profile.is_pi = True
         user_profile.save()
 
         savio_project_name = settings.SAVIO_PROJECT_FOR_VECTOR_USERS
-        savio_project = self.create_active_project_with_pi(
-            savio_project_name, pi)
+        savio_project = self.create_active_project_with_pi(savio_project_name, pi)
         savio_project_allocation = create_project_allocation(
-            savio_project, Decimal('0.00')).allocation
+            savio_project, Decimal("0.00")
+        ).allocation
 
         # Create two Vector projects to add the user to.
         vector_projects = []
         for i in range(2):
             vector_project = self.create_active_project_with_pi(
-                f'vector_project_{i}', self.user)
+                f"vector_project_{i}", self.user
+            )
             vector_project_allocation = Allocation.objects.create(
-                project=vector_project, status=savio_project_allocation.status)
+                project=vector_project, status=savio_project_allocation.status
+            )
             vector_project_allocation.resources.add(
-                Resource.objects.get(name='Vector Compute'))
-            vector_projects.append({
-                'project': vector_project,
-                'allocation': vector_project_allocation,
-                'project_user': vector_project.projectuser_set.get(
-                    user=self.user)
-            })
+                Resource.objects.get(name="Vector Compute")
+            )
+            vector_projects.append(
+                {
+                    "project": vector_project,
+                    "allocation": vector_project_allocation,
+                    "project_user": vector_project.projectuser_set.get(user=self.user),
+                }
+            )
 
         self.assertEqual(len(mail.outbox), 0)
 
         # Add the user to the first Vector project.
         runner = self._runner_factory.get_runner(
-            vector_projects[0]['project_user'], NewProjectUserSource.ADDED)
+            vector_projects[0]["project_user"], NewProjectUserSource.ADDED
+        )
         runner.run()
 
         # There should be two ClusterAccessRequests: one for the Vector
         # project, and one for the Savio project.
         cluster_access_requests = ClusterAccessRequest.objects.filter(
-            allocation_user__user=self.user)
+            allocation_user__user=self.user
+        )
         self.assertEqual(cluster_access_requests.count(), 2)
         savio_request = cluster_access_requests.get(
-            allocation_user__allocation=savio_project_allocation)
-        self.assertEqual(savio_request.status.name, 'Pending - Add')
+            allocation_user__allocation=savio_project_allocation
+        )
+        self.assertEqual(savio_request.status.name, "Pending - Add")
         vector_request = cluster_access_requests.get(
-            allocation_user__allocation=vector_projects[0]['allocation'])
-        self.assertEqual(vector_request.status.name, 'Pending - Add')
+            allocation_user__allocation=vector_projects[0]["allocation"]
+        )
+        self.assertEqual(vector_request.status.name, "Pending - Add")
 
         self.assertEqual(len(mail.outbox), 4)
 
         existing_request_pks = list(
-            cluster_access_requests.values_list('pk', flat=True))
+            cluster_access_requests.values_list("pk", flat=True)
+        )
 
         # Add the user to the second Vector project.
         runner = self._runner_factory.get_runner(
-            vector_projects[1]['project_user'], NewProjectUserSource.ADDED)
+            vector_projects[1]["project_user"], NewProjectUserSource.ADDED
+        )
         runner.run()
 
         # There should only be one additional ClusterAccessRequest, for the
         # second Vector project.
         cluster_access_requests = ClusterAccessRequest.objects.filter(
-            allocation_user__user=self.user).exclude(
-                pk__in=existing_request_pks)
+            allocation_user__user=self.user
+        ).exclude(pk__in=existing_request_pks)
         self.assertEqual(cluster_access_requests.count(), 1)
         vector_request = cluster_access_requests.first()
         self.assertEqual(
-            vector_request.allocation_user.allocation,
-            vector_projects[1]['allocation'])
-        self.assertEqual(
-            vector_request.status.name,
-            'Pending - Add')
+            vector_request.allocation_user.allocation, vector_projects[1]["allocation"]
+        )
+        self.assertEqual(vector_request.status.name, "Pending - Add")
 
         self.assertEqual(len(mail.outbox), 6)
 
-    @enable_deployment('BRC')
+    @enable_deployment("BRC")
     def test_factory_creates_expected_runner(self):
         """Test that the factory creates the BRC runner."""
         factory = NewProjectUserRunnerFactory()
-        runner = factory.get_runner(
-            self.project_user, NewProjectUserSource.ADDED)
+        runner = factory.get_runner(self.project_user, NewProjectUserSource.ADDED)
         self.assertIsInstance(runner, BRCNewProjectUserRunner)
 
 
 @override_settings(
     EMAIL_ADMIN_NOTIFICATION_RECIPIENTS={
-        'cluster_access_requests': {
-            'created': ['admin@example.com'],
+        "cluster_access_requests": {
+            "created": ["admin@example.com"],
         },
     }
 )
 class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
     """A class for testing LRCNewProjectUserRunner."""
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def setUp(self):
         """Set up test data."""
         super().setUp()
-        self._deployment_name = 'LRC'
+        self._deployment_name = "LRC"
 
-        self.project.name = 'pc_project'
+        self.project.name = "pc_project"
         self.project.save()
 
         # Create another PI.
-        self.pi = User.objects.create(username='pi0', email='pi0@lbl.gov')
+        self.pi = User.objects.create(username="pi0", email="pi0@lbl.gov")
         user_profile = UserProfile.objects.get(user=self.pi)
         user_profile.is_pi = True
         user_profile.save()
         ProjectUser.objects.create(
             project=self.project,
             user=self.pi,
-            role=ProjectUserRoleChoice.objects.get(
-                name='Principal Investigator'),
-            status=ProjectUserStatusChoice.objects.get(name='Active'))
+            role=ProjectUserRoleChoice.objects.get(name="Principal Investigator"),
+            status=ProjectUserStatusChoice.objects.get(name="Active"),
+        )
 
         # Create a BillingProject and a BillingActivity.
-        self.billing_project = BillingProject.objects.create(
-            identifier='123456')
+        self.billing_project = BillingProject.objects.create(identifier="123456")
         self.billing_activity = BillingActivity.objects.create(
-            billing_project=self.billing_project, identifier='789')
+            billing_project=self.billing_project, identifier="789"
+        )
         self.allocation_billing_attribute = AllocationAttribute.objects.create(
             allocation_attribute_type=AllocationAttributeType.objects.get(
-                name='Billing Activity'),
+                name="Billing Activity"
+            ),
             allocation=self.allocation,
-            value=str(self.billing_activity.pk))
+            value=str(self.billing_activity.pk),
+        )
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_factory_creates_expected_runner(self):
         """Test that the factory creates the LRC runner."""
         factory = NewProjectUserRunnerFactory()
-        runner = factory.get_runner(
-            self.project_user, NewProjectUserSource.ADDED)
+        runner = factory.get_runner(self.project_user, NewProjectUserSource.ADDED)
         self.assertIsInstance(runner, LRCNewProjectUserRunner)
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_set_billing_activities_failure(self):
         """Test that, if the Allocation does not have an existent
         billing activity, the runner raises an exception and rolls back
@@ -638,8 +676,10 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
             and that other changes are rolled back."""
             email_strategy = EnqueueEmailStrategy()
             runner = self._runner_factory.get_runner(
-                self.project_user, NewProjectUserSource.ADDED,
-                email_strategy=email_strategy)
+                self.project_user,
+                NewProjectUserSource.ADDED,
+                email_strategy=email_strategy,
+            )
             with self.assertRaises(Exception):
                 runner.run()
 
@@ -649,7 +689,9 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
             # AllocationUserAttribute.
             self.assertFalse(
                 AllocationUser.objects.filter(
-                    allocation=self.allocation, user=self.user).exists())
+                    allocation=self.allocation, user=self.user
+                ).exists()
+            )
 
         # The Attribute value is an invalid BillingActivity primary key.
         self.billing_activity.delete()
@@ -657,7 +699,7 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
         assert_runner_failure()
 
         # The Attribute value is empty.
-        self.allocation_billing_attribute.value = ''
+        self.allocation_billing_attribute.value = ""
         self.allocation_billing_attribute.save()
 
         assert_runner_failure()
@@ -667,7 +709,7 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
 
         assert_runner_failure()
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_set_billing_activities_for_empty_attribute_success(self):
         """Test that, if an AllocationUserAttribute exists, but has an
         empty value, it is overwritten. Additionally, test that the
@@ -678,18 +720,21 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
         allocation_user = AllocationUser.objects.create(
             allocation=self.allocation,
             user=self.user,
-            status=AllocationUserStatusChoice.objects.get(name='Active'))
+            status=AllocationUserStatusChoice.objects.get(name="Active"),
+        )
         allocation_user_attribute = AllocationUserAttribute.objects.create(
             allocation_attribute_type=AllocationAttributeType.objects.get(
-                name='Billing Activity'),
+                name="Billing Activity"
+            ),
             allocation=self.allocation,
             allocation_user=allocation_user,
-            value='    ')
+            value="    ",
+        )
 
         email_strategy = EnqueueEmailStrategy()
         runner = self._runner_factory.get_runner(
-            self.project_user, NewProjectUserSource.ADDED,
-            email_strategy=email_strategy)
+            self.project_user, NewProjectUserSource.ADDED, email_strategy=email_strategy
+        )
         runner.run()
 
         self._assert_post_state()
@@ -698,10 +743,9 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
         self.assertEqual(user_profile.billing_activity, self.billing_activity)
 
         allocation_user_attribute.refresh_from_db()
-        self.assertEqual(
-            allocation_user_attribute.value, str(self.billing_activity.pk))
+        self.assertEqual(allocation_user_attribute.value, str(self.billing_activity.pk))
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_set_billing_activities_for_nonexistent_attribute_success(self):
         """Test that, if no AllocationUserAttribute exists, one is
         created. Additionally, test that the activity is set in the
@@ -713,14 +757,16 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
         # AllocationUserAttribute.
         self.assertFalse(
             AllocationUser.objects.filter(
-                allocation=self.allocation, user=self.user).exists())
+                allocation=self.allocation, user=self.user
+            ).exists()
+        )
 
         self._assert_pre_state()
 
         email_strategy = EnqueueEmailStrategy()
         runner = self._runner_factory.get_runner(
-            self.project_user, NewProjectUserSource.ADDED,
-            email_strategy=email_strategy)
+            self.project_user, NewProjectUserSource.ADDED, email_strategy=email_strategy
+        )
         runner.run()
 
         self._assert_post_state()
@@ -730,19 +776,21 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
 
         allocation_user_attribute = AllocationUserAttribute.objects.filter(
             allocation_attribute_type=AllocationAttributeType.objects.get(
-                name='Billing Activity'),
+                name="Billing Activity"
+            ),
             allocation=self.allocation,
-            allocation_user__user=self.user).first()
+            allocation_user__user=self.user,
+        ).first()
         self.assertIsNotNone(allocation_user_attribute)
-        self.assertEqual(
-            allocation_user_attribute.value, str(self.billing_activity.pk))
+        self.assertEqual(allocation_user_attribute.value, str(self.billing_activity.pk))
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_set_billing_activities_not_overwrites_existing(self):
         """Test that the runner does not overwrite billing activities if
         they are already set."""
         new_billing_activity = BillingActivity.objects.create(
-            billing_project=self.billing_project, identifier='000')
+            billing_project=self.billing_project, identifier="000"
+        )
 
         user_profile = self.user.userprofile
         user_profile.billing_activity = new_billing_activity
@@ -751,63 +799,66 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
         allocation_user = AllocationUser.objects.create(
             allocation=self.allocation,
             user=self.user,
-            status=AllocationUserStatusChoice.objects.get(name='Active'))
+            status=AllocationUserStatusChoice.objects.get(name="Active"),
+        )
         allocation_user_attribute = AllocationUserAttribute.objects.create(
             allocation_attribute_type=AllocationAttributeType.objects.get(
-                name='Billing Activity'),
+                name="Billing Activity"
+            ),
             allocation=self.allocation,
             allocation_user=allocation_user,
-            value=str(new_billing_activity.pk))
+            value=str(new_billing_activity.pk),
+        )
 
         email_strategy = EnqueueEmailStrategy()
         runner = self._runner_factory.get_runner(
-            self.project_user, NewProjectUserSource.ADDED,
-            email_strategy=email_strategy)
+            self.project_user, NewProjectUserSource.ADDED, email_strategy=email_strategy
+        )
         runner.run()
 
         self._assert_post_state()
 
         user_profile.refresh_from_db()
         self.assertEqual(user_profile.billing_activity, new_billing_activity)
-        self.assertNotEqual(
-            user_profile.billing_activity, self.billing_activity)
+        self.assertNotEqual(user_profile.billing_activity, self.billing_activity)
 
         allocation_user_attribute.refresh_from_db()
-        self.assertEqual(
-            int(allocation_user_attribute.value), new_billing_activity.pk)
+        self.assertEqual(int(allocation_user_attribute.value), new_billing_activity.pk)
         self.assertNotEqual(
-            int(allocation_user_attribute.value), self.billing_activity.pk)
+            int(allocation_user_attribute.value), self.billing_activity.pk
+        )
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_set_billing_activities_skipped_if_should_not_be_set(self):
         """Test that no attempt is made to set billing activities for
         particular Projects."""
-        example_project_names = ('alsacc', 'etna', 'nano', 'vulcan')
+        example_project_names = ("alsacc", "etna", "nano", "vulcan")
         args = (self.project_user, NewProjectUserSource.ADDED)
-        kwargs = {'email_strategy': EnqueueEmailStrategy()}
+        kwargs = {"email_strategy": EnqueueEmailStrategy()}
 
-        manual_exception_message = 'Rolling back inner changes manually.'
+        manual_exception_message = "Rolling back inner changes manually."
         for project_name in example_project_names:
             self.project.name = project_name
             self.project.save()
 
             allocation = Allocation.objects.create(
                 project=self.project,
-                status=AllocationStatusChoice.objects.get(name='Active'))
+                status=AllocationStatusChoice.objects.get(name="Active"),
+            )
             allocation.resources.add(
                 Resource.objects.get(
-                    name=get_project_compute_resource_name(self.project)))
+                    name=get_project_compute_resource_name(self.project)
+                )
+            )
 
             self._assert_pre_state()
             try:
-                _class = self._runner_factory.get_runner(
-                    *args, **kwargs).__class__
+                _class = self._runner_factory.get_runner(*args, **kwargs).__class__
                 with transaction.atomic():
                     with patch.object(
-                            _class, '_set_billing_activities',
-                            raise_exception):
-                        runner = self._runner_factory.get_runner(
-                            *args, **kwargs)
+                        _class, "_set_billing_activities", raise_exception
+                    ):
+                        runner = self._runner_factory.get_runner(*args, **kwargs)
                         # This call should not raise an exception because the
                         # patched method should never be invoked to begin with.
                         runner.run()
@@ -819,7 +870,7 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
                 self.assertEqual(str(e), manual_exception_message)
             self._assert_pre_state()
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_set_host_user_failure(self):
         """Test that, if a host user could cannot be determined, the
         runner raises an exception and rolls back changes made so
@@ -827,7 +878,7 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
         # For adds (and joins missing a request), the runner attempts to
         # select an eligible host from the PIs of the Project. Alter the
         # would-be host so that it is no longer eligible.
-        self.pi.email = 'pi0@email.com'
+        self.pi.email = "pi0@email.com"
         self.pi.save()
 
         self.assertEqual(len(mail.outbox), 0)
@@ -839,11 +890,11 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
 
         email_strategy = EnqueueEmailStrategy()
         runner = self._runner_factory.get_runner(
-            self.project_user, NewProjectUserSource.ADDED,
-            email_strategy=email_strategy)
+            self.project_user, NewProjectUserSource.ADDED, email_strategy=email_strategy
+        )
         with self.assertRaises(Exception) as cm:
             runner.run()
-        self.assertIn('Failed to determine a host', str(cm.exception))
+        self.assertIn("Failed to determine a host", str(cm.exception))
 
         user_profile.refresh_from_db()
         self.assertIsNone(user_profile.host_user)
@@ -854,18 +905,19 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
         queue = email_strategy.get_queue()
         self.assertEqual(len(queue), 1)
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_set_host_user_for_lbl_employee_success(self):
         """Test that the runner sets the host user for an LBL
         employee to the same user."""
-        self.user.email = 'user@lbl.gov'
+        self.user.email = "user@lbl.gov"
         self.user.save()
 
         user_profile = self.user.userprofile
         self.assertIsNone(user_profile.host_user)
 
         runner = self._runner_factory.get_runner(
-            self.project_user, NewProjectUserSource.ADDED)
+            self.project_user, NewProjectUserSource.ADDED
+        )
         runner.run()
 
         user_profile.refresh_from_db()
@@ -873,7 +925,7 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
 
         self._assert_post_state()
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_set_host_user_for_non_lbl_employee_from_add_success(self):
         """Test that the runner sets the host user for a non-LBL
         employee when the user was added to the Project."""
@@ -883,7 +935,8 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
         self.assertIsNone(user_profile.host_user)
 
         runner = self._runner_factory.get_runner(
-            self.project_user, NewProjectUserSource.ADDED)
+            self.project_user, NewProjectUserSource.ADDED
+        )
         runner.run()
 
         user_profile.refresh_from_db()
@@ -891,7 +944,7 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
 
         self._assert_post_state()
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_set_host_user_for_non_lbl_employee_from_join_success(self):
         """Test that the runner sets the host user for a non-LBL
         employee when the user joined the Project."""
@@ -901,10 +954,12 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
         self.assertIsNone(user_profile.host_user)
 
         ProjectUserJoinRequest.objects.create(
-            project_user=self.project_user, host_user=self.pi)
+            project_user=self.project_user, host_user=self.pi
+        )
 
         runner = self._runner_factory.get_runner(
-            self.project_user, NewProjectUserSource.JOINED)
+            self.project_user, NewProjectUserSource.JOINED
+        )
         runner.run()
 
         user_profile.refresh_from_db()
@@ -912,11 +967,11 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
 
         self._assert_post_state()
 
-    @enable_deployment('LRC')
+    @enable_deployment("LRC")
     def test_set_host_user_skipped_if_has_one(self):
         """Test that the runner does not set the host user for an LBL
         employee if it already has one."""
-        self.user.email = 'user@lbl.gov'
+        self.user.email = "user@lbl.gov"
         self.user.save()
 
         user_profile = self.user.userprofile
@@ -925,10 +980,10 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
 
         # The method for setting a host user should never be invoked, so an
         # exception should not be raised.
-        with patch.object(
-                LRCNewProjectUserRunner, '_set_host_user', raise_exception):
+        with patch.object(LRCNewProjectUserRunner, "_set_host_user", raise_exception):
             runner = self._runner_factory.get_runner(
-                self.project_user, NewProjectUserSource.ADDED)
+                self.project_user, NewProjectUserSource.ADDED
+            )
             runner.run()
 
         user_profile.refresh_from_db()
