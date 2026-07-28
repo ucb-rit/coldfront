@@ -28,6 +28,7 @@ coldfront.db*
 db.json
 coldfront.db.self.broken
 main.yml
+!bootstrap/ansible/roles/**/main.yml
 secrets.yml
 cilogon.yml
 *.dump

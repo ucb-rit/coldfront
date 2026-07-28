@@ -1,0 +1,62 @@
+---
+# Configure Apache: write the WSGI virtualhost config, optionally update the
+# htpasswd file for /metrics basic auth, grant the web server read access to
+# the application directory, then reload Apache.
+# Called from playbook-deploy.yml on every deploy, after the django role.
+
+- name: Set apache_num_processes based on number of CPUs
+  set_fact:
+    apache_num_processes: "{{ apache_num_processes | default(ansible_processor_vcpus | default(ansible_processor_count) | default(4)) }}"
+
+- name: Create a WSGI configuration file from a template if SSL is disabled
+  template:
+    src: wsgi_conf.j2
+    dest: /etc/httpd/conf.d/{{ wsgi_conf_file_name }}
+  when: not ssl_enabled
+
+- name: Create a WSGI configuration file from a template if SSL is enabled
+  template:
+    src: wsgi_conf_ssl.j2
+    dest: /etc/httpd/conf.d/{{ wsgi_conf_file_name }}
+  when: ssl_enabled
+
+- name: Create or update htpasswd file for /metrics basic authentication
+  community.general.htpasswd:
+    path: "{{ htpasswd_file }}"
+    name: "{{ metrics_htpasswd_user }}"
+    password: "{{ vault_metrics_htpasswd_password | default('') }}"
+    crypt_scheme: bcrypt
+    owner: "{{ app_user }}"
+    group: apache
+    mode: 0640
+  vars:
+    ansible_python_interpreter: /usr/libexec/platform-python
+  when: vault_metrics_htpasswd_password is defined and vault_metrics_htpasswd_password | length > 0
+
+# Grant Apache read access to the application directory. Runs after the django
+# role has installed deps and collected static files so new files are covered.
+
+- name: Grant Apache read access to the application's parent directory
+  file:
+    path: "{{ app_root }}"
+    state: directory
+    mode: 0755
+    group: apache
+  when: chmod_tasks
+
+- name: Grant Apache recursive read access to the application directory
+  file:
+    path: "{{ app_root }}/{{ reponame }}"
+    state: directory
+    recurse: true
+    mode: "u=rwX,g=rX,o=rX"
+    group: apache
+  when: chmod_tasks
+
+# Gracefully reload Apache so in-flight requests complete before workers
+# are replaced with processes that serve the new code.
+- name: Reload httpd service
+  service:
+    name: httpd
+    state: reloaded
+    enabled: true

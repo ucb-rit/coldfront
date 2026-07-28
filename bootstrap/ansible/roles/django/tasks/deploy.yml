@@ -1,0 +1,162 @@
+---
+# Django application deploy: write config files, install dependencies, run
+# management commands, and collect static files.
+# Called from playbook-deploy.yml via tasks_from: deploy.
+# Service health checks are handled by the playbook before this role.
+# chmod, httpd reload, and supervisord restart are handled by apache/configure
+# after this role completes.
+
+# Configure the Django application.
+
+- name: Copy the ColdFront local_settings.py file from the sample
+  copy:
+    src: "{{ app_root }}/{{ reponame }}/coldfront/config/local_settings.py.sample"
+    dest: "{{ app_root }}/{{ reponame }}/coldfront/config/local_settings.py"
+
+- name: Copy the ColdFront local_strings.py file from the sample
+  copy:
+    src: "{{ app_root }}/{{ reponame }}/coldfront/config/local_strings.py.sample"
+    dest: "{{ app_root }}/{{ reponame }}/coldfront/config/local_strings.py"
+
+- name: Create /etc/coldfront directory
+  file:
+    path: /etc/coldfront
+    state: directory
+    owner: "{{ app_user }}"
+    group: apache
+    mode: 0750
+
+- name: Create /etc/coldfront/.env from a template
+  template:
+    src: env.j2
+    dest: "/etc/coldfront/.env"
+    owner: "{{ app_user }}"
+    group: apache
+    mode: 0640
+
+- name: Create the deployment-specific password reset email subject text file from a template
+  template:
+    src: password_reset_subject.j2
+    dest: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}/core/user/templates/user/passwords/password_reset_subject.txt"
+
+# Optional pre-pip package setup. Both run before pip installs requirements.txt
+# so that any packages added to requirements.txt can reference them.
+
+- name: Set up MOU generation package
+  include_tasks: mou.yml
+  when: flag_mou_generation_enabled
+
+- name: Install billing validation package
+  include_role:
+    name: billing
+  when: install_billing_validation_package
+
+# Install Django application dependencies.
+
+- name: Install Django application dependencies
+  pip:
+    requirements: "{{ app_root }}/{{ reponame }}/requirements.txt"
+    executable: "{{ app_root }}/venv/bin/pip3"
+  become_user: "{{ app_user }}"
+  environment: # needed as pg_config isn't in PATH by default
+    PATH: "{{ ansible_env.PATH }}:/usr/pgsql-{{ postgres_version }}/bin"
+  vars:
+    ansible_python_interpreter: "{{ app_root }}/venv/bin/python3"
+
+# Run Django management commands.
+
+- name: Run Django management command - initial_setup
+  django_manage:
+    command: initial_setup
+    app_path: "{{ app_root }}/{{ reponame }}"
+    settings: "config.settings"
+    pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
+    virtualenv: "{{ app_root }}/venv"
+  become_user: "{{ app_user }}"
+
+- name: Run Django management command - migrate
+  django_manage:
+    command: migrate
+    app_path: "{{ app_root }}/{{ reponame }}"
+    settings: "config.settings"
+    pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
+    virtualenv: "{{ app_root }}/venv"
+  become_user: "{{ app_user }}"
+
+- name: Run Django management command - add_accounting_defaults
+  django_manage:
+    command: add_accounting_defaults
+    app_path: "{{ app_root }}/{{ reponame }}"
+    settings: "config.settings"
+    pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
+    virtualenv: "{{ app_root }}/venv"
+  become_user: "{{ app_user }}"
+
+- name: Run Django management command - create_allocation_periods
+  django_manage:
+    command: create_allocation_periods
+    app_path: "{{ app_root }}/{{ reponame }}"
+    settings: "config.settings"
+    pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
+    virtualenv: "{{ app_root }}/venv"
+  become_user: "{{ app_user }}"
+
+- name: Run Django management command - add_allowance_defaults
+  django_manage:
+    command: add_allowance_defaults
+    app_path: "{{ app_root }}/{{ reponame }}"
+    settings: "config.settings"
+    pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
+    virtualenv: "{{ app_root }}/venv"
+  become_user: "{{ app_user }}"
+
+- name: Run Django management command - add_directory_defaults
+  django_manage:
+    command: add_directory_defaults
+    app_path: "{{ app_root }}/{{ reponame }}"
+    settings: "config.settings"
+    pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
+    virtualenv: "{{ app_root }}/venv"
+  become_user: "{{ app_user }}"
+
+- name: Run Django management command - create_staff_group
+  django_manage:
+    command: create_staff_group
+    app_path: "{{ app_root }}/{{ reponame }}"
+    settings: "config.settings"
+    pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
+    virtualenv: "{{ app_root }}/venv"
+  become_user: "{{ app_user }}"
+
+- name: Run Django management command - collectstatic
+  django_manage:
+    command: collectstatic --noinput
+    app_path: "{{ app_root }}/{{ reponame }}"
+    settings: "config.settings"
+    pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
+    virtualenv: "{{ app_root }}/venv"
+  become_user: "{{ app_user }}"
+
+- name: Run Django management command - schedule_allocation_period_audits
+  django_manage:
+    command: schedule_allocation_period_audits {{ allocation_period_audit_email_admin_list | join(' ') }} --schedule --month {{ flag_next_period_renewal_requestable_month | int - 1 }}
+    app_path: "{{ app_root }}/{{ reponame }}"
+    settings: "config.settings"
+    pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
+    virtualenv: "{{ app_root }}/venv"
+  become_user: "{{ app_user }}"
+  when: allocation_period_audit_email_admin_list is defined and allocation_period_audit_email_admin_list | length > 0
+
+# Plugin: hardware_procurements: If the plugin is enabled and caching is
+#  enabled, schedule a refresh of the cache every 60 minutes, if not
+#  already scheduled.
+# TODO: (Low priority) Make the interval configurable.
+- name: Run Django management command - refresh_hardware_procurements_cache --schedule --interval 60
+  django_manage:
+    command: refresh_hardware_procurements_cache --schedule --interval 60
+    app_path: "{{ app_root }}/{{ reponame }}"
+    settings: "config.settings"
+    pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
+    virtualenv: "{{ app_root }}/venv"
+  become_user: "{{ app_user }}"
+  when: plugin_hardware_procurements_enabled and plugin_hardware_procurements.data_source == "cached"

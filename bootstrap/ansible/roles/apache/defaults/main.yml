@@ -1,0 +1,42 @@
+###############################################################################
+# Apache role defaults
+# These apply to all hosts. Override in group_vars or host_vars.
+###############################################################################
+
+#------------------------------------------------------------------------------
+# WSGI server
+#------------------------------------------------------------------------------
+
+apache_num_threads_per_process: 10
+# apache_num_processes is set dynamically from CPU count in tasks/configure.yml
+app_port: 80
+
+#------------------------------------------------------------------------------
+# SSL certificate paths
+# Placeholder values; always overridden in host_vars per environment.
+#------------------------------------------------------------------------------
+
+ssl_enabled: false
+ssl_certificate_file: /etc/ssl/ssl_certificate.file
+ssl_certificate_key_file: /etc/ssl/ssl_certificate_key.file
+ssl_certificate_chain_file: /etc/ssl/ssl_certification_chain.file
+
+#------------------------------------------------------------------------------
+# Access
+#------------------------------------------------------------------------------
+
+# Zero or more space-separated IP ranges (CIDR) allowed to reach the REST API.
+# Empty string means no restriction.
+ip_range_with_api_access: ""
+
+#------------------------------------------------------------------------------
+# Metrics (/metrics endpoint)
+#------------------------------------------------------------------------------
+
+# IP ranges, in CIDR notation, from which /metrics is accessible.
+# If the list is empty, access is not restricted by IP.
+ip_range_with_metrics_access:
+  - 127.0.0.1/32
+
+htpasswd_file: /etc/httpd/.htpasswd
+metrics_htpasswd_user: prometheus
