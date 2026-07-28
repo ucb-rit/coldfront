@@ -1,0 +1,37 @@
+###############################################################################
+# lrc-staging: LRC staging server
+# Inherits from group_vars/all and group_vars/lrc.
+###############################################################################
+
+env: staging
+debug: True
+app_user: root
+app_root: /var/www/coldfront_app
+
+#------------------------------------------------------------------------------
+# Host
+#------------------------------------------------------------------------------
+
+# TODO: Fill in staging hostname, IP, and URL.
+hostname: mylrc-dev.lbl.gov
+host_ip: 131.243.8.11
+site_url: https://mylrc-dev.lbl.gov
+ssl_enabled: true
+ssl_certificate_file: /etc/ssl/mylrc/mylrc-dev_lbl_gov_cert.cer
+ssl_certificate_key_file: /etc/ssl/mylrc/mylrc-dev.lbl.gov.key
+ssl_certificate_chain_file: /etc/ssl/mylrc/mylrc-dev_lbl_gov_interm.cer
+
+#------------------------------------------------------------------------------
+# Email
+#------------------------------------------------------------------------------
+
+email_backend: django.core.mail.backends.dummy.EmailBackend
+email_host: localhost
+email_port: 25
+email_use_tls: false
+
+#------------------------------------------------------------------------------
+# Audits
+#------------------------------------------------------------------------------
+
+allocation_period_audit_email_admin_list: []
