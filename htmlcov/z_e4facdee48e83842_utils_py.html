@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_e4facdee48e83842_validate_lrc_initial_state_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-07-28 12:00 +0000
+            created at 2026-07-28 15:30 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -82,8 +82,8 @@
     </div>
 </header>
 <main id="source">
-    <p class="mis show_mis"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="key">from</span> <span class="nam">oauth2client</span><span class="op">.</span><span class="nam">service_account</span> <span class="key">import</span> <span class="nam">ServiceAccountCredentials</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t"><span class="key">import</span> <span class="nam">gspread</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="key">import</span> <span class="nam">gspread</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t"><span class="key">from</span> <span class="nam">oauth2client</span><span class="op">.</span><span class="nam">service_account</span> <span class="key">import</span> <span class="nam">ServiceAccountCredentials</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">"""Utility methods for management commands."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -107,14 +107,14 @@
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">    <span class="nam">scopes</span> <span class="op">=</span> <span class="op">[</span><span class="str">"https://spreadsheets.google.com/feeds"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t">    <span class="nam">credentials</span> <span class="op">=</span> <span class="nam">ServiceAccountCredentials</span><span class="op">.</span><span class="nam">from_json_keyfile_name</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t">        <span class="nam">oauth2_key_file</span><span class="op">,</span> <span class="nam">scopes</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">    <span class="nam">c</span> <span class="op">=</span> <span class="nam">gspread</span><span class="op">.</span><span class="nam">authorize</span><span class="op">(</span><span class="nam">credentials</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t">    <span class="nam">spreadsheet</span> <span class="op">=</span> <span class="nam">c</span><span class="op">.</span><span class="nam">open_by_key</span><span class="op">(</span><span class="nam">spreadsheet_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">    <span class="key">return</span> <span class="nam">spreadsheet</span><span class="op">.</span><span class="nam">worksheet</span><span class="op">(</span><span class="nam">worksheet_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t">        <span class="nam">oauth2_key_file</span><span class="op">,</span> <span class="nam">scopes</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t">    <span class="nam">c</span> <span class="op">=</span> <span class="nam">gspread</span><span class="op">.</span><span class="nam">authorize</span><span class="op">(</span><span class="nam">credentials</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">    <span class="nam">spreadsheet</span> <span class="op">=</span> <span class="nam">c</span><span class="op">.</span><span class="nam">open_by_key</span><span class="op">(</span><span class="nam">spreadsheet_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">    <span class="key">return</span> <span class="nam">spreadsheet</span><span class="op">.</span><span class="nam">worksheet</span><span class="op">(</span><span class="nam">worksheet_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="key">def</span> <span class="nam">get_gspread_worksheet_data</span><span class="op">(</span><span class="nam">worksheet</span><span class="op">,</span> <span class="nam">row_start</span><span class="op">,</span> <span class="nam">row_end</span><span class="op">,</span> <span class="nam">col_start</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">                               <span class="nam">col_end</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="key">def</span> <span class="nam">get_gspread_worksheet_data</span><span class="op">(</span><span class="nam">worksheet</span><span class="op">,</span> <span class="nam">row_start</span><span class="op">,</span> <span class="nam">row_end</span><span class="op">,</span> <span class="nam">col_start</span><span class="op">,</span> <span class="nam">col_end</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">    <span class="str">"""Return a list of lists, where each row corresponds to a row in</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">    the given gspread worksheet. The lists are constrained by the row</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">    and column limits.</span>&nbsp;</span><span class="r"></span></p>
@@ -139,9 +139,10 @@
     <p class="mis show_mis"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="nam">index</span> <span class="op">=</span> <span class="num">0</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">    <span class="key">for</span> <span class="nam">i</span> <span class="key">in</span> <span class="nam">range</span><span class="op">(</span><span class="nam">num_rows</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">        <span class="nam">data</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">            <span class="op">[</span><span class="nam">cell</span><span class="op">.</span><span class="nam">value</span><span class="op">.</span><span class="nam">strip</span><span class="op">(</span><span class="op">)</span> <span class="key">for</span> <span class="nam">cell</span> <span class="key">in</span> <span class="nam">cell_list</span><span class="op">[</span><span class="nam">index</span><span class="op">:</span><span class="nam">index</span> <span class="op">+</span> <span class="nam">num_cols</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">        <span class="nam">index</span> <span class="op">=</span> <span class="nam">index</span> <span class="op">+</span> <span class="nam">num_cols</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">    <span class="key">return</span> <span class="nam">data</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">            <span class="op">[</span><span class="nam">cell</span><span class="op">.</span><span class="nam">value</span><span class="op">.</span><span class="nam">strip</span><span class="op">(</span><span class="op">)</span> <span class="key">for</span> <span class="nam">cell</span> <span class="key">in</span> <span class="nam">cell_list</span><span class="op">[</span><span class="nam">index</span> <span class="op">:</span> <span class="nam">index</span> <span class="op">+</span> <span class="nam">num_cols</span><span class="op">]</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">        <span class="nam">index</span> <span class="op">=</span> <span class="nam">index</span> <span class="op">+</span> <span class="nam">num_cols</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="key">return</span> <span class="nam">data</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -151,7 +152,7 @@
             <a class="nav" href="z_e4facdee48e83842_validate_lrc_initial_state_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-07-28 12:00 +0000
+            created at 2026-07-28 15:30 +0000
         </p>
     </div>
 </footer>
