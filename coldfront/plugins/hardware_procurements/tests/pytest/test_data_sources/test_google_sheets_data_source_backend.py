@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -13,7 +13,7 @@ def backend_from_google_sheet_columns():
     defined in GOOGLE_SHEET_COLUMNS, and with a header row index of
     1."""
     backend = GoogleSheetsDataSourceBackend(
-        credentials_file_path="",
+        credentials={},
         sheet_id="",
         sheet_tab="",
         sheet_columns=GOOGLE_SHEET_COLUMNS,
@@ -245,56 +245,51 @@ class TestGoogleSheetsDataSourceBackendUnit:
     def test_clean_sheet_value_status_unexpected(self):
         kwargs = self._get_backend_kwargs()
         backend = GoogleSheetsDataSourceBackend(**kwargs)
-        with pytest.raises(ValueError, match="Unexpected status") as exc_info:
+        with pytest.raises(ValueError, match="Unexpected status"):
             backend._clean_sheet_value("status", "unknown")
 
-    def test_fetch_sheet_data_file_not_found(self):
+    def test_fetch_sheet_data_empty_credentials(self):
         backend = GoogleSheetsDataSourceBackend(
-            credentials_file_path="nonexistent.json",
+            credentials={},
             sheet_id="mock_sheet_id",
             sheet_tab="mock_tab",
             sheet_columns={},
             header_row_index=1,
         )
 
-        with pytest.raises(FileNotFoundError, match="Could not find credentials file"):
+        with pytest.raises(ValueError, match="No credentials found"):
             backend._fetch_sheet_data()
 
     def test_fetch_sheet_data_returned_values(self):
-        with patch("os.path.isfile", return_value=True) as mock_isfile:
-            with patch("gspread.service_account") as mock_service_account:
-                mock_gspread = MagicMock()
-                mock_service_account.return_value = mock_gspread
-                mock_sheet = mock_gspread.open_by_key.return_value
-                mock_worksheet = mock_sheet.worksheet.return_value
-                mock_worksheet.get_all_values.return_value = [
-                    ["Header1", "Header2"],
-                    ["Value1", "Value2"],
-                ]
+        mock_credentials = {"type": "service_account"}
+        sheet_id = "mock_sheet_id"
+        sheet_tab = "mock_tab"
 
-                credentials_file_path = "mock_credentials.json"
-                sheet_id = "mock_sheet_id"
-                sheet_tab = "mock_tab"
-                backend = GoogleSheetsDataSourceBackend(
-                    credentials_file_path=credentials_file_path,
-                    sheet_id=sheet_id,
-                    sheet_tab=sheet_tab,
-                    sheet_columns={},
-                    header_row_index=1,
-                )
+        with patch("gspread.service_account_from_dict") as mock_saf:
+            mock_gc = mock_saf.return_value
+            mock_sheet = mock_gc.open_by_key.return_value
+            mock_worksheet = mock_sheet.worksheet.return_value
+            mock_worksheet.get_all_values.return_value = [
+                ["Header1", "Header2"],
+                ["Value1", "Value2"],
+            ]
 
-                result = backend._fetch_sheet_data()
-                # The header row is skipped.
-                assert result == [["Value1", "Value2"]]
+            backend = GoogleSheetsDataSourceBackend(
+                credentials=mock_credentials,
+                sheet_id=sheet_id,
+                sheet_tab=sheet_tab,
+                sheet_columns={},
+                header_row_index=1,
+            )
 
-                mock_service_account.assert_called_once_with(
-                    filename=credentials_file_path
-                )
-                mock_gspread.open_by_key.assert_called_once_with(sheet_id)
-                mock_sheet.worksheet.assert_called_once_with(sheet_tab)
-                mock_worksheet.get_all_values.assert_called_once()
+            result = backend._fetch_sheet_data()
+            # The header row is skipped.
+            assert result == [["Value1", "Value2"]]
 
-            mock_isfile.assert_called_once_with(credentials_file_path)
+            mock_saf.assert_called_once_with(mock_credentials)
+            mock_gc.open_by_key.assert_called_once_with(sheet_id)
+            mock_sheet.worksheet.assert_called_once_with(sheet_tab)
+            mock_worksheet.get_all_values.assert_called_once()
 
     @pytest.mark.parametrize(
         ["column_str", "expected_index"],
@@ -316,37 +311,10 @@ class TestGoogleSheetsDataSourceBackendUnit:
         index = backend._gsheet_column_to_index(column_str)
         assert index == expected_index
 
-    def test_init_from_file_sets_attributes(self):
-        mock_config_file_path = "mock_config.json"
-        mock_config = {
-            "credentials_file_path": "mock_credentials.json",
-            "sheet_id": "mock_sheet_id",
-            "sheet_tab": "mock_tab",
-            "sheet_columns": {},
-            "header_row_index": 1,
-        }
-
-        with patch("builtins.open", mock_open(read_data="")) as mock_file:
-            with patch("json.load", return_value=mock_config) as mock_json_load:
-                backend = GoogleSheetsDataSourceBackend(
-                    config_file_path=mock_config_file_path
-                )
-                assert (
-                    backend._credentials_file_path
-                    == mock_config["credentials_file_path"]
-                )
-                assert backend._sheet_id == mock_config["sheet_id"]
-                assert backend._sheet_tab == mock_config["sheet_tab"]
-                assert backend._sheet_columns == mock_config["sheet_columns"]
-                assert backend._header_row_index == mock_config["header_row_index"]
-
-                mock_json_load.assert_called_once()
-            mock_file.assert_called_once_with(mock_config_file_path)
-
     @pytest.mark.parametrize(
         "kwarg",
         [
-            "credentials_file_path",
+            "credentials",
             "sheet_id",
             "sheet_tab",
             "sheet_columns",
@@ -362,7 +330,7 @@ class TestGoogleSheetsDataSourceBackendUnit:
     @pytest.mark.parametrize(
         ["kwarg", "value"],
         [
-            ("credentials_file_path", 123),
+            ("credentials", "not_a_dict"),
             ("sheet_id", 123),
             ("sheet_tab", 123),
             ("sheet_columns", 123),
@@ -378,7 +346,7 @@ class TestGoogleSheetsDataSourceBackendUnit:
     def test_init_sets_attributes(self):
         kwargs = self._get_backend_kwargs()
         backend = GoogleSheetsDataSourceBackend(**kwargs)
-        assert backend._credentials_file_path == kwargs["credentials_file_path"]
+        assert backend._credentials == kwargs["credentials"]
         assert backend._sheet_id == kwargs["sheet_id"]
         assert backend._sheet_tab == kwargs["sheet_tab"]
         assert backend._sheet_columns == kwargs["sheet_columns"]
@@ -386,14 +354,14 @@ class TestGoogleSheetsDataSourceBackendUnit:
 
     @staticmethod
     def _get_backend_kwargs(
-        credentials_file_path="",
+        credentials=None,
         sheet_id="",
         sheet_tab="",
         sheet_columns=None,
         header_row_index=0,
     ):
         return {
-            "credentials_file_path": credentials_file_path,
+            "credentials": credentials or {},
             "sheet_id": sheet_id,
             "sheet_tab": sheet_tab,
             "sheet_columns": sheet_columns or {},
