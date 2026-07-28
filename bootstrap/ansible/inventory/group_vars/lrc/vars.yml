@@ -64,6 +64,16 @@ center_login_guide: "https://scienceit-docs.lbl.gov/hpc/accounts/loggingin/"
 center_help_email: "scienceithelp@lbl.gov"
 
 #------------------------------------------------------------------------------
+# Renewal survey
+#
+# Default to permissive (no survey required) for lrc-dev.
+# lrc-staging and lrc-prod override to google_forms in their host_vars,
+# supplying the three path variables alongside it.
+#------------------------------------------------------------------------------
+
+renewal_survey_backend: permissive
+
+#------------------------------------------------------------------------------
 # Plugins
 #------------------------------------------------------------------------------
 

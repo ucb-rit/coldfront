@@ -59,4 +59,6 @@ redis_host: localhost
 
 opendkim_enabled: false       # brc-prod overrides to true in host_vars
 cloudflare_enabled: false     # lrc-prod overrides to true in host_vars
-install_billing_validation_package: false  # lrc-prod overrides to true in host_vars
+install_billing_validation_package: false  # lrc-prod/lrc-staging override to true in host_vars
+
+enable_maintenance_mode: false
