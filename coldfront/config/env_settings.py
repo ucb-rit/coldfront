@@ -139,11 +139,12 @@ else:
 # BRC Vector Settings
 # ------------------------------------------------------------------------------
 
-# The username of the user to set as the PI for all Vector projects.
-VECTOR_PI_USERNAME = env("HPCS__VECTOR_PI_USERNAME")
+if env.bool("DJANGO_FLAGS__BRC_ONLY_VALUE", default=False):
+    # The username of the user to set as the PI for all Vector projects.
+    VECTOR_PI_USERNAME = env("HPCS__VECTOR_PI_USERNAME")
 
-# The name of the Savio project to which all Vector users are given access.
-SAVIO_PROJECT_FOR_VECTOR_USERS = env("HPCS__SAVIO_PROJECT_FOR_VECTOR_USERS")
+    # The name of the Savio project to which all Vector users are given access.
+    SAVIO_PROJECT_FOR_VECTOR_USERS = env("HPCS__SAVIO_PROJECT_FOR_VECTOR_USERS")
 
 # ------------------------------------------------------------------------------
 # File Storage Settings
