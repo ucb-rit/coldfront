@@ -81,6 +81,16 @@ plugin_faculty_storage_allocations_eligible_pi_email_whitelist_enabled: false
 plugin_faculty_storage_allocations_eligible_pi_email_whitelist: []
 
 #------------------------------------------------------------------------------
+# Renewal survey
+#
+# Default to permissive (no survey required) for brc-dev.
+# brc-prod overrides to google_forms in its host_vars,
+# supplying the three path variables alongside it.
+#------------------------------------------------------------------------------
+
+renewal_survey_backend: permissive
+
+#------------------------------------------------------------------------------
 # BRC Vector
 #------------------------------------------------------------------------------
 

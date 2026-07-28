@@ -491,9 +491,12 @@ if FILE_STORAGE["backend"] == "google_drive":
         "gdstorage",
     ]
 
-    # An absolute path to a private JSON key file for a Google service account.
-    GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = env(
-        "DJANGO_GOOGLEDRIVE_STORAGE__GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE"
+    # Inline JSON contents of a Google service account private key file.
+    # Setting the file path to None signals to django-googledrive-storage that
+    # credentials are supplied via the _CONTENTS env var instead.
+    GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = None
+    GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE_CONTENTS = env(
+        "DJANGO_GOOGLEDRIVE_STORAGE__GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE_CONTENTS"
     )
 
     # The base path files will be uploaded to in Google Drive. (E.g., if the
