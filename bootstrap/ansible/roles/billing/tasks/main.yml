@@ -1,7 +1,7 @@
 ---
 # Install the Oracle instant client and the LRC billing validation Python
 # package via SSH deploy key. Included conditionally when
-# install_billing_validation_package=true (lrc-prod only).
+# install_billing_validation_package=true (lrc only).
 
 # System-level Oracle dependencies (run as root).
 
