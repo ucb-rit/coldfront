@@ -51,6 +51,10 @@
     mode: "u=rwX,g=rX,o=rX"
     group: apache
 
+- name: Validate Apache configuration before reload
+  command: apachectl configtest
+  changed_when: false
+
 # Gracefully reload Apache so in-flight requests complete before workers
 # are replaced with processes that serve the new code.
 - name: Reload httpd service
