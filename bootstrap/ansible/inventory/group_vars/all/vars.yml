@@ -25,12 +25,6 @@ postgres_version: 15
 postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
 
 #------------------------------------------------------------------------------
-# Playbook flags
-#------------------------------------------------------------------------------
-
-chmod_tasks: true  # Set to false when a Windows FS is mounted
-
-#------------------------------------------------------------------------------
 # Project identity
 # Used by multiple roles (django, apache, supervisord).
 #------------------------------------------------------------------------------

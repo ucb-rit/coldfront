@@ -32,14 +32,6 @@ db_name: cf_lrc_db
 
 log_path: /var/log/user_portals/cf_mylrc
 portal_log_file: cf_mylrc_portal.log
-logrotate_entry_name: cf_mylrc
-
-#------------------------------------------------------------------------------
-# Apache / WSGI
-#------------------------------------------------------------------------------
-
-wsgi_conf_file_name: cf_mylrc_wsgi.conf
-wsgi_conf_log_prefix: cf_lrc
 
 #------------------------------------------------------------------------------
 # Prometheus
@@ -66,9 +58,8 @@ center_help_email: "scienceithelp@lbl.gov"
 #------------------------------------------------------------------------------
 # Renewal survey
 #
-# Default to permissive (no survey required) for lrc-dev.
-# lrc-staging and lrc-prod override to google_forms in their host_vars,
-# supplying the three path variables alongside it.
+# Default to permissive (no survey required).
+# lrc-staging and lrc-prod override to google_forms in their host_vars.
 #------------------------------------------------------------------------------
 
 renewal_survey_backend: permissive

@@ -32,14 +32,6 @@ db_name: cf_brc_db
 
 log_path: /var/log/user_portals/cf_mybrc
 portal_log_file: cf_mybrc_portal.log
-logrotate_entry_name: cf_mybrc
-
-#------------------------------------------------------------------------------
-# Apache / WSGI
-#------------------------------------------------------------------------------
-
-wsgi_conf_file_name: cf_mybrc_wsgi.conf
-wsgi_conf_log_prefix: cf_brc
 
 #------------------------------------------------------------------------------
 # Prometheus
