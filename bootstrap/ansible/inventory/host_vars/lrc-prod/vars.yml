@@ -16,6 +16,7 @@ host_ip: 131.243.8.12
 site_url: https://mylrc.lbl.gov
 ssl_enabled: true
 cloudflare_enabled: true
+cloudflare_local_server_name: mylrc-local.lbl.gov
 ssl_certificate_file: /etc/ssl/dummy/mylrc-local.lbl.gov_cert.crt
 ssl_certificate_key_file: /etc/ssl/dummy/mylrc-local.lbl.gov_cert.key
 ssl_certificate_chain_file: ""
