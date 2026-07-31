@@ -51,7 +51,6 @@ redis_host: localhost
 # are referenced in playbook-level `when:` conditions before roles are loaded.
 #------------------------------------------------------------------------------
 
-opendkim_enabled: false       # brc-prod overrides to true in host_vars
 cloudflare_enabled: false     # lrc-prod overrides to true in host_vars
 install_billing_validation_package: false  # lrc-prod/lrc-staging override to true in host_vars
 
