@@ -1,0 +1,72 @@
+###############################################################################
+# LRC-specific configuration
+###############################################################################
+
+#------------------------------------------------------------------------------
+# Feature flags
+#------------------------------------------------------------------------------
+
+flag_brc_enabled: False
+flag_lrc_enabled: True
+flag_link_login_enabled: False
+flag_next_period_renewal_requestable_month: 9
+
+#------------------------------------------------------------------------------
+# Branding and portal identity
+#------------------------------------------------------------------------------
+
+portal_name: "MyLRC"
+program_name_long: "Laboratory Research Computing"
+program_name_short: "LRC"
+primary_cluster_name: "Lawrencium"
+
+#------------------------------------------------------------------------------
+# Database
+#------------------------------------------------------------------------------
+
+db_name: cf_lrc_db
+
+#------------------------------------------------------------------------------
+# Logging
+#------------------------------------------------------------------------------
+
+log_path: /var/log/user_portals/cf_mylrc
+portal_log_file: cf_mylrc_portal.log
+
+#------------------------------------------------------------------------------
+# Prometheus
+#------------------------------------------------------------------------------
+
+prometheus_metric_namespace: mylrc
+
+#------------------------------------------------------------------------------
+# Email
+#------------------------------------------------------------------------------
+
+email_from: mylrc@lbl.gov
+email_ticket_system_address: scienceithelp@lbl.gov
+email_subject_prefix: "[MyLRC-User-Portal]"
+
+#------------------------------------------------------------------------------
+# Center links
+#------------------------------------------------------------------------------
+
+center_user_guide: "https://scienceit-docs.lbl.gov/hpc/"
+center_login_guide: "https://scienceit-docs.lbl.gov/hpc/accounts/loggingin/"
+center_help_email: "scienceithelp@lbl.gov"
+
+#------------------------------------------------------------------------------
+# Renewal survey
+#
+# Default to permissive (no survey required).
+# lrc-staging and lrc-prod override to google_forms in their host_vars.
+#------------------------------------------------------------------------------
+
+renewal_survey_backend: permissive
+
+#------------------------------------------------------------------------------
+# Plugins
+#------------------------------------------------------------------------------
+
+plugin_departments_enabled: false
+plugin_faculty_storage_allocations_enabled: false

@@ -1,0 +1,71 @@
+---
+# Install the Oracle instant client and the LRC billing validation Python
+# package via SSH deploy key. Included conditionally when
+# install_billing_validation_package=true (lrc only).
+
+# System-level Oracle dependencies (run as root).
+
+- name: Add Oracle yum repository
+  yum_repository:
+    name: oracle-repository
+    description: oracle repository
+    baseurl: https://yum.oracle.com/repo/OracleLinux/OL8/oracle/instantclient21/x86_64/
+    # https://linux.oracle.com/security/gpg/
+    gpgkey: https://yum.oracle.com/RPM-GPG-KEY-oracle-ol8
+
+- name: Install Oracle instant client
+  yum:
+    name:
+      - oracle-instantclient-basic.x86_64
+    state: present
+
+# SSH key setup for private GitLab repo access.
+
+- name: Register app_user home directory
+  user:
+    name: "{{ app_user }}"
+  register: billing_user
+
+- name: Check if hpcs-gitlab.lbl.gov is in known_hosts
+  shell: ssh-keygen -F hpcs-gitlab.lbl.gov
+  register: billing_gitlab_known_hosts
+  become_user: "{{ app_user }}"
+  changed_when: false
+  failed_when: false
+
+- name: Add hpcs-gitlab.lbl.gov to known_hosts
+  shell: "ssh-keyscan hpcs-gitlab.lbl.gov >> {{ billing_user.home }}/.ssh/known_hosts"
+  become_user: "{{ app_user }}"
+  when: billing_gitlab_known_hosts.rc != 0
+
+- name: Write billing validation deploy key to user's .ssh directory
+  copy:
+    content: "{{ vault_billing_validation_deploy_key }}\n"
+    dest: "{{ billing_user.home }}/.ssh/id_billing_validation"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: 0600
+  become_user: "{{ app_user }}"
+  no_log: true
+
+- name: Add billing validation key to ssh config
+  blockinfile:
+    path: "{{ billing_user.home }}/.ssh/config"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - billing_validation"
+    block: |
+      Host hpcs-gitlab.lbl.gov
+        IdentityFile ~/.ssh/id_billing_validation
+    create: true
+  become_user: "{{ app_user }}"
+
+# Note: only updates if the version set in setup.py increases.
+# Otherwise, force reinstall with pip and the --force-reinstall flag.
+- name: Install billing validation package
+  pip:
+    name: git+ssh://git@hpcs-gitlab.lbl.gov/meli/lbl_project_activity_validator.git
+    executable: "{{ app_root }}/venv/bin/pip3"
+  become_user: "{{ app_user }}"
+  environment:
+    GIT_SSH_COMMAND: "ssh -o BatchMode=yes"
+  vars:
+    ansible_python_interpreter: "{{ app_root }}/venv/bin/python3"

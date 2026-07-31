@@ -1,0 +1,62 @@
+###############################################################################
+# brc-prod: BRC production server
+# Inherits from group_vars/all and group_vars/brc.
+###############################################################################
+
+debug: False
+app_user: root
+app_root: /var/www/coldfront_app
+
+#------------------------------------------------------------------------------
+# Host
+#------------------------------------------------------------------------------
+
+hostname: mybrc.brc.berkeley.edu
+host_ip: 136.152.224.34
+site_url: https://mybrc.brc.berkeley.edu
+ssl_enabled: true
+
+#------------------------------------------------------------------------------
+# Email
+#------------------------------------------------------------------------------
+
+email_backend: django.core.mail.backends.smtp.EmailBackend
+email_host: smtp.gmail.com
+email_port: 587
+email_use_tls: true
+email_host_user: brc-mybrc@berkeley.edu
+
+#------------------------------------------------------------------------------
+# MOU generation
+#------------------------------------------------------------------------------
+
+flag_mou_generation_enabled: true
+
+#------------------------------------------------------------------------------
+# Renewal surveys (google_forms)
+#------------------------------------------------------------------------------
+
+renewal_survey_backend: google_forms
+renewal_survey_google_forms_survey_data_cache_key: renewal_survey_google_forms_survey_data
+
+#------------------------------------------------------------------------------
+# Hardware procurements
+#------------------------------------------------------------------------------
+
+plugin_hardware_procurements_enabled: true
+plugin_hardware_procurements:
+  data_source: cached
+  data_source_options:
+    cache_key: hardware_procurements_data
+    cached_data_source: google_sheets
+    cached_data_source_options: "{{ vault_hardware_procurements_config_json | from_json }}"
+
+#------------------------------------------------------------------------------
+# File storage (Google Drive)
+#------------------------------------------------------------------------------
+
+file_storage_backend: google_drive
+google_drive_storage_media_root: /
+new_project_request_mou_path: "New-Projects-MOU/"
+service_units_purchase_request_mou_path: "Service-Unit-Purchase-MOU/"
+secure_directory_request_mou_path: "Secure-Computing-MOU/"

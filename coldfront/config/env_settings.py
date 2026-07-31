@@ -78,8 +78,6 @@ EMAIL_OPT_OUT_INSTRUCTION_URL = CENTER_BASE_URL + "/optout"
 EMAIL_SIGNATURE = env("COLDFRONT__EMAIL_SIGNATURE").replace("\\n", "\n")
 
 EMAIL_FROM = env("HPCS__EMAIL_FROM")
-# TODO: EMAIL_ADMIN is not in use. It can be removed.
-EMAIL_ADMIN = env("HPCS__EMAIL_ADMIN")
 DEFAULT_FROM_EMAIL = EMAIL_FROM
 
 DATABASES = {
@@ -139,11 +137,12 @@ else:
 # BRC Vector Settings
 # ------------------------------------------------------------------------------
 
-# The username of the user to set as the PI for all Vector projects.
-VECTOR_PI_USERNAME = env("HPCS__VECTOR_PI_USERNAME")
+if env.bool("DJANGO_FLAGS__BRC_ONLY_VALUE", default=False):
+    # The username of the user to set as the PI for all Vector projects.
+    VECTOR_PI_USERNAME = env("HPCS__VECTOR_PI_USERNAME")
 
-# The name of the Savio project to which all Vector users are given access.
-SAVIO_PROJECT_FOR_VECTOR_USERS = env("HPCS__SAVIO_PROJECT_FOR_VECTOR_USERS")
+    # The name of the Savio project to which all Vector users are given access.
+    SAVIO_PROJECT_FOR_VECTOR_USERS = env("HPCS__SAVIO_PROJECT_FOR_VECTOR_USERS")
 
 # ------------------------------------------------------------------------------
 # File Storage Settings
@@ -492,9 +491,12 @@ if FILE_STORAGE["backend"] == "google_drive":
         "gdstorage",
     ]
 
-    # An absolute path to a private JSON key file for a Google service account.
-    GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = env(
-        "DJANGO_GOOGLEDRIVE_STORAGE__GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE"
+    # Inline JSON contents of a Google service account private key file.
+    # Setting the file path to None signals to django-googledrive-storage that
+    # credentials are supplied via the _CONTENTS env var instead.
+    GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = None
+    GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE_CONTENTS = env(
+        "DJANGO_GOOGLEDRIVE_STORAGE__GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE_CONTENTS"
     )
 
     # The base path files will be uploaded to in Google Drive. (E.g., if the

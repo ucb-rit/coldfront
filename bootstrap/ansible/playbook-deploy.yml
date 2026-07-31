@@ -1,0 +1,58 @@
+---
+
+- name: MyBRC/LRC User Portal - Deploy
+  gather_facts: true
+  hosts: all
+  become: true
+  become_user: root
+  become_method: sudo
+
+  environment:
+    PATH: "/opt/python{{ python_version_short }}/bin:{{ ansible_env.PATH }}"
+
+  tasks:
+
+    # Run on every deploy. Safe to re-run; all tasks are idempotent.
+
+    # Ensure prerequisite services are up before touching the application.
+    # Avoid restarting them to prevent disruption to in-flight requests.
+
+    - name: Ensure postfix is running and enabled
+      service:
+        name: postfix
+        state: started
+        enabled: true
+
+    - name: Ensure Redis is running and enabled
+      service:
+        name: redis
+        state: started
+        enabled: true
+
+    - name: Ensure Supervisord is running and enabled
+      service:
+        name: supervisord
+        state: started
+        enabled: true
+
+    - name: Ensure PostgreSQL is reloaded and enabled
+      service:
+        name: postgresql-{{ postgres_version }}
+        state: reloaded
+        enabled: true
+
+    - name: Deploy Django application
+      include_role:
+        name: django
+        tasks_from: deploy
+
+    - name: Configure Apache
+      include_role:
+        name: apache
+        tasks_from: configure
+
+    # supervisorctl is included in community.general.
+    - name: Restart the django_q cluster worker
+      supervisorctl:
+        name: 'django_q'
+        state: restarted

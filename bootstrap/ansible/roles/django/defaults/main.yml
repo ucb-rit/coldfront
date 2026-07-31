@@ -1,0 +1,74 @@
+###############################################################################
+# Django role defaults
+# These apply to all hosts. Override in group_vars or host_vars.
+###############################################################################
+
+#------------------------------------------------------------------------------
+# Runtime
+#------------------------------------------------------------------------------
+
+debug: False
+enable_django_debug_toolbar: false
+enable_maintenance_mode: false
+django_constance_enabled: true
+django_q_job_queue_mode: async
+django_cache_backend_short: redis
+
+#------------------------------------------------------------------------------
+# Access
+#------------------------------------------------------------------------------
+
+# Extra hosts permitted in ALLOWED_HOSTS beyond hostname and host_ip.
+extra_allowed_hosts:
+  - '127.0.0.1'
+
+# IP addresses that can view the django-debug-toolbar.
+debug_toolbar_ips:
+  - '127.0.0.1'
+
+#------------------------------------------------------------------------------
+# Logging
+#------------------------------------------------------------------------------
+
+stream_logs_to_stdout: false
+
+#------------------------------------------------------------------------------
+# File storage
+# Backend options: 'file_system', 'google_drive'
+#------------------------------------------------------------------------------
+
+file_storage_backend: file_system
+
+#------------------------------------------------------------------------------
+# Renewal survey
+# Backend options: 'google_forms', 'permissive'
+#------------------------------------------------------------------------------
+
+renewal_survey_backend: permissive
+
+#------------------------------------------------------------------------------
+# REST API
+#------------------------------------------------------------------------------
+
+allow_all_jobs: false
+
+#------------------------------------------------------------------------------
+# Feature flags
+#------------------------------------------------------------------------------
+
+flag_basic_auth_enabled: False
+flag_dev_auth_enabled: False
+flag_sso_enabled: True
+flag_mou_generation_enabled: False
+flag_renewal_survey_enabled: True
+flag_multiple_email_addresses_allowed: False
+
+#------------------------------------------------------------------------------
+# Plugin: hardware_procurements (disabled everywhere by default)
+#------------------------------------------------------------------------------
+
+plugin_hardware_procurements_enabled: false
+plugin_hardware_procurements_data_source_modules_by_short_name:
+  cached: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.cached.CachedDataSourceBackend'
+  dummy: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.dummy.DummyDataSourceBackend'
+  google_sheets: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.google_sheets.GoogleSheetsDataSourceBackend'

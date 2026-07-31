@@ -24,6 +24,14 @@
   environment:
     PATH: "/opt/python{{ python_version_short }}/bin:{{ ansible_env.PATH }}"
 
+  pre_tasks:
+    - name: Provisioning not yet available
+      ansible.builtin.fail:
+        msg: >
+          Provisioning via playbook.yml is temporarily disabled.
+          The provisioning roles have not been updated for the new
+          inventory structure. See README.md for the deploy-only workflow.
+
   tasks:
     # Provisioning tasks that can generally be skipped after the first time.
     - name: Run Provisioning Tasks

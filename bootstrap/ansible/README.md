@@ -1,30 +1,69 @@
 # Deployment
 
-## Ansible
+Ansible playbooks for deploying to production and staging servers. All playbooks run on the server itself (`ansible_connection: local`).
 
-Deployments and configuration management are handled by Ansible, located in the `bootstrap/ansible` directory.
+## Prerequisites
 
-In particular, the Ansible playbook installs, enables, and configures PostgreSQL and Redis, creates log files, installs Pip requirements, copies ColdFront settings files, runs initial setup, migrates the database, collects static files, creates WSGI files for Apache, and restarts Apache.
+Install Ansible collections before running any playbook for the first time:
 
-Note that there are some additional server setup steps that are not currently captured in the Ansible playbook.
-
-Also note that on production environments you must install necessary Ansible
-collections using `ansible-galaxy collection install -r bootstrap/ansible/requirements.yml` before initially running the playbook.
-
-1. Create `main.yml`.
-
-    ```
-    cp bootstrap/ansible/main.copyme main.yml
-    ```
-
-2. Modify `main.yml` depending on the current deployment.
-
-3. Run the Ansible playbook as the `djangooperator` user defined in `main.yml`.
-
-```
-ansible-playbook bootstrap/ansible/playbook.yml
+```bash
+ansible-galaxy collection install -r requirements.yml
 ```
 
-## Dynamic Settings
+## Deploy workflow
 
-Some configuration may need to be updated without a server restart (e.g., links to external resources). Such configuration is managed by `django-constance` and stored in Redis. To update these, navigate to the URL path `/admin/constance/config/`, and set the correct values for the current deployment.
+All commands run from `bootstrap/ansible/` on the target server. `ansible.cfg` sets `inventory = inventory/` so no `-i` flag is needed. The vault ID matches the host name.
+
+**lrc-staging:**
+```bash
+git pull
+ansible-playbook playbook-deploy.yml --limit lrc-staging --vault-id lrc-staging@prompt
+```
+
+**lrc-prod:**
+```bash
+git pull
+ansible-playbook playbook-deploy.yml --limit lrc-prod --vault-id lrc-prod@prompt
+```
+
+**brc-prod:**
+```bash
+git pull
+ansible-playbook playbook-deploy.yml --limit brc-prod --vault-id brc-prod@prompt
+```
+
+## Vault management
+
+Secrets are stored in encrypted `vault.yml` files committed to the repository. Each environment has its own vault password. Vault variables use the `vault_` prefix and are referenced directly in templates and tasks — for example, `vault_django_secret_key`, `vault_db_admin_passwd`, `vault_redis_passwd`.
+
+**View secrets:**
+```bash
+ansible-vault view inventory/host_vars/lrc-prod/vault.yml --vault-id lrc-prod@prompt
+```
+
+**Edit secrets:**
+```bash
+ansible-vault edit inventory/host_vars/lrc-prod/vault.yml --vault-id lrc-prod@prompt
+```
+
+## Inspecting resolved variables
+
+To see every variable that would apply to a host — merging `group_vars/all`, `group_vars/lrc|brc`, and `host_vars` — without running the playbook:
+
+```bash
+# From bootstrap/ansible/
+ansible-inventory --host lrc-prod --yaml
+```
+
+Note: role defaults (`roles/<role>/defaults/main.yml`) are not included here; they are only loaded at play runtime.
+
+## Provisioning
+
+Provisioning is not yet covered — the provisioning roles have not been updated for the new inventory structure.
+
+> [!WARNING]
+> Do not run `playbook.yml`. It is the legacy monolithic playbook and is disabled with a fail guard.
+
+## Dynamic settings
+
+Some configuration can be updated without a server restart (e.g., links to external resources). This is managed by `django-constance` and stored in Redis. To update, navigate to `/admin/constance/config/` in the portal and set the correct values.

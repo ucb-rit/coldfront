@@ -1,0 +1,57 @@
+###############################################################################
+# lrc-staging: LRC staging server
+# Inherits from group_vars/all and group_vars/lrc.
+###############################################################################
+
+debug: True
+app_user: root
+app_root: /var/www/coldfront_app
+
+#------------------------------------------------------------------------------
+# Host
+#------------------------------------------------------------------------------
+
+hostname: mylrc-dev.lbl.gov
+host_ip: 131.243.8.11
+site_url: https://mylrc-dev.lbl.gov
+ssl_enabled: true
+
+#------------------------------------------------------------------------------
+# Email
+#------------------------------------------------------------------------------
+
+email_backend: django.core.mail.backends.dummy.EmailBackend
+email_host: localhost
+email_port: 25
+email_use_tls: false
+
+#------------------------------------------------------------------------------
+# Maintenance mode
+#------------------------------------------------------------------------------
+
+enable_maintenance_mode: true
+
+#------------------------------------------------------------------------------
+# LRC billing validation
+#------------------------------------------------------------------------------
+
+install_billing_validation_package: true
+
+#------------------------------------------------------------------------------
+# Renewal surveys (google_forms)
+#------------------------------------------------------------------------------
+
+renewal_survey_backend: google_forms
+renewal_survey_google_forms_survey_data_cache_key: renewal_survey_google_forms_survey_data
+
+#------------------------------------------------------------------------------
+# Hardware procurements
+#------------------------------------------------------------------------------
+
+plugin_hardware_procurements_enabled: false
+plugin_hardware_procurements:
+  data_source: cached
+  data_source_options:
+    cache_key: hardware_procurements_data
+    cached_data_source: google_sheets
+    cached_data_source_options: "{{ vault_hardware_procurements_config_json | from_json }}"

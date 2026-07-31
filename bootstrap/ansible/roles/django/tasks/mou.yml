@@ -1,0 +1,54 @@
+---
+# Set up SSH access to the private mou-generator GitHub repo and install the
+# package. Called from deploy.yml when flag_mou_generation_enabled=true.
+
+# Allow pip installation of private git repo for mou generation.
+
+- name: Register user home directory
+  user:
+    name: "{{ app_user }}"
+  register: user
+
+- name: Check if github in known_hosts
+  shell: ssh-keygen -F github.com
+  register: github_known_hosts
+  become_user: "{{ app_user }}"
+  changed_when: false
+  failed_when: false
+
+- name: Add github.com to known_hosts
+  shell: "ssh-keyscan github.com >> {{ user.home }}/.ssh/known_hosts"
+  become_user: "{{ app_user }}"
+  when: github_known_hosts.rc != 0
+
+- name: Write MOU generator deploy key to user's .ssh directory
+  copy:
+    content: "{{ vault_mou_generator_deploy_key }}\n"
+    dest: "{{ user.home }}/.ssh/id_mou_generator"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: 0600
+  become_user: "{{ app_user }}"
+  no_log: true
+
+- name: Add id_mou_generator to ssh config
+  blockinfile:
+    path: "{{ user.home }}/.ssh/config"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - mou_generator"
+    block: |
+      Host github.com
+        IdentityFile ~/.ssh/id_mou_generator
+    create: true
+  become_user: "{{ app_user }}"
+
+# Note: only updates if the version set in mou-generator/setup.py increases.
+# Otherwise, force reinstall with pip and the --force-reinstall flag.
+- name: Install mou generation package
+  pip:
+    name: git+ssh://git@github.com/ucb-rit/mou-generator.git
+    executable: "{{ app_root }}/venv/bin/pip3"
+  become_user: "{{ app_user }}"
+  environment:
+    GIT_SSH_COMMAND: "ssh -o BatchMode=yes"
+  vars:
+    ansible_python_interpreter: "{{ app_root }}/venv/bin/python3"
