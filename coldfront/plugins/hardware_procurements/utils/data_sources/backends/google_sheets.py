@@ -1,7 +1,5 @@
 from collections import defaultdict
 from datetime import date, datetime
-import json
-import os
 
 import gspread
 
@@ -16,19 +14,14 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
     DATE_FORMAT = "%m/%d/%Y"
 
     def __init__(self, **kwargs):
-        if "config_file_path" in kwargs:
-            config = self._load_config_from_file(kwargs["config_file_path"])
-        else:
-            config = kwargs
-
-        self._credentials_file_path = config["credentials_file_path"]
-        self._sheet_id = config["sheet_id"]
-        self._sheet_tab = config["sheet_tab"]
-        self._sheet_columns = config["sheet_columns"]
-        self._header_row_index = config["header_row_index"]
+        self._credentials = kwargs["credentials"]
+        self._sheet_id = kwargs["sheet_id"]
+        self._sheet_tab = kwargs["sheet_tab"]
+        self._sheet_columns = kwargs["sheet_columns"]
+        self._header_row_index = kwargs["header_row_index"]
 
         # TODO: Validate.
-        assert isinstance(self._credentials_file_path, str)
+        assert isinstance(self._credentials, dict)
         assert isinstance(self._sheet_id, str)
         assert isinstance(self._sheet_tab, str)
         assert isinstance(self._sheet_columns, dict)
@@ -168,13 +161,10 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
     def _fetch_sheet_data(self):
         """Open the spreadsheet and specific tab, and return all values
         strictly after the header row."""
-        credentials_file_path = self._credentials_file_path
-        if not os.path.isfile(credentials_file_path):
-            raise FileNotFoundError(
-                f"Could not find credentials file: {credentials_file_path}."
-            )
+        if not self._credentials:
+            raise ValueError("No credentials found.")
 
-        gc = gspread.service_account(filename=credentials_file_path)
+        gc = gspread.service_account_from_dict(self._credentials)
         sh = gc.open_by_key(self._sheet_id)
         wks = sh.worksheet(self._sheet_tab)
 
@@ -188,9 +178,3 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
         for char in column_str:
             index = index * 26 + (ord(char.upper()) - ord("A") + 1)
         return index - 1
-
-    def _load_config_from_file(self, config_file_path):
-        """Read configuration from the given JSON file and return it as
-        a dict."""
-        with open(config_file_path) as f:
-            return json.load(f)

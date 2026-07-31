@@ -1,6 +1,4 @@
-import json
 import logging
-import os
 
 from django.conf import settings
 from django.core.cache import cache
@@ -45,7 +43,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         pis = wks.col_values(pis_coor)
         projects = wks.col_values(projects_coor)
         # responses = list(zip(periods, pis, projects))
-        responses = list(zip(pis, projects))
+        responses = list(zip(pis, projects, strict=False))
 
         # key = (allocation_period_name, pi_username, project_name)
         key = (pi_username, project_name)
@@ -79,7 +77,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         pis = wks.col_values(pis_column_coor)
         projects = wks.col_values(projs_column_coor)
 
-        all_responses = list(zip(pis, projects))
+        all_responses = list(zip(pis, projects, strict=False))
         key = (pi_username, project_name)
 
         row_ind = None
@@ -96,7 +94,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         questions = wks.row_values(1)
         response = wks.row_values(row_ind)
 
-        return zip(questions, response)
+        return zip(questions, response, strict=False)
 
     def get_renewal_survey_url(
         self, allocation_period_name, pi, project_name, requester
@@ -154,18 +152,15 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         Google Sheet, return a sheet that is editable.
 
         Raises:
-            - FileNotFoundError
+            - ValueError
         """
-        credentials_file_path = settings.RENEWAL_SURVEY.get("details", {}).get(
-            "credentials_file_path", ""
-        )
-        assert isinstance(credentials_file_path, str)
-        if not os.path.isfile(credentials_file_path):
-            raise FileNotFoundError(
-                f"Could not find credentials file: {credentials_file_path}."
+        credentials = settings.RENEWAL_SURVEY.get("details", {}).get("credentials", {})
+        if not credentials:
+            raise ValueError(
+                "No credentials found in settings.RENEWAL_SURVEY['details']['credentials']."
             )
 
-        gc = gspread.service_account(filename=credentials_file_path)
+        gc = gspread.service_account_from_dict(credentials)
         sh = gc.open_by_key(sheet_id)
         wks = sh.get_worksheet(wks_id)
 
@@ -215,11 +210,10 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
                 },
             }
 
-        These dicts are stored in a file on local disk, and cached in
+        These dicts are sourced from settings.RENEWAL_SURVEY and cached in
         Django's caching mechanism.
 
         Raises:
-            - FileNotFoundError
             - ValueError
         """
         renewal_survey_details = settings.RENEWAL_SURVEY.get("details", {})
@@ -233,7 +227,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
             if allocation_period_name in cache_value:
                 return cache_value[allocation_period_name]
 
-        metadata = self._load_survey_metadata_from_file(allocation_period_name)
+        metadata = self._load_survey_metadata_from_settings(allocation_period_name)
 
         cache_value[allocation_period_name] = metadata
         cache.set(cache_key, cache_value)
@@ -241,33 +235,22 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         return metadata
 
     @staticmethod
-    def _load_survey_metadata_from_file(allocation_period_name):
+    def _load_survey_metadata_from_settings(allocation_period_name):
         """Return a dict containing metadata about the Google Form and
         Google Sheet pertaining to the AllocationPeriod with the given
-        name, sourced from a file on local disk.
+        name, sourced from settings.RENEWAL_SURVEY.
 
         Raises:
-            - FileNotFoundError
             - ValueError
         """
         renewal_survey_details = settings.RENEWAL_SURVEY.get("details", {})
-        metadata_file_path = renewal_survey_details.get("survey_data_file_path", None)
-        if not os.path.isfile(metadata_file_path):
-            raise FileNotFoundError(
-                f"Could not find renewal survey data file: {metadata_file_path}."
-            )
+        survey_data = renewal_survey_details.get("survey_data", [])
 
-        metadata = None
-        with open(metadata_file_path) as f:
-            metadata_dicts = json.load(f)
-            for metadata_dict in metadata_dicts:
-                if metadata_dict["allocation_period"] == allocation_period_name:
-                    metadata = metadata_dict
-                    break
+        for metadata_dict in survey_data:
+            if metadata_dict["allocation_period"] == allocation_period_name:
+                return metadata_dict
 
-        if metadata is None:
-            raise ValueError(
-                "Failed to load survey data for AllocationPeriod from file."
-            )
-
-        return metadata
+        raise ValueError(
+            f"Failed to load survey data for AllocationPeriod '{allocation_period_name}' "
+            "from settings.RENEWAL_SURVEY."
+        )

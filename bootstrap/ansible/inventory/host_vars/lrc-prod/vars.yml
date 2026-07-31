@@ -1,0 +1,40 @@
+###############################################################################
+# lrc-prod: LRC production server
+# Inherits from group_vars/all and group_vars/lrc.
+###############################################################################
+
+debug: False
+app_user: root
+app_root: /var/www/coldfront_app
+
+#------------------------------------------------------------------------------
+# Host
+#------------------------------------------------------------------------------
+
+hostname: mylrc.lbl.gov
+host_ip: 131.243.8.12
+site_url: https://mylrc.lbl.gov
+ssl_enabled: true
+cloudflare_enabled: true
+
+#------------------------------------------------------------------------------
+# Email
+#------------------------------------------------------------------------------
+
+email_backend: django.core.mail.backends.smtp.EmailBackend
+email_host: smtp-relay.gmail.com
+email_port: 587
+email_use_tls: true
+
+#------------------------------------------------------------------------------
+# LRC billing validation
+#------------------------------------------------------------------------------
+
+install_billing_validation_package: true
+
+#------------------------------------------------------------------------------
+# Renewal surveys (google_forms)
+#------------------------------------------------------------------------------
+
+renewal_survey_backend: google_forms
+renewal_survey_google_forms_survey_data_cache_key: renewal_survey_google_forms_survey_data

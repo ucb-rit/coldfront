@@ -1,0 +1,57 @@
+###############################################################################
+# Universal defaults
+# These apply to all hosts. Override in group_vars/lrc, group_vars/brc,
+# or host_vars/<host>/vars.yml.
+#
+# Role-specific defaults live in roles/<role>/defaults/main.yml.
+# Only two categories of vars belong here:
+#   1. Cross-role vars — needed by multiple roles (versions, project identity,
+#      shared service connection params).
+#   2. Gate flags — must be defined before roles load because they are
+#      referenced in playbook-level `when:` conditions.
+#
+# Secrets live in host_vars/<host>/vault.yml (encrypted) and are referenced
+# directly by templates and tasks using the vault_ prefix.
+###############################################################################
+
+#------------------------------------------------------------------------------
+# Software versions
+# Used at play level (PATH, service names) and by the python/postgresql roles.
+#------------------------------------------------------------------------------
+
+python_version_long: 3.13.5
+python_version_short: "3.13"
+postgres_version: 15
+postgres_version_dotless: "{{ postgres_version | regex_replace('\\.','') }}"
+
+#------------------------------------------------------------------------------
+# Project identity
+# Used by multiple roles (django, apache, supervisord).
+#------------------------------------------------------------------------------
+
+reponame: coldfront
+djangoprojname: coldfront
+
+#------------------------------------------------------------------------------
+# Cross-role service defaults
+# Used by both the service role (install/configure) and the django role
+# (env.j2 template).
+#------------------------------------------------------------------------------
+
+db_host: localhost
+db_admin_user: admin
+redis_host: localhost
+
+#------------------------------------------------------------------------------
+# Integration enable/disable flags
+# Config for each integration lives in the relevant role's defaults/main.yml
+# and is only meaningful when the flag is true.
+#
+# These must be defined universally (not just in role defaults) because they
+# are referenced in playbook-level `when:` conditions before roles are loaded.
+#------------------------------------------------------------------------------
+
+cloudflare_enabled: false     # lrc-prod overrides to true in host_vars
+install_billing_validation_package: false  # lrc-prod/lrc-staging override to true in host_vars
+
+enable_maintenance_mode: false

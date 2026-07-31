@@ -22,7 +22,7 @@ def cached_data_source_kwargs():
     klass = GoogleSheetsDataSourceBackend
     cached_data_source = f"{klass.__module__}.{klass.__qualname__}"
     cached_data_source_options = {
-        "credentials_file_path": "",
+        "credentials": {},
         "sheet_id": "",
         "sheet_tab": "",
         "sheet_columns": GOOGLE_SHEET_COLUMNS,
@@ -49,12 +49,9 @@ def cached_google_sheets_backend(
         "_fetch_sheet_data",
         return_value=google_sheet_data,
     ):
-        with patch("os.path.isfile", return_value=True) as mock_isfile:
-            with patch(CACHE_MODULE, mock_cache):
-                with patch(LOOK_UP_FUNC_MODULE, mock_look_up_user_by_email):
-                    cached_backend = CachedDataSourceBackend(
-                        **cached_data_source_kwargs
-                    )
+        with patch(CACHE_MODULE, mock_cache):
+            with patch(LOOK_UP_FUNC_MODULE, mock_look_up_user_by_email):
+                cached_backend = CachedDataSourceBackend(**cached_data_source_kwargs)
     return cached_backend
 
 
@@ -121,7 +118,7 @@ class TestCachedDataSourceBackend:
         google_sheets_backend = cached_google_sheets_backend._backend
         assert isinstance(google_sheets_backend, GoogleSheetsDataSourceBackend)
 
-        assert google_sheets_backend._credentials_file_path == ""
+        assert google_sheets_backend._credentials == {}
         assert google_sheets_backend._header_row_index == 1
 
     @pytest.mark.component
