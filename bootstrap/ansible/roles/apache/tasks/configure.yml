@@ -42,7 +42,6 @@
     state: directory
     mode: 0755
     group: apache
-  when: chmod_tasks
 
 - name: Grant Apache recursive read access to the application directory
   file:
@@ -51,7 +50,6 @@
     recurse: true
     mode: "u=rwX,g=rX,o=rX"
     group: apache
-  when: chmod_tasks
 
 # Gracefully reload Apache so in-flight requests complete before workers
 # are replaced with processes that serve the new code.
