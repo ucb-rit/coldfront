@@ -15,6 +15,9 @@ hostname: mybrc.brc.berkeley.edu
 host_ip: 136.152.224.34
 site_url: https://mybrc.brc.berkeley.edu
 ssl_enabled: true
+ssl_certificate_file: /etc/ssl/mybrc/mybrc_brc_berkeley_edu_cert.cer
+ssl_certificate_key_file: /etc/ssl/mybrc/mybrc.brc.berkeley.edu.key
+ssl_certificate_chain_file: /etc/ssl/mybrc/mybrc_brc_berkeley_edu_cert_interm.cer
 
 #------------------------------------------------------------------------------
 # Email
