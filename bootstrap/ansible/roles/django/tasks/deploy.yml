@@ -34,11 +34,6 @@
     group: apache
     mode: 0640
 
-- name: Create the deployment-specific password reset email subject text file from a template
-  template:
-    src: password_reset_subject.j2
-    dest: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}/core/user/templates/user/passwords/password_reset_subject.txt"
-
 # Optional pre-pip package setup. Both run before pip installs requirements.txt
 # so that any packages added to requirements.txt can reference them.
 
@@ -139,13 +134,13 @@
 
 - name: Run Django management command - schedule_allocation_period_audits
   django_manage:
-    command: schedule_allocation_period_audits {{ allocation_period_audit_email_admin_list | join(' ') }} --schedule --month {{ flag_next_period_renewal_requestable_month | int - 1 }}
+    command: schedule_allocation_period_audits {{ vault_allocation_period_audit_email_admin_list | join(' ') }} --schedule --month {{ flag_next_period_renewal_requestable_month | int - 1 }}
     app_path: "{{ app_root }}/{{ reponame }}"
     settings: "config.settings"
     pythonpath: "{{ app_root }}/{{ reponame }}/{{ djangoprojname }}"
     virtualenv: "{{ app_root }}/venv"
   become_user: "{{ app_user }}"
-  when: allocation_period_audit_email_admin_list is defined and allocation_period_audit_email_admin_list | length > 0
+  when: vault_allocation_period_audit_email_admin_list is defined and vault_allocation_period_audit_email_admin_list | length > 0
 
 # Plugin: hardware_procurements: If the plugin is enabled and caching is
 #  enabled, schedule a refresh of the cache every 60 minutes, if not

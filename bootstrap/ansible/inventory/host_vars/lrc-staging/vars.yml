@@ -3,7 +3,6 @@
 # Inherits from group_vars/all and group_vars/lrc.
 ###############################################################################
 
-env: staging
 debug: True
 app_user: root
 app_root: /var/www/coldfront_app
@@ -27,25 +26,19 @@ email_port: 25
 email_use_tls: false
 
 #------------------------------------------------------------------------------
-# Audits
-#------------------------------------------------------------------------------
-
-allocation_period_audit_email_admin_list: []
-
-#------------------------------------------------------------------------------
 # Maintenance mode
 #------------------------------------------------------------------------------
 
 enable_maintenance_mode: true
 
 #------------------------------------------------------------------------------
-# Billing validation
+# LRC billing validation
 #------------------------------------------------------------------------------
 
 install_billing_validation_package: true
 
 #------------------------------------------------------------------------------
-# Renewal survey (google_forms)
+# Renewal surveys (google_forms)
 #------------------------------------------------------------------------------
 
 renewal_survey_backend: google_forms
