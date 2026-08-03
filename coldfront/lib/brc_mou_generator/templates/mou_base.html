@@ -1,0 +1,86 @@
+<html>
+<head>
+<style>
+* {
+  font-family: 'Bitstream Charter', 'Liberation Serif', serif;
+  font-size: 20px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+table {
+  float: right;
+  border-collapse: collapse;
+  margin-right: 4px;
+  max-width: 55%;
+}
+
+td {
+  border: 1px solid black;
+  padding: 5px;
+  word-break: break-word;
+}
+
+table td:first-child {
+  white-space: nowrap;
+}
+
+.gray {
+  color: gray;
+  font-size: large;
+}
+
+.title {
+  color: gray;
+  font-size: 40px;
+  font-weight: bold;
+  text-align: right;
+}
+
+.subtitle {
+  color: gray;
+  font-size: 30px;
+  font-weight: bold;
+  text-align: right;
+}
+
+
+</style>
+</head>
+<body>
+  <img src="{{ brc_logo_b64 }}" alt="BRC Logo" style="float: left;" height=190>
+  <table>
+    <tr>
+      <td class="gray">Between:</td>
+      <td>{{ between }}</td>
+    </tr>
+    <tr>
+      <td class="gray">Date:</td>
+      <td>{{ date }}</td>
+    </tr>
+    <tr>
+      <td class="gray">Re:</td>
+      <td>{{ re }}</td>
+    </tr>
+  </table>
+  <br><br><br><br><br>
+  <p class="title">
+    {% block mou_title %}Memorandum of Understanding{% endblock %}{% block mou_subtitle %}{% endblock %}
+  </p>
+  {% block body %}{% endblock %}
+  <br><br><br><br>
+  <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+      <img src="{{ director_signature_b64 }}" alt="Director Signature" style="width: 300px; height: auto;">
+      <p>{{ director_name }} <br> {{ director_title }}</p>
+    </div>
+    <div style="max-width: 50%; word-break: break-word; text-align: right;">
+      <p>{{ signature }}</p>
+    </div>
+  </div>
+</body>
+{% block footer %}{% endblock %}
+</html>
