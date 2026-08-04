@@ -34,3 +34,7 @@ center_help_email: brc-hpc-help@berkeley.edu
 email_subject_prefix: "[MyBRC-User-Portal]"
 
 prometheus_metric_namespace: mybrc
+
+savio_mou_director_name: 'First Last'
+savio_mou_director_title: 'Program Director, Research IT, UC Berkeley'
+savio_mou_director_signature_path: /var/www/coldfront_app/coldfront/coldfront/lib/brc_mou_generator/static/sample_director_signature.png

@@ -39,7 +39,7 @@
 
 - name: Set up MOU generation package
   include_tasks: mou.yml
-  when: flag_mou_generation_enabled
+  when: flag_brc_enabled
 
 - name: Install billing validation package
   include_role:

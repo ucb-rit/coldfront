@@ -57,6 +57,44 @@ RUN /var/www/coldfront_app/venv/bin/pip install --upgrade pip wheel && \
     /var/www/coldfront_app/venv/bin/pip install setuptools && \
     /var/www/coldfront_app/venv/bin/pip install -r requirements.txt -r requirements-test.txt
 
+# Install Playwright Chromium browser and its OS-level dependencies.
+# playwright install-deps does not support Rocky Linux (falls back to apt-get);
+# the RHEL 8 equivalents are installed via dnf manually instead.
+# pango + cairo: Chromium dynamically links to libpango for text layout/shaping;
+# cairo is pango's rendering backend.
+RUN dnf install -y \
+    alsa-lib \
+    at-spi2-atk \
+    at-spi2-core \
+    atk \
+    cairo \
+    cups-libs \
+    dbus-libs \
+    flac-libs \
+    gdk-pixbuf2 \
+    gtk3 \
+    libdrm \
+    libX11 \
+    libxcb \
+    libXcomposite \
+    libXcursor \
+    libXdamage \
+    libXext \
+    libXfixes \
+    libXi \
+    libXrandr \
+    libXrender \
+    libXtst \
+    libxshmfence \
+    mesa-libgbm \
+    nspr \
+    nss \
+    opus \
+    pango \
+    pulseaudio-libs \
+    liberation-serif-fonts && \
+    /var/www/coldfront_app/venv/bin/playwright install chromium
+
 ENV PATH="/var/www/coldfront_app/venv/bin:$PATH"
 
 ############################
