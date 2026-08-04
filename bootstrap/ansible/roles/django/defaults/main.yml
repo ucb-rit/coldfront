@@ -68,6 +68,7 @@ flag_multiple_email_addresses_allowed: False
 
 plugin_hardware_procurements_enabled: false
 plugin_hardware_procurements_data_source_modules_by_short_name:
+  brc_google_sheets: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.google_sheets.BRCGoogleSheetsDataSourceBackend'
   cached: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.cached.CachedDataSourceBackend'
   dummy: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.dummy.DummyDataSourceBackend'
-  google_sheets: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.google_sheets.GoogleSheetsDataSourceBackend'
+  lrc_google_sheets: 'coldfront.plugins.hardware_procurements.utils.data_sources.backends.google_sheets.LRCGoogleSheetsDataSourceBackend'
