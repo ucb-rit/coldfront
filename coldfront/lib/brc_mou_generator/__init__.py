@@ -2,6 +2,8 @@ import abc
 import base64
 import datetime
 import importlib.resources
+import os
+import sys
 
 import jinja2
 from playwright.sync_api import sync_playwright
@@ -55,26 +57,38 @@ class MouGenerator(abc.ABC):
 
     def _render(self, context: dict) -> bytes:
         html = template_env.get_template(self._template_name).render(context)
-        with sync_playwright() as p:
-            with p.chromium.launch(
-                args=[
-                    "--no-sandbox",  # required in Docker / restricted-namespace VMs
-                    "--disable-dev-shm-usage",  # avoids /dev/shm OOM in containers
-                ]
-            ) as browser:
-                page = browser.new_page()
-                page.set_content(html, wait_until="networkidle")
-                pdf = page.pdf(
-                    format="Letter",
-                    print_background=True,
-                    scale=0.82,
-                    margin={
-                        "top": "0.4in",
-                        "right": "0.4in",
-                        "bottom": "0.4in",
-                        "left": "0.4in",
-                    },
-                )
+
+        # Playwright's subprocess transport calls sys.stderr.fileno() when
+        # spawning the Node.js driver process.  Under mod_wsgi, sys.stderr is
+        # replaced with a log object that has no real file descriptor, raising
+        # OSError.  Temporarily substitute a real file so the fd lookup succeeds.
+        _orig_stderr = sys.stderr
+        sys.stderr = open(os.devnull, "w")
+        try:
+            with sync_playwright() as p:
+                with p.chromium.launch(
+                    args=[
+                        "--no-sandbox",  # required in Docker / restricted-namespace VMs
+                        "--disable-dev-shm-usage",  # avoids /dev/shm OOM in containers
+                    ]
+                ) as browser:
+                    page = browser.new_page()
+                    page.set_content(html, wait_until="networkidle")
+                    pdf = page.pdf(
+                        format="Letter",
+                        print_background=True,
+                        scale=0.82,
+                        margin={
+                            "top": "0.4in",
+                            "right": "0.4in",
+                            "bottom": "0.4in",
+                            "left": "0.4in",
+                        },
+                    )
+        finally:
+            sys.stderr.close()
+            sys.stderr = _orig_stderr
+
         return pdf
 
 
