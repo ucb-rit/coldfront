@@ -1,5 +1,6 @@
 from datetime import date
 import os
+import warnings
 
 from django.core.exceptions import ImproperlyConfigured
 import environ
@@ -144,9 +145,12 @@ if env.bool("DJANGO_FLAGS__BRC_ONLY_VALUE", default=False):
     # Absolute path to the director's signature PNG.
     SAVIO_MOU_DIRECTOR_SIGNATURE_PATH = env("HPCS__SAVIO_MOU_DIRECTOR_SIGNATURE_PATH")
     if not os.path.isfile(SAVIO_MOU_DIRECTOR_SIGNATURE_PATH):
-        raise ImproperlyConfigured(
+        warnings.warn(
             f"SAVIO_MOU_DIRECTOR_SIGNATURE_PATH does not exist: "
-            f"{SAVIO_MOU_DIRECTOR_SIGNATURE_PATH}"
+            f"{SAVIO_MOU_DIRECTOR_SIGNATURE_PATH}. "
+            f"MOU generation will fail at request time.",
+            RuntimeWarning,
+            stacklevel=2,
         )
 
 
