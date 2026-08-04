@@ -125,7 +125,7 @@
 | coldfront/core/project/models.py                                                                            |      279 |       40 |       42 |        7 |     83% |60, 68, 87-96, 113, 125, 135, 251, 260, 267, 300, 349-350, 364, 517, 532-541, 568, 600-617, 634 |
 | coldfront/core/project/signals.py                                                                           |       37 |       15 |        0 |        0 |     59% |32-35, 41-49, 63-72 |
 | coldfront/core/project/templatetags/iso8601\_to\_datetime.py                                                |       10 |        0 |        2 |        0 |    100% |           |
-| coldfront/core/project/urls.py                                                                              |       33 |        0 |        2 |        1 |     97% | 445-\>465 |
+| coldfront/core/project/urls.py                                                                              |       35 |        0 |        2 |        1 |     97% | 451-\>471 |
 | coldfront/core/project/utils.py                                                                             |      108 |       12 |       20 |        7 |     85% |62, 79-\>84, 96, 131, 148-\>153, 164, 208-\>211, 248-255 |
 | coldfront/core/project/utils\_/addition\_utils.py                                                           |      110 |        7 |        6 |        1 |     93% |54, 59, 175-177, 224-225 |
 | coldfront/core/project/utils\_/email\_utils.py                                                              |        6 |        1 |        2 |        1 |     75% |        22 |
@@ -164,7 +164,7 @@
 | coldfront/core/resource/admin.py                                                                            |       58 |       12 |        4 |        0 |     74% |64, 76-79, 128, 131-134, 151, 154, 173, 176 |
 | coldfront/core/resource/apps.py                                                                             |        3 |        0 |        0 |        0 |    100% |           |
 | coldfront/core/resource/management/commands/add\_resource\_defaults.py                                      |       11 |        0 |        6 |        0 |    100% |           |
-| coldfront/core/resource/models.py                                                                           |      106 |       31 |       16 |        1 |     62% |14, 29, 35, 40, 57, 89-105, 109, 119, 122-125, 128, 145-171, 184 |
+| coldfront/core/resource/models.py                                                                           |      106 |       34 |       16 |        0 |     59% |14, 29, 35, 40, 57, 89-105, 109, 114-119, 122-125, 128, 145-171, 184 |
 | coldfront/core/resource/utils.py                                                                            |       15 |        0 |        0 |        0 |    100% |           |
 | coldfront/core/resource/utils\_/allowance\_utils/computing\_allowance.py                                    |      129 |       17 |       58 |       12 |     78% |27-28, 35-\>37, 52-57, 72-\>74, 84-85, 95-96, 104-\>106, 119-122, 145-\>147, 163-\>170, 173, 183-\>186, 191-\>194 |
 | coldfront/core/resource/utils\_/allowance\_utils/constants.py                                               |       10 |        0 |        0 |        0 |    100% |           |
@@ -223,6 +223,7 @@
 | coldfront/core/utils/management/commands/create\_existing\_brc\_data.py                                     |      442 |      442 |      136 |        0 |      0% |     1-898 |
 | coldfront/core/utils/management/commands/create\_staff\_group.py                                            |       18 |        3 |        6 |        2 |     79% |13, 32-\>39, 43-44 |
 | coldfront/core/utils/management/commands/export\_data.py                                                    |      352 |       49 |      128 |       17 |     83% |312-313, 333, 344-\>343, 366-420, 446, 456, 487-\>exit, 572-\>exit, 613-614, 616-\>exit, 652-\>646, 670-\>675, 680, 685, 718, 729-730, 732-\>exit, 766-767, 772-\>775, 778-779, 795-796, 801-802 |
+| coldfront/core/utils/management/commands/generate\_mou.py                                                   |       29 |        0 |        2 |        0 |    100% |           |
 | coldfront/core/utils/management/commands/import\_grants.py                                                  |       60 |       60 |       16 |        0 |      0% |     1-189 |
 | coldfront/core/utils/management/commands/import\_projects.py                                                |       63 |       63 |       16 |        0 |      0% |     1-157 |
 | coldfront/core/utils/management/commands/import\_publications.py                                            |       30 |       30 |        4 |        0 |      0% |      1-86 |
@@ -249,10 +250,11 @@
 | coldfront/core/utils/management/commands/validate\_lrc\_initial\_state.py                                   |      200 |      200 |       76 |        0 |      0% |     1-398 |
 | coldfront/core/utils/middleware.py                                                                          |       14 |        0 |        0 |        0 |    100% |           |
 | coldfront/core/utils/mixins/views.py                                                                        |       67 |       26 |       18 |        2 |     55% |28-29, 45-49, 64-65, 80-90, 95-100, 105-115, 121-131 |
-| coldfront/core/utils/mou.py                                                                                 |       57 |        5 |       16 |        3 |     86% |23-\>26, 51-\>55, 76-84 |
+| coldfront/core/utils/mou.py                                                                                 |       90 |        5 |       26 |        4 |     91% |24-\>27, 52-\>56, 138-\>149, 169-177 |
 | coldfront/core/utils/reporting/report\_message\_strategy.py                                                 |       51 |       51 |        2 |        0 |      0% |      1-83 |
 | coldfront/core/utils/templatetags/common\_tags.py                                                           |       34 |       13 |       16 |        1 |     48% |38-43, 50-65, 75-\>exit |
-| coldfront/core/utils/views/mou\_views.py                                                                    |      174 |       14 |       34 |        6 |     90% |66, 80, 146, 158, 216-217, 257, 260-\>264, 275-278, 314-320 |
+| coldfront/core/utils/views/mou\_views.py                                                                    |      143 |       10 |       20 |        3 |     92% |62, 76, 142, 154, 212-213, 258-264 |
+| coldfront/lib/brc\_mou\_generator/\_\_init\_\_.py                                                           |       60 |        4 |        0 |        0 |     93% |     59-67 |
 | coldfront/plugins/departments/admin.py                                                                      |       32 |        8 |        4 |        0 |     67% |20, 31-34, 68, 71, 74 |
 | coldfront/plugins/departments/apps.py                                                                       |        4 |        0 |        0 |        0 |    100% |           |
 | coldfront/plugins/departments/conf/settings.py                                                              |        3 |        0 |        0 |        0 |    100% |           |
@@ -332,9 +334,9 @@
 | coldfront/plugins/xdmod/apps.py                                                                             |        3 |        3 |        0 |        0 |      0% |       1-5 |
 | coldfront/plugins/xdmod/management/commands/xdmod\_usage.py                                                 |      147 |      147 |       72 |        0 |      0% |     1-347 |
 | coldfront/plugins/xdmod/utils.py                                                                            |       84 |       84 |       12 |        0 |      0% |     1-135 |
-| **TOTAL**                                                                                                   | **26318** | **10902** | **6208** |  **597** | **55%** |           |
+| **TOTAL**                                                                                                   | **26411** | **10905** | **6206** |  **594** | **55%** |           |
 
-100 empty files skipped.
+101 empty files skipped.
 
 
 ## Setup coverage badge
