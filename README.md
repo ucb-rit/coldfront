@@ -254,7 +254,7 @@
 | coldfront/core/utils/reporting/report\_message\_strategy.py                                                 |       51 |       51 |        2 |        0 |      0% |      1-83 |
 | coldfront/core/utils/templatetags/common\_tags.py                                                           |       34 |       13 |       16 |        1 |     48% |38-43, 50-65, 75-\>exit |
 | coldfront/core/utils/views/mou\_views.py                                                                    |      143 |       10 |       20 |        3 |     92% |62, 76, 142, 154, 212-213, 258-264 |
-| coldfront/lib/brc\_mou\_generator/\_\_init\_\_.py                                                           |       60 |        4 |        0 |        0 |     93% |     59-67 |
+| coldfront/lib/brc\_mou\_generator/\_\_init\_\_.py                                                           |       67 |        4 |        0 |        0 |     94% |     69-77 |
 | coldfront/plugins/departments/admin.py                                                                      |       32 |        8 |        4 |        0 |     67% |20, 31-34, 68, 71, 74 |
 | coldfront/plugins/departments/apps.py                                                                       |        4 |        0 |        0 |        0 |    100% |           |
 | coldfront/plugins/departments/conf/settings.py                                                              |        3 |        0 |        0 |        0 |    100% |           |
@@ -334,7 +334,7 @@
 | coldfront/plugins/xdmod/apps.py                                                                             |        3 |        3 |        0 |        0 |      0% |       1-5 |
 | coldfront/plugins/xdmod/management/commands/xdmod\_usage.py                                                 |      147 |      147 |       72 |        0 |      0% |     1-347 |
 | coldfront/plugins/xdmod/utils.py                                                                            |       84 |       84 |       12 |        0 |      0% |     1-135 |
-| **TOTAL**                                                                                                   | **26411** | **10905** | **6206** |  **594** | **55%** |           |
+| **TOTAL**                                                                                                   | **26418** | **10905** | **6206** |  **594** | **55%** |           |
 
 101 empty files skipped.
 
