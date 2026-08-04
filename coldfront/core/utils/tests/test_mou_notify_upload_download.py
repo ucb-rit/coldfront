@@ -1,5 +1,6 @@
 from decimal import Decimal
 from io import BytesIO
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core import mail
@@ -210,7 +211,11 @@ class TestNewProjectMOUNotifyUploadDownload(MOUTestBase):
             }
         }
     )
-    def test_new_project(self):
+    @patch(
+        "coldfront.core.allocation.utils.calculate_service_units_to_allocate",
+        return_value=Decimal("100000"),
+    )
+    def test_new_project(self, _mock_calculate_service_units):
         """Test that the MOU notification task, MOU upload, and MOU download
         features work as expected."""
         eligibility = {"status": "Approved"}
@@ -314,8 +319,6 @@ class TestAllocationAdditionMOUNotifyUploadDownload(MOUTestBase):
         """Test that the MOU notification task, MOU upload, and MOU download
         features work as expected."""
         request_type = "service-units-purchase"
-        eligibility = {"status": "Approved"}
-        readiness = {"status": "Approved"}
         extra_fields = {
             "num_service_units": "100000",
             "campus_chartstring": "TEST-TEST-TEST-TEST-TEST",
