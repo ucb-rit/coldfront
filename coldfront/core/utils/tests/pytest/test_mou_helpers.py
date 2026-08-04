@@ -28,6 +28,11 @@ _patch_director = patch(
     return_value=FAKE_DIRECTOR_KWARGS,
 )
 
+_patch_calculate_sus = patch(
+    "coldfront.core.allocation.utils.calculate_service_units_to_allocate",
+    return_value=Decimal("200000"),
+)
+
 
 def _call(request_obj):
     """Call generate_unsigned_mou_pdf with I/O mocked out.
@@ -43,7 +48,11 @@ def _call(request_obj):
         template_name_seen.append(self._template_name)
         return FAKE_PDF
 
-    with _patch_director, patch.object(MouGenerator, "_render", _capturing_render):
+    with (
+        _patch_director,
+        _patch_calculate_sus,
+        patch.object(MouGenerator, "_render", _capturing_render),
+    ):
         result = generate_unsigned_mou_pdf(request_obj)
 
     template_name = template_name_seen[0] if template_name_seen else None
