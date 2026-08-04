@@ -30,12 +30,6 @@ email_use_tls: true
 email_host_user: brc-mybrc@berkeley.edu
 
 #------------------------------------------------------------------------------
-# MOU generation
-#------------------------------------------------------------------------------
-
-flag_mou_generation_enabled: true
-
-#------------------------------------------------------------------------------
 # Renewal surveys (google_forms)
 #------------------------------------------------------------------------------
 
@@ -53,6 +47,13 @@ plugin_hardware_procurements:
     cache_key: hardware_procurements_data
     cached_data_source: google_sheets
     cached_data_source_options: "{{ vault_hardware_procurements_config_json | from_json }}"
+
+#------------------------------------------------------------------------------
+# MOU generation
+#------------------------------------------------------------------------------
+
+savio_mou_director_signature_path: "{{ app_root }}/mou/director_signature.png"
+playwright_browsers_path: "{{ app_root }}/.playwright"
 
 #------------------------------------------------------------------------------
 # File storage (Google Drive)

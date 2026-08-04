@@ -190,22 +190,28 @@ urlpatterns += [
         new_project_approval_views.SavioProjectRequestEditExtraFieldsView.as_view(),
         name="new-project-request-edit-extra-fields",
     ),
-    path(
-        "new-project-request/<int:pk>/download-unsigned-mou/<str:request_type>/",
-        mou_views.UnsignedMOUDownloadView.as_view(),
-        name="new-project-request-download-unsigned-mou",
-    ),
-    path(
-        "new-project-request/<int:pk>/upload-mou/<str:request_type>/",
-        mou_views.MOUUploadView.as_view(),
-        name="new-project-request-upload-mou",
-    ),
-    path(
-        "new-project-request/<int:pk>/download-mou/<str:request_type>/",
-        mou_views.MOUDownloadView.as_view(),
-        name="new-project-request-download-mou",
-    ),
 ]
+
+
+# New Project Request MOU views (BRC-exclusive)
+with flagged_paths("BRC_ONLY") as f_path:
+    urlpatterns += [
+        f_path(
+            "new-project-request/<int:pk>/download-unsigned-mou/<str:request_type>/",
+            mou_views.UnsignedMOUDownloadView.as_view(),
+            name="new-project-request-download-unsigned-mou",
+        ),
+        f_path(
+            "new-project-request/<int:pk>/upload-mou/<str:request_type>/",
+            mou_views.MOUUploadView.as_view(),
+            name="new-project-request-upload-mou",
+        ),
+        f_path(
+            "new-project-request/<int:pk>/download-mou/<str:request_type>/",
+            mou_views.MOUDownloadView.as_view(),
+            name="new-project-request-download-mou",
+        ),
+    ]
 
 
 # New Project Requests for Vector (BRC-exclusive)
