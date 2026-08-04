@@ -59,7 +59,6 @@ allow_all_jobs: false
 flag_basic_auth_enabled: False
 flag_dev_auth_enabled: False
 flag_sso_enabled: True
-flag_mou_generation_enabled: False
 flag_renewal_survey_enabled: True
 flag_multiple_email_addresses_allowed: False
 
