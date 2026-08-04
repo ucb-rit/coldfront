@@ -51,10 +51,10 @@ renewal_survey_google_forms_survey_data_cache_key: renewal_survey_google_forms_s
 # Hardware procurements
 #------------------------------------------------------------------------------
 
-plugin_hardware_procurements_enabled: false
+plugin_hardware_procurements_enabled: true
 plugin_hardware_procurements:
   data_source: cached
   data_source_options:
     cache_key: hardware_procurements_data
-    cached_data_source: google_sheets
+    cached_data_source: lrc_google_sheets
     cached_data_source_options: "{{ vault_hardware_procurements_config_json | from_json }}"
