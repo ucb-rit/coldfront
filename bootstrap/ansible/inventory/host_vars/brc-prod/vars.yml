@@ -53,6 +53,7 @@ plugin_hardware_procurements:
 #------------------------------------------------------------------------------
 
 savio_mou_director_signature_path: "{{ app_root }}/mou/director_signature.png"
+playwright_browsers_path: "{{ app_root }}/.playwright"
 
 #------------------------------------------------------------------------------
 # File storage (Google Drive)
