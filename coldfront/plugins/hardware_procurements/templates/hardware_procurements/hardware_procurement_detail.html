@@ -1,6 +1,7 @@
 {% extends "common/base.html" %}
 {% load static %}
 {% load common_tags %}
+{% load feature_flags %}
 
 
 {% block title %}
@@ -141,12 +142,36 @@ Hardware Procurement Details
               {% endif %}
             </td>
           </tr>
+          {% flag_enabled 'BRC_ONLY' as brc_only %}
+          {% if brc_only %}
           <tr>
             <th scope="row" class="text-nowrap">
               JIRA Ticket
             </th>
             <td>{{ procurement|get_value_from_dict:"jira_ticket" }}</td>
           </tr>
+          {% endif %}
+          {% flag_enabled 'LRC_ONLY' as lrc_only %}
+          {% if lrc_only %}
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Project ID
+            </th>
+            <td>{{ procurement|get_value_from_dict:"project_id" }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              Requisition ID
+            </th>
+            <td>{{ procurement|get_value_from_dict:"requisition_id" }}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="text-nowrap">
+              PO / PCard
+            </th>
+            <td>{{ procurement|get_value_from_dict:"po_pcard" }}</td>
+          </tr>
+          {% endif %}
           {% endwith %}
         </tbody>
       </table>

@@ -6,11 +6,13 @@ from ....utils.data_sources.backends.cached import (
     CachedDataSourceBackend,
     HardwareProcurementsCacheManager,
 )
-from ....utils.data_sources.backends.google_sheets import GoogleSheetsDataSourceBackend
+from ....utils.data_sources.backends.google_sheets import (
+    BRCGoogleSheetsDataSourceBackend as GoogleSheetsDataSourceBackend,
+)
 from .utils import (
+    BRC_GOOGLE_SHEET_COLUMNS,
     CACHE_KEY,
     CACHE_MODULE,
-    GOOGLE_SHEET_COLUMNS,
     LOOK_UP_FUNC_MODULE,
     MockCache,
     assert_procurement_expected,
@@ -25,7 +27,7 @@ def cached_data_source_kwargs():
         "credentials": {},
         "sheet_id": "",
         "sheet_tab": "",
-        "sheet_columns": GOOGLE_SHEET_COLUMNS,
+        "sheet_columns": BRC_GOOGLE_SHEET_COLUMNS,
         "header_row_index": 1,
     }
     return {
@@ -37,7 +39,7 @@ def cached_data_source_kwargs():
 
 @pytest.fixture
 def cached_google_sheets_backend(
-    mock_cache, mock_look_up_user_by_email, google_sheet_data, cached_data_source_kwargs
+    mock_cache, mock_look_up_user_by_email, brc_google_sheet_data, cached_data_source_kwargs
 ):
     """Return a CachedDataSourceBackend that caches data from a
     GoogleSheetsDataSourceBackend (with the given columns and data)
@@ -47,7 +49,7 @@ def cached_google_sheets_backend(
     with patch.object(
         GoogleSheetsDataSourceBackend,
         "_fetch_sheet_data",
-        return_value=google_sheet_data,
+        return_value=brc_google_sheet_data,
     ):
         with patch(CACHE_MODULE, mock_cache):
             with patch(LOOK_UP_FUNC_MODULE, mock_look_up_user_by_email):
@@ -56,11 +58,11 @@ def cached_google_sheets_backend(
 
 
 @pytest.fixture
-def expected_hardware_procurements_data_by_id(expected_hardware_procurements_data):
+def brc_expected_hardware_procurements_data_by_id(brc_expected_hardware_procurements_data):
     """Return a dict mapping procurement IDs to the procurements
-    returned by the `expected_hardware_procurements_data` fixture."""
+    returned by the `brc_expected_hardware_procurements_data` fixture."""
     procurement_data_by_id = {}
-    for procurement_dict in expected_hardware_procurements_data:
+    for procurement_dict in brc_expected_hardware_procurements_data:
         _id = procurement_dict["id"]
         procurement_data_by_id[_id] = procurement_dict
     return procurement_data_by_id
@@ -83,7 +85,7 @@ class TestCachedDataSourceBackend:
         mock_cache,
         mock_look_up_user_by_email,
         backend,
-        expected_hardware_procurements_data_by_id,
+        brc_expected_hardware_procurements_data_by_id,
         expected_ids,
         status=None,
         user_data=None,
@@ -104,7 +106,7 @@ class TestCachedDataSourceBackend:
                     assert expected_index < num_expected
                     _id = hardware_procurement.get_id()
                     expected_hardware_procurement = (
-                        expected_hardware_procurements_data_by_id[_id]
+                        brc_expected_hardware_procurements_data_by_id[_id]
                     )
                     assert_procurement_expected(
                         hardware_procurement, expected_hardware_procurement
@@ -132,20 +134,20 @@ class TestCachedDataSourceBackend:
         self,
         mock_cache,
         cached_google_sheets_backend,
-        expected_hardware_procurements_data_by_id,
+        brc_expected_hardware_procurements_data_by_id,
     ):
         cache_manager = cached_google_sheets_backend._cache_manager
         with patch(self._cache_module, mock_cache):
             for hardware_procurement in cache_manager.get_cached_procurements():
                 _id = hardware_procurement.get_id()
-                assert _id in expected_hardware_procurements_data_by_id
+                assert _id in brc_expected_hardware_procurements_data_by_id
                 expected_hardware_procurement = (
-                    expected_hardware_procurements_data_by_id.pop(_id)
+                    brc_expected_hardware_procurements_data_by_id.pop(_id)
                 )
                 assert_procurement_expected(
                     hardware_procurement, expected_hardware_procurement
                 )
-        assert not expected_hardware_procurements_data_by_id
+        assert not brc_expected_hardware_procurements_data_by_id
 
     @pytest.mark.component
     def test_init_skips_cache_populate_if_not_needed(
@@ -193,7 +195,7 @@ class TestCachedDataSourceBackend:
         mock_cache,
         mock_look_up_user_by_email,
         cached_google_sheets_backend,
-        expected_hardware_procurements_data_by_id,
+        brc_expected_hardware_procurements_data_by_id,
         status,
         user_data,
         expected_ids,
@@ -202,7 +204,7 @@ class TestCachedDataSourceBackend:
             mock_cache,
             mock_look_up_user_by_email,
             cached_google_sheets_backend,
-            expected_hardware_procurements_data_by_id,
+            brc_expected_hardware_procurements_data_by_id,
             expected_ids,
             status=status,
             user_data=user_data,
@@ -214,14 +216,14 @@ class TestCachedDataSourceBackend:
         mock_cache,
         mock_look_up_user_by_email,
         cached_google_sheets_backend,
-        expected_hardware_procurements_data_by_id,
+        brc_expected_hardware_procurements_data_by_id,
     ):
-        expected_ids = expected_hardware_procurements_data_by_id.keys()
+        expected_ids = brc_expected_hardware_procurements_data_by_id.keys()
         self._assert_fetch_output(
             mock_cache,
             mock_look_up_user_by_email,
             cached_google_sheets_backend,
-            expected_hardware_procurements_data_by_id,
+            brc_expected_hardware_procurements_data_by_id,
             expected_ids,
         )
 
@@ -240,7 +242,7 @@ class TestCachedDataSourceBackend:
         mock_cache,
         mock_look_up_user_by_email,
         cached_google_sheets_backend,
-        expected_hardware_procurements_data_by_id,
+        brc_expected_hardware_procurements_data_by_id,
         status,
         expected_ids,
     ):
@@ -248,7 +250,7 @@ class TestCachedDataSourceBackend:
             mock_cache,
             mock_look_up_user_by_email,
             cached_google_sheets_backend,
-            expected_hardware_procurements_data_by_id,
+            brc_expected_hardware_procurements_data_by_id,
             expected_ids,
             status=status,
         )
@@ -280,7 +282,7 @@ class TestCachedDataSourceBackend:
         mock_cache,
         mock_look_up_user_by_email,
         cached_google_sheets_backend,
-        expected_hardware_procurements_data_by_id,
+        brc_expected_hardware_procurements_data_by_id,
         user_data,
         expected_ids,
     ):
@@ -288,7 +290,7 @@ class TestCachedDataSourceBackend:
             mock_cache,
             mock_look_up_user_by_email,
             cached_google_sheets_backend,
-            expected_hardware_procurements_data_by_id,
+            brc_expected_hardware_procurements_data_by_id,
             expected_ids,
             user_data=user_data,
         )
