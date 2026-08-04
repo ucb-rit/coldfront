@@ -25,3 +25,7 @@ django_q_job_queue_mode: sync
 
 # Use the dummy backend for the departments plugin
 plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.dummy.DummyDataSourceBackend"
+
+# MOU generation: use the bundled sample signature (path relative to repo root,
+# which is the working directory for all CI test runs).
+savio_mou_director_signature_path: "coldfront/lib/brc_mou_generator/static/sample_director_signature.png"
