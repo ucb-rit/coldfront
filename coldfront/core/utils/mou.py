@@ -1,3 +1,4 @@
+import base64
 import datetime
 
 from django.conf import settings
@@ -54,6 +55,98 @@ def get_mou_filename(request_obj):
 
     filename = f"{project_name}_{last_name}_{type_}.pdf"
     return filename
+
+
+def make_director_kwargs() -> dict:
+    """Return constructor kwargs for a MouGenerator from application settings."""
+    with open(settings.SAVIO_MOU_DIRECTOR_SIGNATURE_PATH, "rb") as f:
+        director_signature_b64 = base64.b64encode(f.read()).decode()
+    return {
+        "director_name": settings.SAVIO_MOU_DIRECTOR_NAME,
+        "director_title": settings.SAVIO_MOU_DIRECTOR_TITLE,
+        "director_signature_b64": director_signature_b64,
+    }
+
+
+def generate_unsigned_mou_pdf(request_obj) -> bytes:
+    """Generate an unsigned MOU PDF for the given request object.
+
+    Returns an empty bytes object if the request type does not map to a
+    known generator (e.g. a non-recharge, non-instructional new-project
+    request).
+    """
+    from coldfront.core.allocation.models import (
+        AllocationAdditionRequest,
+        SecureDirRequest,
+    )
+    from coldfront.core.project.models import SavioProjectAllocationRequest
+    from coldfront.core.resource.utils_.allowance_utils.computing_allowance import (
+        ComputingAllowance,
+    )
+    from coldfront.lib.brc_mou_generator import (
+        InstructionalMouGenerator,
+        RechargeMouGenerator,
+        SecureDirMouGenerator,
+    )
+
+    director_kwargs = make_director_kwargs()
+
+    if isinstance(request_obj, SavioProjectAllocationRequest):
+        first_name = request_obj.pi.first_name
+        last_name = request_obj.pi.last_name
+        project_name = request_obj.project.name
+        allowance = ComputingAllowance(request_obj.computing_allowance)
+        if allowance.is_instructional():
+            from coldfront.core.allocation.utils import (
+                calculate_service_units_to_allocate,
+            )
+
+            service_units = calculate_service_units_to_allocate(
+                allowance,
+                request_obj.request_time,
+                allocation_period=request_obj.allocation_period,
+            )
+            return InstructionalMouGenerator(**director_kwargs).generate(
+                first_name,
+                last_name,
+                project_name,
+                service_units=int(service_units),
+                extra_fields=request_obj.extra_fields,
+                allowance_end=request_obj.allocation_period.end_date,
+            )
+        elif allowance.is_recharge():
+            return RechargeMouGenerator(**director_kwargs).generate(
+                first_name,
+                last_name,
+                project_name,
+                service_units=int(request_obj.extra_fields["num_service_units"]),
+                extra_fields=request_obj.extra_fields,
+            )
+
+    elif isinstance(request_obj, AllocationAdditionRequest):
+        first_name = request_obj.requester.first_name
+        last_name = request_obj.requester.last_name
+        project_name = request_obj.project.name
+        return RechargeMouGenerator(**director_kwargs).generate(
+            first_name,
+            last_name,
+            project_name,
+            service_units=int(request_obj.num_service_units),
+            extra_fields=request_obj.extra_fields,
+        )
+
+    elif isinstance(request_obj, SecureDirRequest):
+        first_name = request_obj.pi.first_name
+        last_name = request_obj.pi.last_name
+        project_name = request_obj.project.name
+        return SecureDirMouGenerator(**director_kwargs).generate(
+            first_name,
+            last_name,
+            project_name,
+            department=request_obj.department,
+        )
+
+    return b""
 
 
 class DynamicFieldFile(FieldFile):

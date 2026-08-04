@@ -134,6 +134,23 @@ else:
     }
 
 # ------------------------------------------------------------------------------
+# BRC MOU generation settings
+# ------------------------------------------------------------------------------
+
+if env.bool("DJANGO_FLAGS__BRC_ONLY_VALUE", default=False):
+    # MOU generation: director information embedded in unsigned PDFs.
+    SAVIO_MOU_DIRECTOR_NAME = env("HPCS__SAVIO_MOU_DIRECTOR_NAME")
+    SAVIO_MOU_DIRECTOR_TITLE = env("HPCS__SAVIO_MOU_DIRECTOR_TITLE")
+    # Absolute path to the director's signature PNG.
+    SAVIO_MOU_DIRECTOR_SIGNATURE_PATH = env("HPCS__SAVIO_MOU_DIRECTOR_SIGNATURE_PATH")
+    if not os.path.isfile(SAVIO_MOU_DIRECTOR_SIGNATURE_PATH):
+        raise ImproperlyConfigured(
+            f"SAVIO_MOU_DIRECTOR_SIGNATURE_PATH does not exist: "
+            f"{SAVIO_MOU_DIRECTOR_SIGNATURE_PATH}"
+        )
+
+
+# ------------------------------------------------------------------------------
 # BRC Vector Settings
 # ------------------------------------------------------------------------------
 
@@ -350,14 +367,6 @@ FLAGS = {
         {
             "condition": "boolean",
             "value": env.bool("DJANGO_FLAGS__LRC_ONLY_VALUE", default=False),
-        },
-    ],
-    "MOU_GENERATION_ENABLED": [
-        {
-            "condition": "boolean",
-            "value": env.bool(
-                "DJANGO_FLAGS__MOU_GENERATION_ENABLED_VALUE", default=False
-            ),
         },
     ],
     "MULTIPLE_EMAIL_ADDRESSES_ALLOWED": [
