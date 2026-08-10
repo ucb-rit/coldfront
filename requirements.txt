@@ -3,7 +3,7 @@ beautifulsoup4==4.13.4
 bibtexparser==1.4.4
 chardet==7.4.3
 crispy-bootstrap4==2025.6
-Django==5.2.15
+Django==5.2.16
 django-allauth==65.13.0
 django-constance==4.3.2
 django-crispy-forms==2.6
