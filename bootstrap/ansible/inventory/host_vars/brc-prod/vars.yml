@@ -46,7 +46,8 @@ plugin_hardware_procurements:
   data_source_options:
     cache_key: hardware_procurements_data
     cached_data_source: google_sheets
-    cached_data_source_options: "{{ vault_hardware_procurements_config_json | from_json }}"
+    cached_data_source_options:
+      config_file_path: /etc/coldfront/config/hardware-procurements-config.json
 
 #------------------------------------------------------------------------------
 # MOU generation
