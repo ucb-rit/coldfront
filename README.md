@@ -135,7 +135,7 @@
 | coldfront/core/project/utils\_/removal\_utils.py                                                            |      176 |        6 |       28 |        3 |     96% |127-\>exit, 228-229, 305, 351-\>365, 403-408 |
 | coldfront/core/project/utils\_/renewal\_survey/\_\_init\_\_.py                                              |       16 |        0 |        0 |        0 |    100% |           |
 | coldfront/core/project/utils\_/renewal\_survey/backends/base.py                                             |       11 |        3 |        0 |        0 |     73% |26, 48, 71 |
-| coldfront/core/project/utils\_/renewal\_survey/backends/google\_forms.py                                    |      110 |       76 |       46 |        0 |     27% |30-55, 62-97, 109-147, 219-235 |
+| coldfront/core/project/utils\_/renewal\_survey/backends/google\_forms.py                                    |      115 |       76 |       48 |        0 |     30% |31-56, 63-98, 110-148, 223-239 |
 | coldfront/core/project/utils\_/renewal\_survey/backends/permissive.py                                       |        8 |        0 |        0 |        0 |    100% |           |
 | coldfront/core/project/utils\_/renewal\_utils.py                                                            |      539 |      125 |      100 |       24 |     74% |120, 171-180, 193-212, 222, 229, 231, 278-\>283, 283-\>285, 304-337, 354, 382, 413, 439, 476-510, 519, 552, 571-574, 590, 619, 634-636, 662, 685-713, 721-739, 744-752, 758-764, 777-786, 800, 806, 814, 836-838, 854-\>exit, 860, 864, 869, 875, 880, 885, 921, 925, 930, 936, 941, 946, 955-956, 1102-1106, 1110-1117, 1127-1128, 1147, 1165-1166 |
 | coldfront/core/project/utils\_/request\_processing\_utils.py                                                |       55 |        0 |       26 |        0 |    100% |           |
@@ -312,7 +312,7 @@
 | coldfront/plugins/hardware\_procurements/utils/data\_sources/backends/base.py                               |        5 |        1 |        0 |        0 |     80% |        12 |
 | coldfront/plugins/hardware\_procurements/utils/data\_sources/backends/cached.py                             |       97 |        4 |       42 |        1 |     96% |134-\>exit, 176-177, 186-187 |
 | coldfront/plugins/hardware\_procurements/utils/data\_sources/backends/dummy.py                              |        4 |        0 |        0 |        0 |    100% |           |
-| coldfront/plugins/hardware\_procurements/utils/data\_sources/backends/google\_sheets.py                     |       84 |        2 |       26 |        0 |     98% |     70-71 |
+| coldfront/plugins/hardware\_procurements/utils/data\_sources/backends/google\_sheets.py                     |       89 |        4 |       28 |        1 |     96% |19-20, 77-78 |
 | coldfront/plugins/hardware\_procurements/views.py                                                           |      118 |       94 |       36 |        0 |     16% |26-28, 31-44, 49, 54-61, 64-66, 75-90, 101-102, 105-142, 145-146, 150-200 |
 | coldfront/plugins/iquota/apps.py                                                                            |        3 |        3 |        0 |        0 |      0% |       1-5 |
 | coldfront/plugins/iquota/exceptions.py                                                                      |        7 |        7 |        0 |        0 |      0% |      1-17 |
@@ -334,7 +334,7 @@
 | coldfront/plugins/xdmod/apps.py                                                                             |        3 |        3 |        0 |        0 |      0% |       1-5 |
 | coldfront/plugins/xdmod/management/commands/xdmod\_usage.py                                                 |      147 |      147 |       72 |        0 |      0% |     1-347 |
 | coldfront/plugins/xdmod/utils.py                                                                            |       84 |       84 |       12 |        0 |      0% |     1-135 |
-| **TOTAL**                                                                                                   | **26418** | **10905** | **6206** |  **594** | **55%** |           |
+| **TOTAL**                                                                                                   | **26428** | **10907** | **6210** |  **595** | **55%** |           |
 
 101 empty files skipped.
 
