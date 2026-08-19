@@ -1,5 +1,6 @@
 """Tests for GoogleFormsRenewalSurveyBackend."""
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -40,64 +41,73 @@ class TestGsheetColumnToIndex:
 
 
 @pytest.mark.unit
-class TestLoadSurveyMetadataFromSettings:
-    """Unit tests for _load_survey_metadata_from_settings."""
-
-    @staticmethod
-    def _make_renewal_survey(survey_data):
-        return {"details": {"survey_data": survey_data}}
+class TestLoadSurveyMetadataFromFile:
+    """Unit tests for _load_survey_metadata_from_file."""
 
     @staticmethod
     def _make_survey_entry(allocation_period, sheet_id="sheet_id"):
         return {"allocation_period": allocation_period, "sheet_id": sheet_id}
 
-    def test_returns_matching_metadata(self):
+    def test_returns_matching_metadata(self, tmp_path):
         entries = [
             self._make_survey_entry("AY 2023-24", "sheet_a"),
             self._make_survey_entry("AY 2024-25", "sheet_b"),
         ]
-        renewal_survey = self._make_renewal_survey(entries)
+        survey_file = tmp_path / "renewal-survey-data.json"
+        survey_file.write_text(json.dumps(entries))
+        renewal_survey = {"details": {"survey_data_file_path": str(survey_file)}}
         with patch(f"{_BACKEND}.settings") as mock_settings:
             mock_settings.RENEWAL_SURVEY = renewal_survey
-            result = (
-                GoogleFormsRenewalSurveyBackend._load_survey_metadata_from_settings(
-                    "AY 2024-25"
-                )
+            result = GoogleFormsRenewalSurveyBackend._load_survey_metadata_from_file(
+                "AY 2024-25"
             )
         assert result == self._make_survey_entry("AY 2024-25", "sheet_b")
 
-    def test_raises_when_period_not_found(self):
+    def test_raises_when_period_not_found(self, tmp_path):
         entries = [self._make_survey_entry("AY 2023-24")]
-        renewal_survey = self._make_renewal_survey(entries)
+        survey_file = tmp_path / "renewal-survey-data.json"
+        survey_file.write_text(json.dumps(entries))
+        renewal_survey = {"details": {"survey_data_file_path": str(survey_file)}}
         with patch(f"{_BACKEND}.settings") as mock_settings:
             mock_settings.RENEWAL_SURVEY = renewal_survey
             with pytest.raises(ValueError, match="AY 2099-00"):
-                GoogleFormsRenewalSurveyBackend._load_survey_metadata_from_settings(
+                GoogleFormsRenewalSurveyBackend._load_survey_metadata_from_file(
                     "AY 2099-00"
                 )
 
-    def test_raises_when_survey_data_empty(self):
-        renewal_survey = self._make_renewal_survey([])
+    def test_raises_when_survey_data_empty(self, tmp_path):
+        survey_file = tmp_path / "renewal-survey-data.json"
+        survey_file.write_text(json.dumps([]))
+        renewal_survey = {"details": {"survey_data_file_path": str(survey_file)}}
         with patch(f"{_BACKEND}.settings") as mock_settings:
             mock_settings.RENEWAL_SURVEY = renewal_survey
             with pytest.raises(ValueError):
-                GoogleFormsRenewalSurveyBackend._load_survey_metadata_from_settings(
+                GoogleFormsRenewalSurveyBackend._load_survey_metadata_from_file(
                     "AY 2024-25"
                 )
 
-    def test_returns_first_match_when_duplicates(self):
+    def test_raises_when_survey_data_file_path_absent(self):
+        renewal_survey = {"details": {}}
+        with patch(f"{_BACKEND}.settings") as mock_settings:
+            mock_settings.RENEWAL_SURVEY = renewal_survey
+            with pytest.raises(ValueError, match="survey_data_file_path"):
+                GoogleFormsRenewalSurveyBackend._load_survey_metadata_from_file(
+                    "AY 2024-25"
+                )
+
+    def test_returns_first_match_when_duplicates(self, tmp_path):
         """When multiple entries share the same allocation_period, the first is returned."""
         entries = [
             self._make_survey_entry("AY 2024-25", "sheet_first"),
             self._make_survey_entry("AY 2024-25", "sheet_second"),
         ]
-        renewal_survey = self._make_renewal_survey(entries)
+        survey_file = tmp_path / "renewal-survey-data.json"
+        survey_file.write_text(json.dumps(entries))
+        renewal_survey = {"details": {"survey_data_file_path": str(survey_file)}}
         with patch(f"{_BACKEND}.settings") as mock_settings:
             mock_settings.RENEWAL_SURVEY = renewal_survey
-            result = (
-                GoogleFormsRenewalSurveyBackend._load_survey_metadata_from_settings(
-                    "AY 2024-25"
-                )
+            result = GoogleFormsRenewalSurveyBackend._load_survey_metadata_from_file(
+                "AY 2024-25"
             )
         assert result["sheet_id"] == "sheet_first"
 
@@ -106,34 +116,38 @@ class TestLoadSurveyMetadataFromSettings:
 class TestGetGspreadWks:
     """Unit tests for _get_gspread_wks."""
 
-    _CREDENTIALS = {"type": "service_account", "project_id": "my-project"}
+    _CREDENTIALS_FILE_PATH = "/etc/coldfront/config/renewal-survey.json"
 
-    def _make_renewal_survey(self, credentials=None):
-        creds = credentials if credentials is not None else self._CREDENTIALS
-        return {"details": {"credentials": creds}}
+    def _make_renewal_survey(self, credentials_file_path=None):
+        path = (
+            credentials_file_path
+            if credentials_file_path is not None
+            else self._CREDENTIALS_FILE_PATH
+        )
+        return {"details": {"credentials_file_path": path}}
 
-    def test_raises_when_credentials_key_absent(self):
-        """No 'credentials' key at all → ValueError."""
+    def test_raises_when_credentials_file_path_absent(self):
+        """No 'credentials_file_path' key at all → ValueError."""
         renewal_survey = {"details": {}}
         with patch(f"{_BACKEND}.settings") as mock_settings:
             mock_settings.RENEWAL_SURVEY = renewal_survey
-            with pytest.raises(ValueError, match="No credentials found"):
+            with pytest.raises(ValueError, match="No credentials_file_path found"):
                 GoogleFormsRenewalSurveyBackend._get_gspread_wks("sheet_id_abc")
 
-    def test_raises_when_credentials_empty_dict(self):
-        """Empty credentials dict is falsy → ValueError."""
-        renewal_survey = self._make_renewal_survey(credentials={})
+    def test_raises_when_credentials_file_path_empty(self):
+        """Empty credentials_file_path is falsy → ValueError."""
+        renewal_survey = self._make_renewal_survey(credentials_file_path="")
         with patch(f"{_BACKEND}.settings") as mock_settings:
             mock_settings.RENEWAL_SURVEY = renewal_survey
-            with pytest.raises(ValueError, match="No credentials found"):
+            with pytest.raises(ValueError, match="No credentials_file_path found"):
                 GoogleFormsRenewalSurveyBackend._get_gspread_wks("sheet_id_abc")
 
     def test_returns_worksheet_and_calls_gspread(self):
         mock_wks = MagicMock()
         with patch(f"{_BACKEND}.settings") as mock_settings:
             mock_settings.RENEWAL_SURVEY = self._make_renewal_survey()
-            with patch(f"{_BACKEND}.gspread.service_account_from_dict") as mock_saf:
-                mock_gc = mock_saf.return_value
+            with patch(f"{_BACKEND}.gspread.service_account") as mock_sa:
+                mock_gc = mock_sa.return_value
                 mock_sh = mock_gc.open_by_key.return_value
                 mock_sh.get_worksheet.return_value = mock_wks
 
@@ -142,15 +156,15 @@ class TestGetGspreadWks:
                 )
 
         assert result is mock_wks
-        mock_saf.assert_called_once_with(self._CREDENTIALS)
+        mock_sa.assert_called_once_with(filename=self._CREDENTIALS_FILE_PATH)
         mock_gc.open_by_key.assert_called_once_with("sheet_id_abc")
         mock_sh.get_worksheet.assert_called_once_with(0)
 
     def test_passes_custom_wks_id(self):
         with patch(f"{_BACKEND}.settings") as mock_settings:
             mock_settings.RENEWAL_SURVEY = self._make_renewal_survey()
-            with patch(f"{_BACKEND}.gspread.service_account_from_dict") as mock_saf:
-                mock_sh = mock_saf.return_value.open_by_key.return_value
+            with patch(f"{_BACKEND}.gspread.service_account") as mock_sa:
+                mock_sh = mock_sa.return_value.open_by_key.return_value
                 GoogleFormsRenewalSurveyBackend._get_gspread_wks(
                     "sheet_id_abc", wks_id=2
                 )

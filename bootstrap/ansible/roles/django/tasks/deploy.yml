@@ -26,6 +26,50 @@
     group: apache
     mode: 0750
 
+- name: Create {{ coldfront_config_dir }} directory
+  file:
+    path: "{{ coldfront_config_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: apache
+    mode: 0750
+
+- name: Write Google Drive credentials file
+  copy:
+    content: "{{ vault_google_drive_credentials_json }}"
+    dest: "{{ coldfront_config_dir }}/google-drive.json"
+    owner: "{{ app_user }}"
+    group: apache
+    mode: 0640
+  when: file_storage_backend == 'google_drive'
+
+- name: Write renewal survey credentials file
+  copy:
+    content: "{{ vault_renewal_survey_google_forms_service_account_credentials_json }}"
+    dest: "{{ coldfront_config_dir }}/renewal-survey.json"
+    owner: "{{ app_user }}"
+    group: apache
+    mode: 0640
+  when: renewal_survey_backend == 'google_forms'
+
+- name: Write renewal survey data file
+  copy:
+    content: "{{ vault_renewal_survey_google_forms_survey_data_json }}"
+    dest: "{{ coldfront_config_dir }}/renewal-survey-data.json"
+    owner: "{{ app_user }}"
+    group: apache
+    mode: 0640
+  when: renewal_survey_backend == 'google_forms'
+
+- name: Write hardware procurements config file
+  copy:
+    content: "{{ vault_hardware_procurements_config_json }}"
+    dest: "{{ coldfront_config_dir }}/hardware-procurements-config.json"
+    owner: "{{ app_user }}"
+    group: apache
+    mode: 0640
+  when: plugin_hardware_procurements_enabled | default(false) | bool
+
 - name: Create /etc/coldfront/.env from a template
   template:
     src: env.j2

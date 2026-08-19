@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django.conf import settings
@@ -154,13 +155,16 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         Raises:
             - ValueError
         """
-        credentials = settings.RENEWAL_SURVEY.get("details", {}).get("credentials", {})
-        if not credentials:
+        credentials_file_path = settings.RENEWAL_SURVEY.get("details", {}).get(
+            "credentials_file_path"
+        )
+        if not credentials_file_path:
             raise ValueError(
-                "No credentials found in settings.RENEWAL_SURVEY['details']['credentials']."
+                "No credentials_file_path found in "
+                "settings.RENEWAL_SURVEY['details']['credentials_file_path']."
             )
 
-        gc = gspread.service_account_from_dict(credentials)
+        gc = gspread.service_account(filename=credentials_file_path)
         sh = gc.open_by_key(sheet_id)
         wks = sh.get_worksheet(wks_id)
 
@@ -227,7 +231,7 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
             if allocation_period_name in cache_value:
                 return cache_value[allocation_period_name]
 
-        metadata = self._load_survey_metadata_from_settings(allocation_period_name)
+        metadata = self._load_survey_metadata_from_file(allocation_period_name)
 
         cache_value[allocation_period_name] = metadata
         cache.set(cache_key, cache_value)
@@ -235,16 +239,25 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
         return metadata
 
     @staticmethod
-    def _load_survey_metadata_from_settings(allocation_period_name):
+    def _load_survey_metadata_from_file(allocation_period_name):
         """Return a dict containing metadata about the Google Form and
         Google Sheet pertaining to the AllocationPeriod with the given
-        name, sourced from settings.RENEWAL_SURVEY.
+        name, sourced from the survey data file at the path configured
+        in settings.RENEWAL_SURVEY.
 
         Raises:
             - ValueError
         """
         renewal_survey_details = settings.RENEWAL_SURVEY.get("details", {})
-        survey_data = renewal_survey_details.get("survey_data", [])
+        survey_data_file_path = renewal_survey_details.get("survey_data_file_path")
+        if not survey_data_file_path:
+            raise ValueError(
+                "No survey_data_file_path found in "
+                "settings.RENEWAL_SURVEY['details']['survey_data_file_path']."
+            )
+
+        with open(survey_data_file_path) as f:
+            survey_data = json.load(f)
 
         for metadata_dict in survey_data:
             if metadata_dict["allocation_period"] == allocation_period_name:
@@ -252,5 +265,5 @@ class GoogleFormsRenewalSurveyBackend(BaseRenewalSurveyBackend):
 
         raise ValueError(
             f"Failed to load survey data for AllocationPeriod '{allocation_period_name}' "
-            "from settings.RENEWAL_SURVEY."
+            f"from {survey_data_file_path}."
         )

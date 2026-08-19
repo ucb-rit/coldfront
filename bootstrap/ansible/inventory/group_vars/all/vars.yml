@@ -55,3 +55,11 @@ cloudflare_enabled: false     # lrc-prod overrides to true in host_vars
 install_billing_validation_package: false  # lrc-prod/lrc-staging override to true in host_vars
 
 enable_maintenance_mode: false
+
+#------------------------------------------------------------------------------
+# Application config directory
+# Used by deploy.yml (write destinations) and env.j2 / host_vars (file paths
+# passed to the app). Override in host_vars if the path differs per host.
+#------------------------------------------------------------------------------
+
+coldfront_config_dir: /etc/coldfront/config
