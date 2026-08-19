@@ -26,9 +26,9 @@
     group: apache
     mode: 0750
 
-- name: Create /etc/coldfront/config directory
+- name: Create {{ coldfront_config_dir }} directory
   file:
-    path: /etc/coldfront/config
+    path: "{{ coldfront_config_dir }}"
     state: directory
     owner: "{{ app_user }}"
     group: apache
@@ -37,7 +37,7 @@
 - name: Write Google Drive credentials file
   copy:
     content: "{{ vault_google_drive_credentials_json }}"
-    dest: /etc/coldfront/config/google-drive.json
+    dest: "{{ coldfront_config_dir }}/google-drive.json"
     owner: "{{ app_user }}"
     group: apache
     mode: 0640
@@ -46,7 +46,7 @@
 - name: Write renewal survey credentials file
   copy:
     content: "{{ vault_renewal_survey_google_forms_service_account_credentials_json }}"
-    dest: /etc/coldfront/config/renewal-survey.json
+    dest: "{{ coldfront_config_dir }}/renewal-survey.json"
     owner: "{{ app_user }}"
     group: apache
     mode: 0640
@@ -55,7 +55,7 @@
 - name: Write renewal survey data file
   copy:
     content: "{{ vault_renewal_survey_google_forms_survey_data_json }}"
-    dest: /etc/coldfront/config/renewal-survey-data.json
+    dest: "{{ coldfront_config_dir }}/renewal-survey-data.json"
     owner: "{{ app_user }}"
     group: apache
     mode: 0640
@@ -64,7 +64,7 @@
 - name: Write hardware procurements config file
   copy:
     content: "{{ vault_hardware_procurements_config_json }}"
-    dest: /etc/coldfront/config/hardware-procurements-config.json
+    dest: "{{ coldfront_config_dir }}/hardware-procurements-config.json"
     owner: "{{ app_user }}"
     group: apache
     mode: 0640

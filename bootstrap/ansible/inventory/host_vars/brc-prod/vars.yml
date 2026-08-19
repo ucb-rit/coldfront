@@ -47,7 +47,7 @@ plugin_hardware_procurements:
     cache_key: hardware_procurements_data
     cached_data_source: google_sheets
     cached_data_source_options:
-      config_file_path: /etc/coldfront/config/hardware-procurements-config.json
+      config_file_path: "{{ coldfront_config_dir }}/hardware-procurements-config.json"
 
 #------------------------------------------------------------------------------
 # MOU generation
