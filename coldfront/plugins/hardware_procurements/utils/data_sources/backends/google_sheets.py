@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import date, datetime
+import json
 
 import gspread
 
@@ -14,11 +15,17 @@ class GoogleSheetsDataSourceBackend(BaseDataSourceBackend):
     DATE_FORMAT = "%m/%d/%Y"
 
     def __init__(self, **kwargs):
-        self._credentials = kwargs["credentials"]
-        self._sheet_id = kwargs["sheet_id"]
-        self._sheet_tab = kwargs["sheet_tab"]
-        self._sheet_columns = kwargs["sheet_columns"]
-        self._header_row_index = kwargs["header_row_index"]
+        if "config_file_path" in kwargs:
+            with open(kwargs["config_file_path"]) as f:
+                config = json.load(f)
+        else:
+            config = kwargs
+
+        self._credentials = config["credentials"]
+        self._sheet_id = config["sheet_id"]
+        self._sheet_tab = config["sheet_tab"]
+        self._sheet_columns = config["sheet_columns"]
+        self._header_row_index = config["header_row_index"]
 
         # TODO: Validate.
         assert isinstance(self._credentials, dict)
