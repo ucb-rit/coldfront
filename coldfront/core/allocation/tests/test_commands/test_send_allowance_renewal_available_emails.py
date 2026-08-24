@@ -26,7 +26,11 @@ from coldfront.core.resource.utils_.allowance_utils.interface import (
 )
 from coldfront.core.user.models import UserProfile
 from coldfront.core.utils.common import utc_now_offset_aware
-from coldfront.core.utils.tests.test_base import LRCTestBase, TestBase
+from coldfront.core.utils.tests.test_base import (
+    LRCTestBase,
+    TestBase,
+    enable_deployment,
+)
 
 
 class SendAllowanceRenewalAvailableEmailsTestMixin:
@@ -35,6 +39,8 @@ class SendAllowanceRenewalAvailableEmailsTestMixin:
 
     def setUp(self):
         super().setUp()
+        self._deployer = enable_deployment(self._deployment_name)
+        self._deployer.enable()
 
         self.current_period = get_current_allowance_year_period()
         self.next_period = get_next_allowance_year_period()
@@ -81,6 +87,10 @@ class SendAllowanceRenewalAvailableEmailsTestMixin:
                 role=pi_role,
                 status=active_pu_status,
             )
+
+    def tearDown(self):
+        self._deployer.disable()
+        super().tearDown()
 
     def _call_command_dry_run(self, *extra_args):
         """Call the command with --dry_run and _assert_allocation_period_ready
