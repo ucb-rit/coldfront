@@ -52,11 +52,13 @@ If additional tags should be included in `<head>`, include a `head` block, and i
       Previous Step
     </button>
   {% endif %}
+  {% block submit_button %}
   {% if wizard.steps.step1 == wizard.steps.count %}
     <input class="btn btn-primary" type="submit" value="Submit"/>
   {% else %}
     <input class="btn btn-primary" type="submit" value="Next Step"/>
   {% endif %}
+  {% endblock %}
 </form>
 <br>
 
