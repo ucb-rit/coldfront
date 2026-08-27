@@ -40,7 +40,7 @@ from coldfront.core.project.forms_.renewal_forms.request_forms import (
     ProjectRenewalPoolingPreferenceForm,
     ProjectRenewalProjectSelectionForm,
     ProjectRenewalReviewAndSubmitForm,
-    ProjectRenewalSurveyForm,
+    # ProjectRenewalSurveyForm,
 )
 from coldfront.core.project.models import (
     Project,
@@ -159,17 +159,24 @@ class AllocationRenewalMixin:
         current_step = int(self.steps.current)
         self._set_data_from_previous_steps(current_step, context)
 
-        if current_step == self.step_numbers_by_form_name["renewal_survey"]:
-            context["renewal_survey_url"] = get_renewal_survey_url(
-                context["allocation_period"].name,
-                context["PI"].user,
-                context["requested_project"].name,
-                self.request.user,
-            )
+        # if current_step == self.step_numbers_by_form_name["renewal_survey"]:
+        #     context["renewal_survey_url"] = get_renewal_survey_url(
+        #         context["allocation_period"].name,
+        #         context["PI"].user,
+        #         context["requested_project"].name,
+        #         self.request.user,
+        #     )
 
         if current_step == self.step_numbers_by_form_name["review_and_submit"]:
             if self._billing_id_required():
                 self._add_context_data_for_billing_ids(context)
+            if flag_enabled("RENEWAL_SURVEY_ENABLED"):
+                context["renewal_survey_url"] = get_renewal_survey_url(
+                    context["allocation_period"].name,
+                    context["PI"].user,
+                    context["requested_project"].name,
+                    self.request.user,
+                )
 
         return context
 
@@ -279,7 +286,7 @@ class AllocationRenewalMixin:
         new_project_request=None,
     ):
         """Create a new AllocationRenewalRequest."""
-        request_kwargs = dict()
+        request_kwargs = {}
         request_kwargs["requester"] = requester
         request_kwargs["pi"] = pi
         request_kwargs["computing_allowance"] = computing_allowance
@@ -460,7 +467,7 @@ class AllocationRenewalRequestView(
         ("new_project_details", SavioProjectDetailsForm),
         ("billing_id", BillingIDValidationForm),
         ("new_project_survey", SavioProjectSurveyForm),
-        ("renewal_survey", ProjectRenewalSurveyForm),
+        # ("renewal_survey", ProjectRenewalSurveyForm),
         ("review_and_submit", ProjectRenewalReviewAndSubmitForm),
     ]
 
@@ -474,7 +481,7 @@ class AllocationRenewalRequestView(
         "new_project_details": "new_project_details.html",
         "billing_id": "billing_id.html",
         "new_project_survey": "new_project_survey.html",
-        "renewal_survey": "project_renewal_survey.html",
+        # "renewal_survey": "project_renewal_survey.html",
         "review_and_submit": "review_and_submit.html",
     }
 
@@ -486,7 +493,7 @@ class AllocationRenewalRequestView(
         SavioProjectDetailsForm,
         BillingIDValidationForm,
         SavioProjectSurveyForm,
-        ProjectRenewalSurveyForm,
+        # ProjectRenewalSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
     ]
 
@@ -574,12 +581,12 @@ class AllocationRenewalRequestView(
             kwargs["computing_allowance"] = self.computing_allowance
         elif step == self.step_numbers_by_form_name["new_project_survey"]:
             kwargs["computing_allowance"] = self.computing_allowance
-        elif step == self.step_numbers_by_form_name["renewal_survey"]:
-            tmp = {}
-            self._set_data_from_previous_steps(step, tmp)
-            kwargs["project_name"] = tmp["requested_project"].name
-            kwargs["allocation_period_name"] = tmp["allocation_period"].name
-            kwargs["pi_username"] = tmp["PI"].user.username
+        # elif step == self.step_numbers_by_form_name["renewal_survey"]:
+        #     tmp = {}
+        #     self._set_data_from_previous_steps(step, tmp)
+        #     kwargs["project_name"] = tmp["requested_project"].name
+        #     kwargs["allocation_period_name"] = tmp["allocation_period"].name
+        #     kwargs["pi_username"] = tmp["PI"].user.username
 
         return kwargs
 
@@ -660,7 +667,7 @@ class AllocationRenewalRequestView(
             "4": view.show_new_project_forms_condition,
             "5": view.show_billing_id_form_condition,
             "6": view.show_new_project_forms_condition,
-            "7": view.show_renewal_survey_form_condition,
+            # "7": view.show_renewal_survey_form_condition,
         }
 
     def show_billing_id_form_condition(self):
@@ -747,7 +754,7 @@ class AllocationRenewalRequestView(
         """Create a new SavioProjectAllocationRequest. This method
         should only be invoked if a new Project is requested."""
         # TODO: allocation_type will eventually be removed from the model.
-        request_kwargs = dict()
+        request_kwargs = {}
         request_kwargs["requester"] = self.request.user
         request_kwargs["allocation_type"] = self.interface.name_short_from_name(
             self.computing_allowance.name
@@ -780,25 +787,21 @@ class AllocationRenewalRequestView(
                 computing_allowance.get_name()
             )
             requester_projects = set(
-                list(
-                    ProjectUser.objects.filter(
-                        project__name__startswith=project_name_prefix,
-                        user=self.request.user,
-                        role__name__in=["Manager", "Principal Investigator"],
-                    ).values_list("project", flat=True)
-                )
+                ProjectUser.objects.filter(
+                    project__name__startswith=project_name_prefix,
+                    user=self.request.user,
+                    role__name__in=["Manager", "Principal Investigator"],
+                ).values_list("project", flat=True)
             )
             pi_projects = set(
-                list(
-                    ProjectUser.objects.filter(
-                        project__name__startswith=project_name_prefix,
-                        user=pi_user,
-                        role__name="Principal Investigator",
-                    ).values_list("project", flat=True)
-                )
+                ProjectUser.objects.filter(
+                    project__name__startswith=project_name_prefix,
+                    user=pi_user,
+                    role__name="Principal Investigator",
+                ).values_list("project", flat=True)
             )
             intersection = set.intersection(requester_projects, pi_projects)
-            project_pk = sorted(list(intersection))[0]
+            project_pk = sorted(intersection)[0]
             return Project.objects.get(pk=project_pk)
 
     def _set_data_from_previous_steps(self, step, dictionary):
@@ -899,7 +902,7 @@ class AllocationRenewalRequestUnderProjectView(
         ("allocation_period", SavioProjectAllocationPeriodForm),
         ("pi_selection", ProjectRenewalPISelectionForm),
         ("billing_id", BillingIDValidationForm),
-        ("renewal_survey", ProjectRenewalSurveyForm),
+        # ("renewal_survey", ProjectRenewalSurveyForm),
         ("review_and_submit", ProjectRenewalReviewAndSubmitForm),
     ]
 
@@ -909,7 +912,7 @@ class AllocationRenewalRequestUnderProjectView(
         "allocation_period": "allocation_period.html",
         "pi_selection": "pi_selection.html",
         "billing_id": "billing_id.html",
-        "renewal_survey": "project_renewal_survey.html",
+        # "renewal_survey": "project_renewal_survey.html",
         "review_and_submit": "review_and_submit.html",
     }
 
@@ -917,7 +920,7 @@ class AllocationRenewalRequestUnderProjectView(
         SavioProjectAllocationPeriodForm,
         ProjectRenewalPISelectionForm,
         BillingIDValidationForm,
-        ProjectRenewalSurveyForm,
+        # ProjectRenewalSurveyForm,
         ProjectRenewalReviewAndSubmitForm,
     ]
 
@@ -986,12 +989,12 @@ class AllocationRenewalRequestUnderProjectView(
                 tmp.get("allocation_period", None), "pk", None
             )
             kwargs["project_pks"] = [self.project_obj.pk]
-        elif step == self.step_numbers_by_form_name["renewal_survey"]:
-            tmp = {}
-            self._set_data_from_previous_steps(step, tmp)
-            kwargs["project_name"] = tmp["requested_project"].name
-            kwargs["allocation_period_name"] = tmp["allocation_period"].name
-            kwargs["pi_username"] = tmp["PI"].user.username
+        # elif step == self.step_numbers_by_form_name["renewal_survey"]:
+        #     tmp = {}
+        #     self._set_data_from_previous_steps(step, tmp)
+        #     kwargs["project_name"] = tmp["requested_project"].name
+        #     kwargs["allocation_period_name"] = tmp["allocation_period"].name
+        #     kwargs["pi_username"] = tmp["PI"].user.username
         return kwargs
 
     def get_template_names(self):
@@ -1042,7 +1045,7 @@ class AllocationRenewalRequestUnderProjectView(
         view = AllocationRenewalRequestUnderProjectView
         return {
             "2": view.show_billing_id_form_condition,
-            "3": view.show_renewal_survey_form_condition,
+            # "3": view.show_renewal_survey_form_condition,
         }
 
     def _set_data_from_previous_steps(self, step, dictionary):
