@@ -141,7 +141,12 @@ class AllocationRenewalRequestMixin:
             logger.exception(e)
             messages.error(self.request, self.error_message)
             context["allocation_amount"] = "Failed to compute."
-        if flag_enabled("RENEWAL_SURVEY_ENABLED"):
+        computing_allowance = self.request_obj.computing_allowance
+        if (
+            flag_enabled("RENEWAL_SURVEY_ENABLED")
+            and computing_allowance is not None
+            and ComputingAllowance(computing_allowance).is_renewal_supported()
+        ):
             try:
                 context["survey_response"] = get_renewal_survey_response(
                     self.request_obj.allocation_period.name,
