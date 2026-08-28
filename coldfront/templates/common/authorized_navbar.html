@@ -23,6 +23,20 @@
         <li id="navbar-jobs-list" class="nav-item">
           <a class="nav-link" href="{% url 'slurm-job-list' %}">Jobs</a>
         </li>
+        {% if ANALYTICS_VISIBLE %}
+        <li id="navbar-analytics" class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbar-analytics-dropdown"
+             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Analytics
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbar-analytics-dropdown">
+            <a class="dropdown-item" href="{% url 'analytics:queue-wait-times' %}">Queue Wait Times</a>
+            <a class="dropdown-item" href="{% url 'analytics:gpu-queue-wait-times' %}">GPU Queue Wait Times</a>
+            <a class="dropdown-item" href="{% url 'analytics:monthly-job-counts' %}">Monthly Job Counts</a>
+            <a class="dropdown-item" href="{% url 'analytics:top-usage' %}">Top Usage</a>
+          </div>
+        </li>
+        {% endif %}
         {% if request.user.is_superuser %}
         {% include 'common/navbar_admin.html' %}
         {% elif request.user.is_staff %}
