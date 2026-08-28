@@ -58,18 +58,31 @@
 </p>
 <hr>
 
-<!-- Window selector -->
-<div class="mb-3 d-flex align-items-center gap-2">
-  <span class="text-muted mr-2">Rolling window:</span>
-  <div class="window-toggle btn-group btn-group-sm" role="group">
-    {% for d in valid_days %}
-    <a href="?days={{ d }}&min_jobs={{ min_jobs }}"
-       class="btn {% if d == days %}btn-primary{% else %}btn-outline-primary{% endif %}">
-      {{ d }}d
-    </a>
-    {% endfor %}
-  </div>
-</div>
+<!-- Controls -->
+<table class="mb-3">
+  <tr>
+    <td class="pr-4">
+      <div class="text-muted small">Rolling window</div>
+      <div class="window-toggle btn-group btn-group-sm" role="group">
+        {% for d in valid_days %}
+        <a href="?days={{ d }}&min_jobs={{ min_jobs }}{% if show_all_qos %}&show_all_qos=1{% endif %}"
+           class="btn {% if d == days %}btn-primary{% else %}btn-outline-primary{% endif %}">
+          {{ d }}d
+        </a>
+        {% endfor %}
+      </div>
+    </td>
+    <td>
+      <div class="text-muted small">QoS</div>
+      <div class="form-check mt-1">
+        <input class="form-check-input" type="checkbox" id="show-condo-check"
+               {% if show_all_qos %}checked{% endif %}
+               onchange="window.location='?days={{ days }}&min_jobs={{ min_jobs }}' + (this.checked ? '&show_all_qos=1' : '')">
+        <label class="form-check-label" for="show-condo-check">Show all</label>
+      </div>
+    </td>
+  </tr>
+</table>
 
 {% if error %}
 <div class="alert alert-danger">
@@ -253,7 +266,7 @@
   // ── Generic heatmap renderer ──────────────────────────────────────────────────
   // Axes: columns = partitions (X), rows = QoS (Y)
   var CELL   = 36;
-  var MARGIN = { top: 10, right: 20, bottom: 10, left: 110 };
+  var MARGIN = { top: 10, right: 20, bottom: 10, left: 160 };
   var LABEL_H = 120;
 
   var tooltip = document.getElementById('hm-tooltip');

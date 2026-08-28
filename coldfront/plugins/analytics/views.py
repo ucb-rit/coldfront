@@ -81,13 +81,25 @@ def _cpu_qos_clause():
     """Return (sql_fragment, params) to filter QoS to the deployment's CPU prefix.
 
     Mirrors the partition filter so condo QoSes running on cluster partitions
-    are excluded from the CPU wait-time view (matching the management command).
-    Not used for GPU wait times, which intentionally shows all QoSes.
+    are excluded from the CPU wait-time view by default.
     """
     if flag_enabled("BRC_ONLY"):
         return "AND qos LIKE %s", ["savio%"]
     if flag_enabled("LRC_ONLY"):
         return "AND qos LIKE %s", ["lr%"]
+    raise ImproperlyConfigured(_MISCONFIGURED)
+
+
+def _gpu_qos_clause():
+    """Return (sql_fragment, params) to filter QoS to the deployment's GPU-native prefix.
+
+    BRC GPU QoSes start with 'savio'; LRC GPU QoSes start with 'es'.
+    Condo QoSes (condo_*) are excluded by default; omit to show all.
+    """
+    if flag_enabled("BRC_ONLY"):
+        return "AND qos LIKE %s", ["savio%"]
+    if flag_enabled("LRC_ONLY"):
+        return "AND qos LIKE %s", ["es%"]
     raise ImproperlyConfigured(_MISCONFIGURED)
 
 
@@ -145,6 +157,7 @@ WHERE
     AND startdate  IS NOT NULL
     AND startdate  > submitdate
     {prefix_clause}
+    {qos_clause}
 GROUP BY partition, qos
 HAVING COUNT(*) >= %s
 ORDER BY partition, p50_wait_min DESC;
@@ -255,16 +268,20 @@ class CpuQueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
         except (ValueError, TypeError):
             min_jobs = 20
 
+        show_all_qos = self.request.GET.get("show_all_qos") == "1"
+
         cluster = _cluster_tag()
         prefix_clause, prefix_params = _cpu_partition_clause()
-        qos_clause, qos_params = _cpu_qos_clause()
+        qos_clause, qos_params = ("", []) if show_all_qos else _cpu_qos_clause()
         context["page_title"] = "CPU Queue Wait Times"
         context["days"] = days
         context["min_jobs"] = min_jobs
         context["valid_days"] = sorted(self._VALID_DAYS)
+        context["show_all_qos"] = show_all_qos
         context["cache_ttl_hours"] = CACHE_TTL // 3600
 
-        cache_key = f"analytics:wait_times:{days}:{min_jobs}:{cluster}"
+        all_tag = "all" if show_all_qos else "filtered"
+        cache_key = f"analytics:wait_times:{days}:{min_jobs}:{all_tag}:{cluster}"
         cached = cache.get(cache_key)
         if cached is not None:
             context.update(cached)
@@ -418,27 +435,34 @@ class GpuQueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
         except (ValueError, TypeError):
             min_jobs = 20
 
+        show_all_qos = self.request.GET.get("show_all_qos") == "1"
+
         cluster = _cluster_tag()
         prefix_clause, prefix_params = _gpu_partition_clause()
+        qos_clause, qos_params = ("", []) if show_all_qos else _gpu_qos_clause()
         context["page_title"] = "GPU Queue Wait Times"
         context["page_description"] = (
             "Median and p90 queue wait times by GPU partition and QOS. "
-            "All QOS are shown — including lowprio — to give a complete picture "
-            "of condo pool wait times."
+            "Lowprio QOS are included (unlike CPU wait times). "
+            "Condo QOS are excluded by default — use the toggle to include them."
         )
         context["days"] = days
         context["min_jobs"] = min_jobs
         context["valid_days"] = sorted(self._VALID_DAYS)
+        context["show_all_qos"] = show_all_qos
         context["cache_ttl_hours"] = CACHE_TTL // 3600
 
-        cache_key = f"analytics:gpu_wait_times:{days}:{min_jobs}:{cluster}"
+        all_tag = "all" if show_all_qos else "filtered"
+        cache_key = f"analytics:gpu_wait_times:{days}:{min_jobs}:{all_tag}:{cluster}"
         cached = cache.get(cache_key)
         if cached is not None:
             context.update(cached)
             return context
 
-        sql_params = [f"{days} days", *prefix_params, min_jobs]
-        sql = _GPU_WAIT_TIMES_SQL.format(prefix_clause=prefix_clause)
+        sql_params = [f"{days} days", *prefix_params, *qos_params, min_jobs]
+        sql = _GPU_WAIT_TIMES_SQL.format(
+            prefix_clause=prefix_clause, qos_clause=qos_clause
+        )
 
         try:
             with connection.cursor() as cursor:

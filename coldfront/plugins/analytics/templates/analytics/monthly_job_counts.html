@@ -20,18 +20,22 @@
 </p>
 <hr>
 
-<!-- Window selector -->
-<div class="mb-3 d-flex align-items-center gap-2">
-  <span class="text-muted mr-2">Window:</span>
-  <div class="window-toggle btn-group btn-group-sm" role="group">
-    {% for m in valid_months %}
-    <a href="?months={{ m }}"
-       class="btn {% if m == months_n %}btn-primary{% else %}btn-outline-primary{% endif %}">
-      {{ m }}mo
-    </a>
-    {% endfor %}
-  </div>
-</div>
+<!-- Controls -->
+<table class="mb-3">
+  <tr>
+    <td class="pr-4">
+      <div class="text-muted small">Window</div>
+      <div class="window-toggle btn-group btn-group-sm" role="group">
+        {% for m in valid_months %}
+        <a href="?months={{ m }}"
+           class="btn {% if m == months_n %}btn-primary{% else %}btn-outline-primary{% endif %}">
+          {{ m }}mo
+        </a>
+        {% endfor %}
+      </div>
+    </td>
+  </tr>
+</table>
 
 {% if error %}
 <div class="alert alert-danger">
