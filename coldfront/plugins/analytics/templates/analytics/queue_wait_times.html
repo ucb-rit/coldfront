@@ -275,14 +275,16 @@
     RAW.forEach(function(d) { var v = valFn(d); if (v > maxVal) maxVal = v; });
     if (maxVal < 1) maxVal = 1;
 
-    // Size label areas to fit actual data
+    // Size label areas to fit actual data.
+    // labelH must cover textVerticalExtent + pivot gap (6) + buffer so labels
+    // don't overflow the top of the SVG.
     var maxColLen = 0;
     partitions.forEach(function(p) { if (p.length > maxColLen) maxColLen = p.length; });
-    var labelH = Math.max(50, Math.round(maxColLen * 7 * 0.82));
+    var labelH = Math.max(60, Math.round(maxColLen * 7.5 * 0.82) + 8);
 
     var maxRowLen = 0;
     allQos.forEach(function(q) { if (q.length > maxRowLen) maxRowLen = q.length; });
-    var leftMargin = Math.max(60, maxRowLen * 7 + 12);
+    var leftMargin = Math.max(60, maxRowLen * 7.5 + 12);
 
     var svgW = leftMargin + partitions.length * CELL + MARGIN.right;
     var svgH = MARGIN.top + labelH + allQos.length * CELL + MARGIN.bottom;
