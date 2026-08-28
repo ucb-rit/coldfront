@@ -1,16 +1,20 @@
 from django.urls import path
 
 from .views import (
+    CpuQueueWaitTimesView,
     GpuQueueWaitTimesView,
     MonthlyJobCountsView,
-    QueueWaitTimesView,
     TopUsageView,
 )
 
 app_name = "analytics"
 
 urlpatterns = [
-    path("queue-wait-times/", QueueWaitTimesView.as_view(), name="queue-wait-times"),
+    path(
+        "queue-wait-times/",
+        CpuQueueWaitTimesView.as_view(),
+        name="cpu-queue-wait-times",
+    ),
     path(
         "gpu-queue-wait-times/",
         GpuQueueWaitTimesView.as_view(),

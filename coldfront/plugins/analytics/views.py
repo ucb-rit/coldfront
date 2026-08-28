@@ -77,6 +77,20 @@ def _gpu_partition_clause():
     raise ImproperlyConfigured(_MISCONFIGURED)
 
 
+def _cpu_qos_clause():
+    """Return (sql_fragment, params) to filter QoS to the deployment's CPU prefix.
+
+    Mirrors the partition filter so condo QoSes running on cluster partitions
+    are excluded from the CPU wait-time view (matching the management command).
+    Not used for GPU wait times, which intentionally shows all QoSes.
+    """
+    if flag_enabled("BRC_ONLY"):
+        return "AND qos LIKE %s", ["savio%"]
+    if flag_enabled("LRC_ONLY"):
+        return "AND qos LIKE %s", ["lr%"]
+    raise ImproperlyConfigured(_MISCONFIGURED)
+
+
 # SQL templates — {prefix_clause} is injected at query time.
 # Using .format() is safe because the SQL contains no { } characters
 # other than the placeholder.
@@ -103,6 +117,7 @@ WHERE
     AND startdate  > submitdate
     AND qos        NOT LIKE '%%_lowprio'
     {prefix_clause}
+    {qos_clause}
 GROUP BY partition, qos
 HAVING COUNT(*) >= %s
 ORDER BY partition, p50_wait_min DESC;
@@ -219,7 +234,7 @@ class AnalyticsAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
         return user_can_view_analytics(self.request.user)
 
 
-class QueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
+class CpuQueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
     template_name = "analytics/queue_wait_times.html"
 
     _VALID_DAYS = {30, 90, 180, 365}
@@ -242,6 +257,8 @@ class QueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
 
         cluster = _cluster_tag()
         prefix_clause, prefix_params = _cpu_partition_clause()
+        qos_clause, qos_params = _cpu_qos_clause()
+        context["page_title"] = "CPU Queue Wait Times"
         context["days"] = days
         context["min_jobs"] = min_jobs
         context["valid_days"] = sorted(self._VALID_DAYS)
@@ -253,8 +270,8 @@ class QueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
             context.update(cached)
             return context
 
-        sql_params = [f"{days} days", *prefix_params, min_jobs]
-        sql = _WAIT_TIMES_SQL.format(prefix_clause=prefix_clause)
+        sql_params = [f"{days} days", *prefix_params, *qos_params, min_jobs]
+        sql = _WAIT_TIMES_SQL.format(prefix_clause=prefix_clause, qos_clause=qos_clause)
 
         try:
             with connection.cursor() as cursor:
