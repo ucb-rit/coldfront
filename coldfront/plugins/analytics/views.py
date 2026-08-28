@@ -245,6 +245,7 @@ class QueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
         context["days"] = days
         context["min_jobs"] = min_jobs
         context["valid_days"] = sorted(self._VALID_DAYS)
+        context["cache_ttl_hours"] = CACHE_TTL // 3600
 
         cache_key = f"analytics:wait_times:{days}:{min_jobs}:{cluster}"
         cached = cache.get(cache_key)
@@ -309,6 +310,7 @@ class MonthlyJobCountsView(AnalyticsAccessMixin, TemplateView):
         prefix_clause, prefix_params = _cpu_partition_clause()
         context["months_n"] = months_n
         context["valid_months"] = sorted(self._VALID_MONTHS)
+        context["cache_ttl_hours"] = CACHE_TTL // 3600
 
         cache_key = f"analytics:monthly_jobs:{months_n}:{cluster}"
         cached = cache.get(cache_key)
@@ -410,6 +412,7 @@ class GpuQueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
         context["days"] = days
         context["min_jobs"] = min_jobs
         context["valid_days"] = sorted(self._VALID_DAYS)
+        context["cache_ttl_hours"] = CACHE_TTL // 3600
 
         cache_key = f"analytics:gpu_wait_times:{days}:{min_jobs}:{cluster}"
         cached = cache.get(cache_key)
@@ -497,6 +500,7 @@ class TopUsageView(AnalyticsAccessMixin, TemplateView):
         cluster = _cluster_tag()
         context["days"] = days
         context["valid_days"] = sorted(self._VALID_DAYS)
+        context["cache_ttl_hours"] = CACHE_TTL // 3600
 
         cache_key = f"analytics:top_usage:{days}:{cluster}"
         cached = cache.get(cache_key)
