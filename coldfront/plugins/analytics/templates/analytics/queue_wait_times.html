@@ -1,0 +1,386 @@
+{% extends "common/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"Queue Wait Times" }}{% endblock %}
+
+{% block head %}
+<style>
+  .qos-label { font-family: monospace; }
+
+  .heatmap-wrap { overflow-x: auto; }
+  .heatmap-wrap svg text { font-family: monospace; font-size: 12px; }
+
+  .heatmap-cell {
+    stroke: #fff;
+    stroke-width: 2px;
+    cursor: default;
+  }
+  .heatmap-cell:hover { stroke: #222; }
+
+  #hm-tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(25,25,25,0.93);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1.7;
+    max-width: 260px;
+    z-index: 9999;
+    display: none;
+  }
+
+  .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .legend-row canvas { height: 14px; width: 200px; border-radius: 3px; }
+  .legend-label { font-size: 12px; color: #555; white-space: nowrap; }
+
+  .metric-toggle .btn { min-width: 80px; }
+  .window-toggle .btn { min-width: 56px; }
+
+  /* Prevent header text from wrapping into sort-arrow space */
+  #wait-times-table thead th { white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{{ page_title|default:"Queue Wait Times" }}</h1>
+<p class="text-muted mb-1">
+  {% if page_description %}
+  {{ page_description }}
+  {% else %}
+  Median and p90 queue wait times by partition and QOS.
+  Preemptible (lowprio) QOS are excluded — their wait times are structurally
+  inflated by design and are not comparable to regular queue times.
+  {% endif %}
+  Buckets with fewer than {{ min_jobs }} jobs are excluded.
+  Both heatmaps share the same axes &mdash; hover any cell for details.
+</p>
+<hr>
+
+<!-- Window selector -->
+<div class="mb-3 d-flex align-items-center gap-2">
+  <span class="text-muted mr-2">Rolling window:</span>
+  <div class="window-toggle btn-group btn-group-sm" role="group">
+    {% for d in valid_days %}
+    <a href="?days={{ d }}&min_jobs={{ min_jobs }}"
+       class="btn {% if d == days %}btn-primary{% else %}btn-outline-primary{% endif %}">
+      {{ d }}d
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+  <i class="fas fa-exclamation-triangle"></i> {{ error }}
+</div>
+{% else %}
+
+<!-- Wait Time Heatmap -->
+<div class="card border-primary mb-3">
+  <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between flex-wrap">
+    <span>Average Queue Wait Time (QOS &times; Partition)</span>
+    <div class="metric-toggle btn-group btn-group-sm mt-1 mt-md-0" role="group">
+      <button class="btn btn-light active" data-metric="p50">Median (p50)</button>
+      <button class="btn btn-outline-light"  data-metric="p90">p90</button>
+    </div>
+  </div>
+  <div class="card-body pb-1">
+    <div class="legend-row">
+      <span class="legend-label">~0</span>
+      <canvas id="wait-legend"></canvas>
+      <span class="legend-label" id="wait-legend-max"></span>
+    </div>
+    <div class="heatmap-wrap">
+      <svg id="heatmap-wait"></svg>
+    </div>
+  </div>
+</div>
+
+<!-- Job Count Heatmap -->
+<div class="card border-primary mb-4">
+  <div class="card-header bg-primary text-white">
+    Total Number of Jobs (QOS &times; Partition)
+  </div>
+  <div class="card-body pb-1">
+    <div class="legend-row">
+      <span class="legend-label">1</span>
+      <canvas id="jobs-legend"></canvas>
+      <span class="legend-label" id="jobs-legend-max"></span>
+    </div>
+    <div class="heatmap-wrap">
+      <svg id="heatmap-jobs"></svg>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Table -->
+<div class="card border-primary mb-4">
+  <div class="card-header bg-primary text-white">
+    Detail Table
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table id="wait-times-table" class="table table-bordered table-hover table-sm mb-0">
+        <thead class="thead-light">
+          <tr>
+            <th>Partition</th>
+            <th>QOS</th>
+            <th>Jobs</th>
+            <th>Median Wait (p50)</th>
+            <th>p90 Wait</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td class="qos-label">{{ row.partition }}</td>
+            <td class="qos-label">{{ row.qos }}</td>
+            <td class="text-right">{{ row.jobs }}</td>
+            <td class="text-right">{{ row.p50_display }}</td>
+            <td class="text-right">{{ row.p90_display }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<p class="text-muted small">Generated {{ generated_at }}. Rolling {{ days }}-day window. Current period is partial.</p>
+
+<div id="hm-tooltip"></div>
+
+{% endif %}
+{% endblock %}
+
+{% block javascript %}
+<script>
+  $("#navbar-main > ul > li.active").removeClass("active");
+
+  {% if not error %}
+  var RAW = [
+    {% for row in rows %}
+    {
+      partition:   "{{ row.partition }}",
+      qos:         "{{ row.qos }}",
+      jobs:        {{ row.jobs }},
+      p50:         {{ row.p50_wait_min }},
+      p90:         {{ row.p90_wait_min }},
+      p50_display: "{{ row.p50_display }}",
+      p90_display: "{{ row.p90_display }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  // ── Axes ─────────────────────────────────────────────────────────────────────
+  var partitions = [];
+  RAW.forEach(function(d) {
+    if (partitions.indexOf(d.partition) === -1) partitions.push(d.partition);
+  });
+
+  // shared/system QOS first, condo_* alphabetically after
+  var allQos = [];
+  RAW.forEach(function(d) { if (allQos.indexOf(d.qos) === -1) allQos.push(d.qos); });
+  allQos.sort(function(a, b) {
+    var aC = a.startsWith('condo_'), bC = b.startsWith('condo_');
+    if (aC !== bC) return aC ? 1 : -1;
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
+
+  var lookup = {};
+  RAW.forEach(function(d) { lookup[d.partition + '|' + d.qos] = d; });
+
+  // ── Formatting ────────────────────────────────────────────────────────────────
+  function fmtMin(minutes) {
+    if (!minutes || minutes === 0) return '~0s';
+    if (minutes < 1) {
+      var s = Math.round(minutes * 60);
+      return s > 0 ? s + 's' : '~0s';
+    }
+    var t = Math.round(minutes);
+    if (t < 60) return t + 'm';
+    var h = Math.floor(t / 60), m = t % 60;
+    if (h < 24) return m ? h + 'h ' + m + 'm' : h + 'h';
+    var d = Math.floor(h / 24), rh = h % 24;
+    return rh ? d + 'd ' + rh + 'h' : d + 'd';
+  }
+
+  function fmtJobs(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+    return n.toString();
+  }
+
+  function fmtJobsFull(n) {
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  // ── Color scales ──────────────────────────────────────────────────────────────
+  function waitColor(value, maxVal) {
+    if (value == null) return '#e9ecef';
+    if (value < 0.5)   return '#1a9641';
+    var t = Math.max(0, Math.min(1, Math.log(value) / Math.log(maxVal)));
+    var r, g;
+    if (t < 0.5) { r = Math.round(255 * t * 2); g = 200; }
+    else          { r = 220; g = Math.round(200 * (1 - (t - 0.5) * 2)); }
+    return 'rgb(' + r + ',' + g + ',40)';
+  }
+
+  function jobsColor(value, maxVal) {
+    if (value == null || value === 0) return '#e9ecef';
+    var t = Math.max(0, Math.min(1, Math.log(value) / Math.log(maxVal)));
+    var r = Math.round(255 - t * 185);
+    var g = Math.round(255 - t * 130);
+    var b = Math.round(255 - t * 55);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  // ── Legend ────────────────────────────────────────────────────────────────────
+  function drawLegend(canvasId, maxLabelId, colorFn, maxVal, fmtMax) {
+    var canvas = document.getElementById(canvasId);
+    canvas.width = 200; canvas.height = 14;
+    var ctx = canvas.getContext('2d');
+    for (var x = 0; x < 200; x++) {
+      var val = Math.pow(maxVal, x / 200);
+      ctx.fillStyle = colorFn(val, maxVal);
+      ctx.fillRect(x, 0, 1, 14);
+    }
+    document.getElementById(maxLabelId).textContent = fmtMax(maxVal);
+  }
+
+  // ── Generic heatmap renderer ──────────────────────────────────────────────────
+  // Axes: columns = partitions (X), rows = QoS (Y)
+  var CELL   = 36;
+  var MARGIN = { top: 10, right: 20, bottom: 10, left: 110 };
+  var LABEL_H = 120;
+
+  var tooltip = document.getElementById('hm-tooltip');
+
+  function renderHeatmap(svgId, colorFn, valFn, tooltipFn) {
+    var maxVal = 0;
+    RAW.forEach(function(d) { var v = valFn(d); if (v > maxVal) maxVal = v; });
+    if (maxVal < 1) maxVal = 1;
+
+    var svgW = MARGIN.left + partitions.length * CELL + MARGIN.right;
+    var svgH = MARGIN.top + LABEL_H + allQos.length * CELL + MARGIN.bottom;
+
+    var svg = d3.select('#' + svgId)
+      .attr('width',  svgW)
+      .attr('height', svgH);
+    svg.selectAll('*').remove();
+
+    var g = svg.append('g')
+      .attr('transform', 'translate(' + MARGIN.left + ',' + MARGIN.top + ')');
+
+    // Column labels = partitions (rotated)
+    g.selectAll('.col-lbl')
+      .data(partitions).enter()
+      .append('text')
+        .attr('class', 'col-lbl')
+        .attr('x', function(d, i) { return i * CELL + CELL / 2; })
+        .attr('y', LABEL_H - 6)
+        .attr('text-anchor', 'start')
+        .attr('transform', function(d, i) {
+          var x = i * CELL + CELL / 2;
+          return 'rotate(-55,' + x + ',' + (LABEL_H - 6) + ')';
+        })
+        .text(function(d) { return d; });
+
+    // Row labels = QoS
+    g.selectAll('.row-lbl')
+      .data(allQos).enter()
+      .append('text')
+        .attr('class', 'row-lbl')
+        .attr('x', -6)
+        .attr('y', function(d, i) { return LABEL_H + i * CELL + CELL / 2 + 4; })
+        .attr('text-anchor', 'end')
+        .text(function(d) { return d; });
+
+    // Cells
+    allQos.forEach(function(qos, qi) {
+      partitions.forEach(function(partition, pi) {
+        var d   = lookup[partition + '|' + qos];
+        var val = d ? valFn(d) : null;
+
+        var cell = g.append('rect')
+          .attr('class', 'heatmap-cell')
+          .attr('x',      pi * CELL)
+          .attr('y',      LABEL_H + qi * CELL)
+          .attr('width',  CELL - 1)
+          .attr('height', CELL - 1)
+          .attr('rx', 3)
+          .attr('fill', colorFn(val, maxVal));
+
+        if (d) {
+          cell
+            .on('mousemove', function() {
+              tooltip.innerHTML = tooltipFn(d, partition, qos);
+              tooltip.style.display = 'block';
+              tooltip.style.left = (d3.event.clientX + 14) + 'px';
+              tooltip.style.top  = (d3.event.clientY - 10) + 'px';
+            })
+            .on('mouseleave', function() { tooltip.style.display = 'none'; });
+        }
+      });
+    });
+
+    return maxVal;
+  }
+
+  // ── Tooltip builders ──────────────────────────────────────────────────────────
+  var currentMetric = 'p50';
+
+  function waitTooltip(d, partition, qos) {
+    var primary  = currentMetric === 'p50' ? d.p50_display : d.p90_display;
+    var other    = currentMetric === 'p50' ? d.p90_display : d.p50_display;
+    var otherLbl = currentMetric === 'p50' ? 'p90' : 'Median (p50)';
+    return '<strong>' + partition + ' / ' + qos + '</strong><br>' +
+           (currentMetric === 'p50' ? 'Median (p50)' : 'p90') + ': <strong>' + primary + '</strong><br>' +
+           otherLbl + ': ' + other + '<br>' +
+           'Jobs: ' + fmtJobsFull(d.jobs);
+  }
+
+  function jobsTooltip(d, partition, qos) {
+    return '<strong>' + partition + ' / ' + qos + '</strong><br>' +
+           'Jobs: <strong>' + fmtJobsFull(d.jobs) + '</strong><br>' +
+           'Median wait: ' + d.p50_display + '<br>' +
+           'p90 wait: '    + d.p90_display;
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────────
+  function redrawWait() {
+    var valFn = currentMetric === 'p50'
+      ? function(d) { return d.p50; }
+      : function(d) { return d.p90; };
+    var maxVal = renderHeatmap('heatmap-wait', waitColor, valFn, waitTooltip);
+    drawLegend('wait-legend', 'wait-legend-max', waitColor, maxVal, fmtMin);
+  }
+
+  $(document).ready(function() {
+    redrawWait();
+
+    var maxJobs = renderHeatmap('heatmap-jobs', jobsColor,
+      function(d) { return d.jobs; }, jobsTooltip);
+    drawLegend('jobs-legend', 'jobs-legend-max', jobsColor, maxJobs, fmtJobs);
+
+    $('#wait-times-table').DataTable({
+      paging:    false,
+      searching: false,
+      info:      false,
+      order:     [[3, 'desc']]
+    });
+
+    $('.metric-toggle .btn').on('click', function() {
+      var metric = $(this).data('metric');
+      if (metric === currentMetric) return;
+      currentMetric = metric;
+      $('.metric-toggle .btn').removeClass('active btn-light').addClass('btn-outline-light');
+      $(this).removeClass('btn-outline-light').addClass('active btn-light');
+      redrawWait();
+    });
+  });
+  {% endif %}
+</script>
+{% endblock %}
