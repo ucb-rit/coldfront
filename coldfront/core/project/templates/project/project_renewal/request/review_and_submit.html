@@ -106,3 +106,15 @@ Project Renewal - Review and Submit
 {{ block.super }}
 
 {% endblock %}
+
+
+{% block submit_button %}
+{% if renewal_survey_url %}
+<button type="submit" class="btn btn-primary"
+    onclick="if(this.form.reportValidity()){ window.open('{{ renewal_survey_url }}', '_blank'); }">
+  Submit
+</button>
+{% else %}
+<input class="btn btn-primary" type="submit" value="Submit"/>
+{% endif %}
+{% endblock %}
