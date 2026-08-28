@@ -58,6 +58,7 @@ from coldfront.core.project.utils_.renewal_utils import (
     get_current_allowance_year_period,
     get_pi_active_unique_project,
     has_non_denied_renewal_request,
+    send_allocation_renewal_request_received_email,
     send_new_allocation_renewal_request_admin_notification_email,
     send_new_allocation_renewal_request_pi_notification_email,
     send_new_allocation_renewal_request_pooling_notification_email,
@@ -200,6 +201,12 @@ class AllocationRenewalMixin:
     def send_emails(request_obj):
         """Send emails to various recipients based on the given, newly-
         created AllocationRenewalRequest."""
+        # Send a confirmation email to the requester.
+        try:
+            send_allocation_renewal_request_received_email(request_obj)
+        except Exception as e:
+            logger.error("Failed to send confirmation email. Details:\n")
+            logger.exception(e)
         # Send a notification email to admins.
         try:
             send_new_allocation_renewal_request_admin_notification_email(request_obj)

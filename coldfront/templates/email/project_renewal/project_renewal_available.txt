@@ -11,6 +11,7 @@ To renew a PI's {{ computing_allowance_name_short }} under {{ project_name }}:
 
 Here is what to expect after making a request:
 
+- You will receive a confirmation email.
 - You and the PI should see a project renewal request on the Requests page: {{ requests_url }}.
 - The request will be reviewed and approved a few days before {{ next_allocation_period_start_date }}. You and the PI will be notified by email.
 - If approved, the request will be processed on {{ next_allocation_period_start_date }}, and {{ num_service_units }} service units will be allocated to {{ project_name }}. You and the PI will be notified by email.
