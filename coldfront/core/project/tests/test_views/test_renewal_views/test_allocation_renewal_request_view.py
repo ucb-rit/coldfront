@@ -175,15 +175,9 @@ class TestAllocationRenewalRequestViewMixin:
             }
             form_data.append(new_project_survey_form_data)
 
-        renewal_survey_form_data = {
-            "7-was_survey_completed": True,
-            current_step_key: "7",
-        }
-        form_data.append(renewal_survey_form_data)
-
         review_and_submit_form_data = {
-            "8-confirmation": True,
-            current_step_key: "8",
+            "7-confirmation": True,
+            current_step_key: "7",
         }
         form_data.append(review_and_submit_form_data)
 
@@ -205,7 +199,7 @@ class TestAllocationRenewalRequestViewMixin:
         """Test that a POST request sets the request_time of the renewal
         request."""
         with enable_deployment(self._deployment_name):
-            project, pi_project_user = self._create_project()
+            _project, pi_project_user = self._create_project()
 
             pre_time = utc_now_offset_aware()
 
