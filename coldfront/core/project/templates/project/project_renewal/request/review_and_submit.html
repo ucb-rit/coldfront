@@ -110,13 +110,8 @@ Project Renewal - Review and Submit
 
 {% block submit_button %}
 {% if renewal_survey_url %}
-<p>
-  Clicking <strong>Submit</strong> will submit your renewal request and open
-  the usage survey in a new tab. <strong>You must complete the survey to
-  finalize your renewal.</strong>
-</p>
 <button type="submit" class="btn btn-primary"
-    onclick="window.open('{{ renewal_survey_url }}', '_blank');">
+    onclick="if(this.form.reportValidity()){ window.open('{{ renewal_survey_url }}', '_blank'); }">
   Submit
 </button>
 {% else %}
