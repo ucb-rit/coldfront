@@ -7,11 +7,11 @@ To renew a PI's {{ computing_allowance_name_short }} under {{ project_name }}:
 - Visit the project page: {{ project_detail_url }}, and click on the "Renew Allowance" button.
 - Select the "{{ next_allocation_period_name }}" period and the PI. (If there are multiple PIs, they must be renewed separately.){% if lrc_only %}
 - If the project's LBL Project ID is invalid, you will be prompted to provide a valid one.{% endif %}
-- Fill out the usage survey. Note: This is not the final step of the renewal form.
-- Review your selections and submit.
+- Review your selections and submit. A usage survey will open in a new tab.
 
 Here is what to expect after making a request:
 
+- You will receive a confirmation email.
 - You and the PI should see a project renewal request on the Requests page: {{ requests_url }}.
 - The request will be reviewed and approved a few days before {{ next_allocation_period_start_date }}. You and the PI will be notified by email.
 - If approved, the request will be processed on {{ next_allocation_period_start_date }}, and {{ num_service_units }} service units will be allocated to {{ project_name }}. You and the PI will be notified by email.

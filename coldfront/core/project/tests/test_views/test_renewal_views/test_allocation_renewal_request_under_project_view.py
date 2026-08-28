@@ -111,15 +111,9 @@ class TestAllocationRenewalRequestUnderProjectViewMixin:
             }
             form_data.append(billing_id_form_data)
 
-        renewal_survey_form_data = {
-            "3-was_survey_completed": True,
-            current_step_key: "3",
-        }
-        form_data.append(renewal_survey_form_data)
-
         review_and_submit_form_data = {
-            "4-confirmation": True,
-            current_step_key: "4",
+            "3-confirmation": True,
+            current_step_key: "3",
         }
         form_data.append(review_and_submit_form_data)
 
@@ -201,7 +195,7 @@ class TestLRCAllocationRenewalRequestUnderProjectView(
         billing_id = "000000-001"
         assert not is_billing_id_valid(billing_id)
 
-        with self.assertRaises(AssertionError) as cm:
+        with self.assertRaises(AssertionError):
             self._send_post_requests(
                 allocation_period, project, pi_project_user, billing_id=billing_id
             )

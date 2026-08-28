@@ -252,7 +252,7 @@ def non_denied_renewal_request_statuses():
 
 
 def pis_with_renewal_requests_pks(
-    allocation_period, computing_allowance=None, request_status_names=[]
+    allocation_period, computing_allowance=None, request_status_names=None
 ):
     """Return a list of primary keys of PIs of allocation renewal
     requests for the given AllocationPeriod that match the given filters.
@@ -274,6 +274,8 @@ def pis_with_renewal_requests_pks(
           cannot be retrieved.
     """
     assert isinstance(allocation_period, AllocationPeriod)
+    if request_status_names is None:
+        request_status_names = []
     f = Q(allocation_period=allocation_period)
     if computing_allowance is not None:
         assert isinstance(computing_allowance, Resource)
@@ -462,6 +464,43 @@ def send_new_allocation_renewal_request_admin_notification_email(request):
     receiver_list = get_email_admin_notification_recipients(
         "allocation_renewal_requests", "created"
     )
+
+    send_email_template(subject, template_name, context, sender, receiver_list)
+
+
+def send_allocation_renewal_request_received_email(request):
+    """Send a confirmation email to the requester of the given
+    AllocationRenewalRequest."""
+    email_enabled = import_from_settings("EMAIL_ENABLED", False)
+    if not email_enabled:
+        return
+
+    subject = "Allowance Renewal Request Received"
+    template_name = "email/project_renewal/project_renewal_request_received.txt"
+
+    requester = request.requester
+    requester_str = f"{requester.first_name} {requester.last_name}"
+
+    pi = request.pi
+    pi_str = f"{pi.first_name} {pi.last_name}"
+
+    detail_view_name = "pi-allocation-renewal-request-detail"
+    review_url = urljoin(
+        settings.CENTER_BASE_URL, reverse(detail_view_name, kwargs={"pk": request.pk})
+    )
+
+    context = {
+        "allocation_period_name": request.allocation_period.name,
+        "pi_str": pi_str,
+        "requested_project_name": request.post_project.name,
+        "requester_str": requester_str,
+        "review_url": review_url,
+        "support_email": settings.CENTER_HELP_EMAIL,
+        "signature": settings.EMAIL_SIGNATURE,
+    }
+
+    sender = settings.EMAIL_SENDER
+    receiver_list = [requester.email]
 
     send_email_template(subject, template_name, context, sender, receiver_list)
 
@@ -680,6 +719,7 @@ class AllowanceRenewalAvailableEmailSender:
         current_allocation_period,
         next_allocation_period,
         computing_allowance,
+        not_renewed_only=False,
         email_strategy=None,
     ):
         assert isinstance(current_allocation_period, AllocationPeriod)
@@ -709,6 +749,8 @@ class AllowanceRenewalAvailableEmailSender:
                 allocation_period=self._next_allocation_period,
             )
         )
+
+        self._not_renewed_only = not_renewed_only
 
         self._email_strategy = validate_email_strategy_or_get_default(
             email_strategy=email_strategy
@@ -752,15 +794,30 @@ class AllowanceRenewalAvailableEmailSender:
             raise e
 
     def _get_eligible_projects(self):
-        """Return a list of Projects that are eligible to receive a
-        reminder email: currently "Active" ones that have the
-        computing allowance."""
+        """Return a queryset of Projects that are eligible to receive a
+        reminder email: currently "Active" ones that have the computing
+        allowance. If not_renewed_only is set, further excludes projects
+        that already have a non-denied renewal request for the next
+        allocation period.
+
+        Note: this does not exclude projects whose PI has submitted a
+        non-denied new project request for the next period instead of
+        renewing. That case is rare enough in practice that it is not
+        worth the added complexity."""
         project_name_prefix = self._computing_allowance_interface.code_from_name(
             self._computing_allowance.get_name()
         )
         active_projects_with_allowance = Project.objects.filter(
             name__startswith=project_name_prefix, status__name="Active"
         )
+        if self._not_renewed_only:
+            already_renewed_project_ids = AllocationRenewalRequest.objects.filter(
+                allocation_period=self._next_allocation_period,
+                status__in=non_denied_renewal_request_statuses(),
+            ).values_list("pre_project_id", flat=True)
+            active_projects_with_allowance = active_projects_with_allowance.exclude(
+                pk__in=already_renewed_project_ids
+            )
         return active_projects_with_allowance
 
     def _process_email(
