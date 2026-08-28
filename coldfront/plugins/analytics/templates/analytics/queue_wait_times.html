@@ -266,8 +266,7 @@
   // ── Generic heatmap renderer ──────────────────────────────────────────────────
   // Axes: columns = partitions (X), rows = QoS (Y)
   var CELL   = 36;
-  var MARGIN = { top: 10, right: 20, bottom: 10, left: 160 };
-  var LABEL_H = 120;
+  var MARGIN = { top: 4, right: 20, bottom: 10 };
 
   var tooltip = document.getElementById('hm-tooltip');
 
@@ -276,8 +275,17 @@
     RAW.forEach(function(d) { var v = valFn(d); if (v > maxVal) maxVal = v; });
     if (maxVal < 1) maxVal = 1;
 
-    var svgW = MARGIN.left + partitions.length * CELL + MARGIN.right;
-    var svgH = MARGIN.top + LABEL_H + allQos.length * CELL + MARGIN.bottom;
+    // Size label areas to fit actual data
+    var maxColLen = 0;
+    partitions.forEach(function(p) { if (p.length > maxColLen) maxColLen = p.length; });
+    var labelH = Math.max(50, Math.round(maxColLen * 7 * 0.82));
+
+    var maxRowLen = 0;
+    allQos.forEach(function(q) { if (q.length > maxRowLen) maxRowLen = q.length; });
+    var leftMargin = Math.max(60, maxRowLen * 7 + 12);
+
+    var svgW = leftMargin + partitions.length * CELL + MARGIN.right;
+    var svgH = MARGIN.top + labelH + allQos.length * CELL + MARGIN.bottom;
 
     var svg = d3.select('#' + svgId)
       .attr('width',  svgW)
@@ -285,7 +293,7 @@
     svg.selectAll('*').remove();
 
     var g = svg.append('g')
-      .attr('transform', 'translate(' + MARGIN.left + ',' + MARGIN.top + ')');
+      .attr('transform', 'translate(' + leftMargin + ',' + MARGIN.top + ')');
 
     // Column labels = partitions (rotated)
     g.selectAll('.col-lbl')
@@ -293,11 +301,11 @@
       .append('text')
         .attr('class', 'col-lbl')
         .attr('x', function(d, i) { return i * CELL + CELL / 2; })
-        .attr('y', LABEL_H - 6)
+        .attr('y', labelH - 6)
         .attr('text-anchor', 'start')
         .attr('transform', function(d, i) {
           var x = i * CELL + CELL / 2;
-          return 'rotate(-55,' + x + ',' + (LABEL_H - 6) + ')';
+          return 'rotate(-55,' + x + ',' + (labelH - 6) + ')';
         })
         .text(function(d) { return d; });
 
@@ -307,7 +315,7 @@
       .append('text')
         .attr('class', 'row-lbl')
         .attr('x', -6)
-        .attr('y', function(d, i) { return LABEL_H + i * CELL + CELL / 2 + 4; })
+        .attr('y', function(d, i) { return labelH + i * CELL + CELL / 2 + 4; })
         .attr('text-anchor', 'end')
         .text(function(d) { return d; });
 
@@ -320,7 +328,7 @@
         var cell = g.append('rect')
           .attr('class', 'heatmap-cell')
           .attr('x',      pi * CELL)
-          .attr('y',      LABEL_H + qi * CELL)
+          .attr('y',      labelH + qi * CELL)
           .attr('width',  CELL - 1)
           .attr('height', CELL - 1)
           .attr('rx', 3)
