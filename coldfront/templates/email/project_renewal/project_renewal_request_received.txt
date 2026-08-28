@@ -1,0 +1,12 @@
+Dear {{ requester_str }},
+
+Your request to renew PI {{ pi_str }}'s allowance under project {{ requested_project_name }} for Allocation Period "{{ allocation_period_name }}" has been received.
+
+You may view the details of the request here: {{ review_url }}.
+
+You and the PI will be notified by email when the request is processed.
+
+If you have any questions, please contact us at {{ support_email }}.
+
+Thank you,
+{{ signature }}

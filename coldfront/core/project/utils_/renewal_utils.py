@@ -468,6 +468,43 @@ def send_new_allocation_renewal_request_admin_notification_email(request):
     send_email_template(subject, template_name, context, sender, receiver_list)
 
 
+def send_allocation_renewal_request_received_email(request):
+    """Send a confirmation email to the requester of the given
+    AllocationRenewalRequest."""
+    email_enabled = import_from_settings("EMAIL_ENABLED", False)
+    if not email_enabled:
+        return
+
+    subject = "Allowance Renewal Request Received"
+    template_name = "email/project_renewal/project_renewal_request_received.txt"
+
+    requester = request.requester
+    requester_str = f"{requester.first_name} {requester.last_name}"
+
+    pi = request.pi
+    pi_str = f"{pi.first_name} {pi.last_name}"
+
+    detail_view_name = "pi-allocation-renewal-request-detail"
+    review_url = urljoin(
+        settings.CENTER_BASE_URL, reverse(detail_view_name, kwargs={"pk": request.pk})
+    )
+
+    context = {
+        "allocation_period_name": request.allocation_period.name,
+        "pi_str": pi_str,
+        "requested_project_name": request.post_project.name,
+        "requester_str": requester_str,
+        "review_url": review_url,
+        "support_email": settings.CENTER_HELP_EMAIL,
+        "signature": settings.EMAIL_SIGNATURE,
+    }
+
+    sender = settings.EMAIL_SENDER
+    receiver_list = [requester.email]
+
+    send_email_template(subject, template_name, context, sender, receiver_list)
+
+
 def send_new_allocation_renewal_request_pi_notification_email(request):
     """Send an email to the PI of the given request notifying them that
     someone has made a new AllocationRenewalRequest under their name.
