@@ -46,6 +46,8 @@ _MISCONFIGURED = (
     "Analytics plugin requires either BRC_ONLY or LRC_ONLY flag to be enabled."
 )
 
+_MIN_JOBS = 20  # minimum jobs per partition/QoS bucket to appear in wait-time views
+
 
 def _cluster_tag():
     """Short identifier for cache key scoping."""
@@ -127,7 +129,6 @@ WHERE
     AND submitdate IS NOT NULL
     AND startdate  IS NOT NULL
     AND startdate  > submitdate
-    AND qos        NOT LIKE '%%_lowprio'
     {prefix_clause}
     {qos_clause}
 GROUP BY partition, qos
@@ -262,12 +263,6 @@ class CpuQueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
         if days not in self._VALID_DAYS:
             days = 30
 
-        try:
-            min_jobs = int(self.request.GET.get("min_jobs", 20))
-            min_jobs = max(1, min(min_jobs, 10000))
-        except (ValueError, TypeError):
-            min_jobs = 20
-
         show_all_qos = self.request.GET.get("show_all_qos") == "1"
 
         cluster = _cluster_tag()
@@ -275,19 +270,19 @@ class CpuQueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
         qos_clause, qos_params = ("", []) if show_all_qos else _cpu_qos_clause()
         context["page_title"] = "CPU Queue Wait Times"
         context["days"] = days
-        context["min_jobs"] = min_jobs
+        context["min_jobs"] = _MIN_JOBS
         context["valid_days"] = sorted(self._VALID_DAYS)
         context["show_all_qos"] = show_all_qos
         context["cache_ttl_hours"] = CACHE_TTL // 3600
 
         all_tag = "all" if show_all_qos else "filtered"
-        cache_key = f"analytics:wait_times:{days}:{min_jobs}:{all_tag}:{cluster}"
+        cache_key = f"analytics:wait_times:{days}:{all_tag}:{cluster}"
         cached = cache.get(cache_key)
         if cached is not None:
             context.update(cached)
             return context
 
-        sql_params = [f"{days} days", *prefix_params, *qos_params, min_jobs]
+        sql_params = [f"{days} days", *prefix_params, *qos_params, _MIN_JOBS]
         sql = _WAIT_TIMES_SQL.format(prefix_clause=prefix_clause, qos_clause=qos_clause)
 
         try:
@@ -429,37 +424,26 @@ class GpuQueueWaitTimesView(AnalyticsAccessMixin, TemplateView):
         if days not in self._VALID_DAYS:
             days = 30
 
-        try:
-            min_jobs = int(self.request.GET.get("min_jobs", 20))
-            min_jobs = max(1, min(min_jobs, 10000))
-        except (ValueError, TypeError):
-            min_jobs = 20
-
         show_all_qos = self.request.GET.get("show_all_qos") == "1"
 
         cluster = _cluster_tag()
         prefix_clause, prefix_params = _gpu_partition_clause()
         qos_clause, qos_params = ("", []) if show_all_qos else _gpu_qos_clause()
         context["page_title"] = "GPU Queue Wait Times"
-        context["page_description"] = (
-            "Median and p90 queue wait times by GPU partition and QOS. "
-            "Lowprio QOS are included (unlike CPU wait times). "
-            "Condo QOS are excluded by default — use the toggle to include them."
-        )
         context["days"] = days
-        context["min_jobs"] = min_jobs
+        context["min_jobs"] = _MIN_JOBS
         context["valid_days"] = sorted(self._VALID_DAYS)
         context["show_all_qos"] = show_all_qos
         context["cache_ttl_hours"] = CACHE_TTL // 3600
 
         all_tag = "all" if show_all_qos else "filtered"
-        cache_key = f"analytics:gpu_wait_times:{days}:{min_jobs}:{all_tag}:{cluster}"
+        cache_key = f"analytics:gpu_wait_times:{days}:{all_tag}:{cluster}"
         cached = cache.get(cache_key)
         if cached is not None:
             context.update(cached)
             return context
 
-        sql_params = [f"{days} days", *prefix_params, *qos_params, min_jobs]
+        sql_params = [f"{days} days", *prefix_params, *qos_params, _MIN_JOBS]
         sql = _GPU_WAIT_TIMES_SQL.format(
             prefix_clause=prefix_clause, qos_clause=qos_clause
         )
