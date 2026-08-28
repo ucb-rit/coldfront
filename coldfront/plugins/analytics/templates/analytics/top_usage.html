@@ -68,7 +68,7 @@
       <table id="top-usage-table" class="table table-bordered table-hover table-sm mb-0">
         <thead class="thead-light">
           <tr>
-            <th id="partition-col-header">Partition</th>
+            <th>Partition</th>
             <th>Name</th>
             <th id="metric-header">CPU Time (hrs)</th>
             <th>Job Count</th>
@@ -181,18 +181,18 @@
     );
     $('#metric-header').text(metricLabel);
 
-    // Show/hide partition column
     var showPartCol = currentPartition === '__all__';
-    $('#partition-col-header').toggle(showPartCol);
 
-    if (dt) { dt.destroy(); dt = null; }
+    if ($.fn.dataTable.isDataTable('#top-usage-table')) {
+      $('#top-usage-table').DataTable().destroy();
+    }
+    dt = null;
 
     var tbody = $('#top-usage-tbody').empty();
     data.forEach(function(row) {
-      var partCell = showPartCol ? '<td>' + row.partition + '</td>' : '';
       tbody.append(
         '<tr>' +
-        partCell +
+        '<td>' + row.partition + '</td>' +
         '<td>' + row.name + '</td>' +
         '<td class="text-right" data-order="' + metricSort(row) + '">' + metricValue(row) + '</td>' +
         '<td class="text-right">' + fmtN(row.job_count) + '</td>' +
@@ -200,17 +200,18 @@
       );
     });
 
-    var nameCol    = showPartCol ? 1 : 0;
-    var metricCol  = showPartCol ? 2 : 1;
-    var jobCol     = showPartCol ? 3 : 2;
-
+    // Column indices are fixed: 0=Partition, 1=Name, 2=Metric, 3=Job Count.
+    // DataTables owns partition column visibility instead of jQuery toggling the <th>.
     dt = $('#top-usage-table').DataTable({
       paging:     true,
       pageLength: 25,
       searching:  true,
       info:       true,
-      order:      [[metricCol, 'desc']],
-      columnDefs: [{ targets: [metricCol, jobCol], className: 'dt-body-right' }]
+      order:      [[2, 'desc']],
+      columnDefs: [
+        { targets: [2, 3], className: 'dt-body-right' },
+        { targets: [0], visible: showPartCol }
+      ]
     });
   }
 
