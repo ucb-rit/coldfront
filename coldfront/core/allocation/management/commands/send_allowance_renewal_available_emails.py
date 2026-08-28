@@ -25,19 +25,29 @@ class Command(BaseCommand):
     help = (
         "Send emails to active projects with FCAs (BRC) or PCAs (LRC), "
         "notifying them that they may renew their computing allowance for the "
-        "upcoming allowance year."
+        "upcoming allowance year. By default, emails are sent to all eligible "
+        "active projects. Pass --not-yet-renewed to send only to those that "
+        "have not yet submitted a renewal request."
     )
 
     logger = logging.getLogger("coldfront.commands")
 
-    # TODO: Consider only sending the email to projects that have not yet
-    #  renewed, so that this command can be safely re-run for subsequent emails.
-
     def add_arguments(self, parser):
         add_argparse_dry_run_argument(parser)
+        parser.add_argument(
+            "--not-renewed-only",
+            action="store_true",
+            dest="not_renewed_only",
+            default=False,
+            help=(
+                "Only send to active projects that have not yet submitted a "
+                "renewal request for the upcoming allowance year."
+            ),
+        )
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
+        not_renewed_only = options["not_renewed_only"]
 
         current_allowance_year = get_current_allowance_year_period()
         next_allowance_year = get_next_allowance_year_period()
@@ -60,6 +70,7 @@ class Command(BaseCommand):
             current_allowance_year,
             next_allowance_year,
             computing_allowance,
+            not_renewed_only=not_renewed_only,
             email_strategy=email_strategy,
         )
         email_sender.run()
