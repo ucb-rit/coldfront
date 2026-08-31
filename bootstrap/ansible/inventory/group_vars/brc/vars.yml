@@ -66,6 +66,8 @@ center_help_email: "brc-hpc-help@berkeley.edu"
 # Plugins
 #------------------------------------------------------------------------------
 
+plugin_analytics_enabled: true
+
 plugin_departments_enabled: true
 plugin_departments_department_display_name: "Department"
 plugin_departments_department_data_source: "coldfront.plugins.departments.utils.data_sources.backends.calnet_ldap.CalNetLdapDataSourceBackend"

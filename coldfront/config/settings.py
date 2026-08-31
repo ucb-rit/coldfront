@@ -275,6 +275,11 @@ if "django_su.backends.SuBackend" in EXTRA_AUTHENTICATION_BACKENDS:
         ]
     )
 
+if "coldfront.plugins.analytics" in INSTALLED_APPS:
+    TEMPLATES[0]["OPTIONS"]["context_processors"].append(
+        "coldfront.plugins.analytics.context_processors.analytics_nav_visibility"
+    )
+
 VERSION = coldfront.__version__
 
 try:

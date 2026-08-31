@@ -75,5 +75,7 @@ renewal_survey_backend: permissive
 # Plugins
 #------------------------------------------------------------------------------
 
+plugin_analytics_enabled: true
+
 plugin_departments_enabled: false
 plugin_faculty_storage_allocations_enabled: false

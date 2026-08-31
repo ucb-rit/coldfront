@@ -1,0 +1,247 @@
+{% extends "common/base.html" %}
+{% load static %}
+
+{% block title %}Top Usage{% endblock %}
+
+{% block head %}
+<style>
+  .window-toggle .btn  { min-width: 56px; }
+  .axis-toggle .btn    { min-width: 80px; }
+  .metric-toggle .btn  { min-width: 100px; }
+  #top-usage-table thead th { white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Top Usage</h1>
+<hr>
+
+<!-- Controls -->
+<table class="mb-3">
+  <tr>
+    <td class="pr-4">
+      <div class="text-muted small">Window</div>
+      <div class="window-toggle btn-group btn-group-sm" role="group">
+        {% for d in valid_days %}
+        <a href="?days={{ d }}"
+           class="btn {% if d == days %}btn-primary{% else %}btn-outline-primary{% endif %}">
+          {{ d }}d
+        </a>
+        {% endfor %}
+      </div>
+    </td>
+    <td class="pr-4">
+      <div class="text-muted small">Show</div>
+      <div class="axis-toggle btn-group btn-group-sm" role="group">
+        <button class="btn btn-primary active" data-axis="users">Users</button>
+        <button class="btn btn-outline-primary" data-axis="projects">Projects</button>
+      </div>
+    </td>
+    <td class="pr-4">
+      <div class="text-muted small">Metric</div>
+      <div class="metric-toggle btn-group btn-group-sm" role="group">
+        <button class="btn btn-primary active" data-metric="cpu_time">CPU Time</button>
+        <button class="btn btn-outline-primary" data-metric="amount">SUs</button>
+        <button class="btn btn-outline-primary" data-metric="raw_time">Raw Time</button>
+      </div>
+    </td>
+    <td>
+      <div class="text-muted small">Partition</div>
+      <select id="partition-select" class="form-control form-control-sm">
+        <option value="__all__">All partitions (aggregated)</option>
+      </select>
+    </td>
+  </tr>
+</table>
+
+{% if error %}
+<div class="alert alert-danger">
+  <i class="fas fa-exclamation-triangle"></i> {{ error }}
+</div>
+{% else %}
+
+<div class="card border-primary mb-4">
+  <div class="card-header bg-primary text-white" id="table-heading">
+    Top Users by CPU Time &mdash; last {{ days }} days
+  </div>
+  <div class="card-body p-3">
+    <div class="table-responsive">
+      <table id="top-usage-table" class="table table-bordered table-hover table-sm mb-0">
+        <thead class="thead-light">
+          <tr>
+            <th>Partition</th>
+            <th>Name</th>
+            <th id="metric-header">CPU Time (hrs)</th>
+            <th>Job Count</th>
+          </tr>
+        </thead>
+        <tbody id="top-usage-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<p class="text-muted small">Generated {{ generated_at }} (cached up to {{ cache_ttl_hours }}h). Rolling {{ days }}-day window. Current period is partial.</p>
+
+{% endif %}
+{% endblock %}
+
+{% block javascript %}
+<script>
+  $("#navbar-main > ul > li.active").removeClass("active");
+
+  {% if not error %}
+  var USERS    = {{ users_json|safe }};
+  var PROJECTS = {{ projects_json|safe }};
+
+  var currentAxis      = 'users';
+  var currentMetric    = 'cpu_time';
+  var currentPartition = '__all__';
+
+  var METRIC_LABELS = {
+    cpu_time:  'CPU Time (hrs)',
+    job_count: 'Job Count',
+    amount:    'SUs',
+    raw_time:  'Raw Time (hrs)'
+  };
+
+  var dt = null;
+
+  // ── Populate partition dropdown from data ─────────────────────────────────
+  (function() {
+    var seen = {};
+    USERS.concat(PROJECTS).forEach(function(r) {
+      if (r.partition && !seen[r.partition]) {
+        seen[r.partition] = true;
+      }
+    });
+    var partitions = Object.keys(seen).sort();
+    var sel = document.getElementById('partition-select');
+    partitions.forEach(function(p) {
+      var opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      sel.appendChild(opt);
+    });
+  })();
+
+  // ── Aggregation ───────────────────────────────────────────────────────────
+  function aggregate(data) {
+    var map = {};
+    data.forEach(function(r) {
+      if (!map[r.name]) {
+        map[r.name] = { name: r.name, partition: 'All', job_count: 0, amount: 0, cpu_time: 0, raw_time: 0 };
+      }
+      map[r.name].job_count += r.job_count;
+      map[r.name].amount    += r.amount;
+      map[r.name].cpu_time  += r.cpu_time;
+      map[r.name].raw_time  += r.raw_time;
+    });
+    return Object.values(map);
+  }
+
+  // ── Formatting ────────────────────────────────────────────────────────────
+  function metricValue(row) {
+    if (currentMetric === 'cpu_time') return (row.cpu_time / 3600).toFixed(1);
+    if (currentMetric === 'raw_time') return (row.raw_time / 3600).toFixed(1);
+    if (currentMetric === 'amount')   return row.amount.toFixed(2);
+    return row.job_count;
+  }
+
+  function metricSort(row) {
+    if (currentMetric === 'cpu_time') return row.cpu_time;
+    if (currentMetric === 'raw_time') return row.raw_time;
+    if (currentMetric === 'amount')   return row.amount;
+    return row.job_count;
+  }
+
+  function fmtN(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+    return n.toString();
+  }
+
+  // ── Rebuild table ─────────────────────────────────────────────────────────
+  function rebuild() {
+    var raw  = currentAxis === 'users' ? USERS : PROJECTS;
+    var data;
+
+    if (currentPartition === '__all__') {
+      data = aggregate(raw);
+    } else {
+      data = raw.filter(function(r) { return r.partition === currentPartition; });
+    }
+
+    // Heading
+    var axisLabel   = currentAxis === 'users' ? 'Users' : 'Projects';
+    var metricLabel = METRIC_LABELS[currentMetric];
+    var partLabel   = currentPartition === '__all__' ? 'all partitions' : currentPartition;
+    $('#table-heading').text(
+      'Top ' + axisLabel + ' by ' + metricLabel +
+      ' \u2014 ' + partLabel + ' \u2014 last {{ days }} days'
+    );
+    $('#metric-header').text(metricLabel);
+
+    var showPartCol = currentPartition === '__all__';
+
+    if ($.fn.dataTable.isDataTable('#top-usage-table')) {
+      $('#top-usage-table').DataTable().destroy();
+    }
+    dt = null;
+
+    var tbody = $('#top-usage-tbody').empty();
+    data.forEach(function(row) {
+      tbody.append(
+        '<tr>' +
+        '<td>' + row.partition + '</td>' +
+        '<td>' + row.name + '</td>' +
+        '<td class="text-right" data-order="' + metricSort(row) + '">' + metricValue(row) + '</td>' +
+        '<td class="text-right">' + fmtN(row.job_count) + '</td>' +
+        '</tr>'
+      );
+    });
+
+    // Column indices are fixed: 0=Partition, 1=Name, 2=Metric, 3=Job Count.
+    // DataTables owns partition column visibility instead of jQuery toggling the <th>.
+    dt = $('#top-usage-table').DataTable({
+      paging:     true,
+      pageLength: 25,
+      searching:  true,
+      info:       true,
+      order:      [[2, 'desc']],
+      columnDefs: [
+        { targets: [2, 3], className: 'dt-body-right' },
+        { targets: [0], visible: showPartCol }
+      ]
+    });
+  }
+
+  $(document).ready(function() {
+    rebuild();
+
+    $('.axis-toggle .btn').on('click', function() {
+      var axis = $(this).data('axis');
+      if (axis === currentAxis) return;
+      currentAxis = axis;
+      $('.axis-toggle .btn').removeClass('active btn-primary').addClass('btn-outline-primary');
+      $(this).removeClass('btn-outline-primary').addClass('active btn-primary');
+      rebuild();
+    });
+
+    $('.metric-toggle .btn').on('click', function() {
+      var metric = $(this).data('metric');
+      if (metric === currentMetric) return;
+      currentMetric = metric;
+      $('.metric-toggle .btn').removeClass('active btn-primary').addClass('btn-outline-primary');
+      $(this).removeClass('btn-outline-primary').addClass('active btn-primary');
+      rebuild();
+    });
+
+    $('#partition-select').on('change', function() {
+      currentPartition = $(this).val();
+      rebuild();
+    });
+  });
+  {% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "common/base.html" %}
+{% load static %}
+
+{% block title %}Monthly Job Counts{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  .partition-label { font-family: monospace; }
+  #chart-wrap { position: relative; height: 420px; }
+  tfoot th { background-color: #f8f9fa; }
+  .window-toggle .btn { min-width: 56px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Monthly Job Counts</h1>
+<hr>
+
+<!-- Controls -->
+<table class="mb-3">
+  <tr>
+    <td class="pr-4">
+      <div class="text-muted small">Window</div>
+      <div class="window-toggle btn-group btn-group-sm" role="group">
+        {% for m in valid_months %}
+        <a href="?months={{ m }}"
+           class="btn {% if m == months_n %}btn-primary{% else %}btn-outline-primary{% endif %}">
+          {{ m }}mo
+        </a>
+        {% endfor %}
+      </div>
+    </td>
+  </tr>
+</table>
+
+{% if error %}
+<div class="alert alert-danger">
+  <i class="fas fa-exclamation-triangle"></i> {{ error }}
+</div>
+{% else %}
+
+<!-- Stacked bar chart -->
+<div class="card border-primary mb-4">
+  <div class="card-header bg-primary text-white">
+    Jobs per Partition per Month
+  </div>
+  <div class="card-body">
+    <div id="chart-wrap"><canvas id="jobs-chart"></canvas></div>
+  </div>
+</div>
+
+<!-- Detail table -->
+<div class="card border-primary mb-4">
+  <div class="card-header bg-primary text-white">
+    Detail Table
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover table-sm mb-0">
+        <thead class="thead-light">
+          <tr>
+            <th>Partition</th>
+            {% for lbl in month_labels %}
+            <th class="text-right">{{ lbl }}</th>
+            {% endfor %}
+            <th class="text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in table_rows %}
+          <tr>
+            <td class="partition-label">{{ row.partition }}</td>
+            {% for count in row.counts %}
+            <td class="text-right">{{ count }}</td>
+            {% endfor %}
+            <td class="text-right"><strong>{{ row.total }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th>Total</th>
+            {% for t in col_totals %}
+            <th class="text-right">{{ t }}</th>
+            {% endfor %}
+            <th class="text-right">{{ grand_total }}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<p class="text-muted small">Generated {{ generated_at }} (cached up to {{ cache_ttl_hours }}h). Last {{ months_n }} months shown.</p>
+
+{% endif %}
+{% endblock %}
+
+{% block javascript %}
+<script>
+  $("#navbar-main > ul > li.active").removeClass("active");
+
+  {% if not error %}
+  var MONTHS   = {{ months_json|safe }};
+  var DATASETS = {{ datasets_json|safe }};
+
+  function fmtN(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+    return n.toString();
+  }
+
+  var ctx = document.getElementById('jobs-chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: { labels: MONTHS, datasets: DATASETS },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true },
+        y: {
+          stacked: true,
+          ticks: { callback: function(v) { return fmtN(v); } }
+        }
+      },
+      plugins: {
+        legend: { position: 'right' },
+        tooltip: {
+          callbacks: {
+            footer: function(items) {
+              var total = items.reduce(function(s, i) { return s + i.parsed.y; }, 0);
+              return 'Total: ' + total.toLocaleString();
+            }
+          }
+        }
+      }
+    }
+  });
+  {% endif %}
+</script>
+{% endblock %}
