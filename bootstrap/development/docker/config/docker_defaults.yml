@@ -30,3 +30,5 @@ flag_basic_auth_enabled: False
 flag_dev_auth_enabled: True
 flag_sso_enabled: False
 flag_link_login_enabled: False
+
+plugin_analytics_enabled: true

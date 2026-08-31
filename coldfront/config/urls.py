@@ -70,6 +70,10 @@ if (
         urlpatterns.append(path(prefix, include(module_path)))
 
 
+if "coldfront.plugins.analytics" in settings.INSTALLED_APPS:
+    urlpatterns.append(path("analytics/", include("coldfront.plugins.analytics.urls")))
+
+
 # Note: The feature flag generally abstracts away the check for whether the app
 # is installed. However, the app module is still resolved, which may be
 # problematic if it is not installed, so the check is manually done here.
