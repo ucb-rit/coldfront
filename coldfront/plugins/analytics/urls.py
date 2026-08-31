@@ -11,7 +11,7 @@ app_name = "analytics"
 
 urlpatterns = [
     path(
-        "queue-wait-times/",
+        "cpu-queue-wait-times/",
         CpuQueueWaitTimesView.as_view(),
         name="cpu-queue-wait-times",
     ),
