@@ -62,7 +62,7 @@
 # Otherwise, force reinstall with pip and the --force-reinstall flag.
 - name: Install billing validation package
   pip:
-    name: git+ssh://git@hpcs-gitlab.lbl.gov/meli/lbl_project_activity_validator.git
+    name: git+ssh://git@hpcs-gitlab.lbl.gov/meli/lbl_project_activity_validator.git@v1.0.0
     executable: "{{ app_root }}/venv/bin/pip3"
   become_user: "{{ app_user }}"
   environment:
