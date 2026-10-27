@@ -6,29 +6,29 @@
 |------------------------------------------------------------------------------------------------------------ | -------: | -------: | -------: | -------: | ------: | --------: |
 | coldfront/\_\_init\_\_.py                                                                                   |        8 |        3 |        0 |        0 |     62% |      9-12 |
 | coldfront/api/allocation/filters.py                                                                         |       33 |        0 |        0 |        0 |    100% |           |
-| coldfront/api/allocation/serializers.py                                                                     |       90 |        0 |       22 |        1 |     99% | 245-\>252 |
+| coldfront/api/allocation/serializers.py                                                                     |       90 |       26 |       22 |        0 |     57% |131, 215-252 |
 | coldfront/api/allocation/urls.py                                                                            |       18 |        0 |        0 |        0 |    100% |           |
-| coldfront/api/allocation/views.py                                                                           |       90 |        0 |       12 |        4 |     96% |65-\>69, 97-\>101, 128-\>132, 146-\>150 |
+| coldfront/api/allocation/views.py                                                                           |       90 |       40 |       12 |        0 |     49% |63-69, 82, 95-101, 114, 126-132, 144-150, 167, 170-186, 197 |
 | coldfront/api/billing/serializers.py                                                                        |        7 |        0 |        0 |        0 |    100% |           |
 | coldfront/api/billing/urls.py                                                                               |        5 |        0 |        0 |        0 |    100% |           |
-| coldfront/api/billing/views.py                                                                              |       13 |        0 |        0 |        0 |    100% |           |
+| coldfront/api/billing/views.py                                                                              |       13 |        1 |        0 |        0 |     92% |        33 |
 | coldfront/api/permissions.py                                                                                |       28 |        1 |       12 |        1 |     95% |        57 |
 | coldfront/api/project/filters.py                                                                            |       43 |        3 |        8 |        2 |     90% |50-\>47, 52-53, 59 |
-| coldfront/api/project/serializers.py                                                                        |       36 |        0 |        4 |        0 |    100% |           |
+| coldfront/api/project/serializers.py                                                                        |       36 |        6 |        4 |        0 |     75% |     83-90 |
 | coldfront/api/project/urls.py                                                                               |       11 |        0 |        0 |        0 |    100% |           |
-| coldfront/api/project/views.py                                                                              |       49 |        1 |        4 |        1 |     96% |       109 |
+| coldfront/api/project/views.py                                                                              |       49 |       13 |        4 |        1 |     70% |70, 73-82, 93, 109 |
 | coldfront/api/resource/serializers.py                                                                       |        6 |        0 |        0 |        0 |    100% |           |
-| coldfront/api/statistics/pagination.py                                                                      |       19 |        0 |        4 |        0 |    100% |           |
-| coldfront/api/statistics/serializers.py                                                                     |      136 |       18 |       34 |        7 |     84% |29-30, 86, 89-90, 106-109, 161-164, 177-179, 213-\>230, 215-220, 236-\>248, 238-242 |
+| coldfront/api/statistics/pagination.py                                                                      |       19 |       13 |        4 |        0 |     26% |12-24, 27-30 |
+| coldfront/api/statistics/serializers.py                                                                     |      136 |      104 |       34 |        0 |     19% |27-30, 35-38, 84-92, 95-120, 124-181, 186-194, 199-207, 212-230, 235-248 |
 | coldfront/api/statistics/urls.py                                                                            |        8 |        0 |        0 |        0 |    100% |           |
-| coldfront/api/statistics/utils.py                                                                           |      156 |       27 |       46 |       19 |     77% |66, 68, 94, 96, 146, 148, 150, 208, 242, 300, 302, 305-308, 331, 333, 336-339, 366, 368, 370, 400, 402, 404 |
-| coldfront/api/statistics/views.py                                                                           |      298 |       19 |       54 |        5 |     93% |168, 175-176, 192-193, 199-\>206, 202-203, 227-228, 324-330, 339-345, 491, 698-701, 712-714 |
+| coldfront/api/statistics/utils.py                                                                           |      156 |       31 |       46 |       17 |     74% |65-70, 94, 96, 146, 148, 150, 208, 242, 300, 302, 305-308, 331, 333, 336-339, 366, 368, 370, 400, 402, 404 |
+| coldfront/api/statistics/views.py                                                                           |      298 |      234 |       54 |        0 |     18% |159-257, 266-358, 373, 384-493, 594-754 |
 | coldfront/api/urls.py                                                                                       |        7 |        0 |        2 |        1 |     89% | 18-\>exit |
 | coldfront/api/user/authentication.py                                                                        |       19 |        2 |        4 |        2 |     83% |    20, 23 |
 | coldfront/api/user/filters.py                                                                               |        7 |        0 |        0 |        0 |    100% |           |
-| coldfront/api/user/serializers.py                                                                           |       38 |        0 |        2 |        0 |    100% |           |
+| coldfront/api/user/serializers.py                                                                           |       38 |        3 |        2 |        1 |     90% |54-\>exit, 63-64, 70 |
 | coldfront/api/user/urls.py                                                                                  |        8 |        0 |        0 |        0 |    100% |           |
-| coldfront/api/user/views.py                                                                                 |       97 |       25 |       24 |        1 |     74% |49-75, 217-\>233 |
+| coldfront/api/user/views.py                                                                                 |       97 |       26 |       24 |        1 |     73% |42, 49-75, 217-\>233 |
 | coldfront/api/utils/urls.py                                                                                 |        7 |        0 |        0 |        0 |    100% |           |
 | coldfront/core/account/adapter.py                                                                           |       10 |        5 |        4 |        0 |     36% |     13-17 |
 | coldfront/core/account/admin.py                                                                             |       44 |        5 |       12 |        0 |     91% |     54-62 |
@@ -179,7 +179,7 @@
 | coldfront/core/statistics/management/commands/free\_qos\_jobs.py                                            |      132 |      132 |       42 |        0 |      0% |     1-261 |
 | coldfront/core/statistics/models.py                                                                         |       57 |        2 |        0 |        0 |     96% |    15, 67 |
 | coldfront/core/statistics/urls.py                                                                           |        3 |        0 |        0 |        0 |    100% |           |
-| coldfront/core/statistics/utils\_/accounting\_utils.py                                                      |       69 |       19 |       20 |        0 |     76% |     37-73 |
+| coldfront/core/statistics/utils\_/accounting\_utils.py                                                      |       69 |       56 |       20 |        0 |     15% |37-73, 86-168 |
 | coldfront/core/statistics/utils\_/job\_accessibility\_manager.py                                            |       30 |       21 |       12 |        0 |     21% |12-13, 17-32, 38-52, 59-63 |
 | coldfront/core/statistics/utils\_/job\_query\_filtering.py                                                  |       51 |       41 |       26 |        0 |     13% |8-37, 45-48, 51-56, 59, 62-69, 72-79 |
 | coldfront/core/statistics/views.py                                                                          |      130 |       91 |       26 |        0 |     25% |47-93, 96-151, 161-172, 175-191, 202, 205-230, 236-271 |
@@ -199,7 +199,7 @@
 | coldfront/core/user/signals.py                                                                              |       36 |        6 |       16 |        3 |     83% |36-37, 44-\>exit, 58, 63-65 |
 | coldfront/core/user/urls.py                                                                                 |       21 |        0 |        2 |        1 |     96% | 130-\>140 |
 | coldfront/core/user/utils.py                                                                                |      156 |      113 |       40 |        1 |     22% |24-25, 29, 32-46, 53-86, 91-97, 101-138, 149-185, 192, 209-219, 225-247, 253-273, 278-296 |
-| coldfront/core/user/utils\_/host\_user\_utils.py                                                            |       29 |        1 |        6 |        1 |     94% |        57 |
+| coldfront/core/user/utils\_/host\_user\_utils.py                                                            |       29 |        5 |        6 |        1 |     77% | 20-23, 57 |
 | coldfront/core/user/utils\_/link\_login\_utils.py                                                           |       34 |        2 |        8 |        2 |     90% |    23, 47 |
 | coldfront/core/user/utils\_/merge\_users/\_\_init\_\_.py                                                    |        2 |        0 |        0 |        0 |    100% |           |
 | coldfront/core/user/utils\_/merge\_users/class\_handlers.py                                                 |      229 |      165 |       54 |        0 |     23% |20-21, 27-31, 41-54, 59-64, 70, 77-83, 93-94, 100-101, 106, 112-118, 122-124, 128-130, 135-136, 139, 148-151, 154-178, 181-209, 214, 217, 222, 225-226, 231-237, 240-253, 258-271, 276, 279-280, 285, 288-292, 297, 300-301, 306-312, 315-321, 328-335, 340-351, 356, 359-360, 365, 368-371, 376-384, 387-393, 399-403 |
@@ -209,7 +209,7 @@
 | coldfront/core/user/views\_/request\_hub\_views.py                                                          |      337 |       11 |       48 |        6 |     95% |76-77, 153-154, 160-161, 215-220, 795-\>802, 802-\>805, 805-\>808 |
 | coldfront/core/utils/admin.py                                                                               |       46 |       17 |       12 |        0 |     50% |34-44, 51-56 |
 | coldfront/core/utils/apps.py                                                                                |        5 |        0 |        0 |        0 |    100% |           |
-| coldfront/core/utils/common.py                                                                              |       81 |        8 |       18 |        0 |     90% |31-32, 36, 50, 55-61 |
+| coldfront/core/utils/common.py                                                                              |       81 |       10 |       18 |        0 |     88% |31-32, 36, 50, 55-61, 168-169 |
 | coldfront/core/utils/context\_processors.py                                                                 |       55 |        3 |       14 |        0 |     96% |     66-70 |
 | coldfront/core/utils/email/\_\_init\_\_.py                                                                  |        3 |        0 |        0 |        0 |    100% |           |
 | coldfront/core/utils/email/email\_strategy.py                                                               |       40 |        7 |        6 |        1 |     83% |16, 26-27, 48-49, 69-70 |
@@ -339,7 +339,7 @@
 | coldfront/plugins/xdmod/apps.py                                                                             |        3 |        3 |        0 |        0 |      0% |       1-5 |
 | coldfront/plugins/xdmod/management/commands/xdmod\_usage.py                                                 |      147 |      147 |       72 |        0 |      0% |     1-347 |
 | coldfront/plugins/xdmod/utils.py                                                                            |       84 |       84 |       12 |        0 |      0% |     1-135 |
-| **TOTAL**                                                                                                   | **26712** | **10859** | **6266** |  **606** | **56%** |           |
+| **TOTAL**                                                                                                   | **26712** | **11309** | **6266** |  **588** | **54%** |           |
 
 102 empty files skipped.
 
