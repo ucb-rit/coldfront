@@ -18,9 +18,6 @@ Project Detail
 {% endif %}
 
 
-<div id="alert_div">
-
-</div>
 
 {% if project.status.name == 'Archived' %}
 <div class="alert alert-warning" role="alert">
@@ -414,22 +411,6 @@ Project Detail
 
 <script>
 
-function getCookie(name) {
-  var cookieValue = null;
-  if (document.cookie && document.cookie != '') {
-    var cookies = document.cookie.split(';');
-    for (var i = 0; i < cookies.length; i++) {
-      var cookie = jQuery.trim(cookies[i]);
-      // Does this cookie string begin with the name we want?
-      if (cookie.substring(0, name.length + 1) == (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
-
 $(document).ready(function(){
     $('[data-toggle="popover"]').popover();
 
@@ -450,30 +431,6 @@ $('#grant_table').DataTable({
     'bSortable': false,
     'aTargets': ['nosort']
 }]
-});
-
-
-$("[id^=email_notifications_for_user_id_]").change(function() {
-  var checked = $(this).prop('checked');
-  var user_project_id = Number($(this).attr('id').split("_").pop());
-
-  $.ajax({
-    headers: { 'X-CSRFToken': getCookie('csrftoken') },
-    type: "POST",
-    url: "/project/project-user-update-email-notification/",
-    data: {
-      user_project_id: user_project_id,
-      checked: checked
-    },
-    success: function (data) {
-      $("#alert_div").html('<div class="alert alert-success alert-dismissible"><button type="button" class="close" data-dismiss="alert">&times;</button><strong>Success!</strong> Email notification updated.</div>')
-    },
-    error: function (xhr, status, error) {
-      $("#alert_div").html('<div class="alert alert-danger alert-dismissible"><button type="button" class="close" data-dismiss="alert">&times;</button><strong>Error!</strong> Failed updating email notification.</div>')
-    }
-  });
-
-  location.reload();
 });
 
 </script>

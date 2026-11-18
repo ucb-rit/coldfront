@@ -9,7 +9,7 @@ from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import transaction
 from django.db.models import Case, CharField, Q, Value, When
 from django.forms import formset_factory
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
@@ -1537,28 +1537,6 @@ class ProjectUserDetail(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                         },
                     )
                 )
-
-
-def project_update_email_notification(request):
-
-    if request.method == "POST":
-        data = request.POST
-        project_user_obj = get_object_or_404(
-            ProjectUser, pk=data.get("user_project_id")
-        )
-        checked = data.get("checked")
-        if checked == "true":
-            project_user_obj.enable_notifications = True
-            project_user_obj.save()
-            return HttpResponse("", status=200)
-        elif checked == "false":
-            project_user_obj.enable_notifications = False
-            project_user_obj.save()
-            return HttpResponse("", status=200)
-        else:
-            return HttpResponse("", status=400)
-    else:
-        return HttpResponse("", status=400)
 
 
 class ProjectReviewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
