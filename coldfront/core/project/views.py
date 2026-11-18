@@ -377,17 +377,13 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         ).order_by("request_time")
 
         if allocation_requests.exists():
-            survey_answers_list = list(
-                map(
-                    lambda x: SavioProjectSurveyForm(
-                        initial=x.survey_answers, disable_fields=True
-                    ),
-                    allocation_requests,
-                )
-            )
+            survey_answers_list = [
+                SavioProjectSurveyForm(initial=x.survey_answers, disable_fields=True)
+                for x in allocation_requests
+            ]
 
             context["survey_answers"] = list(
-                zip(allocation_requests, survey_answers_list)
+                zip(allocation_requests, survey_answers_list, strict=False)
             )
 
         context["user_agreement_signed"] = access_agreement_signed(self.request.user)
@@ -562,7 +558,7 @@ class ProjectListView(LoginRequiredMixin, ListView):
         if order_by:
             direction = self.request.GET.get("direction")
             filter_parameters_with_order_by = (
-                filter_parameters + "order_by=%s&direction=%s&" % (order_by, direction)
+                filter_parameters + f"order_by={order_by}&direction={direction}&"
             )
         else:
             filter_parameters_with_order_by = filter_parameters
@@ -758,7 +754,7 @@ class ProjectArchivedListView(LoginRequiredMixin, UserPassesTestMixin, ListView)
         if order_by:
             direction = self.request.GET.get("direction")
             filter_parameters_with_order_by = (
-                filter_parameters + "order_by=%s&direction=%s&" % (order_by, direction)
+                filter_parameters + f"order_by={order_by}&direction={direction}&"
             )
         else:
             filter_parameters_with_order_by = filter_parameters
@@ -851,7 +847,7 @@ class ProjectCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         project_obj.save()
         self.object = project_obj
 
-        project_user_obj = ProjectUser.objects.create(
+        ProjectUser.objects.create(
             user=self.request.user,
             project=project_obj,
             role=ProjectUserRoleChoice.objects.get(name="Manager"),
@@ -1646,7 +1642,7 @@ class ProjectReviewView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
 
         if project_review_form.is_valid():
             form_data = project_review_form.cleaned_data
-            project_review_obj = ProjectReview.objects.create(
+            ProjectReview.objects.create(
                 project=project_obj,
                 reason_for_not_updating_project=form_data.get("reason"),
                 status=project_review_status_choice,
@@ -1796,7 +1792,7 @@ class ProjectReivewEmailView(LoginRequiredMixin, UserPassesTestMixin, FormView):
 
         if receiver_list:
             message = "Email sent to:"
-            for i, pi in enumerate(pi_users):
+            for pi in pi_users:
                 message = message + (
                     f"\n{pi.first_name} {pi.last_name} ({pi.username})"
                 )
