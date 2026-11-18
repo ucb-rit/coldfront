@@ -440,15 +440,14 @@ class UserSearchHome(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         return self.request.user.is_staff
 
 
-class UserSearchAll(LoginRequiredMixin, ListView):
+class UserSearchAll(LoginRequiredMixin, UserPassesTestMixin, ListView):
     model = User
     template_name = "user/user_list.html"
     context_object_name = "user_list"
     paginate_by = 25
 
     def test_func(self):
-        if self.request.user.is_superuser or self.request.user.is_staff:
-            return True
+        return self.request.user.is_superuser or self.request.user.is_staff
 
     def get_queryset(self):
         order_by = self.request.GET.get("order_by")
@@ -498,7 +497,7 @@ class UserSearchAll(LoginRequiredMixin, ListView):
         user_ids = EmailAddress.objects.filter(
             primary=False, email__icontains=email
         ).values_list("user__id", flat=True)
-        user_ids = set(list(user_ids))
+        user_ids = set(user_ids)
         return users.filter(Q(email__icontains=email) | Q(id__in=user_ids))
 
     def get_context_data(self, **kwargs):
@@ -528,7 +527,7 @@ class UserSearchAll(LoginRequiredMixin, ListView):
         if order_by:
             direction = self.request.GET.get("direction")
             filter_parameters_with_order_by = (
-                filter_parameters + "order_by=%s&direction=%s&" % (order_by, direction)
+                filter_parameters + f"order_by={order_by}&direction={direction}&"
             )
         else:
             filter_parameters_with_order_by = filter_parameters
@@ -755,7 +754,7 @@ def activate_user_account(request, uidb64=None, token=None):
     try:
         user_pk = int(force_str(urlsafe_base64_decode(uidb64)))
         user = User.objects.get(pk=user_pk)
-    except:
+    except Exception:
         user = None
     if user and token:
         if PasswordResetTokenGenerator().check_token(user, token):
