@@ -40,6 +40,17 @@ class UserProfile(models.Model):
 
     history = HistoricalRecords()
 
+    class Meta:
+        permissions = (
+            (
+                "can_view_user_profiles",
+                "Can view user profiles, including billing and cluster details",
+            ),
+        )
+
+    def __str__(self):
+        return self.user.username
+
 
 class EmailAddress(models.Model):
     user = models.ForeignKey(
@@ -61,6 +72,9 @@ class EmailAddress(models.Model):
     class Meta:
         verbose_name = "Email Address"
         verbose_name_plural = "Email Addresses"
+
+    def __str__(self):
+        return self.email
 
     def save(self, *args, **kwargs):
         self.email = self.email.lower()
@@ -95,9 +109,6 @@ class EmailAddress(models.Model):
                 self.user.save()
 
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.email
 
 
 class ExpiringToken(Token):
