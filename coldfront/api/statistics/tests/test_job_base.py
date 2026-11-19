@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 
 from coldfront.api.statistics.utils import (
     create_project_allocation,
@@ -22,7 +22,7 @@ from coldfront.core.project.models import (
 from coldfront.core.project.utils_.renewal_utils import (
     get_current_allowance_year_period,
 )
-from coldfront.core.user.models import UserProfile
+from coldfront.core.user.models import ExpiringToken, UserProfile
 from coldfront.core.utils.common import display_time_zone_date_to_utc_datetime
 
 
@@ -41,6 +41,19 @@ class TestJobBase(TestAPIBase):
     def setUp(self):
         """Set up test data."""
         super().setUp()
+
+        # Run the client as a non-staff service account with permission to
+        # record Jobs.
+        job_writer = User.objects.create(
+            username="job_writer", email="job_writer@nonexistent.com"
+        )
+        job_writer.user_permissions.add(
+            Permission.objects.get(
+                content_type__app_label="statistics", codename="can_record_jobs"
+            )
+        )
+        job_writer_token = ExpiringToken.objects.create(user=job_writer)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {job_writer_token.key}")
 
         # Create a User and a PI.
         self.user = User.objects.create(username="user0", email="user0@nonexistent.com")

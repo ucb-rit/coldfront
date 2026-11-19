@@ -68,7 +68,7 @@ class TestJobList(TestJobBase):
         # Create Projects.
         self.num_projects = 2
         project_status = ProjectStatusChoice.objects.get(name="Active")
-        allocation_pks = dict()
+        allocation_pks = {}
 
         # Create compute allocations for the Projects.
         allocation_amount = Decimal("1000.00")
@@ -103,7 +103,7 @@ class TestJobList(TestJobBase):
         dt = self.default_start.replace(hour=index, minute=0, second=0, microsecond=0)
         # Jobs were submitted on the hour from 12 to 7 p.m. on the current day.
         for allocation_user in AllocationUser.objects.all():
-            for i in range(self.num_projects):
+            for _ in range(self.num_projects):
                 allocation_amount = int(
                     AllocationUserAttribute.objects.filter(
                         allocation_user=allocation_user
@@ -279,11 +279,11 @@ class TestJobList(TestJobBase):
             self.assertTrue(minimum <= amount <= maximum)
 
         self.assert_results(
-            TestJobList.get_url(max_amount=Decimal(249.99)), status_code, 0
+            TestJobList.get_url(max_amount=Decimal("249.99")), status_code, 0
         )
 
         self.assert_results(
-            TestJobList.get_url(min_amount=Decimal(750.01)), status_code, 0
+            TestJobList.get_url(min_amount=Decimal("750.01")), status_code, 0
         )
 
         maximum = Decimal(500)
@@ -491,7 +491,7 @@ class TestJobSerializer(TestJobBase):
     def test_invalid_datetime_format(self):
         """Test that requests with improperly formatted dates fail."""
         bad_time = datetime.now().strftime(self.date_format).replace(" ", "XX")
-        fields = dict()
+        fields = {}
         for field in ("submitdate", "startdate", "enddate"):
             fields[field] = bad_time
         for field, value in fields.items():
@@ -785,8 +785,8 @@ class TestJobViewSet(TestJobBase):
         return account_usage, user_account_usage
 
     def test_unauthorized_post_denied(self):
-        """Test that unauthorized POST requests from non-staff accounts
-        are denied."""
+        """Test that unauthorized POST requests from accounts without the
+        required permission are denied."""
         self.client = APIClient()
         # The user must provide an authorization token.
         response = self.client.post(self.post_url, data={})
@@ -795,7 +795,7 @@ class TestJobViewSet(TestJobBase):
         self.assertEqual(
             json["detail"], "Authentication credentials were not provided."
         )
-        # The user must have the is_staff field set to True.
+        # The user must have the can_record_jobs permission.
         user = User.objects.create(username="user1")
         token = ExpiringToken.objects.create(user=user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
@@ -806,8 +806,8 @@ class TestJobViewSet(TestJobBase):
         self.assertEqual(json["detail"], message)
 
     def test_unauthorized_put_denied(self):
-        """Test that unauthorized PUT requests from non-staff accounts
-        are denied."""
+        """Test that unauthorized PUT requests from accounts without the
+        required permission are denied."""
         self.client = APIClient()
         # The user must provide an authorization token.
         response = self.client.put(self.put_url(1), data={})
@@ -816,7 +816,7 @@ class TestJobViewSet(TestJobBase):
         self.assertEqual(
             json["detail"], "Authentication credentials were not provided."
         )
-        # The user must have the is_staff field set to True.
+        # The user must have the can_record_jobs permission.
         user = User.objects.create(username="user1")
         token = ExpiringToken.objects.create(user=user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
@@ -825,6 +825,30 @@ class TestJobViewSet(TestJobBase):
         json = response.json()
         message = "You do not have permission to perform this action."
         self.assertEqual(json["detail"], message)
+
+    def test_staff_without_permission_denied(self):
+        """Test that staff accounts without permission to record Jobs may
+        not create or update Jobs."""
+        user = User.objects.create(username="staff1", is_staff=True)
+        token = ExpiringToken.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        self.assertEqual(self.client.post(self.post_url, data={}).status_code, 403)
+        self.assertEqual(self.client.put(self.put_url(1), data={}).status_code, 403)
+
+    def test_record_jobs_permission(self):
+        """Test that permission to record Jobs allows creating Jobs via
+        POST and PUT requests and updating them via PUT requests."""
+        response = self.client.post(self.post_url, self.data, format="json")
+        self.assertEqual(response.status_code, 201)
+
+        jobslurmid = self.data["jobslurmid"]
+        response = self.client.put(self.put_url(jobslurmid), self.data, format="json")
+        self.assertEqual(response.status_code, 200)
+
+        new_job_data = dict(self.data, jobslurmid="2")
+        response = self.client.put(self.put_url("2"), new_job_data, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Job.objects.filter(jobslurmid="2").exists())
 
     def test_get(self):
         """Test that jobs are returned from a GET request."""
