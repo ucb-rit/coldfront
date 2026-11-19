@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 import pytest
 from rest_framework.test import APIClient
 
@@ -24,15 +24,42 @@ class TestUserViewSetList:
         response = client.get(URL)
         assert response.status_code == HTTPStatus.UNAUTHORIZED
 
-    def test_any_authenticated_user_allowed(self, api_test_data):
-        """Regular users, staff, and superusers all have read access."""
-        for key in ("user0", "staff", "superuser"):
+    def test_regular_user_forbidden(self, api_test_data):
+        """Regular users have no read access."""
+        client = APIClient()
+        client.credentials(
+            HTTP_AUTHORIZATION=f"Token {api_test_data['tokens']['user0'].key}"
+        )
+        response = client.get(URL)
+        assert response.status_code == HTTPStatus.FORBIDDEN
+
+    def test_staff_and_superuser_allowed(self, api_test_data):
+        """Staff and superusers have read access."""
+        for key in ("staff", "superuser"):
             client = APIClient()
             client.credentials(
                 HTTP_AUTHORIZATION=f"Token {api_test_data['tokens'][key].key}"
             )
             response = client.get(URL)
             assert response.status_code == HTTPStatus.OK, key
+
+    def test_regular_user_with_view_profiles_perm_allowed(self, api_test_data):
+        """Regular users with the can_view_user_profiles permission have read
+        access."""
+        user1 = api_test_data["users"]["user1"]
+        user1.user_permissions.add(
+            Permission.objects.get(
+                content_type__app_label="user", codename="can_view_user_profiles"
+            )
+        )
+        client = APIClient()
+        client.credentials(
+            HTTP_AUTHORIZATION=f"Token {api_test_data['tokens']['user1'].key}"
+        )
+        response = client.get(URL)
+        assert response.status_code == HTTPStatus.OK
+        response = client.get(f"{URL}{user1.pk}/")
+        assert response.status_code == HTTPStatus.OK
 
     def test_no_filter_returns_all_users(self, api_client):
         response = api_client.get(URL)
