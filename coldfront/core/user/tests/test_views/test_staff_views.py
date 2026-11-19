@@ -5,8 +5,24 @@ from django.core import mail
 from django.urls import reverse
 from flags.state import flag_enabled
 
-from coldfront.core.allocation.models import *
-from coldfront.core.project.models import *
+from coldfront.core.allocation.models import (
+    Allocation,
+    AllocationRenewalRequest,
+    AllocationRenewalRequestStatusChoice,
+    AllocationStatusChoice,
+)
+from coldfront.core.project.models import (
+    Project,
+    ProjectAllocationRequestStatusChoice,
+    ProjectReview,
+    ProjectReviewStatusChoice,
+    ProjectStatusChoice,
+    ProjectUser,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+    SavioProjectAllocationRequest,
+    VectorProjectAllocationRequest,
+)
 from coldfront.core.project.utils_.renewal_utils import (
     get_current_allowance_year_period,
 )
@@ -79,9 +95,11 @@ class TestStaffViewPermissions(TestBase):
 
     def test_user_search(self):
         # user-search-all
+        self.assert_has_access(self.user1, False, reverse("user-search-all"))
         self.assert_has_access(self.staff1, True, reverse("user-search-all"))
 
         # user-search-home
+        self.assert_has_access(self.user1, False, reverse("user-search-home"))
         self.assert_has_access(self.staff1, True, reverse("user-search-home"))
 
     def test_pi_allocation_renewal_request_detail(self):
