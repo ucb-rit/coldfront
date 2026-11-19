@@ -11,7 +11,6 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from coldfront.api.permissions import (
-    IsAdminUserOrReadOnly,
     IsSuperuserOrHasPerm,
     IsSuperuserOrStaff,
 )
@@ -80,7 +79,9 @@ class UserViewSet(
 ):
     """A ViewSet for the User model."""
 
-    permission_class = [IsAdminUserOrReadOnly]
+    permission_classes = [
+        IsSuperuserOrStaff | IsSuperuserOrHasPerm("user.can_view_user_profiles")
+    ]
     serializer_class = UserSerializer
 
     @swagger_auto_schema(

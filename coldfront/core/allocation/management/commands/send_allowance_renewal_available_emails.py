@@ -26,7 +26,7 @@ class Command(BaseCommand):
         "Send emails to active projects with FCAs (BRC) or PCAs (LRC), "
         "notifying them that they may renew their computing allowance for the "
         "upcoming allowance year. By default, emails are sent to all eligible "
-        "active projects. Pass --not-yet-renewed to send only to those that "
+        "active projects. Pass --not-renewed-only to send only to those that "
         "have not yet submitted a renewal request."
     )
 

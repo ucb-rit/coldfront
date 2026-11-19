@@ -896,15 +896,15 @@ class SavioProjectSurveyForm(forms.Form):
                 "high-performance-computing/condos/condo-storage-service/"
             )
             self.fields["data_storage_space"].help_text = mark_safe(
-                f"{settings.PROGRAM_NAME_SHORT} provides each user with 10GB "
-                f"of backed up home directory space; and free access to a "
+                f"{settings.PROGRAM_NAME_SHORT} provides each user with 50GB "
+                f"of backed up home directory space, and free access to a "
                 f"not-backed-up shared Global Scratch high performance "
                 f"parallel filesystem. Research projects that need to share "
                 f"datasets among their team members can also be allocated up "
-                f"to 30 GB of not-backed-up shared filesystem space on "
+                f"to 50 GB of not-backed-up shared filesystem space on "
                 f"request. Users needing more storage can choose to join the "
-                f"Condo Storage service by purchasing 42TB at the cost of "
-                f"$6539. More details about this program are available "
+                f"Condo Storage service by purchasing it in 112TB increments. "
+                f"More details about this program are available "
                 f'<a href="{condo_docs_url}">'
                 f'<span class="accessibility-link-text">Data Storage program '
                 f"details</span>here</a>. Please indicate if you need "

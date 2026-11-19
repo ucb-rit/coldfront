@@ -36,6 +36,9 @@ class TestUsersBase(TestUserBase):
         """Set up test data."""
         super().setUp()
 
+        # Run the client as the superuser.
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.superuser_token.key}")
+
 
 class TestCreateUsers(TestUsersBase):
     """A class for testing POST /users/."""
@@ -56,7 +59,7 @@ class TestCreateUsers(TestUsersBase):
         """Test permissions for regular users, staff, and superusers."""
         url = BASE_URL
         method = "POST"
-        users = [(self.user0, True), (self.staff_user, True), (self.superuser, True)]
+        users = [(self.user0, False), (self.staff_user, False), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)
 
 
@@ -79,7 +82,7 @@ class TestDestroyUsers(TestUsersBase):
         """Test permissions for regular users, staff, and superusers."""
         url = self.pk_url(BASE_URL, "1")
         method = "DELETE"
-        users = [(self.user0, True), (self.staff_user, True), (self.superuser, True)]
+        users = [(self.user0, False), (self.staff_user, False), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)
 
 
@@ -96,7 +99,7 @@ class TestListUsers(TestUsersBase):
         """Test permissions for regular users, staff, and superusers."""
         url = BASE_URL
         method = "GET"
-        users = [(self.user0, True), (self.staff_user, True), (self.superuser, True)]
+        users = [(self.user0, False), (self.staff_user, True), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)
 
     def test_result_order(self):
@@ -133,7 +136,7 @@ class TestRetrieveUsers(TestUsersBase):
         """Test permissions for regular users, staff, and superusers."""
         url = self.pk_url(BASE_URL, "1")
         method = "GET"
-        users = [(self.user0, True), (self.staff_user, True), (self.superuser, True)]
+        users = [(self.user0, False), (self.staff_user, True), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)
 
     def test_response_format(self):
@@ -198,7 +201,8 @@ class TestRetrieveUsers(TestUsersBase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, HTTPStatus.OK)
             json = response.json()
-            profile_serializer_fields = PROFILE_SERIALIZER_FIELDS + (
+            profile_serializer_fields = (
+                *PROFILE_SERIALIZER_FIELDS,
                 "billing_activity",
                 "host_user",
                 "host_user_lbl_email",
@@ -247,7 +251,7 @@ class TestUpdatePatchUsers(TestUsersBase):
         """Test permissions for regular users, staff, and superusers."""
         url = self.pk_url(BASE_URL, "1")
         method = "PATCH"
-        users = [(self.user0, True), (self.staff_user, True), (self.superuser, True)]
+        users = [(self.user0, False), (self.staff_user, False), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)
 
 
@@ -270,5 +274,5 @@ class TestUpdatePutUsers(TestUsersBase):
         """Test permissions for regular users, staff, and superusers."""
         url = self.pk_url(BASE_URL, "1")
         method = "PUT"
-        users = [(self.user0, True), (self.staff_user, True), (self.superuser, True)]
+        users = [(self.user0, False), (self.staff_user, False), (self.superuser, True)]
         self.assert_permissions_by_user(url, method, users)

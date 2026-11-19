@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
-from django.utils.html import mark_safe
+from django.utils.html import escape, format_html
 from django.utils.module_loading import import_string
 from model_utils.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
@@ -118,12 +118,14 @@ class Allocation(TimeStampedModel):
 
     @property
     def get_information(self):
-        html_string = ""
+        # Escape every value interpolated into the HTML.
+        html_string = escape("")
         for attribute in self.allocationattribute_set.all():
             if attribute.allocation_attribute_type.name in [
                 SLURM_ACCOUNT_ATTRIBUTE_NAME,
             ]:
-                html_string += "%s: %s <br>" % (
+                html_string += format_html(
+                    "{}: {} <br>",
                     attribute.allocation_attribute_type.name,
                     attribute.value,
                 )
@@ -135,7 +137,7 @@ class Allocation(TimeStampedModel):
 
                 service = ServiceUnitsUsageService()
                 displayed_su_usage = service.get_usage_display(self.project, attribute)
-                html_string += f"Service Units: {displayed_su_usage} <br>"
+                html_string += format_html("Service Units: {} <br>", displayed_su_usage)
                 continue
 
             if hasattr(attribute, "allocationattributeusage"):
@@ -157,13 +159,18 @@ class Allocation(TimeStampedModel):
                         attribute.allocation_attribute_type.name,
                     )
 
-                string = f"{attribute.allocation_attribute_type.name}: {attribute.allocationattributeusage.value}/{attribute.value} ({percent} %) <br>"
-                html_string += string
+                html_string += format_html(
+                    "{}: {}/{} ({} %) <br>",
+                    attribute.allocation_attribute_type.name,
+                    attribute.allocationattributeusage.value,
+                    attribute.value,
+                    percent,
+                )
 
             if attribute.allocation_attribute_type.name == "Cluster Directory Access":
-                html_string += f"Directory Name: {attribute.value}"
+                html_string += format_html("Directory Name: {}", attribute.value)
 
-        return mark_safe(html_string)
+        return html_string
 
     @property
     def get_resources_as_string(self):
@@ -213,7 +220,7 @@ class Allocation(TimeStampedModel):
         return [a.value for a in attr]
 
     def __str__(self):
-        return "%s (%s)" % (self.get_parent_resource.name, self.project.name)
+        return f"{self.get_parent_resource.name} ({self.project.name})"
 
 
 class AllocationAdminNote(TimeStampedModel):
@@ -261,7 +268,7 @@ class AllocationAttributeType(TimeStampedModel):
     history = HistoricalRecords()
 
     def __str__(self):
-        return "%s (%s)" % (self.name, self.attribute_type.name)
+        return f"{self.name} ({self.attribute_type.name})"
 
     class Meta:
         ordering = [
@@ -304,7 +311,7 @@ class AllocationAttribute(TimeStampedModel):
         validate_allocation_attribute_value_type(expected_value_type, self.value)
 
     def __str__(self):
-        return "%s" % (self.allocation_attribute_type.name)
+        return f"{self.allocation_attribute_type.name}"
 
 
 class AllocationAttributeUsage(TimeStampedModel):
@@ -355,7 +362,7 @@ class AllocationUser(TimeStampedModel):
     history = HistoricalRecords()
 
     def __str__(self):
-        return "%s (%s)" % (self.user, self.allocation.resources.first().name)
+        return f"{self.user} ({self.allocation.resources.first().name})"
 
     class Meta:
         verbose_name_plural = "Allocation User Status"
@@ -438,26 +445,26 @@ def validate_allocation_attribute_value_type(expected_value_type, value):
     """Raise a ValidationError if the given value does not conform to
     the requirements of the expected value type."""
     if expected_value_type == "Int" and not isinstance(literal_eval(value), int):
-        raise ValidationError('Invalid Value "%s". Value must be an integer.' % value)
+        raise ValidationError(f'Invalid Value "{value}". Value must be an integer.')
     elif expected_value_type == "Decimal" and not isinstance(
         literal_eval(value), (Decimal, int, str)
     ):
-        raise ValidationError('Invalid Value "%s". Value must be a decimal.' % value)
+        raise ValidationError(f'Invalid Value "{value}". Value must be a decimal.')
     elif expected_value_type == "Float" and not isinstance(
         literal_eval(value), (float, int)
     ):
-        raise ValidationError('Invalid Value "%s". Value must be a float.' % value)
+        raise ValidationError(f'Invalid Value "{value}". Value must be a float.')
     elif expected_value_type == "Yes/No" and value not in ["Yes", "No"]:
         raise ValidationError(
-            'Invalid Value "%s". Allowed inputs are "Yes" or "No".' % value
+            f'Invalid Value "{value}". Allowed inputs are "Yes" or "No".'
         )
     elif expected_value_type == "Date":
         try:
             datetime.datetime.strptime(value.strip(), "%Y-%m-%d")
-        except ValueError:
+        except ValueError as e:
             raise ValidationError(
-                ('Invalid Value "%s". Date must be in format YYYY-MM-DD') % value
-            )
+                f'Invalid Value "{value}". Date must be in format YYYY-MM-DD'
+            ) from e
 
 
 class AllocationPeriod(TimeStampedModel):
