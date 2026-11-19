@@ -68,7 +68,7 @@ class TestJobList(TestJobBase):
         # Create Projects.
         self.num_projects = 2
         project_status = ProjectStatusChoice.objects.get(name="Active")
-        allocation_pks = dict()
+        allocation_pks = {}
 
         # Create compute allocations for the Projects.
         allocation_amount = Decimal("1000.00")
@@ -103,7 +103,7 @@ class TestJobList(TestJobBase):
         dt = self.default_start.replace(hour=index, minute=0, second=0, microsecond=0)
         # Jobs were submitted on the hour from 12 to 7 p.m. on the current day.
         for allocation_user in AllocationUser.objects.all():
-            for i in range(self.num_projects):
+            for _ in range(self.num_projects):
                 allocation_amount = int(
                     AllocationUserAttribute.objects.filter(
                         allocation_user=allocation_user
@@ -279,11 +279,11 @@ class TestJobList(TestJobBase):
             self.assertTrue(minimum <= amount <= maximum)
 
         self.assert_results(
-            TestJobList.get_url(max_amount=Decimal(249.99)), status_code, 0
+            TestJobList.get_url(max_amount=Decimal("249.99")), status_code, 0
         )
 
         self.assert_results(
-            TestJobList.get_url(min_amount=Decimal(750.01)), status_code, 0
+            TestJobList.get_url(min_amount=Decimal("750.01")), status_code, 0
         )
 
         maximum = Decimal(500)
@@ -491,7 +491,7 @@ class TestJobSerializer(TestJobBase):
     def test_invalid_datetime_format(self):
         """Test that requests with improperly formatted dates fail."""
         bad_time = datetime.now().strftime(self.date_format).replace(" ", "XX")
-        fields = dict()
+        fields = {}
         for field in ("submitdate", "startdate", "enddate"):
             fields[field] = bad_time
         for field, value in fields.items():

@@ -32,6 +32,9 @@ class CPU(models.Model):
     class Meta:
         unique_together = ("timestamp", "host")
 
+    def __str__(self):
+        return f"{self.host} at {self.timestamp}"
+
 
 class Job(TimeStampedModel):
     jobslurmid = models.CharField(primary_key=True, max_length=150)
@@ -87,6 +90,9 @@ class ProjectTransaction(models.Model):
     class Meta:
         verbose_name = "Project Transaction"
 
+    def __str__(self):
+        return f"{self.project.name}: {self.allocation} at {self.date_time}"
+
 
 class ProjectUserTransaction(models.Model):
     project_user = models.ForeignKey(
@@ -107,3 +113,6 @@ class ProjectUserTransaction(models.Model):
 
     class Meta:
         verbose_name = "Project User Transaction"
+
+    def __str__(self):
+        return f"{self.project_user}: {self.allocation} at {self.date_time}"
