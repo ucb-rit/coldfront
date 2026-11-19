@@ -22,7 +22,7 @@
 | coldfront/api/statistics/serializers.py                                                                     |      136 |       18 |       34 |        7 |     84% |29-30, 86, 89-90, 106-109, 161-164, 177-179, 213-\>230, 215-220, 236-\>248, 238-242 |
 | coldfront/api/statistics/urls.py                                                                            |        8 |        0 |        0 |        0 |    100% |           |
 | coldfront/api/statistics/utils.py                                                                           |      156 |       27 |       46 |       19 |     77% |66, 68, 94, 96, 146, 148, 150, 208, 242, 300, 302, 305-308, 331, 333, 336-339, 366, 368, 370, 400, 402, 404 |
-| coldfront/api/statistics/views.py                                                                           |      298 |       19 |       54 |        5 |     93% |168, 175-176, 192-193, 199-\>206, 202-203, 227-228, 324-330, 339-345, 491, 698-701, 712-714 |
+| coldfront/api/statistics/views.py                                                                           |      302 |       19 |       56 |        5 |     93% |176, 183-184, 200-201, 207-\>214, 210-211, 235-236, 332-338, 347-353, 499, 706-709, 720-722 |
 | coldfront/api/urls.py                                                                                       |        7 |        0 |        2 |        1 |     89% | 18-\>exit |
 | coldfront/api/user/authentication.py                                                                        |       19 |        2 |        4 |        2 |     83% |    20, 23 |
 | coldfront/api/user/filters.py                                                                               |        7 |        0 |        0 |        0 |    100% |           |
@@ -177,7 +177,7 @@
 | coldfront/core/statistics/apps.py                                                                           |        3 |        0 |        0 |        0 |    100% |           |
 | coldfront/core/statistics/forms.py                                                                          |       36 |       21 |       10 |        0 |     33% |    61-115 |
 | coldfront/core/statistics/management/commands/free\_qos\_jobs.py                                            |      132 |      132 |       42 |        0 |      0% |     1-261 |
-| coldfront/core/statistics/models.py                                                                         |       57 |        2 |        0 |        0 |     96% |    15, 67 |
+| coldfront/core/statistics/models.py                                                                         |       65 |        5 |        0 |        0 |     92% |15, 36, 78, 102, 126 |
 | coldfront/core/statistics/urls.py                                                                           |        3 |        0 |        0 |        0 |    100% |           |
 | coldfront/core/statistics/utils\_/accounting\_utils.py                                                      |       69 |       19 |       20 |        0 |     76% |     37-73 |
 | coldfront/core/statistics/utils\_/job\_accessibility\_manager.py                                            |       30 |       21 |       12 |        0 |     21% |12-13, 17-32, 38-52, 59-63 |
@@ -339,7 +339,7 @@
 | coldfront/plugins/xdmod/apps.py                                                                             |        3 |        3 |        0 |        0 |      0% |       1-5 |
 | coldfront/plugins/xdmod/management/commands/xdmod\_usage.py                                                 |      147 |      147 |       72 |        0 |      0% |     1-347 |
 | coldfront/plugins/xdmod/utils.py                                                                            |       84 |       84 |       12 |        0 |      0% |     1-135 |
-| **TOTAL**                                                                                                   | **26699** | **10842** | **6258** |  **605** | **56%** |           |
+| **TOTAL**                                                                                                   | **26711** | **10845** | **6260** |  **605** | **56%** |           |
 
 102 empty files skipped.
 
