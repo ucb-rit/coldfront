@@ -25,11 +25,6 @@ urlpatterns = [
     ),
     path("", project_views.ProjectListView.as_view(), name="project-list"),
     path(
-        "project-user-update-email-notification/",
-        project_views.project_update_email_notification,
-        name="project-user-update-email-notification",
-    ),
-    path(
         "archived/",
         project_views.ProjectArchivedListView.as_view(),
         name="project-archived-list",
