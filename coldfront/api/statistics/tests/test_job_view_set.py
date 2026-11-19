@@ -785,8 +785,8 @@ class TestJobViewSet(TestJobBase):
         return account_usage, user_account_usage
 
     def test_unauthorized_post_denied(self):
-        """Test that unauthorized POST requests from non-staff accounts
-        are denied."""
+        """Test that unauthorized POST requests from accounts without the
+        required permission are denied."""
         self.client = APIClient()
         # The user must provide an authorization token.
         response = self.client.post(self.post_url, data={})
@@ -795,7 +795,7 @@ class TestJobViewSet(TestJobBase):
         self.assertEqual(
             json["detail"], "Authentication credentials were not provided."
         )
-        # The user must have the is_staff field set to True.
+        # The user must have the can_record_jobs permission.
         user = User.objects.create(username="user1")
         token = ExpiringToken.objects.create(user=user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
@@ -806,8 +806,8 @@ class TestJobViewSet(TestJobBase):
         self.assertEqual(json["detail"], message)
 
     def test_unauthorized_put_denied(self):
-        """Test that unauthorized PUT requests from non-staff accounts
-        are denied."""
+        """Test that unauthorized PUT requests from accounts without the
+        required permission are denied."""
         self.client = APIClient()
         # The user must provide an authorization token.
         response = self.client.put(self.put_url(1), data={})
@@ -816,7 +816,7 @@ class TestJobViewSet(TestJobBase):
         self.assertEqual(
             json["detail"], "Authentication credentials were not provided."
         )
-        # The user must have the is_staff field set to True.
+        # The user must have the can_record_jobs permission.
         user = User.objects.create(username="user1")
         token = ExpiringToken.objects.create(user=user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
@@ -825,6 +825,30 @@ class TestJobViewSet(TestJobBase):
         json = response.json()
         message = "You do not have permission to perform this action."
         self.assertEqual(json["detail"], message)
+
+    def test_staff_without_permission_denied(self):
+        """Test that staff accounts without permission to record Jobs may
+        not create or update Jobs."""
+        user = User.objects.create(username="staff1", is_staff=True)
+        token = ExpiringToken.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        self.assertEqual(self.client.post(self.post_url, data={}).status_code, 403)
+        self.assertEqual(self.client.put(self.put_url(1), data={}).status_code, 403)
+
+    def test_record_jobs_permission(self):
+        """Test that permission to record Jobs allows creating Jobs via
+        POST and PUT requests and updating them via PUT requests."""
+        response = self.client.post(self.post_url, self.data, format="json")
+        self.assertEqual(response.status_code, 201)
+
+        jobslurmid = self.data["jobslurmid"]
+        response = self.client.put(self.put_url(jobslurmid), self.data, format="json")
+        self.assertEqual(response.status_code, 200)
+
+        new_job_data = dict(self.data, jobslurmid="2")
+        response = self.client.put(self.put_url("2"), new_job_data, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Job.objects.filter(jobslurmid="2").exists())
 
     def test_get(self):
         """Test that jobs are returned from a GET request."""

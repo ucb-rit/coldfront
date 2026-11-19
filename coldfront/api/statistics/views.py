@@ -14,9 +14,10 @@ from drf_yasg.utils import swagger_auto_schema
 import pytz
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from coldfront.api.permissions import IsAdminUserOrReadOnly
+from coldfront.api.permissions import IsSuperuserOrHasPerm
 from coldfront.api.statistics.pagination import JobPagination
 from coldfront.api.statistics.serializers import JobSerializer
 from coldfront.api.statistics.utils import (
@@ -151,8 +152,15 @@ class JobViewSet(
     purposes."""
 
     pagination_class = JobPagination
-    permission_classes = [IsAdminUserOrReadOnly]
     serializer_class = JobSerializer
+
+    def get_permissions(self):
+        """Allow any authenticated user to read Jobs. Only allow
+        superusers and users with permission to record Jobs to create or
+        update them."""
+        if self.action in ("create", "update", "partial_update"):
+            return [IsSuperuserOrHasPerm("statistics.can_record_jobs")()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         # Begin with all jobs.

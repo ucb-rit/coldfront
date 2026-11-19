@@ -66,6 +66,14 @@ class Job(TimeStampedModel):
     raw_time = models.FloatField(default=None, blank=True, null=True)
     cpu_time = models.FloatField(default=None, blank=True, null=True)
 
+    class Meta:
+        permissions = (
+            (
+                "can_record_jobs",
+                "Can record jobs and their service unit usage",
+            ),
+        )
+
     def __str__(self):
         return self.jobslurmid
 
