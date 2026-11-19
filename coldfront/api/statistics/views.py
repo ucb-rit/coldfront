@@ -14,9 +14,10 @@ from drf_yasg.utils import swagger_auto_schema
 import pytz
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from coldfront.api.permissions import IsAdminUserOrReadOnly
+from coldfront.api.permissions import IsSuperuserOrHasPerm
 from coldfront.api.statistics.pagination import JobPagination
 from coldfront.api.statistics.serializers import JobSerializer
 from coldfront.api.statistics.utils import (
@@ -151,8 +152,15 @@ class JobViewSet(
     purposes."""
 
     pagination_class = JobPagination
-    permission_classes = [IsAdminUserOrReadOnly]
     serializer_class = JobSerializer
+
+    def get_permissions(self):
+        """Allow any authenticated user to read Jobs. Only allow
+        superusers and users with permission to record Jobs to create or
+        update them."""
+        if self.action in ("create", "update", "partial_update"):
+            return [IsSuperuserOrHasPerm("statistics.can_record_jobs")()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         # Begin with all jobs.
@@ -192,7 +200,7 @@ class JobViewSet(
                 except InvalidOperation as e:
                     raise serializers.ValidationError(
                         f"Invalid minimum amount {min_amount}. Details: {e}"
-                    )
+                    ) from e
             max_amount = self.request.query_params.get(
                 "max_amount", settings.ALLOCATION_MAX
             )
@@ -202,7 +210,7 @@ class JobViewSet(
                 except InvalidOperation as e:
                     raise serializers.ValidationError(
                         f"Invalid maximum amount {max_amount}. Details: {e}"
-                    )
+                    ) from e
             jobs = jobs.filter(amount__gte=min_amount, amount__lte=max_amount)
 
             # Filter by partition, if provided.
@@ -227,7 +235,7 @@ class JobViewSet(
             except Exception as e:
                 raise serializers.ValidationError(
                     f"Failed to retrieve default start and end times. Details: {e}"
-                )
+                ) from e
             default_start_time = convert_utc_datetime_to_unix_timestamp(default_start)
             default_end_time = convert_utc_datetime_to_unix_timestamp(default_end)
 
@@ -241,13 +249,13 @@ class JobViewSet(
             except (TypeError, ValueError) as e:
                 raise serializers.ValidationError(
                     f"Invalid starting timestamp {start_time}. Details: {e}"
-                )
+                ) from e
             try:
                 end_time = datetime.fromtimestamp(float(end_time), tz=pytz.utc)
             except (TypeError, ValueError) as e:
                 raise serializers.ValidationError(
                     f"Invalid ending timestamp {start_time}. Details: {e}"
-                )
+                ) from e
 
             # Filter on startdate, keeping those that end between the given
             # times, inclusive.
