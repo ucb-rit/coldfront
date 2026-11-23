@@ -1,9 +1,11 @@
 from http import HTTPStatus
 
+from django.contrib.auth.models import User
 import pytest
 from rest_framework.test import APIClient
 
 from coldfront.core.project.models import (
+    ProjectStatusChoice,
     ProjectUser,
     ProjectUserRoleChoice,
     ProjectUserStatusChoice,
@@ -97,6 +99,11 @@ class TestProjectMembershipsValidation:
         response = api_client.post(URL, {"users": "alice"}, format="json")
         assert response.status_code == HTTPStatus.BAD_REQUEST
 
+    def test_non_string_username_returns_400(self, api_client, api_test_data):
+        response = api_client.post(URL, {"users": [1]}, format="json")
+        assert response.status_code == HTTPStatus.BAD_REQUEST
+        assert "users" in response.json()
+
     def test_empty_users_list_returns_200(self, api_client, api_test_data):
         response = api_client.post(URL, {"users": []}, format="json")
         assert response.status_code == HTTPStatus.OK
@@ -156,9 +163,7 @@ class TestProjectMembershipsDefaultResponse:
 
     def test_user_with_no_active_memberships(self, api_client, api_test_data):
         """A user with no Active memberships returns projects: []."""
-        from django.contrib.auth.models import User
-
-        no_project_user, _ = User.objects.get_or_create(
+        User.objects.get_or_create(
             username="no_projects", defaults={"email": "np@nonexistent.com"}
         )
         response = api_client.post(URL, {"users": ["no_projects"]}, format="json")
@@ -350,3 +355,222 @@ class TestProjectMembershipsExpand:
         data = response.json()
         for pk in data[0]["projects"]:
             assert isinstance(pk, int)
+
+
+def _set_membership_status(user, project, status_name):
+    pu = ProjectUser.objects.get(user=user, project=project)
+    pu.status = ProjectUserStatusChoice.objects.get(name=status_name)
+    pu.save()
+
+
+def _add_pi(project, username, status_name):
+    pi, _ = User.objects.get_or_create(
+        username=username,
+        defaults={
+            "first_name": "Other",
+            "last_name": "PI",
+            "email": f"{username}@nonexistent.com",
+        },
+    )
+    ProjectUser.objects.get_or_create(
+        user=pi,
+        project=project,
+        defaults={
+            "role": ProjectUserRoleChoice.objects.get(name="Principal Investigator"),
+            "status": ProjectUserStatusChoice.objects.get(name=status_name),
+        },
+    )
+    return pi
+
+
+@pytest.mark.django_db
+@pytest.mark.component
+@pytest.mark.usefixtures("api_test_data")
+class TestProjectMembershipsMembershipFilter:
+    """Test ?membership= query parameter filtering."""
+
+    def _project_ids(self, api_client, user, query=""):
+        response = api_client.post(
+            f"{URL}{query}", {"users": [user.username]}, format="json"
+        )
+        assert response.status_code == HTTPStatus.OK
+        return set(response.json()[0]["projects"])
+
+    def test_default_includes_pending_remove(self, api_client, api_test_data):
+        """A user is still a current member while a removal is pending."""
+        user0 = api_test_data["users"]["user0"]
+        project0 = api_test_data["projects"]["project0"]
+        _set_membership_status(user0, project0, "Pending - Remove")
+        assert project0.pk in self._project_ids(api_client, user0)
+
+    def test_current_past_all(self, api_client, api_test_data):
+        user0 = api_test_data["users"]["user0"]
+        project0 = api_test_data["projects"]["project0"]
+        project1 = api_test_data["projects"]["project1"]
+        _set_membership_status(user0, project1, "Removed")
+
+        current = self._project_ids(api_client, user0, "?membership=current")
+        past = self._project_ids(api_client, user0, "?membership=past")
+        all_ = self._project_ids(api_client, user0, "?membership=all")
+
+        assert project0.pk in current and project1.pk not in current
+        assert past == {project1.pk}
+        assert all_ == current | past
+
+    def test_default_matches_current(self, api_client, api_test_data):
+        user0 = api_test_data["users"]["user0"]
+        assert self._project_ids(api_client, user0) == self._project_ids(
+            api_client, user0, "?membership=current"
+        )
+
+    @pytest.mark.parametrize("status_name", ["Denied", "Pending - Add"])
+    def test_all_excludes_never_members(self, api_client, api_test_data, status_name):
+        user0 = api_test_data["users"]["user0"]
+        project0 = api_test_data["projects"]["project0"]
+        _set_membership_status(user0, project0, status_name)
+        assert project0.pk not in self._project_ids(
+            api_client, user0, "?membership=all"
+        )
+
+    def test_invalid_membership_returns_400(self, api_client, api_test_data):
+        response = api_client.post(
+            f"{URL}?membership=ever", {"users": []}, format="json"
+        )
+        assert response.status_code == HTTPStatus.BAD_REQUEST
+        assert "membership" in response.json()
+
+    def test_membership_with_status_returns_400(self, api_client, api_test_data):
+        response = api_client.post(
+            f"{URL}?membership=all&status=Active", {"users": []}, format="json"
+        )
+        assert response.status_code == HTTPStatus.BAD_REQUEST
+        assert "membership" in response.json()
+
+    def test_unknown_status_name_returns_400(self, api_client, api_test_data):
+        response = api_client.post(
+            f"{URL}?status=removed", {"users": []}, format="json"
+        )
+        assert response.status_code == HTTPStatus.BAD_REQUEST
+        assert response.json() == {"unknown_statuses": ["removed"]}
+
+
+@pytest.mark.django_db
+@pytest.mark.component
+@pytest.mark.usefixtures("api_test_data")
+class TestProjectMembershipsExpandedFields:
+    """Test the status and role fields added to expanded projects."""
+
+    def _project_entry(self, api_client, user, project, query="?expand=project"):
+        response = api_client.post(
+            f"{URL}{query}", {"users": [user.username]}, format="json"
+        )
+        assert response.status_code == HTTPStatus.OK
+        return next(p for p in response.json()[0]["projects"] if p["id"] == project.pk)
+
+    def test_project_fields(self, api_client, api_test_data):
+        user0 = api_test_data["users"]["user0"]
+        project0 = api_test_data["projects"]["project0"]
+        entry = self._project_entry(api_client, user0, project0)
+        assert entry["project_status"] == "Active"
+        assert entry["role"] == "User"
+        assert entry["membership_status"] == "Active"
+
+    def test_past_membership_status(self, api_client, api_test_data):
+        user0 = api_test_data["users"]["user0"]
+        project0 = api_test_data["projects"]["project0"]
+        _set_membership_status(user0, project0, "Removed")
+        entry = self._project_entry(
+            api_client, user0, project0, "?expand=project&membership=all"
+        )
+        assert entry["membership_status"] == "Removed"
+
+    def test_pi_fields(self, api_client, api_test_data):
+        user0 = api_test_data["users"]["user0"]
+        pi = api_test_data["pi"]
+        project0 = api_test_data["projects"]["project0"]
+        entry = self._project_entry(api_client, user0, project0)
+        assert {
+            "username": pi.username,
+            "name": pi.get_full_name(),
+            "email": pi.email,
+            "status": "Active",
+        } in entry["pis"]
+
+
+@pytest.mark.django_db
+@pytest.mark.component
+@pytest.mark.usefixtures("api_test_data")
+class TestProjectMembershipsPisFilter:
+    """Test ?pis= query parameter filtering."""
+
+    def _pi_usernames(self, api_client, user, project, query):
+        response = api_client.post(
+            f"{URL}?expand=project{query}", {"users": [user.username]}, format="json"
+        )
+        assert response.status_code == HTTPStatus.OK
+        entry = next(p for p in response.json()[0]["projects"] if p["id"] == project.pk)
+        return {p["username"] for p in entry["pis"]}
+
+    def test_default_excludes_removed_pi(self, api_client, api_test_data):
+        user0 = api_test_data["users"]["user0"]
+        project0 = api_test_data["projects"]["project0"]
+        _add_pi(project0, "removed_pi", "Removed")
+        assert "removed_pi" not in self._pi_usernames(api_client, user0, project0, "")
+
+    def test_current_includes_pending_remove_pi(self, api_client, api_test_data):
+        user0 = api_test_data["users"]["user0"]
+        project0 = api_test_data["projects"]["project0"]
+        _add_pi(project0, "leaving_pi", "Pending - Remove")
+        assert "leaving_pi" in self._pi_usernames(
+            api_client, user0, project0, "&pis=current"
+        )
+
+    def test_all_includes_removed_pi(self, api_client, api_test_data):
+        user0 = api_test_data["users"]["user0"]
+        pi = api_test_data["pi"]
+        project0 = api_test_data["projects"]["project0"]
+        _add_pi(project0, "removed_pi", "Removed")
+        assert {pi.username, "removed_pi"} <= self._pi_usernames(
+            api_client, user0, project0, "&pis=all"
+        )
+
+    def test_all_excludes_denied_pi(self, api_client, api_test_data):
+        user0 = api_test_data["users"]["user0"]
+        project0 = api_test_data["projects"]["project0"]
+        _add_pi(project0, "denied_pi", "Denied")
+        assert "denied_pi" not in self._pi_usernames(
+            api_client, user0, project0, "&pis=all"
+        )
+
+    def test_retired_project_history(self, api_client, api_test_data):
+        """A retired project, with its PI and members removed, still
+        reports its former PI under membership=all&pis=all."""
+        user0 = api_test_data["users"]["user0"]
+        pi = api_test_data["pi"]
+        project0 = api_test_data["projects"]["project0"]
+        project0.status = ProjectStatusChoice.objects.get(name="Inactive")
+        project0.save()
+        _set_membership_status(user0, project0, "Removed")
+        _set_membership_status(pi, project0, "Removed")
+
+        response = api_client.post(
+            f"{URL}?expand=project&membership=all&pis=all",
+            {"users": [user0.username]},
+            format="json",
+        )
+        assert response.status_code == HTTPStatus.OK
+        entry = next(
+            p for p in response.json()[0]["projects"] if p["id"] == project0.pk
+        )
+        assert entry["project_status"] == "Inactive"
+        assert entry["membership_status"] == "Removed"
+        assert {"username": pi.username, "status": "Removed"}.items() <= next(
+            p for p in entry["pis"] if p["username"] == pi.username
+        ).items()
+
+    def test_invalid_pis_returns_400(self, api_client, api_test_data):
+        response = api_client.post(
+            f"{URL}?expand=project&pis=past", {"users": []}, format="json"
+        )
+        assert response.status_code == HTTPStatus.BAD_REQUEST
+        assert "pis" in response.json()
