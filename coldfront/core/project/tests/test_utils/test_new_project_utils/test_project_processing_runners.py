@@ -36,7 +36,7 @@ from coldfront.core.utils.tests.test_base import (
 )
 
 
-class TestProjectProcessingRunnerMixin(TestRunnerMixinBase):
+class ProjectProcessingRunnerTestMixin(TestRunnerMixinBase):
     """A mixin for testing functionality common to all runner
     classes."""
 
@@ -124,7 +124,7 @@ class TestProjectProcessingRunnerMixin(TestRunnerMixinBase):
         self._assert_post_state(pre_time, post_time)
 
 
-class TestBRCProjectProcessingRunner(TestProjectProcessingRunnerMixin, TestBase):
+class TestBRCProjectProcessingRunner(ProjectProcessingRunnerTestMixin, TestBase):
     """A class for testing SavioProjectProcessingRunner on the BRC
     deployment."""
 
@@ -146,7 +146,7 @@ class TestBRCProjectProcessingRunner(TestProjectProcessingRunnerMixin, TestBase)
         self._runner_args = [self.request_obj, self._num_service_units]
 
 
-class TestLRCProjectProcessingRunner(TestProjectProcessingRunnerMixin, LRCTestBase):
+class TestLRCProjectProcessingRunner(ProjectProcessingRunnerTestMixin, LRCTestBase):
     """A class for testing SavioProjectProcessingRunner on the LRC
     deployment."""
 
@@ -205,7 +205,7 @@ class TestLRCProjectProcessingRunner(TestProjectProcessingRunnerMixin, LRCTestBa
         # TODO
 
 
-class TestVectorProjectProcessingRunner(TestProjectProcessingRunnerMixin, TestBase):
+class TestVectorProjectProcessingRunner(ProjectProcessingRunnerTestMixin, TestBase):
     """A class for testing "VectorProjectProcessingRunner."""
 
     @enable_deployment("BRC")

@@ -1,7 +1,7 @@
 from coldfront.core.allocation.models import AllocationAttributeType
 
 
-class TestRunnerMixin:
+class RunnerTestMixin:
     """A mixin for testing AllocationAdditionRequest-related runners."""
 
     def assert_allocation_service_units_values(
