@@ -58,6 +58,28 @@ jobs:
         # remove this flag once the codebase is clean.
         run: ruff check --output-format github --exit-zero coldfront/
 
+      # `manage.py test` discovery skips directories without __init__.py, so
+      # a test module in one silently never runs in CI. Fail if any test*.py
+      # (outside pytest-only tests/pytest/ dirs) has a non-package ancestor.
+      - name: Check test modules are discoverable
+        run: |
+          missing=$(
+            find coldfront -name 'test*.py' -not -path '*/pytest/*' -print0 \
+              | xargs -0 -n1 dirname | sort -u \
+              | while read -r d; do
+                  p=$d
+                  while [ "$p" != "coldfront" ]; do
+                    [ -f "$p/__init__.py" ] || echo "$p"
+                    p=$(dirname "$p")
+                  done
+                done | sort -u
+          )
+          if [ -n "$missing" ]; then
+            echo "::error::Test directories missing __init__.py (tests there never run):"
+            echo "$missing"
+            exit 1
+          fi
+
   test-pytest:
     runs-on: ubuntu-22.04
 

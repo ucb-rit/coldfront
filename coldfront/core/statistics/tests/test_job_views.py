@@ -1,11 +1,18 @@
 import copy
+import datetime
 from http import HTTPStatus
 from urllib.parse import urlencode
 
 from django.contrib.auth.models import User
 from django.urls import reverse
 
-from coldfront.core.project.models import *
+from coldfront.core.project.models import (
+    Project,
+    ProjectStatusChoice,
+    ProjectUser,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
 from coldfront.core.statistics.forms import JobSearchForm
 from coldfront.core.statistics.models import Job
 from coldfront.core.user.models import UserProfile

@@ -1,4 +1,5 @@
 from io import StringIO
+from unittest import skip
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -7,6 +8,11 @@ from coldfront.core.resource.models import Resource
 from coldfront.plugins.slurm.associations import SlurmCluster
 
 
+# Inherited from upstream ColdFront and never run here: it depends on a
+# management command (add_default_allocation_choices) and a fixture
+# (test_data.json) that don't exist in this codebase, and the slurm plugin
+# isn't installed (see EXTRA_APPS in local_settings.py.sample).
+@skip("Upstream test; slurm plugin not installed and its fixtures are missing")
 class AssociationTest(TestCase):
     fixtures = ["test_data.json"]
 

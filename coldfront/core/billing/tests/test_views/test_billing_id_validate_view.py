@@ -11,6 +11,7 @@ from coldfront.core.billing.utils.queries import (
     is_billing_id_well_formed,
 )
 from coldfront.core.billing.utils.validation import is_billing_id_valid
+from coldfront.core.utils.tests.test_base import enable_deployment
 
 
 class TestBillingIDValidateView(TestBillingBase):
@@ -27,6 +28,7 @@ class TestBillingIDValidateView(TestBillingBase):
 
         self.command = BillingIdsCommand()
 
+    @enable_deployment("LRC")
     def test_permissions_get(self):
         """Test that the correct users have permissions to perform GET
         requests."""
@@ -49,6 +51,7 @@ class TestBillingIDValidateView(TestBillingBase):
         self.user.is_superuser = False
         self.user.save()
 
+    @enable_deployment("LRC")
     def test_billing_ids_correctness(self):
         """Test that, given a variety of billing IDs, the
         'validate' outputs correctly."""
