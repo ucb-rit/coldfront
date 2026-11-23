@@ -27,9 +27,6 @@ DJANGO_SETTINGS_MODULE = "coldfront.config.settings"
 
 [tool.coverage.run]
 source = ["coldfront"]
-# multiprocessing: measure worker processes under `manage.py test --parallel`.
-# thread is the default and is kept alongside it.
-concurrency = ["multiprocessing", "thread"]
 omit = [
     "*/migrations/*",
     "*/tests/*",

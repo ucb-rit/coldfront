@@ -198,13 +198,16 @@ jobs:
       # --durations reports the slowest tests instead. Coverage runs in
       # parallel mode (one data file per process) and is combined into
       # .coverage before the rename step, even when tests fail.
+      # --concurrency is passed here, not in pyproject.toml: there it would
+      # put every job into parallel mode and break their `mv .coverage`.
+      # Workers still get source/omit from pyproject.toml.
       - name: Run Django tests (core.project - commands, forms, utils)
         run: |
           source ~/venv/bin/activate
           export django_secret_key=`openssl rand -base64 64`
           python manage.py migrate
           status=0
-          coverage run --parallel-mode manage.py test \
+          coverage run --parallel-mode --concurrency=multiprocessing,thread manage.py test \
             --timing \
             --parallel auto \
             --durations 50 \
