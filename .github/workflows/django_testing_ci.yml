@@ -30,6 +30,9 @@ jobs:
   # - pytest-xdist runs each group on one worker per core (-n auto; 4 on
   #   standard runners for public repos), each with its own test database.
   #   --dist loadscope keeps a class's tests on one worker.
+  #   --no-loadscope-reorder keeps pytest-django's ordering (by default
+  #   loadscope schedules the largest classes first, which can run a
+  #   TransactionTestCase early and flush data later tests rely on).
   # - pytest-randomly is disabled: the Django suite has never run shuffled,
   #   and pytest-django must order TransactionTestCase classes (which flush
   #   the database) after the rest.
@@ -143,7 +146,7 @@ jobs:
           export django_secret_key=`openssl rand -base64 64`
           pytest coldfront/ \
             -p no:randomly \
-            -n auto --dist loadscope \
+            -n auto --dist loadscope --no-loadscope-reorder \
             --splits 3 --group ${{ matrix.group }} \
             --splitting-algorithm duration_based_chunks \
             --store-durations --clean-durations \
