@@ -13,7 +13,8 @@ from django.core.management import call_command
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.test.utils import TestContextDecorator
 from django.urls import reverse
-from flags.state import enable_flag, flag_enabled
+from flags.models import FlagState
+from flags.state import flag_enabled
 
 from coldfront.core.allocation.models import Allocation, AllocationStatusChoice
 from coldfront.core.allocation.utils import get_project_compute_resource_name
@@ -71,7 +72,7 @@ class BaseTestMixin:
         """Tear down test data."""
         get_computing_allowance_interface.cache_clear()
 
-    def assert_has_access(self, url, user, has_access=True, expected_messages=[]):
+    def assert_has_access(self, url, user, has_access=True, expected_messages=None):
         """Assert that the given user has or does not have access to the
         given URL. Optionally, assert that the given messages were sent
         to the user.
@@ -106,7 +107,12 @@ class BaseTestMixin:
     def call_setup_commands():
         """Call the management commands that load required database
         objects."""
-        enable_flag("SERVICE_UNITS_PURCHASABLE", create_boolean_condition=True)
+        # get_or_create rather than enable_flag(create_boolean_condition=True):
+        # under pytest, coldfront/conftest.py's session fixture has already
+        # created this row, and creating it again violates its unique key.
+        FlagState.objects.get_or_create(
+            name="SERVICE_UNITS_PURCHASABLE", condition="boolean", value="True"
+        )
 
         out, err = StringIO(), StringIO()
         commands = [

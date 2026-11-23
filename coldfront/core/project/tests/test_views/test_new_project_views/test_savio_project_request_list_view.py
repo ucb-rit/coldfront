@@ -9,7 +9,7 @@ from coldfront.core.project.utils_.renewal_utils import (
 from coldfront.core.utils.tests.test_base import TestBase
 
 
-class TestViewMixin:
+class ViewTestMixin:
     """A mixin for testing SavioProjectRequestListView."""
 
     completed_url = reverse("new-project-request-list") + "?status=completed"
@@ -171,7 +171,7 @@ class TestViewMixin:
         self.assertNotContains(response, self.project_b.name)
 
 
-class TestSavioProjectRequestCompletedListView(TestViewMixin, TestBase):
+class TestSavioProjectRequestCompletedListView(ViewTestMixin, TestBase):
     """A class for testing SavioProjectRequestListView for completed
     requests."""
 
@@ -204,7 +204,7 @@ class TestSavioProjectRequestCompletedListView(TestViewMixin, TestBase):
         self.assertContains(response, "Completed New Project Requests")
 
 
-class TestSavioProjectRequestPendingListView(TestViewMixin, TestBase):
+class TestSavioProjectRequestPendingListView(ViewTestMixin, TestBase):
     """A class for testing SavioProjectRequestListView for pending
     requests."""
 

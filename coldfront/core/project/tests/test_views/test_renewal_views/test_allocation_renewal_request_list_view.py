@@ -11,7 +11,7 @@ from coldfront.core.project.tests.test_views.test_renewal_views.utils import (
 from coldfront.core.utils.tests.test_base import TestBase
 
 
-class TestViewMixin(TestRenewalViewsMixin):
+class ViewTestMixin(TestRenewalViewsMixin):
     """A mixin for testing AllocationRenewalRequestListView."""
 
     completed_url = reverse("pi-allocation-renewal-request-list") + "?status=completed"
@@ -133,7 +133,7 @@ class TestViewMixin(TestRenewalViewsMixin):
         self.assertNotContains(response, self.project_b.name)
 
 
-class TestAllocationRenewalRequestCompletedListView(TestViewMixin, TestBase):
+class TestAllocationRenewalRequestCompletedListView(ViewTestMixin, TestBase):
     """A class for testing AllocationRenewalRequestListView for
     completed requests."""
 
@@ -168,7 +168,7 @@ class TestAllocationRenewalRequestCompletedListView(TestViewMixin, TestBase):
         self.assertContains(response, "Completed Project Renewal Requests")
 
 
-class TestAllocationRenewalRequestPendingListView(TestViewMixin, TestBase):
+class TestAllocationRenewalRequestPendingListView(ViewTestMixin, TestBase):
     """A class for testing AllocationRenewalRequestListView for pending
     requests."""
 

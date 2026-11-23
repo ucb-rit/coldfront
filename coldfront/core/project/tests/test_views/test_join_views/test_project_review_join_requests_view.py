@@ -19,7 +19,7 @@ from coldfront.core.utils.tests.test_base import (
 )
 
 
-class TestViewMixin:
+class ViewTestMixin:
     """A mixin for testing view functionality common to both
     deployments."""
 
@@ -63,7 +63,7 @@ class TestViewMixin:
         return reverse("project-review-join-requests", kwargs={"pk": project.pk})
 
 
-class TestBRCProjectReviewJoinRequestsView(TestViewMixin, TestBase):
+class TestBRCProjectReviewJoinRequestsView(ViewTestMixin, TestBase):
     """A class for testing ProjectReviewJoinRequestsView on the BRC
     deployment."""
 
@@ -125,7 +125,7 @@ class TestBRCProjectReviewJoinRequestsView(TestViewMixin, TestBase):
         self.assertIsNone(user_profile.billing_activity)
 
 
-class TestLRCProjectReviewJoinRequestsView(TestViewMixin, LRCTestBase):
+class TestLRCProjectReviewJoinRequestsView(ViewTestMixin, LRCTestBase):
     """A class for testing ProjectReviewJoinRequestsView on the LRC
     deployment."""
 

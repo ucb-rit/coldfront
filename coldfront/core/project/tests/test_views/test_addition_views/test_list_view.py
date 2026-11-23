@@ -15,7 +15,7 @@ from coldfront.core.project.models import (
 from coldfront.core.utils.tests.test_base import TestBase, enable_deployment
 
 
-class TestViewMixin:
+class ViewTestMixin:
     """A mixin for testing AllocationAdditionRequestListView."""
 
     completed_url = reverse("service-units-purchase-completed-request-list")
@@ -183,7 +183,7 @@ class TestViewMixin:
         self.assertContains(response, self.project_b.name)
 
 
-class TestAllocationAdditionRequestCompletedListView(TestViewMixin, TestBase):
+class TestAllocationAdditionRequestCompletedListView(ViewTestMixin, TestBase):
     """A class for testing AllocationAdditionRequestListView for
     completed requests."""
 
@@ -215,7 +215,7 @@ class TestAllocationAdditionRequestCompletedListView(TestViewMixin, TestBase):
         self.assertContains(response, "Completed Service Units Purchase Requests")
 
 
-class TestAllocationAdditionRequestPendingListView(TestViewMixin, TestBase):
+class TestAllocationAdditionRequestPendingListView(ViewTestMixin, TestBase):
     """A class for testing AllocationAdditionRequestListView for
     pending requests."""
 

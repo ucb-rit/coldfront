@@ -25,7 +25,7 @@ from coldfront.core.project.models import (
     ProjectUserStatusChoice,
 )
 from coldfront.core.project.tests.test_utils.test_addition_utils.test_runner_mixin import (
-    TestRunnerMixin,
+    RunnerTestMixin,
 )
 from coldfront.core.project.utils_.addition_utils import (
     AllocationAdditionProcessingRunner,
@@ -35,7 +35,7 @@ from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.tests.test_base import TestBase
 
 
-class TestAllocationAdditionProcessingRunner(TestRunnerMixin, TestBase):
+class TestAllocationAdditionProcessingRunner(RunnerTestMixin, TestBase):
     """A class for testing AllocationAdditionProcessingRunner."""
 
     def setUp(self):

@@ -17,6 +17,8 @@ class TestAllocationPeriodSignals(TestCase):
 
     def setUp(self):
         """Set up test data."""
+        # These tests count Schedules, so start from none.
+        Schedule.objects.all().delete()
         self.today = display_time_zone_current_date()
         self.started_period = AllocationPeriod(
             name="Period 1",
@@ -147,7 +149,7 @@ class TestAllocationPeriodSignals(TestCase):
 
         # Create and updating a period should not reschedule tasks for other
         # periods.
-        for i in range(2):
+        for _ in range(2):
             self.non_started_period_2.save()
             try:
                 Schedule.objects.get(pk=updated_task.pk)

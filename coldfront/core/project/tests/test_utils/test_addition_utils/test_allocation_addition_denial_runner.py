@@ -22,7 +22,7 @@ from coldfront.core.project.models import (
     ProjectUserStatusChoice,
 )
 from coldfront.core.project.tests.test_utils.test_addition_utils.test_runner_mixin import (
-    TestRunnerMixin,
+    RunnerTestMixin,
 )
 from coldfront.core.project.utils_.addition_utils import AllocationAdditionDenialRunner
 from coldfront.core.statistics.models import ProjectTransaction, ProjectUserTransaction
@@ -30,7 +30,7 @@ from coldfront.core.utils.common import utc_now_offset_aware
 from coldfront.core.utils.tests.test_base import TestBase
 
 
-class TestAllocationAdditionDenialRunner(TestRunnerMixin, TestBase):
+class TestAllocationAdditionDenialRunner(RunnerTestMixin, TestBase):
     """A class for testing AllocationAdditionDenialRunner."""
 
     def setUp(self):

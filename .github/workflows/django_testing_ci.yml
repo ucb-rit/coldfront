@@ -17,19 +17,41 @@ env:
 
 jobs:
 
-  # ─── Coverage strategy ───────────────────────────────────────────────────────
+  # ─── Overview ────────────────────────────────────────────────────────────────
   #
-  # Each test job writes its coverage data to a unique coverage-<shard> file,
-  # then uploads it as an artifact.  The `report` job downloads all five files,
-  # runs `coverage combine`, and generates the combined HTML + XML report.
+  # All tests (Django TestCase acceptance tests and pytest unit/component
+  # tests) run under pytest in one matrix job, split into groups:
+  #
+  # - pytest-split assigns each group a share of the suite, balanced using
+  #   the committed .test_durations file. duration_based_chunks keeps
+  #   neighbouring tests together, so a TestCase class mostly lands in one
+  #   group and its setUpClass runs once. Tests missing from the durations
+  #   file get the average duration.
+  # - pytest-xdist runs each group on one worker per core (-n auto; 4 on
+  #   standard runners for public repos), each with its own test database.
+  #   --dist loadscope keeps a class's tests on one worker.
+  #   --no-loadscope-reorder keeps pytest-django's ordering (by default
+  #   loadscope schedules the largest classes first, which can run a
+  #   TransactionTestCase early and flush data later tests rely on).
+  # - pytest-randomly is disabled: the Django suite has never run shuffled,
+  #   and pytest-django must order TransactionTestCase classes (which flush
+  #   the database) after the rest.
+  #
+  # Refreshing durations: each group uploads the durations of the tests it
+  # ran (--store-durations --clean-durations writes only those). Download
+  # the test-durations-* artifacts from a run on develop, merge them with
+  # `jq -s -S --indent 4 add test-durations-*/.test_durations > .test_durations`,
+  # and commit the result.
+  #
+  # Coverage: pytest-cov combines worker data into .coverage, which each group
+  # renames to coverage-test-<group> (no leading dot: upload-artifact skips
+  # dotfiles) and uploads. The `report` job combines all groups and is the
+  # only place the coverage threshold is enforced (--fail-under), since
+  # each group holds only part of the coverage.
   #
   # Shared setup (checkout, Python, venv, settings) lives in the composite
   # action at .github/actions/coldfront-setup.  Each job still declares its
   # own Postgres service because services cannot be defined in composite actions.
-  #
-  # Coverage is written to the default .coverage file (no --data-file flag),
-  # then renamed to coverage-<shard> (no leading dot) immediately after the run.
-  # Each job runs on an isolated runner so there is no cross-job collision.
   #
   # ─────────────────────────────────────────────────────────────────────────────
 
@@ -58,9 +80,11 @@ jobs:
         # remove this flag once the codebase is clean.
         run: ruff check --output-format github --exit-zero coldfront/
 
-      # `manage.py test` discovery skips directories without __init__.py, so
-      # a test module in one silently never runs in CI. Fail if any test*.py
-      # (outside pytest-only tests/pytest/ dirs) has a non-package ancestor.
+      # Test directories must be packages. `manage.py test` discovery skips
+      # directories without __init__.py, and pytest imports test modules in
+      # them by bare filename, so same-named modules in different directories
+      # collide. Fail if any test*.py (outside tests/pytest/ dirs) has a
+      # non-package ancestor.
       - name: Check test modules are discoverable
         run: |
           missing=$(
@@ -80,11 +104,21 @@ jobs:
             exit 1
           fi
 
-  test-pytest:
+  # ─── Tests ───────────────────────────────────────────────────────────────────
+  # Keep the group count in step with --splits and with the report job's
+  # expected coverage file count.
+
+  test:
+    name: test (${{ matrix.group }}/3)
     runs-on: ubuntu-22.04
 
     permissions:
       contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3]
 
     services:
       postgres:
@@ -106,247 +140,43 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/coldfront-setup
 
-      - name: Run pytest unit tests
+      - name: Run tests
         run: |
           source ~/venv/bin/activate
           export django_secret_key=`openssl rand -base64 64`
-          coverage run -m pytest coldfront/ -m unit
-
-      - name: Run pytest component tests
-        run: |
-          source ~/venv/bin/activate
-          export django_secret_key=`openssl rand -base64 64`
-          coverage run --append -m pytest coldfront/ -m component
+          pytest coldfront/ \
+            -p no:randomly \
+            -n auto --dist loadscope --no-loadscope-reorder \
+            --splits 3 --group ${{ matrix.group }} \
+            --splitting-algorithm duration_based_chunks \
+            --store-durations --clean-durations \
+            --cov --cov-report=
 
       - name: Rename coverage data
         if: always()
-        run: mv .coverage coverage-pytest || true
+        run: mv .coverage coverage-test-${{ matrix.group }} || true
 
-      - name: Upload pytest coverage data
+      - name: Upload coverage data
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-data-pytest
-          path: coverage-pytest
+          name: coverage-data-test-${{ matrix.group }}
+          path: coverage-test-${{ matrix.group }}
         if: always()
 
-  # ─── Django: core.project views ──────────────────────────────────────────────
-  # ~143 test methods — view tests only.
-
-  test-django-project-views:
-    runs-on: ubuntu-22.04
-
-    permissions:
-      contents: read
-
-    services:
-      postgres:
-        image: postgres:15.2-alpine3.17
-        env:
-          POSTGRES_DB: cf_brc_db
-          POSTGRES_PASSWORD: test
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/coldfront-setup
-
-      - name: Run Django tests (core.project - views)
-        run: |
-          source ~/venv/bin/activate
-          export django_secret_key=`openssl rand -base64 64`
-          python manage.py migrate
-          coverage run manage.py test \
-            --timing \
-            --testrunner=coldfront.tests.timing_runner.TimingTestRunner \
-            coldfront.core.project.tests.test_views
-
-      - name: Rename coverage data
-        if: always()
-        run: mv .coverage coverage-django-project-views || true
-
-      - name: Upload Django project views coverage data
+      - name: Upload test durations
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-data-django-project-views
-          path: coverage-django-project-views
-        if: always()
-
-  # ─── Django: core.project non-views ──────────────────────────────────────────
-  # ~151 test methods — commands, forms, and utils.
-
-  test-django-project-other:
-    runs-on: ubuntu-22.04
-
-    permissions:
-      contents: read
-
-    services:
-      postgres:
-        image: postgres:15.2-alpine3.17
-        env:
-          POSTGRES_DB: cf_brc_db
-          POSTGRES_PASSWORD: test
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/coldfront-setup
-
-      - name: Run Django tests (core.project - commands, forms, utils)
-        run: |
-          source ~/venv/bin/activate
-          export django_secret_key=`openssl rand -base64 64`
-          python manage.py migrate
-          coverage run manage.py test \
-            --timing \
-            --testrunner=coldfront.tests.timing_runner.TimingTestRunner \
-            coldfront.core.project.tests.test_commands \
-            coldfront.core.project.tests.test_forms \
-            coldfront.core.project.tests.test_utils
-
-      - name: Rename coverage data
-        if: always()
-        run: mv .coverage coverage-django-project-other || true
-
-      - name: Upload Django project other coverage data
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-data-django-project-other
-          path: coverage-django-project-other
-        if: always()
-
-  # ─── Django: api.* ───────────────────────────────────────────────────────────
-  # ~229 test methods across allocation, billing, project, statistics, user apps.
-
-  test-django-api:
-    runs-on: ubuntu-22.04
-
-    permissions:
-      contents: read
-
-    services:
-      postgres:
-        image: postgres:15.2-alpine3.17
-        env:
-          POSTGRES_DB: cf_brc_db
-          POSTGRES_PASSWORD: test
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/coldfront-setup
-
-      - name: Run Django tests (api)
-        run: |
-          source ~/venv/bin/activate
-          export django_secret_key=`openssl rand -base64 64`
-          python manage.py migrate
-          coverage run manage.py test \
-            --timing \
-            --testrunner=coldfront.tests.timing_runner.TimingTestRunner \
-            coldfront.api
-
-      - name: Rename coverage data
-        if: always()
-        run: mv .coverage coverage-django-api || true
-
-      - name: Upload Django API coverage data
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-data-django-api
-          path: coverage-django-api
-        if: always()
-
-  # ─── Django: remaining core.* + plugins.* ────────────────────────────────────
-  # ~284 test methods: core.allocation, billing, user, utils, statistics,
-  # account, socialaccount, research_output, publication, and plugins.
-
-  test-django-core:
-    runs-on: ubuntu-22.04
-
-    permissions:
-      contents: read
-
-    services:
-      postgres:
-        image: postgres:15.2-alpine3.17
-        env:
-          POSTGRES_DB: cf_brc_db
-          POSTGRES_PASSWORD: test
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/coldfront-setup
-
-      - name: Run Django tests (core except project, plugins)
-        run: |
-          source ~/venv/bin/activate
-          export django_secret_key=`openssl rand -base64 64`
-          python manage.py migrate
-          coverage run manage.py test \
-            --timing \
-            --testrunner=coldfront.tests.timing_runner.TimingTestRunner \
-            coldfront.core.account \
-            coldfront.core.allocation \
-            coldfront.core.billing \
-            coldfront.core.publication \
-            coldfront.core.research_output \
-            coldfront.core.socialaccount \
-            coldfront.core.statistics \
-            coldfront.core.user \
-            coldfront.core.utils \
-            coldfront.plugins
-
-      - name: Rename coverage data
-        if: always()
-        run: mv .coverage coverage-django-core || true
-
-      - name: Upload Django core coverage data
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-data-django-core
-          path: coverage-django-core
+          name: test-durations-${{ matrix.group }}
+          path: .test_durations
+          include-hidden-files: true
         if: always()
 
   # ─── Report ──────────────────────────────────────────────────────────────────
-  # Runs after all five test jobs (even if one fails) to combine coverage data,
+  # Runs after all test groups (even if one fails) to combine coverage data,
   # post the PR comment, and upload the combined report artifact.
 
   report:
-    needs: [test-pytest, test-django-project-views, test-django-project-other, test-django-api, test-django-core]
+    needs: [test]
     if: always()
     runs-on: ubuntu-22.04
 
@@ -364,6 +194,19 @@ jobs:
           pattern: coverage-data-*
           merge-multiple: true
           path: coverage-data
+
+      # A test job that fails to produce coverage only warns at upload
+      # ("No files were found"), and the report would silently combine fewer
+      # groups. Fail instead. Keep the count in step with the test matrix.
+      - name: Check all coverage data arrived
+        run: |
+          expected=3
+          found=$(ls coverage-data/coverage-* 2>/dev/null | wc -l)
+          if [ "$found" -ne "$expected" ]; then
+            echo "::error::Expected $expected coverage files, found $found:"
+            ls coverage-data/ || true
+            exit 1
+          fi
 
       - name: Generate combined coverage report
         run: |

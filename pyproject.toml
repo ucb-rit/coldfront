@@ -3,21 +3,25 @@
 ################################################################################
 
 [tool.pytest.ini_options]
-addopts = "--continue-on-collection-errors --tb=short --durations=30 --timeout=30"
+# --timeout guards against hangs. Some Django view tests (e.g. the LRC renewal
+# request wizard) legitimately take ~20-30s, more with xdist workers sharing CPU.
+addopts = "--continue-on-collection-errors --tb=short --durations=30 --timeout=120"
 markers = [
     "acceptance: Marks tests as acceptance tests",
     "component: Mark tests as component tests",
     "unit: Marks tests as unit tests",
 ]
-python_files = [
-    # Only collect files in a (sub)directory of "tests/pytest" to avoid
-    # collecting legacy unittest acceptance tests.
-    "tests/pytest/test*.py",
-    "tests/pytest/*/test*.py",
-]
-testpaths = [
-    "tests/pytest/",
-]
+# Collect every test module, including the Django TestCase suite.
+# coldfront/conftest.py marks unmarked tests as "acceptance", so CI selects
+# suites with -m unit / -m component / -m acceptance. Name helper classes
+# that hold test_ methods *TestMixin, not Test*Mixin: pytest collects plain
+# classes named Test* as tests.
+python_files = ["test*.py"]
+testpaths = ["coldfront"]
+# pytest-timeout: time only the test function, not fixtures. Under xdist each
+# worker creates and migrates its own test database in the first test's
+# setup, which can exceed --timeout; so can a TestCase's setUpClass seeding.
+timeout_func_only = true
 # pytest-django
 DJANGO_SETTINGS_MODULE = "coldfront.config.settings"
 
@@ -40,7 +44,6 @@ relative_files = true
 [tool.coverage.report]
 skip_empty = true
 show_missing = true
-fail_under = 50
 
 ################################################################################
 # ruff

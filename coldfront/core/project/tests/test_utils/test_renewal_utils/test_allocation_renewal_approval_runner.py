@@ -25,7 +25,7 @@ from coldfront.core.utils.email.email_strategy import DropEmailStrategy
 TEST_PRIMARY_CLUSTER_NAME = "Savio"
 
 
-class TestRunnerMixin(TestRunnerMixinBase):
+class RunnerTestMixin(TestRunnerMixinBase):
     """A mixin for testing AllocationRenewalApprovalRunner."""
 
     def test_request_allocation_period_not_ended_enforced(self):
@@ -149,7 +149,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestUnpooledToUnpooled(TestRunnerMixin, TestCase):
+class TestUnpooledToUnpooled(RunnerTestMixin, TestCase):
     """A class for testing the AllocationRenewalApprovalRunner in the
     'unpooled_to_unpooled' case."""
 
@@ -173,7 +173,7 @@ class TestUnpooledToUnpooled(TestRunnerMixin, TestCase):
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestUnpooledToPooled(TestRunnerMixin, TestCase):
+class TestUnpooledToPooled(RunnerTestMixin, TestCase):
     """A class for testing the AllocationRenewalApprovalRunner in the
     'unpooled_to_pooled' case."""
 
@@ -195,7 +195,7 @@ class TestUnpooledToPooled(TestRunnerMixin, TestCase):
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestPooledToPooledSame(TestRunnerMixin, TestCase):
+class TestPooledToPooledSame(RunnerTestMixin, TestCase):
     """A class for testing the AllocationRenewalApprovalRunner in the
     'pooled_to_pooled_same' case."""
 
@@ -219,7 +219,7 @@ class TestPooledToPooledSame(TestRunnerMixin, TestCase):
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestPooledToPooledDifferent(TestRunnerMixin, TestCase):
+class TestPooledToPooledDifferent(RunnerTestMixin, TestCase):
     """A class for testing the AllocationRenewalApprovalRunner in the
     'pooled_to_pooled_different' case."""
 
@@ -243,7 +243,7 @@ class TestPooledToPooledDifferent(TestRunnerMixin, TestCase):
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestPooledToUnpooledOld(TestRunnerMixin, TestCase):
+class TestPooledToUnpooledOld(RunnerTestMixin, TestCase):
     """A class for testing the AllocationRenewalApprovalRunner in the
     'pooled_to_unpooled_old' case."""
 
@@ -267,7 +267,7 @@ class TestPooledToUnpooledOld(TestRunnerMixin, TestCase):
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestPooledToUnpooledNew(TestRunnerMixin, TestCase):
+class TestPooledToUnpooledNew(RunnerTestMixin, TestCase):
     """A class for testing the AllocationRenewalApprovalRunner in the
     'pooled_to_unpooled_new' case."""
 

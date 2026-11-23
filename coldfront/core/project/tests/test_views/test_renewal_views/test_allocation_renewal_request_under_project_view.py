@@ -37,7 +37,7 @@ from coldfront.core.utils.tests.test_base import (
 )
 
 
-class TestAllocationRenewalRequestUnderProjectViewMixin:
+class AllocationRenewalRequestUnderProjectViewTestMixin:
     """A mixin for testing AllocationRenewalRequestUnderProjectView
     functionality common to both deployments."""
 
@@ -158,7 +158,7 @@ class TestAllocationRenewalRequestUnderProjectViewMixin:
 
 
 class TestBRCAllocationRenewalRequestUnderProjectView(
-    TestAllocationRenewalRequestUnderProjectViewMixin, TestBase
+    AllocationRenewalRequestUnderProjectViewTestMixin, TestBase
 ):
     """A class for testing AllocationRenewalRequestUnderProjectView on
     the BRC deployment."""
@@ -171,7 +171,7 @@ class TestBRCAllocationRenewalRequestUnderProjectView(
 
 
 class TestLRCAllocationRenewalRequestUnderProjectView(
-    TestAllocationRenewalRequestUnderProjectViewMixin, LRCTestBase
+    AllocationRenewalRequestUnderProjectViewTestMixin, LRCTestBase
 ):
     """A class for testing AllocationRenewalRequestUnderProjectView on
     the LRC deployment."""

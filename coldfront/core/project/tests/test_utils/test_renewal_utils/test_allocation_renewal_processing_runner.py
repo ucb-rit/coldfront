@@ -51,7 +51,7 @@ from coldfront.core.utils.common import (
 TEST_PRIMARY_CLUSTER_NAME = "Savio"
 
 
-class TestRunnerMixin(TestRunnerMixinBase):
+class RunnerTestMixin(TestRunnerMixinBase):
     """A mixin for testing AllocationRenewalProcessingRunner."""
 
     def test_cluster_access_requests_created_if_project_user_not_active(self):
@@ -816,7 +816,7 @@ class TestRunnerMixin(TestRunnerMixinBase):
             self.assertEqual(attribute.value, new_allocation_value)
 
 
-class TestFutureRequestsUpdateMixin:
+class FutureRequestsUpdateTestMixin:
     """A mixin for testing that future AllocationRenewalRequests may be
     updated as a result of processing."""
 
@@ -1013,7 +1013,7 @@ class TestFutureRequestsUpdateMixin:
         self.assertEqual(future_request.pre_project, request.post_project)
 
 
-class TestPIDemotionMixin:
+class PIDemotionTestMixin:
     """A mixin for testing PI demotion to the 'User' role."""
 
     def test_pre_project_pi_demoted_if_pooled(self):
@@ -1045,7 +1045,7 @@ class TestPIDemotionMixin:
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestUnpooledToUnpooled(TestFutureRequestsUpdateMixin, TestRunnerMixin, TestCase):
+class TestUnpooledToUnpooled(FutureRequestsUpdateTestMixin, RunnerTestMixin, TestCase):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'unpooled_to_unpooled' case."""
 
@@ -1069,7 +1069,7 @@ class TestUnpooledToUnpooled(TestFutureRequestsUpdateMixin, TestRunnerMixin, Tes
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestUnpooledToPooled(TestFutureRequestsUpdateMixin, TestRunnerMixin, TestCase):
+class TestUnpooledToPooled(FutureRequestsUpdateTestMixin, RunnerTestMixin, TestCase):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'unpooled_to_pooled' case."""
 
@@ -1091,7 +1091,7 @@ class TestUnpooledToPooled(TestFutureRequestsUpdateMixin, TestRunnerMixin, TestC
 
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
-class TestPooledToPooledSame(TestFutureRequestsUpdateMixin, TestRunnerMixin, TestCase):
+class TestPooledToPooledSame(FutureRequestsUpdateTestMixin, RunnerTestMixin, TestCase):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'pooled_to_pooled_same' case."""
 
@@ -1116,7 +1116,7 @@ class TestPooledToPooledSame(TestFutureRequestsUpdateMixin, TestRunnerMixin, Tes
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
 class TestPooledToPooledDifferent(
-    TestFutureRequestsUpdateMixin, TestPIDemotionMixin, TestRunnerMixin, TestCase
+    FutureRequestsUpdateTestMixin, PIDemotionTestMixin, RunnerTestMixin, TestCase
 ):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'pooled_to_pooled_different' case."""
@@ -1142,7 +1142,7 @@ class TestPooledToPooledDifferent(
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
 class TestPooledToUnpooledOld(
-    TestFutureRequestsUpdateMixin, TestPIDemotionMixin, TestRunnerMixin, TestCase
+    FutureRequestsUpdateTestMixin, PIDemotionTestMixin, RunnerTestMixin, TestCase
 ):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'pooled_to_unpooled_old' case."""
@@ -1168,7 +1168,7 @@ class TestPooledToUnpooledOld(
 
 @override_settings(PRIMARY_CLUSTER_NAME=TEST_PRIMARY_CLUSTER_NAME)
 class TestPooledToUnpooledNew(
-    TestFutureRequestsUpdateMixin, TestPIDemotionMixin, TestRunnerMixin, TestCase
+    FutureRequestsUpdateTestMixin, PIDemotionTestMixin, RunnerTestMixin, TestCase
 ):
     """A class for testing the AllocationRenewalProcessingRunner in the
     'pooled_to_unpooled_new' case."""

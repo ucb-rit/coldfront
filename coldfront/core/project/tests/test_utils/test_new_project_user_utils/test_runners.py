@@ -120,7 +120,7 @@ class LRCTestRunnerBase(LRCTestBase):
         self.project_user = self.project.projectuser_set.get(user=self.user)
 
 
-class TestCommonRunnerMixin:
+class CommonRunnerTestMixin:
     """A mixin for testing functionality common to all concrete runner
     classes."""
 
@@ -455,7 +455,7 @@ class TestCommonRunnerMixin:
         },
     }
 )
-class TestBRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
+class TestBRCNewProjectUserRunner(CommonRunnerTestMixin, TestRunnerBase):
     """A class for testing BRCNewProjectUserRunner."""
 
     @enable_deployment("BRC")
@@ -620,7 +620,7 @@ class TestBRCNewProjectUserRunner(TestCommonRunnerMixin, TestRunnerBase):
         },
     }
 )
-class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
+class TestLRCNewProjectUserRunner(CommonRunnerTestMixin, LRCTestRunnerBase):
     """A class for testing LRCNewProjectUserRunner."""
 
     @enable_deployment("LRC")
@@ -680,7 +680,9 @@ class TestLRCNewProjectUserRunner(TestCommonRunnerMixin, LRCTestRunnerBase):
                 NewProjectUserSource.ADDED,
                 email_strategy=email_strategy,
             )
-            with self.assertRaises(Exception):
+            # Each scenario below fails differently (DoesNotExist for the
+            # activity or the attribute, ValueError for an empty value).
+            with self.assertRaises(Exception):  # noqa: B017
                 runner.run()
 
             user_profile.refresh_from_db()
