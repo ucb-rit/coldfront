@@ -132,6 +132,19 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ------------------------------------------------------------------------------
+# Password hashers
+# ------------------------------------------------------------------------------
+# Tests hash passwords constantly (set_password in setUp, client.login), and
+# the default PBKDF2 hasher is deliberately slow. Use a fast hasher under both
+# test runners: `manage.py test` (argv) and pytest (imported before settings).
+# PBKDF2 stays in the list so existing hashes (e.g., from a DB dump) verify.
+if "test" in sys.argv or "pytest" in sys.modules:
+    PASSWORD_HASHERS = [
+        "django.contrib.auth.hashers.MD5PasswordHasher",
+        "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    ]
+
+# ------------------------------------------------------------------------------
 # Django site settings
 # ------------------------------------------------------------------------------
 ROOT_URLCONF = "coldfront.config.urls"
