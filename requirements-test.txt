@@ -6,3 +6,4 @@ pytest-cov==7.1.0
 pytest-django==4.11.1
 pytest-randomly==4.0.1
 pytest-timeout==2.4.0
+tblib==3.2.2

@@ -186,17 +186,33 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/coldfront-setup
 
+      # Experiment: run this shard with Django's --parallel to see whether
+      # in-job parallelism is worth rolling out to the other shards.
+      - name: Report runner resources
+        run: |
+          nproc
+          free -h
+
+      # --parallel runs test classes in worker processes, so
+      # TimingTestRunner's per-test timings would be meaningless here;
+      # --durations reports the slowest tests instead. Coverage runs in
+      # parallel mode (one data file per process) and is combined into
+      # .coverage before the rename step, even when tests fail.
       - name: Run Django tests (core.project - commands, forms, utils)
         run: |
           source ~/venv/bin/activate
           export django_secret_key=`openssl rand -base64 64`
           python manage.py migrate
-          coverage run manage.py test \
+          status=0
+          coverage run --parallel-mode manage.py test \
             --timing \
-            --testrunner=coldfront.tests.timing_runner.TimingTestRunner \
+            --parallel auto \
+            --durations 50 \
             coldfront.core.project.tests.test_commands \
             coldfront.core.project.tests.test_forms \
-            coldfront.core.project.tests.test_utils
+            coldfront.core.project.tests.test_utils || status=$?
+          coverage combine
+          exit $status
 
       - name: Rename coverage data
         if: always()
