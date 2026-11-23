@@ -23,6 +23,7 @@ runs:
 
   steps:
     - name: Set up Python 3.13
+      id: setup-python
       uses: actions/setup-python@v5
       with:
         python-version: "3.13"
@@ -37,7 +38,10 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/venv
-        key: ${{ runner.os }}-python-313-packages-${{ hashFiles('requirements.txt', 'requirements-test.txt') }}
+        # The venv's interpreter symlinks into the toolcache for one exact
+        # Python patch version, so key on it: a runner image that ships a
+        # different 3.13.x must build its own venv, not restore a broken one.
+        key: ${{ runner.os }}-python-${{ steps.setup-python.outputs.python-version }}-packages-${{ hashFiles('requirements.txt', 'requirements-test.txt') }}
 
     - name: Install Python packages
       if: steps.cache-python.outputs.cache-hit != 'true'
