@@ -20,8 +20,27 @@ from coldfront.api.user.serializers import (
     IdentityLinkingRequestSerializer,
     UserSerializer,
 )
-from coldfront.core.project.models import ProjectUser, ProjectUserRoleChoice
+from coldfront.core.project.models import (
+    ProjectUser,
+    ProjectUserRoleChoice,
+    ProjectUserStatusChoice,
+)
 from coldfront.core.user.models import ExpiringToken, IdentityLinkingRequest
+
+# ProjectUser status names behind each value of the membership and pis
+# query parameters of the project_memberships endpoint. A user is still
+# a member while a removal is pending.
+CURRENT_MEMBER_STATUSES = ["Active", "Pending - Remove"]
+PAST_MEMBER_STATUSES = ["Removed"]
+MEMBERSHIP_STATUSES = {
+    "current": CURRENT_MEMBER_STATUSES,
+    "past": PAST_MEMBER_STATUSES,
+    "all": CURRENT_MEMBER_STATUSES + PAST_MEMBER_STATUSES,
+}
+PI_STATUSES = {
+    "current": CURRENT_MEMBER_STATUSES,
+    "all": CURRENT_MEMBER_STATUSES + PAST_MEMBER_STATUSES,
+}
 
 
 class IdentityLinkingRequestViewSet(
@@ -119,11 +138,22 @@ class UserViewSet(
         ),
         manual_parameters=[
             openapi.Parameter(
+                "membership",
+                openapi.IN_QUERY,
+                description=(
+                    "Which memberships to return: current (Active or "
+                    "Pending - Remove), past (Removed), or all (both). "
+                    "Default: current. Cannot be combined with status."
+                ),
+                type=openapi.TYPE_STRING,
+                enum=["current", "past", "all"],
+            ),
+            openapi.Parameter(
                 "status",
                 openapi.IN_QUERY,
                 description=(
-                    "Filter memberships by ProjectUser status. "
-                    "May be repeated for multiple values. Default: Active."
+                    "Filter memberships by ProjectUser status name. May be "
+                    "repeated for multiple values. Prefer membership."
                 ),
                 type=openapi.TYPE_STRING,
                 enum=[
@@ -139,10 +169,22 @@ class UserViewSet(
                 openapi.IN_QUERY,
                 description=(
                     "Use expand=project to expand project PKs into objects "
-                    "including name and pis. Only Active PIs are included."
+                    "including name, project_status, role, "
+                    "membership_status, and pis."
                 ),
                 type=openapi.TYPE_STRING,
                 enum=["project"],
+            ),
+            openapi.Parameter(
+                "pis",
+                openapi.IN_QUERY,
+                description=(
+                    "Which PIs to include with expand=project: current "
+                    "(Active or Pending - Remove) or all (also Removed). "
+                    "Default: current."
+                ),
+                type=openapi.TYPE_STRING,
+                enum=["current", "all"],
             ),
         ],
         responses={
@@ -156,8 +198,10 @@ class UserViewSet(
                             type=openapi.TYPE_ARRAY,
                             description=(
                                 "List of project PKs (default), or project "
-                                "objects with id, name, and pis when "
-                                "?expand=project is used."
+                                "objects with id, name, project_status, "
+                                "role, membership_status, and pis (each "
+                                "with username, name, email, and status) "
+                                "when ?expand=project is used."
                             ),
                             items=openapi.Schema(type=openapi.TYPE_INTEGER),
                         ),
@@ -179,11 +223,49 @@ class UserViewSet(
 
         POST body: {"users": ["alice", "bob"]}
         Query params:
-          ?status=Active (default; repeatable)
-          ?expand=project (expand PKs to objects with name and pis)
+          ?membership=current|past|all (default: current)
+          ?status=Active (repeatable; alternative to membership)
+          ?expand=project (expand PKs to objects with statuses and pis)
+          ?pis=current|all (default: current; used with expand=project)
         """
+        membership = request.query_params.get("membership")
+        requested_statuses = request.query_params.getlist("status")
+        pis = request.query_params.get("pis", "current")
+        if membership is not None and requested_statuses:
+            return Response(
+                {"membership": "Cannot be combined with status."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if membership is not None and membership not in MEMBERSHIP_STATUSES:
+            return Response(
+                {"membership": f"Expected one of {list(MEMBERSHIP_STATUSES)}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if pis not in PI_STATUSES:
+            return Response(
+                {"pis": f"Expected one of {list(PI_STATUSES)}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if requested_statuses:
+            valid_statuses = set(
+                ProjectUserStatusChoice.objects.values_list("name", flat=True)
+            )
+            invalid = [s for s in requested_statuses if s not in valid_statuses]
+            if invalid:
+                return Response(
+                    {"unknown_statuses": invalid},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            statuses = requested_statuses
+        else:
+            statuses = MEMBERSHIP_STATUSES[membership or "current"]
+        pi_statuses = PI_STATUSES[pis]
+        expand_project = "project" in request.query_params.getlist("expand")
+
         raw_users = request.data.get("users", [])
-        if not isinstance(raw_users, list):
+        if not isinstance(raw_users, list) or not all(
+            isinstance(u, str) for u in raw_users
+        ):
             return Response(
                 {"users": "Expected a list of usernames."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -199,12 +281,9 @@ class UserViewSet(
                 {"unknown_users": unknown}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        statuses = request.query_params.getlist("status") or ["Active"]
-        expand_project = "project" in request.query_params.getlist("expand")
-
         memberships = (
             ProjectUser.objects.filter(user__in=users, status__name__in=statuses)
-            .select_related("user", "project")
+            .select_related("user", "project__status", "role", "status")
             .order_by("user__username", "project_id")
         )
 
@@ -219,15 +298,23 @@ class UserViewSet(
                 pi_role = ProjectUserRoleChoice.objects.get(
                     name="Principal Investigator"
                 )
-                pi_qs = ProjectUser.objects.filter(
-                    project_id__in=project_ids, role=pi_role, status__name="Active"
-                ).select_related("user")
+                pi_qs = (
+                    ProjectUser.objects.filter(
+                        project_id__in=project_ids,
+                        role=pi_role,
+                        status__name__in=pi_statuses,
+                    )
+                    .select_related("user", "status")
+                    .order_by("user__username")
+                )
                 pis_by_project = defaultdict(list)
                 for pi_pu in pi_qs:
                     pis_by_project[pi_pu.project_id].append(
                         {
+                            "username": pi_pu.user.username,
                             "name": pi_pu.user.get_full_name(),
                             "email": pi_pu.user.email,
+                            "status": pi_pu.status.name,
                         }
                     )
 
@@ -239,6 +326,9 @@ class UserViewSet(
                     {
                         "id": pu.project_id,
                         "name": pu.project.name,
+                        "project_status": pu.project.status.name,
+                        "role": pu.role.name,
+                        "membership_status": pu.status.name,
                         "pis": pis_by_project.get(pu.project_id, []),
                     }
                     for pu in user_memberships
