@@ -18,7 +18,7 @@ django-maintenance-mode==0.23.0
 django-model-utils==5.0.0
 django-phonenumber-field==8.4.0
 django-picklefield==3.4.0
-django-prometheus==2.4.1
+django-prometheus==2.5.0
 django-q2==1.8.0
 django-redis==6.0.0
 django-sesame==3.2.3
