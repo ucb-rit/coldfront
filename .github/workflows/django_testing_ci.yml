@@ -37,12 +37,14 @@ jobs:
   # Refreshing durations: each group uploads the durations of the tests it
   # ran (--store-durations --clean-durations writes only those). Download
   # the test-durations-* artifacts from a run on develop, merge them with
-  # `jq -s add test-durations-*/.test_durations > .test_durations`, and
-  # commit the result.
+  # `jq -s -S --indent 4 add test-durations-*/.test_durations > .test_durations`,
+  # and commit the result.
   #
   # Coverage: pytest-cov combines worker data into .coverage, which each group
   # renames to coverage-test-<group> (no leading dot: upload-artifact skips
-  # dotfiles) and uploads. The `report` job combines all groups.
+  # dotfiles) and uploads. The `report` job combines all groups and is the
+  # only place the coverage threshold is enforced (--fail-under), since
+  # each group holds only part of the coverage.
   #
   # Shared setup (checkout, Python, venv, settings) lives in the composite
   # action at .github/actions/coldfront-setup.  Each job still declares its
